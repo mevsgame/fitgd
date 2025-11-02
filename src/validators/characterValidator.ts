@@ -113,3 +113,45 @@ export function validateTraitCount(character: Character): void {
     }
   }
 }
+
+/**
+ * Validate trait grouping
+ */
+export function validateTraitGrouping(
+  character: Character,
+  traitIds: string[]
+): void {
+  if (traitIds.length !== 3) {
+    throw new CharacterValidationError(
+      `Trait grouping requires exactly 3 traits (got ${traitIds.length})`
+    );
+  }
+
+  // Verify all traits exist
+  for (const traitId of traitIds) {
+    const trait = character.traits.find((t) => t.id === traitId);
+    if (!trait) {
+      throw new CharacterValidationError(
+        `Trait ${traitId} not found on character`
+      );
+    }
+  }
+}
+
+/**
+ * Validate action dot advancement
+ */
+export function validateActionDotAdvancement(
+  character: Character,
+  action: keyof ActionDots
+): void {
+  const config = DEFAULT_CONFIG;
+  const currentDots = character.actionDots[action];
+  const newDots = currentDots + 1;
+
+  if (newDots > config.character.maxActionDotsPerAction) {
+    throw new CharacterValidationError(
+      `Action '${action}' cannot exceed ${config.character.maxActionDotsPerAction} dots (currently at ${currentDots})`
+    );
+  }
+}

@@ -5,6 +5,8 @@ import {
   validateStartingActionDots,
   validateActionDots,
   validateTraitCount,
+  validateTraitGrouping,
+  validateActionDotAdvancement,
 } from '../validators/characterValidator';
 import type {
   Character,
@@ -83,6 +85,25 @@ interface UseRallyPayload {
 
 interface ResetRallyPayload {
   characterId: string;
+  userId?: string;
+}
+
+interface GroupTraitsPayload {
+  characterId: string;
+  traitIds: string[];
+  groupedTrait: Trait;
+  userId?: string;
+}
+
+interface CreateTraitFromFlashbackPayload {
+  characterId: string;
+  trait: Trait;
+  userId?: string;
+}
+
+interface AdvanceActionDotsPayload {
+  characterId: string;
+  action: keyof ActionDots;
   userId?: string;
 }
 
@@ -414,6 +435,126 @@ const characterSlice = createSlice({
         };
       },
     },
+
+    groupTraits: {
+      reducer: (
+        state,
+        action: PayloadAction<{
+          characterId: string;
+          traitIds: string[];
+          groupedTrait: Trait;
+        }>
+      ) => {
+        const { characterId, traitIds, groupedTrait } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        // Validate trait grouping
+        validateTraitGrouping(character, traitIds);
+
+        // Remove the 3 original traits
+        character.traits = character.traits.filter(
+          (t) => !traitIds.includes(t.id)
+        );
+
+        // Add the grouped trait
+        character.traits.push(groupedTrait);
+        character.updatedAt = Date.now();
+      },
+      prepare: (payload: GroupTraitsPayload) => {
+        const command: Command = {
+          type: 'character/groupTraits',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    createTraitFromFlashback: {
+      reducer: (
+        state,
+        action: PayloadAction<{ characterId: string; trait: Trait }>
+      ) => {
+        const { characterId, trait } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        // Flashback traits have category 'flashback'
+        if (trait.category !== 'flashback') {
+          throw new Error(
+            'Trait created from flashback must have category "flashback"'
+          );
+        }
+
+        character.traits.push(trait);
+        character.updatedAt = Date.now();
+      },
+      prepare: (payload: CreateTraitFromFlashbackPayload) => {
+        const command: Command = {
+          type: 'character/createTraitFromFlashback',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    advanceActionDots: {
+      reducer: (
+        state,
+        action: PayloadAction<{ characterId: string; action: keyof ActionDots }>
+      ) => {
+        const { characterId, action: actionType } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        // Validate advancement
+        validateActionDotAdvancement(character, actionType);
+
+        // Advance by 1
+        character.actionDots[actionType] += 1;
+        character.updatedAt = Date.now();
+      },
+      prepare: (payload: AdvanceActionDotsPayload) => {
+        const command: Command = {
+          type: 'character/advanceActionDots',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
   },
 });
 
@@ -427,6 +568,9 @@ export const {
   removeEquipment,
   useRally,
   resetRally,
+  groupTraits,
+  createTraitFromFlashback,
+  advanceActionDots,
 } = characterSlice.actions;
 
 export default characterSlice.reducer;
