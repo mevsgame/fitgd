@@ -246,10 +246,18 @@
 /*  Action Ratings                              */
 /* -------------------------------------------- */
 
+.fitgd .actions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
 .fitgd .actions-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
+  margin-top: 10px;
 }
 
 .fitgd .action-row {
@@ -260,6 +268,15 @@
   background: #2a2a2a;
   border: 1px solid #444;
   border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fitgd .action-row:hover {
+  background: #333;
+  border-color: #666;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .fitgd .action-row label {
@@ -579,4 +596,81 @@
   margin-top: 15px;
   display: flex;
   gap: 10px;
+}
+
+/* -------------------------------------------- */
+/*  Action Roll Dialog                          */
+/* -------------------------------------------- */
+
+.fitgd-action-roll .dice-pool-display {
+  margin-top: 15px;
+  padding: 10px;
+  background: #1a1a1a;
+  border: 2px solid #ff6347;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 16px;
+}
+
+.fitgd-action-roll .pool-count {
+  color: #ff6347;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.fitgd-action-roll .warning {
+  color: #ffd700;
+  font-size: 11px;
+  font-style: italic;
+  margin-left: 5px;
+}
+
+/* -------------------------------------------- */
+/*  Chat Message Styling                        */
+/* -------------------------------------------- */
+
+.chat-message .fitgd-action-roll {
+  padding: 10px;
+  background: #2a2a2a;
+  border-left: 4px solid #ff6347;
+  border-radius: 4px;
+}
+
+.chat-message .fitgd-action-roll h3 {
+  margin: 0 0 10px 0;
+  color: #fff;
+  font-size: 16px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 5px;
+}
+
+.chat-message .fitgd-action-roll .roll-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #aaa;
+}
+
+.chat-message .fitgd-action-roll .roll-details em {
+  color: #ff6347;
+}
+
+.chat-message .fitgd-action-roll .roll-result {
+  text-align: center;
+  padding: 10px;
+  background: #1a1a1a;
+  border-radius: 4px;
+}
+
+.chat-message .fitgd-action-roll .roll-result h4 {
+  margin: 0 0 5px 0;
+  font-size: 14px;
+}
+
+.chat-message .fitgd-action-roll .dice-result {
+  font-size: 24px;
+  font-weight: bold;
+  color: #ff6347;
 }

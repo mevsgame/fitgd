@@ -13,6 +13,7 @@
 import { configureStore, createGameAPI } from '../dist/fitgd-core.js';
 import { createFoundryAdapter } from '../dist/fitgd-core.js';
 import {
+  ActionRollDialog,
   TakeHarmDialog,
   RallyDialog,
   PushDialog,
@@ -255,6 +256,10 @@ class FitGDCharacterSheet extends ActorSheet {
   activateListeners(html) {
     super.activateListeners(html);
 
+    // Action Rolls
+    html.find('.action-roll-btn').click(this._onActionRoll.bind(this));
+    html.find('.action-row').click(this._onQuickActionRoll.bind(this));
+
     // Harm
     html.find('.add-harm-btn').click(this._onAddHarm.bind(this));
 
@@ -285,6 +290,52 @@ class FitGDCharacterSheet extends ActorSheet {
     }
 
     return null;
+  }
+
+  async _onActionRoll(event) {
+    event.preventDefault();
+    const characterId = this.actor.id;
+    const crewId = this._getCrewId();
+
+    if (!crewId) {
+      ui.notifications.warn('Character must be part of a crew to make action rolls');
+      return;
+    }
+
+    new ActionRollDialog(characterId, crewId).render(true);
+  }
+
+  async _onQuickActionRoll(event) {
+    event.preventDefault();
+
+    // Only trigger on action row clicks, not on child elements
+    if (!event.currentTarget.classList.contains('action-row')) {
+      return;
+    }
+
+    const characterId = this.actor.id;
+    const crewId = this._getCrewId();
+
+    if (!crewId) {
+      ui.notifications.warn('Character must be part of a crew to make action rolls');
+      return;
+    }
+
+    // Get the action from the clicked row
+    const actionLabel = event.currentTarget.querySelector('label')?.textContent.trim().toLowerCase();
+
+    if (actionLabel) {
+      const dialog = new ActionRollDialog(characterId, crewId);
+      dialog.render(true);
+
+      // Pre-select the action after dialog renders
+      setTimeout(() => {
+        const select = dialog.element.find('[name="action"]');
+        if (select.length) {
+          select.val(actionLabel).trigger('change');
+        }
+      }, 100);
+    }
   }
 
   async _onAddHarm(event) {

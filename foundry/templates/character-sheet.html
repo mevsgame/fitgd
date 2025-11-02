@@ -25,10 +25,17 @@
 
     {{!-- Actions Tab --}}
     <div class="tab actions" data-group="primary" data-tab="actions">
-      <h2>Action Ratings</h2>
+      <div class="actions-header">
+        <h2>Action Ratings</h2>
+        <button class="action-roll-btn" type="button">
+          <i class="fas fa-dice-d6"></i> Roll Action
+        </button>
+      </div>
+      <p class="help-text">Click an action to roll it quickly, or use the Roll Action button for more options.</p>
+
       <div class="actions-grid">
         {{#each system.actionDots as |dots action|}}
-        <div class="action-row">
+        <div class="action-row" title="Click to roll {{action}}">
           <label>{{action}}</label>
           <div class="action-dots">
             {{#times 4}}
