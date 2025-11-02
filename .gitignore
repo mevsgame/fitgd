@@ -3,6 +3,7 @@
 # Dependencies
 node_modules/
 dist/
+foundry/dist/
 
 # Build outputs
 *.tsbuildinfo

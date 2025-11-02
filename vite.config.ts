@@ -3,6 +3,7 @@ import path from 'path';
 
 export default defineConfig({
   build: {
+    outDir: 'foundry/dist', // Output to foundry/dist for symlink
     lib: {
       entry: path.resolve(__dirname, 'src/api/index.ts'),
       name: 'FitGD',
