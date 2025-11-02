@@ -108,7 +108,7 @@ export function createClockAPI(store: Store) {
      * Delete a clock
      */
     delete(clockId: string): void {
-      store.dispatch(deleteClock(clockId));
+      store.dispatch(deleteClock({ clockId }));
     },
   };
 }

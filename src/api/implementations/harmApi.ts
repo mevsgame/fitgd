@@ -126,7 +126,7 @@ export function createHarmAPI(store: Store) {
       store.dispatch(addTrait({ characterId, trait: traitWithId }));
 
       // Delete the harm clock
-      store.dispatch(deleteClock(clockId));
+      store.dispatch(deleteClock({ clockId }));
 
       return {
         traitId: traitWithId.id,
