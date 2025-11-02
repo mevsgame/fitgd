@@ -3,26 +3,97 @@
  *
  * Main API export combining all sub-APIs.
  * This is the primary interface for consumers (Foundry VTT, etc.)
+ *
+ * Usage:
+ * ```typescript
+ * import { configureStore } from '@reduxjs/toolkit';
+ * import { createGameAPI } from '@fitgd/core';
+ *
+ * const store = configureStore({ ... });
+ * const game = createGameAPI(store);
+ *
+ * // Player actions
+ * const charId = game.character.create({ name, traits, actionDots });
+ * game.character.leanIntoTrait({ characterId, traitId, crewId });
+ * game.action.push({ crewId, type: 'extra-die' });
+ *
+ * // GM actions
+ * game.crew.performReset(crewId);
+ * game.harm.take({ characterId, harmType, position, effect });
+ *
+ * // Queries
+ * const canRally = game.query.canUseRally({ characterId, crewId });
+ * const momentum = game.query.getMomentum(crewId);
+ * ```
  */
 
-import type { CharacterAPI } from './character';
-import type { CrewAPI } from './crew';
-import type { ClockAPI } from './clock';
-import type { GameStateAPI } from './gameState';
+import type { Store } from '@reduxjs/toolkit';
+import { createCharacterAPI } from './implementations/characterApi';
+import { createActionAPI } from './implementations/actionApi';
+import { createResourceAPI } from './implementations/resourceApi';
+import { createCrewAPI } from './implementations/crewApi';
+import { createHarmAPI } from './implementations/harmApi';
+import { createClockAPI } from './implementations/clockApi';
+import { createQueryAPI } from './implementations/queryApi';
 
+/**
+ * Complete Game API
+ */
 export interface GameAPI {
-  character: CharacterAPI;
-  crew: CrewAPI;
-  clock: ClockAPI;
-  gameState: GameStateAPI;
+  character: ReturnType<typeof createCharacterAPI>;
+  action: ReturnType<typeof createActionAPI>;
+  resource: ReturnType<typeof createResourceAPI>;
+  crew: ReturnType<typeof createCrewAPI>;
+  harm: ReturnType<typeof createHarmAPI>;
+  clock: ReturnType<typeof createClockAPI>;
+  query: ReturnType<typeof createQueryAPI>;
 }
 
-export * from './character';
-export * from './crew';
-export * from './clock';
-export * from './gameState';
-
-// Factory function placeholder (will be implemented in Phase 6)
-export function createGameAPI(/* config?: Partial<GameConfig> */): GameAPI {
-  throw new Error('createGameAPI not yet implemented - Phase 6');
+/**
+ * Create the complete game API
+ *
+ * @param store - Redux store instance
+ * @returns Complete game API with all verbs
+ *
+ * @example
+ * ```typescript
+ * import { configureStore } from '@reduxjs/toolkit';
+ * import { rootReducer } from './store/rootReducer';
+ * import { createGameAPI } from '@fitgd/core';
+ *
+ * const store = configureStore({ reducer: rootReducer });
+ * const game = createGameAPI(store);
+ *
+ * // Now use the API
+ * const charId = game.character.create({
+ *   name: 'Sergeant Kane',
+ *   traits: [
+ *     { name: 'Served with Elite Infantry', category: 'role', disabled: false },
+ *     { name: 'Survived Hive Gangs', category: 'background', disabled: false }
+ *   ],
+ *   actionDots: { shoot: 3, command: 2, ... }
+ * });
+ * ```
+ */
+export function createGameAPI(store: Store): GameAPI {
+  return {
+    character: createCharacterAPI(store),
+    action: createActionAPI(store),
+    resource: createResourceAPI(store),
+    crew: createCrewAPI(store),
+    harm: createHarmAPI(store),
+    clock: createClockAPI(store),
+    query: createQueryAPI(store),
+  };
 }
+
+// Re-export for convenience
+export type {
+  CharacterAPI,
+  ActionAPI,
+  ResourceAPI,
+  CrewAPI,
+  HarmAPI,
+  ClockAPI,
+  QueryAPI,
+} from './types';

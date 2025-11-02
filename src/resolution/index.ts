@@ -150,10 +150,9 @@ export function applyHarmConsequence(
       })
     );
 
-    // Get the newly created clock ID
+    // Get the newly created clock ID (last one in allIds)
     const newState = store.getState() as any;
-    const newHarmClockIds = newState.clocks.byTypeAndEntity[harmClocksKey] || [];
-    clockId = newHarmClockIds[newHarmClockIds.length - 1];
+    clockId = newState.clocks.allIds[newState.clocks.allIds.length - 1];
 
     // Add segments if any
     if (segments > 0) {
