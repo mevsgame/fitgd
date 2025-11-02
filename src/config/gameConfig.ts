@@ -42,4 +42,31 @@ export const DEFAULT_CONFIG: GameConfig = {
   rally: {
     maxMomentumToUse: 3, // Rally only available at 0-3 Momentum
   },
+
+  resolution: {
+    // Momentum generated on failure/partial success (rules_primer.md:40-48)
+    momentumOnConsequence: {
+      controlled: 1,
+      risky: 2,
+      desperate: 4,
+    },
+    // Harm segments based on Position and Effect (rules_primer.md:144-146)
+    harmSegments: {
+      controlled: {
+        limited: 0,    // Controlled + Limited = 0 segments
+        standard: 1,   // Controlled + Standard = 1 segment
+        great: 2,      // Controlled + Great = 2 segments
+      },
+      risky: {
+        limited: 2,    // Risky + Limited = 2 segments
+        standard: 3,   // Risky + Standard = 3 segments
+        great: 4,      // Risky + Great = 4 segments
+      },
+      desperate: {
+        limited: 4,    // Desperate + Limited = 4 segments
+        standard: 5,   // Desperate + Standard = 5 segments
+        great: 6,      // Desperate + Great = 6 segments (Dying)
+      },
+    },
+  },
 };

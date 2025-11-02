@@ -41,4 +41,31 @@ export interface GameConfig {
   rally: {
     maxMomentumToUse: number; // Rally only available at 0-3 Momentum
   };
+
+  resolution: {
+    // Momentum generated on failure/partial success
+    momentumOnConsequence: {
+      controlled: number;
+      risky: number;
+      desperate: number;
+    };
+    // Harm segments based on Position and Effect
+    harmSegments: {
+      controlled: {
+        limited: number;
+        standard: number;
+        great: number;
+      };
+      risky: {
+        limited: number;
+        standard: number;
+        great: number;
+      };
+      desperate: {
+        limited: number;
+        standard: number;
+        great: number;
+      };
+    };
+  };
 }

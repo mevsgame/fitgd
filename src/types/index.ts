@@ -9,3 +9,4 @@ export * from './crew';
 export * from './clock';
 export * from './command';
 export * from './config';
+export * from './resolution';
