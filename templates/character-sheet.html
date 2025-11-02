@@ -1,0 +1,228 @@
+<!--
+  FitGD Character Sheet Template (Foundry VTT)
+
+  NOTE: This implements Forged in the Grimdark rules, NOT standard Blades in the Dark!
+
+  Key Differences:
+  - No Stress/Trauma (Momentum is crew-level)
+  - Harm Clocks instead of harm levels
+  - Rally mechanic (at 0-3 Momentum)
+  - Trait system (lean into, disable, group)
+-->
+
+<form class="{{cssClass}} fitgd-character-sheet" autocomplete="off">
+
+  <!-- Header -->
+  <header class="sheet-header">
+    <img class="profile-img" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" height="100" width="100"/>
+
+    <div class="header-fields">
+      <h1 class="charname">
+        <input name="name" type="text" value="{{actor.name}}" placeholder="Character Name"/>
+      </h1>
+
+      <!-- Rally Indicator (Available at 0-3 Momentum) -->
+      <div class="rally-indicator {{#if system.rally.available}}available{{/if}}">
+        <label>
+          <input type="checkbox" name="system.rally.available" {{checked system.rally.available}} disabled/>
+          <span class="rally-label">Rally Available</span>
+        </label>
+      </div>
+    </div>
+  </header>
+
+  {{!-- Sheet Tab Navigation --}}
+  <nav class="sheet-tabs tabs" data-group="primary">
+    <a class="item" data-tab="actions">Actions</a>
+    <a class="item" data-tab="traits">Traits</a>
+    <a class="item" data-tab="harm">Harm</a>
+    <a class="item" data-tab="equipment">Equipment</a>
+  </nav>
+
+  {{!-- Sheet Body --}}
+  <section class="sheet-body">
+
+    {{!-- Actions Tab --}}
+    <div class="tab actions" data-group="primary" data-tab="actions">
+      <h2>Action Ratings</h2>
+      <p class="help-text">Starting: 12 dots total, max 3 per action. Maximum: 4 dots per action.</p>
+
+      <div class="actions-grid">
+        {{!-- Insight Actions --}}
+        <div class="action-group">
+          <h3>Insight</h3>
+          {{> actionRating name="study" label="Study" value=system.actions.study.value}}
+          {{> actionRating name="survey" label="Survey" value=system.actions.survey.value}}
+          {{> actionRating name="tech" label="Tech" value=system.actions.tech.value}}
+          {{> actionRating name="attune" label="Attune" value=system.actions.attune.value}}
+        </div>
+
+        {{!-- Prowess Actions --}}
+        <div class="action-group">
+          <h3>Prowess</h3>
+          {{> actionRating name="finesse" label="Finesse" value=system.actions.finesse.value}}
+          {{> actionRating name="skulk" label="Skulk" value=system.actions.skulk.value}}
+          {{> actionRating name="shoot" label="Shoot" value=system.actions.shoot.value}}
+          {{> actionRating name="skirmish" label="Skirmish" value=system.actions.skirmish.value}}
+          {{> actionRating name="wreck" label="Wreck" value=system.actions.wreck.value}}
+        </div>
+
+        {{!-- Resolve Actions --}}
+        <div class="action-group">
+          <h3>Resolve</h3>
+          {{> actionRating name="command" label="Command" value=system.actions.command.value}}
+          {{> actionRating name="consort" label="Consort" value=system.actions.consort.value}}
+          {{> actionRating name="sway" label="Sway" value=system.actions.sway.value}}
+        </div>
+      </div>
+    </div>
+
+    {{!-- Traits Tab --}}
+    <div class="tab traits" data-group="primary" data-tab="traits">
+      <h2>Traits</h2>
+      <p class="help-text">Starting: 2 traits (role + background). Lean into trait for Momentum. Disable until Rally or Reset.</p>
+
+      <button type="button" class="add-trait-btn">
+        <i class="fas fa-plus"></i> Add Trait
+      </button>
+
+      <ol class="traits-list">
+        {{#each actor.items as |item|}}
+          {{#if (eq item.type "trait")}}
+            <li class="trait-item {{item.system.category}} {{#if item.system.disabled}}disabled{{/if}}" data-item-id="{{item._id}}">
+              <div class="trait-header">
+                <h4 class="trait-name">{{item.name}}</h4>
+                <span class="trait-category">{{item.system.category}}</span>
+              </div>
+
+              <div class="trait-controls">
+                <label class="trait-disabled">
+                  <input type="checkbox" name="items.{{item._id}}.system.disabled" {{checked item.system.disabled}}/>
+                  Disabled (Leaned Into)
+                </label>
+
+                <button type="button" class="trait-edit-btn" data-item-id="{{item._id}}">
+                  <i class="fas fa-edit"></i>
+                </button>
+
+                <button type="button" class="trait-delete-btn" data-item-id="{{item._id}}">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+
+              {{#if item.system.description}}
+                <p class="trait-description">{{item.system.description}}</p>
+              {{/if}}
+            </li>
+          {{/if}}
+        {{/each}}
+      </ol>
+    </div>
+
+    {{!-- Harm Tab --}}
+    <div class="tab harm" data-group="primary" data-tab="harm">
+      <h2>Harm Clocks</h2>
+      <p class="help-text">Max 3 active harm clocks (6 segments each). 4th harm replaces clock with fewest segments. 6/6 = Dying.</p>
+
+      <button type="button" class="add-harm-btn">
+        <i class="fas fa-plus"></i> Take Harm
+      </button>
+
+      <div class="harm-clocks-grid">
+        {{#each system.harm as |harmClock|}}
+          <div class="harm-clock-item" data-clock-id="{{harmClock.id}}">
+            <h4 class="harm-type">{{harmClock.type}}</h4>
+
+            {{!-- Clock Visual (SVG from Blades assets) --}}
+            <img
+              src="assets/clocks/themes/{{harmClock.color}}/6clock_{{harmClock.segments}}.svg"
+              alt="{{harmClock.type}} ({{harmClock.segments}}/6)"
+              class="clock-image"
+              width="120"
+              height="120"
+              data-clock-id="{{harmClock.id}}"
+            />
+
+            <div class="harm-clock-controls">
+              <button type="button" class="harm-add-btn" data-clock-id="{{harmClock.id}}">
+                <i class="fas fa-plus"></i> Add
+              </button>
+              <button type="button" class="harm-clear-btn" data-clock-id="{{harmClock.id}}">
+                <i class="fas fa-minus"></i> Clear
+              </button>
+              <button type="button" class="harm-delete-btn" data-clock-id="{{harmClock.id}}">
+                <i class="fas fa-trash"></i> Delete
+              </button>
+            </div>
+
+            {{#if (eq harmClock.segments 6)}}
+              <div class="dying-warning">
+                <i class="fas fa-skull"></i> DYING
+              </div>
+            {{/if}}
+          </div>
+        {{/each}}
+
+        {{#if (lt system.harm.length 1)}}
+          <p class="no-harm-message">No harm taken. Click "Take Harm" to add a harm clock.</p>
+        {{/if}}
+      </div>
+    </div>
+
+    {{!-- Equipment Tab --}}
+    <div class="tab equipment" data-group="primary" data-tab="equipment">
+      <h2>Equipment</h2>
+      <p class="help-text">Tiered equipment: Accessible (standard), Inaccessible (rare), Epic (legendary).</p>
+
+      <button type="button" class="add-equipment-btn">
+        <i class="fas fa-plus"></i> Add Equipment
+      </button>
+
+      <div class="equipment-list">
+        {{#each actor.items as |item|}}
+          {{#if (eq item.type "equipment")}}
+            <div class="equipment-item {{item.system.tier}}" data-item-id="{{item._id}}">
+              <div class="equipment-header">
+                <h4 class="equipment-name">{{item.name}}</h4>
+                <span class="equipment-tier">{{item.system.tier}}</span>
+                <span class="equipment-category">{{item.system.category}}</span>
+              </div>
+
+              <div class="equipment-controls">
+                <button type="button" class="equipment-edit-btn" data-item-id="{{item._id}}">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button type="button" class="equipment-delete-btn" data-item-id="{{item._id}}">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+
+              {{#if item.system.description}}
+                <p class="equipment-description">{{item.system.description}}</p>
+              {{/if}}
+            </div>
+          {{/if}}
+        {{/each}}
+      </div>
+    </div>
+
+  </section>
+</form>
+
+{{!-- Partial: Action Rating Dots --}}
+{{#*inline "actionRating"}}
+  <div class="action-rating" data-action="{{name}}">
+    <label>{{label}}</label>
+    <div class="action-dots">
+      {{#times 5}}
+        <input
+          type="radio"
+          name="system.actions.{{../name}}.value"
+          value="{{@index}}"
+          {{#if (eq @index ../value)}}checked{{/if}}
+        />
+        <span class="dot {{#if (lte @index ../value)}}filled{{/if}}"></span>
+      {{/times}}
+    </div>
+  </div>
+{{/inline}}

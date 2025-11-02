@@ -1,0 +1,257 @@
+<!--
+  FitGD Crew Sheet Template (Foundry VTT)
+
+  NOTE: This implements Forged in the Grimdark rules, NOT standard Blades in the Dark!
+
+  Key Differences:
+  - Momentum (0-10, starts at 5) instead of Rep/Heat
+  - Addiction Clock (crew-wide, 8 segments)
+  - Consumable Clocks (depletion tracking)
+  - Progress Clocks (mission objectives)
+  - Rally available at 0-3 Momentum
+-->
+
+<form class="{{cssClass}} fitgd-crew-sheet" autocomplete="off">
+
+  <!-- Header -->
+  <header class="sheet-header">
+    <img class="profile-img" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" height="100" width="100"/>
+
+    <div class="header-fields">
+      <h1 class="crewname">
+        <input name="name" type="text" value="{{actor.name}}" placeholder="Crew Name"/>
+      </h1>
+
+      <!-- Momentum Track (PRIMARY RESOURCE) -->
+      <div class="momentum-track">
+        <h2>Momentum</h2>
+        <p class="help-text">Shared crew resource (0-10). Starts at 5. Rally available at 0-3.</p>
+
+        <div class="momentum-bar">
+          {{#times 11}}
+            <input
+              type="radio"
+              name="system.momentum.value"
+              value="{{@index}}"
+              {{#if (eq @index ../system.momentum.value)}}checked{{/if}}
+            />
+            <span class="momentum-pip {{#if (lte @index ../system.momentum.value)}}filled{{/if}}" data-value="{{@index}}">
+              {{@index}}
+            </span>
+          {{/times}}
+        </div>
+
+        {{#if (lte system.momentum.value 3)}}
+          <div class="rally-notice">
+            <i class="fas fa-heartbeat"></i> Rally Available (Momentum ≤ 3)
+          </div>
+        {{/if}}
+      </div>
+    </div>
+  </header>
+
+  {{!-- Sheet Tab Navigation --}}
+  <nav class="sheet-tabs tabs" data-group="primary">
+    <a class="item" data-tab="members">Members</a>
+    <a class="item" data-tab="resources">Resources</a>
+    <a class="item" data-tab="clocks">Clocks</a>
+  </nav>
+
+  {{!-- Sheet Body --}}
+  <section class="sheet-body">
+
+    {{!-- Members Tab --}}
+    <div class="tab members" data-group="primary" data-tab="members">
+      <h2>Crew Members</h2>
+
+      <button type="button" class="add-member-btn">
+        <i class="fas fa-user-plus"></i> Add Member
+      </button>
+
+      <ul class="members-list">
+        {{#each system.characters as |characterId|}}
+          <li class="member-item" data-character-id="{{characterId}}">
+            {{!-- This would link to actual character actors --}}
+            <a href="#" class="member-link" data-uuid="Actor.{{characterId}}">
+              {{!-- Character name would be resolved from actor --}}
+              Character: {{characterId}}
+            </a>
+
+            <button type="button" class="remove-member-btn" data-character-id="{{characterId}}">
+              <i class="fas fa-user-minus"></i>
+            </button>
+          </li>
+        {{/each}}
+
+        {{#if (eq system.characters.length 0)}}
+          <li class="no-members">No crew members. Click "Add Member" to recruit.</li>
+        {{/if}}
+      </ul>
+    </div>
+
+    {{!-- Resources Tab --}}
+    <div class="tab resources" data-group="primary" data-tab="resources">
+      <h2>Crew Resources</h2>
+
+      {{!-- Addiction Clock (FitGD unique mechanic!) --}}
+      <div class="addiction-section">
+        <h3>Addiction Clock</h3>
+        <p class="help-text">Using stims advances this clock. At 8/8, all stims are locked. Reduces by 2 on Reset.</p>
+
+        {{#if system.addiction}}
+          <div class="addiction-clock">
+            <img
+              src="assets/clocks/themes/{{system.addiction.color}}/8clock_{{system.addiction.segments}}.svg"
+              alt="Addiction ({{system.addiction.segments}}/8)"
+              class="clock-image large"
+              width="150"
+              height="150"
+            />
+
+            <div class="addiction-controls">
+              <button type="button" class="addiction-add-btn">
+                <i class="fas fa-plus"></i> Use Stim (+1 segment)
+              </button>
+              <button type="button" class="addiction-clear-btn">
+                <i class="fas fa-minus"></i> Clear Segment
+              </button>
+            </div>
+
+            {{#if (gte system.addiction.segments 8)}}
+              <div class="addiction-warning">
+                <i class="fas fa-ban"></i> ADDICTED - All Stims Locked
+              </div>
+            {{/if}}
+          </div>
+        {{else}}
+          <button type="button" class="create-addiction-clock-btn">
+            <i class="fas fa-plus"></i> Create Addiction Clock
+          </button>
+        {{/if}}
+      </div>
+
+      {{!-- Consumable Clocks --}}
+      <div class="consumables-section">
+        <h3>Consumables</h3>
+        <p class="help-text">Track depletion of grenades, ammo, etc. When filled, tier downgrades (accessible → inaccessible).</p>
+
+        <button type="button" class="add-consumable-btn">
+          <i class="fas fa-plus"></i> Add Consumable
+        </button>
+
+        <div class="consumables-grid">
+          {{#each system.consumables as |consumable|}}
+            <div class="consumable-item {{#if consumable.frozen}}frozen{{/if}}" data-clock-id="{{consumable.id}}">
+              <h4 class="consumable-name">{{consumable.type}}</h4>
+
+              <img
+                src="assets/clocks/themes/{{consumable.color}}/{{consumable.maxSegments}}clock_{{consumable.segments}}.svg"
+                alt="{{consumable.type}} ({{consumable.segments}}/{{consumable.maxSegments}})"
+                class="clock-image"
+                width="100"
+                height="100"
+              />
+
+              <div class="consumable-meta">
+                <span class="consumable-rarity">{{consumable.rarity}}</span>
+                <span class="consumable-tier">{{consumable.tier}}</span>
+              </div>
+
+              <div class="consumable-controls">
+                <button type="button" class="consumable-use-btn" data-clock-id="{{consumable.id}}" {{#if consumable.frozen}}disabled{{/if}}>
+                  <i class="fas fa-hand-sparkles"></i> Use
+                </button>
+                <button type="button" class="consumable-delete-btn" data-clock-id="{{consumable.id}}">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+
+              {{#if consumable.frozen}}
+                <div class="consumable-frozen-warning">
+                  <i class="fas fa-lock"></i> Depleted
+                </div>
+              {{/if}}
+            </div>
+          {{/each}}
+
+          {{#if (eq system.consumables.length 0)}}
+            <p class="no-consumables">No consumables tracked. Click "Add Consumable" to create.</p>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+
+    {{!-- Clocks Tab --}}
+    <div class="tab clocks" data-group="primary" data-tab="clocks">
+      <h2>Progress & Threat Clocks</h2>
+      <p class="help-text">Track mission objectives, long-term projects, enemy plans, etc.</p>
+
+      <button type="button" class="add-clock-btn">
+        <i class="fas fa-clock"></i> Add Clock
+      </button>
+
+      <div class="clocks-grid">
+        {{#each system.progressClocks as |clock|}}
+          <div class="progress-clock-item {{clock.category}}" data-clock-id="{{clock.id}}">
+            <h4 class="clock-name">{{clock.name}}</h4>
+
+            {{#if clock.category}}
+              <span class="clock-category">{{clock.category}}</span>
+            {{/if}}
+
+            {{#if clock.isCountdown}}
+              <span class="clock-countdown-badge">
+                <i class="fas fa-hourglass-half"></i> Countdown
+              </span>
+            {{/if}}
+
+            <img
+              src="assets/clocks/themes/{{clock.color}}/{{clock.maxSegments}}clock_{{clock.segments}}.svg"
+              alt="{{clock.name}} ({{clock.segments}}/{{clock.maxSegments}})"
+              class="clock-image"
+              width="120"
+              height="120"
+            />
+
+            {{#if clock.description}}
+              <p class="clock-description">{{clock.description}}</p>
+            {{/if}}
+
+            <div class="clock-controls">
+              <button type="button" class="clock-advance-btn" data-clock-id="{{clock.id}}">
+                <i class="fas fa-plus"></i> Advance
+              </button>
+              <button type="button" class="clock-reduce-btn" data-clock-id="{{clock.id}}">
+                <i class="fas fa-minus"></i> Reduce
+              </button>
+              <button type="button" class="clock-edit-btn" data-clock-id="{{clock.id}}">
+                <i class="fas fa-edit"></i> Edit
+              </button>
+              <button type="button" class="clock-delete-btn" data-clock-id="{{clock.id}}">
+                <i class="fas fa-trash"></i> Delete
+              </button>
+            </div>
+
+            {{#if (gte clock.segments clock.maxSegments)}}
+              <div class="clock-completed-badge">
+                <i class="fas fa-check-circle"></i> Completed
+              </div>
+            {{/if}}
+          </div>
+        {{/each}}
+
+        {{#if (eq system.progressClocks.length 0)}}
+          <p class="no-clocks">No clocks tracked. Click "Add Clock" to create.</p>
+        {{/if}}
+      </div>
+    </div>
+
+  </section>
+
+  {{!-- Footer: Reset Button --}}
+  <footer class="sheet-footer">
+    <button type="button" class="reset-btn">
+      <i class="fas fa-redo"></i> Perform Reset (Momentum → 5, Addiction -2, Rally Reset)
+    </button>
+  </footer>
+</form>
