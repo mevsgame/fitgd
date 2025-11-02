@@ -11,7 +11,6 @@ import { addMomentum } from '../slices/crewSlice';
 import { createClock, addSegments } from '../slices/clockSlice';
 import type {
   Position,
-  Effect,
   Result,
   RollResult,
   ConsequenceResult,

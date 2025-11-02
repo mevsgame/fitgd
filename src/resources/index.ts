@@ -1,4 +1,5 @@
 import type { Store } from '@reduxjs/toolkit';
+import type { Trait } from '../types';
 import { addTrait, enableTrait, resetRally } from '../slices/characterSlice';
 import { resetMomentum } from '../slices/crewSlice';
 import {
@@ -337,7 +338,7 @@ export function performMomentumReset(
   const addictionSegments = reduceAddiction(store, crewId, userId);
 
   // 3 & 4. Reset rally and re-enable traits for all characters in crew
-  const characterResults = crew.characters.map((characterId) => {
+  const characterResults = crew.characters.map((characterId: string) => {
     const character = state.characters.byId[characterId];
 
     if (!character) {
@@ -352,8 +353,8 @@ export function performMomentumReset(
     store.dispatch(resetRally({ characterId, userId }));
 
     // Re-enable all disabled traits
-    const disabledTraits = character.traits.filter((t) => t.disabled);
-    disabledTraits.forEach((trait) => {
+    const disabledTraits = character.traits.filter((t: Trait) => t.disabled);
+    disabledTraits.forEach((trait: Trait) => {
       store.dispatch(
         enableTrait({
           characterId,

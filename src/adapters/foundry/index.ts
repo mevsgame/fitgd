@@ -84,12 +84,12 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
       const state = store.getState();
 
       const characters = state.characters.allIds
-        .map((id) => exportCharacterToFoundry(store, id))
-        .filter((actor): actor is FoundryActor => actor !== null);
+        .map((id: string) => exportCharacterToFoundry(store, id))
+        .filter((actor: FoundryActor | null): actor is FoundryActor => actor !== null);
 
       const crews = state.crews.allIds
-        .map((id) => exportCrewToFoundry(store, id))
-        .filter((actor): actor is FoundryActor => actor !== null);
+        .map((id: string) => exportCrewToFoundry(store, id))
+        .filter((actor: FoundryActor | null): actor is FoundryActor => actor !== null);
 
       return { characters, crews };
     },
@@ -99,10 +99,10 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
       const character = importCharacterFromFoundry(foundryActor);
       if (!character) return null;
 
-      // Dispatch to Redux
-      store.dispatch(
+      // Dispatch to Redux (generates new ID)
+      // TODO: Preserve Foundry ID - need importCharacter action that accepts ID
+      const result = store.dispatch(
         createCharacter({
-          id: character.id,
           name: character.name,
           traits: character.traits,
           actionDots: character.actionDots,
@@ -111,24 +111,24 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
 
       // TODO: Import equipment and harm clocks separately
 
-      return character.id;
+      return result.payload.id;
     },
 
     importCrew(foundryActor: FoundryActor): string | null {
       const crew = importCrewFromFoundry(foundryActor);
       if (!crew) return null;
 
-      // Dispatch to Redux
-      store.dispatch(
+      // Dispatch to Redux (generates new ID)
+      // TODO: Preserve Foundry ID - need importCrew action that accepts ID
+      const result = store.dispatch(
         createCrew({
-          id: crew.id,
           name: crew.name,
         })
       );
 
       // TODO: Import characters, clocks separately
 
-      return crew.id;
+      return result.payload.id;
     },
 
     // ===== Sync (bidirectional) =====
@@ -153,7 +153,7 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
       };
     },
 
-    importState(serializedState: SerializedState): void {
+    importState(_serializedState: SerializedState): void {
       // TODO: Implement state hydration
       // This should replay commands or directly set state
       console.warn('importState not yet implemented');
@@ -170,7 +170,7 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
       };
     },
 
-    replayCommands(history: CommandHistory): void {
+    replayCommands(_history: CommandHistory): void {
       // TODO: Implement command replay
       // Dispatch each command in order to reconstruct state
       console.warn('replayCommands not yet implemented');

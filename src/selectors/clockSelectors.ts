@@ -67,7 +67,7 @@ export const selectClocksByType = createSelector(
 export const selectClocksByTypeAndEntity = createSelector(
   [
     selectClocksState,
-    (_state: RootState, clockType: ClockType, entityId: string) => clockType,
+    (_state: RootState, clockType: ClockType, _entityId: string) => clockType,
     (_state: RootState, _clockType: ClockType, entityId: string) => entityId,
   ],
   (clocksState, clockType, entityId): Clock[] => {
@@ -128,7 +128,7 @@ export const selectAddictionClockByCrew = createSelector(
 export const selectConsumableClockBySubtype = createSelector(
   [
     selectClocksState,
-    (_state: RootState, crewId: string, subtype: string) => crewId,
+    (_state: RootState, crewId: string, _subtype: string) => crewId,
     (_state: RootState, _crewId: string, subtype: string) => subtype,
   ],
   (clocksState, crewId, subtype): Clock | null => {

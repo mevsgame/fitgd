@@ -1,9 +1,8 @@
 import type { Store } from '@reduxjs/toolkit';
-import type { Character } from '../../types';
+import type { Character, Trait, Equipment } from '../../types';
 import type {
   FoundryActor,
   FoundryCharacterData,
-  FoundryItem,
   HarmClockData,
   ClockColor,
 } from './types';
@@ -34,7 +33,7 @@ export function exportCharacterToFoundry(
   const harmClocks = getCharacterHarmClocks(store, characterId);
 
   // Get traits as Foundry Items
-  const traitItems = character.traits.map((trait) => ({
+  const traitItems = character.traits.map((trait: Trait) => ({
     _id: trait.id,
     name: trait.name,
     type: 'trait' as const,
@@ -47,7 +46,7 @@ export function exportCharacterToFoundry(
   }));
 
   // Get equipment as Foundry Items
-  const equipmentItems = character.equipment.map((equipment) => ({
+  const equipmentItems = character.equipment.map((equipment: Equipment) => ({
     _id: equipment.id,
     name: equipment.name,
     type: 'equipment' as const,
@@ -170,7 +169,7 @@ function getCharacterHarmClocks(store: Store, characterId: string): HarmClockDat
   const harmClocksKey = `harm:${characterId}`;
   const harmClockIds = state.clocks.byTypeAndEntity[harmClocksKey] || [];
 
-  return harmClockIds.map((clockId) => {
+  return harmClockIds.map((clockId: string) => {
     const clock = state.clocks.byId[clockId];
     return {
       id: clock.id,

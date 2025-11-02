@@ -90,7 +90,7 @@ export function createQueryAPI(store: Store) {
         return [];
       }
 
-      return character.traits.filter((t) => !t.disabled);
+      return character.traits.filter((t: Trait) => !t.disabled);
     },
 
     /**

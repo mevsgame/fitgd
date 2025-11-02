@@ -2,16 +2,13 @@ import type { Store } from '@reduxjs/toolkit';
 import type { Trait, ActionDots, Equipment } from '../../types';
 import {
   createCharacter,
-  addTrait,
   disableTrait,
   enableTrait,
   groupTraits,
-  setActionDots,
   advanceActionDots,
   addEquipment,
   removeEquipment,
   useRally,
-  resetRally,
 } from '../../slices/characterSlice';
 import { addMomentum, spendMomentum } from '../../slices/crewSlice';
 import { DEFAULT_CONFIG } from '../../config';
@@ -241,7 +238,7 @@ export function createCharacterAPI(store: Store) {
         return [];
       }
 
-      return character.traits.filter((t) => !t.disabled);
+      return character.traits.filter((t: Trait) => !t.disabled);
     },
   };
 }

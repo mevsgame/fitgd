@@ -3,14 +3,11 @@ import { generateId } from '../utils/uuid';
 import {
   validateSegmentAmount,
   validateSegmentAddition,
-  validateSegmentRange,
   getMaxSegments,
-  validateHarmClockCount,
   findClockWithFewestSegments,
   validateSingleAddictionClock,
   isClockFilled,
   validateConsumableMetadata,
-  calculateAddictionReduction,
   validateClockExists,
   validateProgressClockSize,
 } from '../validators/clockValidator';

@@ -114,7 +114,7 @@ function getCrewConsumableClocks(store: Store, crewId: string): ConsumableClockD
   const consumableClocksKey = `consumable:${crewId}`;
   const consumableClockIds = state.clocks.byTypeAndEntity[consumableClocksKey] || [];
 
-  return consumableClockIds.map((clockId) => {
+  return consumableClockIds.map((clockId: string) => {
     const clock = state.clocks.byId[clockId];
     const metadata = clock.metadata || {};
 
@@ -139,7 +139,7 @@ function getCrewProgressClocks(store: Store, crewId: string): ProgressClockData[
   const progressClocksKey = `progress:${crewId}`;
   const progressClockIds = state.clocks.byTypeAndEntity[progressClocksKey] || [];
 
-  return progressClockIds.map((clockId) => {
+  return progressClockIds.map((clockId: string) => {
     const clock = state.clocks.byId[clockId];
     const metadata = clock.metadata || {};
 
