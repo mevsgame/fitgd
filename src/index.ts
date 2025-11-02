@@ -18,5 +18,9 @@ export { DEFAULT_CONFIG } from './config';
 // API
 export * from './api';
 
+// Store
+export { configureStore, rootReducer } from './store';
+export type { RootState, AppDispatch } from './store';
+
 // Version
 export const VERSION = '0.1.0';

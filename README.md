@@ -62,6 +62,17 @@ console.log(`Took ${harmResult.segmentsAdded} harm, now at ${harmResult.newSegme
 game.action.push({ crewId, type: "extra-die" });
 ```
 
+**For more examples**, see [docs/EXAMPLES.md](./docs/EXAMPLES.md) which includes:
+- Character creation and advancement
+- Action resolution (push, flashback, consequences)
+- Harm management and recovery
+- Momentum economy
+- Traits and Rally mechanics
+- Resources and consumables
+- Progress clocks
+- Complete mission flow examples
+- Foundry VTT integration patterns
+
 ## Architecture
 
 ### Event Sourcing
@@ -103,7 +114,11 @@ game.action.push({ crewId, type: "extra-die" });
 
 ## API Reference
 
-See [CLAUDE.md](./CLAUDE.md) for complete implementation plan and API documentation.
+### Documentation
+
+- **[Full API Documentation](./docs/api/)** - Complete TypeDoc-generated API reference with type definitions
+- **[Usage Examples](./docs/EXAMPLES.md)** - Comprehensive code examples for common scenarios
+- **[Implementation Plan](./CLAUDE.md)** - Complete development roadmap and architecture details
 
 ### Main API Modules
 
@@ -114,6 +129,11 @@ See [CLAUDE.md](./CLAUDE.md) for complete implementation plan and API documentat
 - **HarmAPI**: take, recover, convertToScar
 - **ClockAPI**: createProgress, advance, reduce, delete
 - **QueryAPI**: canUseRally, canUseStim, isDying, getMomentum, trait/clock queries
+
+To generate API documentation locally:
+```bash
+pnpm run docs  # Generates docs in ./docs/api/
+```
 
 ## Testing
 

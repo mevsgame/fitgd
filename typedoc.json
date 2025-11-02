@@ -1,0 +1,32 @@
+{
+  "entryPoints": ["src/api/index.ts"],
+  "out": "docs/api",
+  "exclude": ["**/node_modules/**", "**/tests/**", "**/*.test.ts"],
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeExternals": true,
+  "includeVersion": true,
+  "readme": "README.md",
+  "plugin": [],
+  "name": "FitGD Core API",
+  "tsconfig": "./tsconfig.json",
+  "skipErrorChecking": true,
+  "navigationLinks": {
+    "GitHub": "https://github.com/mevsgame/fitgd"
+  },
+  "sort": ["source-order"],
+  "searchInComments": true,
+  "categorizeByGroup": true,
+  "defaultCategory": "Other",
+  "categoryOrder": [
+    "Character API",
+    "Crew API",
+    "Action API",
+    "Harm API",
+    "Clock API",
+    "Resource API",
+    "Query API",
+    "Foundry Adapter",
+    "*"
+  ]
+}

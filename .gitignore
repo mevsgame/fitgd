@@ -10,6 +10,9 @@ dist/
 # Test results
 coverage/
 
+# Documentation (generated)
+docs/api/
+
 # Environment
 .env
 .env.local
