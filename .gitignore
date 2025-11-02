@@ -1,1 +1,15 @@
 /vault/.obsidian
+
+# Dependencies
+node_modules/
+dist/
+
+# Build outputs
+*.tsbuildinfo
+
+# Test results
+coverage/
+
+# Environment
+.env
+.env.local
