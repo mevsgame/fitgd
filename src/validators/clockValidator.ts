@@ -57,7 +57,8 @@ export function validateSegmentRange(
  */
 export function getMaxSegments(
   clockType: ClockType,
-  rarity?: 'common' | 'uncommon' | 'rare'
+  rarity?: 'common' | 'uncommon' | 'rare',
+  customSize?: number
 ): number {
   switch (clockType) {
     case 'harm':
@@ -71,6 +72,12 @@ export function getMaxSegments(
 
     case 'addiction':
       return DEFAULT_CONFIG.clocks.addiction.segments; // 8
+
+    case 'progress':
+      if (!customSize) {
+        throw new Error('Progress clocks require a custom size (4, 6, 8, or 12)');
+      }
+      return customSize; // Caller provides size after validation
 
     default:
       throw new Error(`Unknown clock type: ${clockType}`);
@@ -174,5 +181,18 @@ export function validateClockExists(
 ): asserts clock is Clock {
   if (!clock) {
     throw new Error(`Clock ${clockId} not found`);
+  }
+}
+
+/**
+ * Validate progress clock size
+ */
+export function validateProgressClockSize(maxSegments: number): void {
+  const allowedSizes = DEFAULT_CONFIG.clocks.progress.allowedSizes;
+
+  if (!allowedSizes.includes(maxSegments)) {
+    throw new Error(
+      `Progress clock size must be one of: ${allowedSizes.join(', ')}. Got ${maxSegments}.`
+    );
   }
 }

@@ -12,6 +12,7 @@ import {
   validateConsumableMetadata,
   calculateAddictionReduction,
   validateClockExists,
+  validateProgressClockSize,
 } from '../validators/clockValidator';
 import type { Clock, ClockType, Command } from '../types';
 
@@ -50,6 +51,10 @@ interface CreateClockPayload {
   subtype?: string;
   rarity?: 'common' | 'uncommon' | 'rare';
   tier?: 'accessible' | 'inaccessible';
+  maxSegments?: number; // For progress clocks (4, 6, 8, or 12)
+  category?: 'long-term-project' | 'threat' | 'personal-goal' | 'obstacle' | 'faction';
+  description?: string;
+  isCountdown?: boolean;
   userId?: string;
 }
 
@@ -244,7 +249,35 @@ const clockSlice = createSlice({
           validateConsumableMetadata(payload.rarity, payload.tier);
         }
 
-        const maxSegments = getMaxSegments(payload.clockType, payload.rarity);
+        if (payload.clockType === 'progress') {
+          if (!payload.maxSegments) {
+            throw new Error('Progress clocks require maxSegments (4, 6, 8, or 12)');
+          }
+          validateProgressClockSize(payload.maxSegments);
+        }
+
+        const maxSegments = getMaxSegments(
+          payload.clockType,
+          payload.rarity,
+          payload.maxSegments
+        );
+
+        // Build metadata based on clock type
+        let metadata: Record<string, unknown> | undefined;
+
+        if (payload.clockType === 'consumable') {
+          metadata = {
+            rarity: payload.rarity,
+            tier: payload.tier,
+            frozen: false,
+          };
+        } else if (payload.clockType === 'progress') {
+          metadata = {
+            category: payload.category,
+            isCountdown: payload.isCountdown,
+            description: payload.description,
+          };
+        }
 
         const clock: Clock = {
           id: generateId(),
@@ -253,14 +286,7 @@ const clockSlice = createSlice({
           subtype: payload.subtype,
           segments: 0,
           maxSegments,
-          metadata:
-            payload.clockType === 'consumable'
-              ? {
-                  rarity: payload.rarity,
-                  tier: payload.tier,
-                  frozen: false,
-                }
-              : undefined,
+          metadata,
           createdAt: timestamp,
           updatedAt: timestamp,
         };

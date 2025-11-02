@@ -594,4 +594,187 @@ describe('clockSlice', () => {
       expect(clock.segments).toBe(5);
     });
   });
+
+  describe('progress clocks', () => {
+    it('should create a 4-clock progress clock', () => {
+      store.dispatch(
+        createClock({
+          entityId: 'crew-456',
+          clockType: 'progress',
+          subtype: 'Infiltrate Underhive',
+          maxSegments: 4,
+          category: 'long-term-project',
+        })
+      );
+
+      const state = store.getState().clocks;
+      const clockId = state.allIds[0];
+      const clock = state.byId[clockId];
+
+      expect(clock.clockType).toBe('progress');
+      expect(clock.maxSegments).toBe(4);
+      expect(clock.segments).toBe(0);
+      expect(clock.metadata?.category).toBe('long-term-project');
+    });
+
+    it('should create a 6-clock progress clock', () => {
+      store.dispatch(
+        createClock({
+          entityId: 'character-789',
+          clockType: 'progress',
+          subtype: 'Earn Trust of Mechanicus',
+          maxSegments: 6,
+          category: 'personal-goal',
+          description: 'Complete tasks for Tech-Priests',
+        })
+      );
+
+      const state = store.getState().clocks;
+      const clockId = state.allIds[0];
+      const clock = state.byId[clockId];
+
+      expect(clock.maxSegments).toBe(6);
+      expect(clock.metadata?.category).toBe('personal-goal');
+      expect(clock.metadata?.description).toBe('Complete tasks for Tech-Priests');
+    });
+
+    it('should create an 8-clock progress clock', () => {
+      store.dispatch(
+        createClock({
+          entityId: 'crew-456',
+          clockType: 'progress',
+          subtype: 'Establish Safe House',
+          maxSegments: 8,
+          category: 'long-term-project',
+        })
+      );
+
+      const clock = store.getState().clocks.byId[store.getState().clocks.allIds[0]];
+      expect(clock.maxSegments).toBe(8);
+    });
+
+    it('should create a 12-clock progress clock', () => {
+      store.dispatch(
+        createClock({
+          entityId: 'campaign',
+          clockType: 'progress',
+          subtype: 'Stop the Heresy',
+          maxSegments: 12,
+          category: 'faction',
+        })
+      );
+
+      const clock = store.getState().clocks.byId[store.getState().clocks.allIds[0]];
+      expect(clock.maxSegments).toBe(12);
+    });
+
+    it('should create a countdown clock (threat)', () => {
+      store.dispatch(
+        createClock({
+          entityId: 'scene-current',
+          clockType: 'progress',
+          subtype: 'Inquisitor Closes In',
+          maxSegments: 4,
+          category: 'threat',
+          isCountdown: true,
+        })
+      );
+
+      const clock = store.getState().clocks.byId[store.getState().clocks.allIds[0]];
+      expect(clock.metadata?.category).toBe('threat');
+      expect(clock.metadata?.isCountdown).toBe(true);
+    });
+
+    it('should reject invalid progress clock sizes', () => {
+      expect(() => {
+        store.dispatch(
+          createClock({
+            entityId: 'crew-456',
+            clockType: 'progress',
+            subtype: 'Invalid Clock',
+            maxSegments: 5, // Not in [4, 6, 8, 12]
+          })
+        );
+      }).toThrow();
+    });
+
+    it('should reject progress clock without maxSegments', () => {
+      expect(() => {
+        store.dispatch(
+          createClock({
+            entityId: 'crew-456',
+            clockType: 'progress',
+            subtype: 'Missing Size',
+            // maxSegments missing
+          } as any)
+        );
+      }).toThrow();
+    });
+
+    it('should allow adding and clearing segments on progress clocks', () => {
+      store.dispatch(
+        createClock({
+          entityId: 'crew-456',
+          clockType: 'progress',
+          subtype: 'Research Project',
+          maxSegments: 8,
+        })
+      );
+
+      const clockId = store.getState().clocks.allIds[0];
+
+      // Add segments
+      store.dispatch(addSegments({ clockId, amount: 3 }));
+      expect(store.getState().clocks.byId[clockId].segments).toBe(3);
+
+      // Add more
+      store.dispatch(addSegments({ clockId, amount: 2 }));
+      expect(store.getState().clocks.byId[clockId].segments).toBe(5);
+
+      // Clear some
+      store.dispatch(clearSegments({ clockId, amount: 1 }));
+      expect(store.getState().clocks.byId[clockId].segments).toBe(4);
+    });
+
+    it('should index progress clocks by entityId', () => {
+      store.dispatch(
+        createClock({
+          entityId: 'crew-456',
+          clockType: 'progress',
+          subtype: 'Project 1',
+          maxSegments: 6,
+        })
+      );
+
+      store.dispatch(
+        createClock({
+          entityId: 'crew-456',
+          clockType: 'progress',
+          subtype: 'Project 2',
+          maxSegments: 8,
+        })
+      );
+
+      const state = store.getState().clocks;
+      const crewClocks = state.byEntityId['crew-456'];
+
+      expect(crewClocks).toHaveLength(2);
+    });
+
+    it('should index progress clocks by type', () => {
+      store.dispatch(
+        createClock({
+          entityId: 'crew-456',
+          clockType: 'progress',
+          subtype: 'Project 1',
+          maxSegments: 6,
+        })
+      );
+
+      const state = store.getState().clocks;
+      const progressClocks = state.byType['progress'];
+
+      expect(progressClocks).toHaveLength(1);
+    });
+  });
 });

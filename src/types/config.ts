@@ -36,6 +36,9 @@ export interface GameConfig {
       segments: number;
       resetReduction: number;
     };
+    progress: {
+      allowedSizes: number[]; // Standard FitD clock sizes: [4, 6, 8, 12]
+    };
   };
 
   rally: {

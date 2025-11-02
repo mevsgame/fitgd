@@ -16,7 +16,7 @@ Phase 5.5 implements resolution helpers for evaluating rolls and applying conseq
 - `tests/unit/resolution.test.ts` - 19 comprehensive tests
 - Updated `src/config/gameConfig.ts` - Added resolution tables
 
-**Test Results:** ✅ 108 tests passing (19 resolution + 89 previous)
+**Test Results:** ✅ 118 tests passing (19 resolution + 11 progress clocks + 88 previous)
 
 ---
 
@@ -391,7 +391,7 @@ Phase 5.5 successfully implements:
 
 **No deviations from game rules detected.**
 
-**Test Results:** 108 tests passing (19 resolution + 89 previous)
+**Test Results:** 118 tests passing (19 resolution + 11 progress clocks + 88 previous)
 
 **Architecture Benefits:**
 - Application layer helpers (not Redux slice)
@@ -399,6 +399,150 @@ Phase 5.5 successfully implements:
 - Event sourced via existing commands
 - Foundry provides dice rolling, we provide consequence logic
 - Clean separation of concerns
+
+---
+
+## Progress Clocks (Extension to Clock System)
+
+**Added:** 2025-11-02
+**Feature:** Standard FitD progress/project clock support
+
+Progress clocks are a core FitD mechanic for tracking:
+- Long-term projects
+- Threats/countdowns
+- Personal goals
+- Obstacles
+- Faction clocks
+
+While not explicitly in `vault/rules_primer.md`, they are a fundamental FitD mechanic referenced throughout the system.
+
+### Implementation ✅
+
+**Files Modified:**
+- `src/types/clock.ts` - Added 'progress' to ClockType union
+- `src/types/config.ts` - Added progress clock configuration
+- `src/config/gameConfig.ts` - Added allowedSizes: [4, 6, 8, 12]
+- `src/validators/clockValidator.ts` - Added validateProgressClockSize()
+- `src/slices/clockSlice.ts` - Updated CreateClockPayload to handle progress clocks
+- `tests/unit/clockSlice.test.ts` - Added 11 tests for progress clocks
+
+**Types:**
+```typescript
+export type ClockType = 'harm' | 'consumable' | 'addiction' | 'progress';
+
+interface ClockMetadata {
+  // For progress clocks
+  category?: 'long-term-project' | 'threat' | 'personal-goal' | 'obstacle' | 'faction';
+  isCountdown?: boolean;
+  description?: string;
+  [key: string]: unknown;
+}
+```
+
+**Configuration:**
+```typescript
+// src/config/gameConfig.ts
+clocks: {
+  progress: {
+    allowedSizes: [4, 6, 8, 12], // Standard FitD clock sizes
+  }
+}
+```
+
+**Validation:**
+```typescript
+// src/validators/clockValidator.ts
+export function validateProgressClockSize(maxSegments: number): void {
+  const allowedSizes = DEFAULT_CONFIG.clocks.progress.allowedSizes;
+  if (!allowedSizes.includes(maxSegments)) {
+    throw new Error(
+      `Progress clock size must be one of: ${allowedSizes.join(', ')}. Got ${maxSegments}.`
+    );
+  }
+}
+```
+
+### Tests ✅
+
+**11 tests added to clockSlice.test.ts:**
+- ✅ Create 4-clock (simple obstacles)
+- ✅ Create 6-clock (standard projects)
+- ✅ Create 8-clock (complex projects)
+- ✅ Create 12-clock (major undertakings)
+- ✅ Create countdown clock (threats)
+- ✅ Reject invalid sizes (must be 4/6/8/12)
+- ✅ Reject missing maxSegments
+- ✅ Add segments to progress clock
+- ✅ Clear segments from progress clock
+- ✅ Index by entityId
+- ✅ Index by type
+
+### Usage Examples
+
+**Long-term project clock:**
+```typescript
+dispatch(createClock({
+  entityId: 'crew-123',
+  clockType: 'progress',
+  subtype: 'Establish Safe House',
+  maxSegments: 8,
+  category: 'long-term-project',
+  description: 'Build a secure base of operations',
+}));
+```
+
+**Threat/countdown clock:**
+```typescript
+dispatch(createClock({
+  entityId: 'campaign-456',
+  clockType: 'progress',
+  subtype: 'Inquisition Investigation',
+  maxSegments: 6,
+  category: 'threat',
+  isCountdown: true,
+  description: 'Inquisitor closes in on crew location',
+}));
+```
+
+**Personal goal clock:**
+```typescript
+dispatch(createClock({
+  entityId: 'character-789',
+  clockType: 'progress',
+  subtype: 'Master Tech-Priest Rituals',
+  maxSegments: 12,
+  category: 'personal-goal',
+  description: 'Character learning advanced tech rituals',
+}));
+```
+
+### Flexibility ✅
+
+Progress clocks can be attached to:
+- **Crew** - crew-wide projects, faction clocks
+- **Character** - personal goals, relationships
+- **Campaign** - threats, world events
+- **Any entityId** - supports custom use cases
+
+### FitD Standard Practice ✅
+
+Standard FitD clock sizes:
+- **4 segments:** Simple tasks, minor obstacles
+- **6 segments:** Standard projects, moderate threats
+- **8 segments:** Complex projects, serious threats
+- **12 segments:** Epic undertakings, major campaigns
+
+Our implementation matches Blades in the Dark conventions exactly.
+
+### Architecture Benefits ✅
+
+- ✅ Uses existing abstract Clock entity
+- ✅ Configuration-driven (allowed sizes)
+- ✅ Type-safe with metadata
+- ✅ Event sourced (command history)
+- ✅ Indexed for efficient queries
+- ✅ Supports countdown/countup
+- ✅ Flexible entityId (crew/character/campaign)
 
 ---
 
@@ -411,7 +555,7 @@ Phase 5.5 successfully implements:
 **Phase 5:** Advanced Features ✅
 **Phase 5.5:** Resolution Helpers ✅
 
-**Total Test Count:** 108 tests passing
+**Total Test Count:** 118 tests passing
 
 **Next Phase:** Phase 6 - API Implementation & Foundry Integration
 - Complete high-level API layer

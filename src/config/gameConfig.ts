@@ -37,6 +37,9 @@ export const DEFAULT_CONFIG: GameConfig = {
       segments: 8,          // 8-segment addiction clock
       resetReduction: 2,    // Reduce by 2 on Momentum Reset
     },
+    progress: {
+      allowedSizes: [4, 6, 8, 12], // Standard FitD clock sizes
+    },
   },
 
   rally: {
