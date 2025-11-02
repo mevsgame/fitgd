@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FitGD Core - Vanilla JS Example</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #d4af37;
+    }
+    h1 {
+      color: #d4af37;
+      border-bottom: 2px solid #d4af37;
+      padding-bottom: 10px;
+    }
+    .section {
+      background: #2a2a2a;
+      border: 1px solid #3e3e3e;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .section h2 {
+      margin-top: 0;
+      color: #f0e6d2;
+    }
+    .output {
+      background: #1a1a1a;
+      border: 1px solid #d4af37;
+      padding: 10px;
+      margin: 10px 0;
+      font-family: 'Courier New', monospace;
+      overflow-x: auto;
+    }
+    .success {
+      color: #4ade80;
+    }
+    .warning {
+      color: #fbbf24;
+    }
+    .error {
+      color: #ef4444;
+    }
+    button {
+      background: #3e3e3e;
+      color: #d4af37;
+      border: 1px solid #d4af37;
+      padding: 8px 16px;
+      cursor: pointer;
+      margin: 5px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+    button:hover {
+      background: #d4af37;
+      color: #1a1a1a;
+    }
+    .state-display {
+      background: #0a0a0a;
+      border: 1px solid #666;
+      padding: 10px;
+      margin: 10px 0;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    pre {
+      margin: 0;
+      color: #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>FitGD Core - Vanilla JavaScript Example</h1>
+  <p>This example demonstrates using the FitGD Core library in a plain JavaScript environment (no build tools required).</p>
+
+  <div class="section">
+    <h2>1. Initialize System</h2>
+    <button onclick="initializeGame()">Initialize Game</button>
+    <div id="init-output" class="output"></div>
+  </div>
+
+  <div class="section">
+    <h2>2. Create Character</h2>
+    <button onclick="createCharacter()">Create Character</button>
+    <div id="character-output" class="output"></div>
+  </div>
+
+  <div class="section">
+    <h2>3. Create Crew & Add Character</h2>
+    <button onclick="createCrew()">Create Crew</button>
+    <div id="crew-output" class="output"></div>
+  </div>
+
+  <div class="section">
+    <h2>4. Take Action (Push)</h2>
+    <button onclick="pushAction()">Push Yourself</button>
+    <div id="action-output" class="output"></div>
+  </div>
+
+  <div class="section">
+    <h2>5. Take Harm</h2>
+    <button onclick="takeHarm()">Take Harm (Risky)</button>
+    <div id="harm-output" class="output"></div>
+  </div>
+
+  <div class="section">
+    <h2>6. Lean Into Trait</h2>
+    <button onclick="leanIntoTrait()">Lean Into Trait</button>
+    <div id="trait-output" class="output"></div>
+  </div>
+
+  <div class="section">
+    <h2>7. Use Rally</h2>
+    <button onclick="useRally()">Use Rally</button>
+    <div id="rally-output" class="output"></div>
+  </div>
+
+  <div class="section">
+    <h2>8. Reset</h2>
+    <button onclick="performReset()">Perform Reset</button>
+    <div id="reset-output" class="output"></div>
+  </div>
+
+  <div class="section">
+    <h2>Current Game State</h2>
+    <button onclick="displayState()">Refresh State</button>
+    <div id="state-display" class="state-display"></div>
+  </div>
+
+  <script type="module">
+    // In a real environment, you would import from the built bundle
+    // import { configureStore, createGameAPI } from './dist/fitgd-core.js';
+
+    // For this example, we'll simulate the imports
+    // NOTE: In production, you'd build the library and import the bundle
+
+    // Global state
+    let game = null;
+    let store = null;
+    let characterId = null;
+    let crewId = null;
+    let traitId = null;
+
+    function log(elementId, message, type = 'normal') {
+      const element = document.getElementById(elementId);
+      const className = type === 'success' ? 'success' : type === 'warning' ? 'warning' : type === 'error' ? 'error' : '';
+      element.innerHTML += `<div class="${className}">${message}</div>`;
+    }
+
+    function clearLog(elementId) {
+      document.getElementById(elementId).innerHTML = '';
+    }
+
+    // Simulate importing the library
+    // In production: import { configureStore, createGameAPI } from '@fitgd/core';
+    window.initializeGame = async function() {
+      clearLog('init-output');
+      try {
+        log('init-output', '⏳ Initializing FitGD Core...', 'normal');
+
+        // NOTE: In a real implementation, you would:
+        // 1. Build the library: npm run build
+        // 2. Import from the bundle: <script type="module" src="./dist/bundle.js">
+        // 3. Use: const store = FitGD.configureStore();
+        //        const game = FitGD.createGameAPI(store);
+
+        log('init-output', '✅ Store configured', 'success');
+        log('init-output', '✅ Game API created', 'success');
+        log('init-output', '', 'normal');
+        log('init-output', '<strong>Ready to play!</strong>', 'success');
+
+        // Simulate initialization
+        store = { /* Redux store */ };
+        game = { /* Game API */ };
+
+      } catch (error) {
+        log('init-output', `❌ Error: ${error.message}`, 'error');
+      }
+    };
+
+    window.createCharacter = function() {
+      clearLog('character-output');
+      try {
+        log('character-output', '⏳ Creating character...', 'normal');
+
+        // Simulate: game.character.create()
+        characterId = 'char-' + Date.now();
+        traitId = 'trait-role-' + Date.now();
+
+        const character = {
+          id: characterId,
+          name: 'Sergeant Kane',
+          traits: [
+            { id: traitId, name: 'Veteran NCO', category: 'role', disabled: false },
+            { id: 'trait-bg-' + Date.now(), name: 'Survived Hive Gangs', category: 'background', disabled: false }
+          ],
+          actionDots: {
+            shoot: 3, command: 2, skirmish: 1, skulk: 1,
+            wreck: 1, finesse: 1, survey: 1, study: 1,
+            tech: 0, attune: 0, consort: 1, sway: 0
+          }
+        };
+
+        log('character-output', '✅ Character created:', 'success');
+        log('character-output', `   ID: ${characterId}`, 'normal');
+        log('character-output', `   Name: ${character.name}`, 'normal');
+        log('character-output', `   Traits: ${character.traits.length}`, 'normal');
+        log('character-output', `   Starting action dots: 12`, 'normal');
+
+      } catch (error) {
+        log('character-output', `❌ Error: ${error.message}`, 'error');
+      }
+    };
+
+    window.createCrew = function() {
+      clearLog('crew-output');
+      try {
+        if (!characterId) {
+          log('crew-output', '⚠️ Create a character first!', 'warning');
+          return;
+        }
+
+        log('crew-output', '⏳ Creating crew...', 'normal');
+
+        // Simulate: game.crew.create() and game.crew.addCharacter()
+        crewId = 'crew-' + Date.now();
+
+        log('crew-output', '✅ Crew created:', 'success');
+        log('crew-output', `   ID: ${crewId}`, 'normal');
+        log('crew-output', `   Name: Strike Team Alpha`, 'normal');
+        log('crew-output', `   Starting Momentum: 5/10`, 'success');
+        log('crew-output', '', 'normal');
+        log('crew-output', '✅ Character added to crew', 'success');
+
+      } catch (error) {
+        log('crew-output', `❌ Error: ${error.message}`, 'error');
+      }
+    };
+
+    window.pushAction = function() {
+      clearLog('action-output');
+      try {
+        if (!crewId) {
+          log('action-output', '⚠️ Create a crew first!', 'warning');
+          return;
+        }
+
+        log('action-output', '⏳ Pushing yourself (extra die)...', 'normal');
+
+        // Simulate: game.action.push()
+        const momentum = 5 - 1; // Cost 1 Momentum
+
+        log('action-output', '✅ Push successful!', 'success');
+        log('action-output', `   Type: extra-die`, 'normal');
+        log('action-output', `   Momentum spent: 1`, 'warning');
+        log('action-output', `   New Momentum: ${momentum}/10`, 'normal');
+
+      } catch (error) {
+        log('action-output', `❌ Error: ${error.message}`, 'error');
+      }
+    };
+
+    window.takeHarm = function() {
+      clearLog('harm-output');
+      try {
+        if (!characterId) {
+          log('harm-output', '⚠️ Create a character first!', 'warning');
+          return;
+        }
+
+        log('harm-output', '⏳ Taking harm (risky/standard)...', 'normal');
+
+        // Simulate: game.harm.take()
+        const segments = 2; // Risky = 2 segments
+
+        log('harm-output', '✅ Harm recorded:', 'success');
+        log('harm-output', `   Type: Physical Harm`, 'normal');
+        log('harm-output', `   Segments added: ${segments}`, 'warning');
+        log('harm-output', `   Total: ${segments}/6`, 'normal');
+        log('harm-output', `   Status: Injured`, 'warning');
+
+      } catch (error) {
+        log('harm-output', `❌ Error: ${error.message}`, 'error');
+      }
+    };
+
+    window.leanIntoTrait = function() {
+      clearLog('trait-output');
+      try {
+        if (!characterId || !traitId) {
+          log('trait-output', '⚠️ Create a character first!', 'warning');
+          return;
+        }
+
+        log('trait-output', '⏳ Leaning into trait "Veteran NCO"...', 'normal');
+
+        // Simulate: game.character.leanIntoTrait()
+        const momentum = 4 + 1; // Gain 1 Momentum
+
+        log('trait-output', '✅ Trait disabled (leaned into):', 'success');
+        log('trait-output', `   Trait: Veteran NCO`, 'normal');
+        log('trait-output', `   Momentum gained: 1`, 'success');
+        log('trait-output', `   New Momentum: ${momentum}/10`, 'normal');
+        log('trait-output', '', 'normal');
+        log('trait-output', '⚠️ Trait disabled until Rally or Reset', 'warning');
+
+      } catch (error) {
+        log('trait-output', `❌ Error: ${error.message}`, 'error');
+      }
+    };
+
+    window.useRally = function() {
+      clearLog('rally-output');
+      try {
+        if (!characterId) {
+          log('rally-output', '⚠️ Create a character first!', 'warning');
+          return;
+        }
+
+        // Check if Momentum is low enough
+        const currentMomentum = 5; // Simulated
+        if (currentMomentum > 3) {
+          log('rally-output', '❌ Rally only available at 0-3 Momentum', 'error');
+          log('rally-output', `   Current Momentum: ${currentMomentum}/10`, 'normal');
+          return;
+        }
+
+        log('rally-output', '⏳ Using Rally...', 'normal');
+
+        // Simulate: game.character.useRally()
+        const momentumSpent = 2;
+        const momentumGained = 1;
+        const newMomentum = currentMomentum - momentumSpent + momentumGained;
+
+        log('rally-output', '✅ Rally successful!', 'success');
+        log('rally-output', `   Momentum spent: ${momentumSpent}`, 'warning');
+        log('rally-output', `   Momentum gained: ${momentumGained}`, 'success');
+        log('rally-output', `   New Momentum: ${newMomentum}/10`, 'normal');
+        log('rally-output', '', 'normal');
+        log('rally-output', '✅ Trait "Veteran NCO" re-enabled', 'success');
+        log('rally-output', '⚠️ Rally used (once per Reset)', 'warning');
+
+      } catch (error) {
+        log('rally-output', `❌ Error: ${error.message}`, 'error');
+      }
+    };
+
+    window.performReset = function() {
+      clearLog('reset-output');
+      try {
+        if (!crewId) {
+          log('reset-output', '⚠️ Create a crew first!', 'warning');
+          return;
+        }
+
+        log('reset-output', '⏳ Performing Reset...', 'normal');
+
+        // Simulate: game.crew.performReset()
+
+        log('reset-output', '✅ Reset complete!', 'success');
+        log('reset-output', '', 'normal');
+        log('reset-output', '   Momentum: 5/10 (reset)', 'success');
+        log('reset-output', '   Addiction: -2 segments', 'success');
+        log('reset-output', '   Rally: Available again', 'success');
+        log('reset-output', '   Characters reset: 1', 'normal');
+
+      } catch (error) {
+        log('reset-output', `❌ Error: ${error.message}`, 'error');
+      }
+    };
+
+    window.displayState = function() {
+      const stateDiv = document.getElementById('state-display');
+
+      // Simulate: store.getState()
+      const state = {
+        characters: {
+          byId: {
+            [characterId || 'none']: {
+              id: characterId,
+              name: 'Sergeant Kane',
+              traits: 2,
+              actionDots: { shoot: 3, command: 2 },
+              rallyAvailable: false
+            }
+          }
+        },
+        crews: {
+          byId: {
+            [crewId || 'none']: {
+              id: crewId,
+              name: 'Strike Team Alpha',
+              currentMomentum: 5,
+              characters: [characterId]
+            }
+          }
+        },
+        clocks: {
+          allIds: [],
+          byId: {}
+        }
+      };
+
+      stateDiv.innerHTML = '<pre>' + JSON.stringify(state, null, 2) + '</pre>';
+    };
+
+    // Initialize on load
+    log('init-output', '📋 Click "Initialize Game" to start', 'normal');
+  </script>
+
+  <div class="section">
+    <h2>Usage Notes</h2>
+    <ul>
+      <li><strong>This is a demonstration</strong> - In production, you'd import the built library</li>
+      <li><strong>Build the library:</strong> <code>npm run build</code> or <code>pnpm run build</code></li>
+      <li><strong>Import in Foundry:</strong> <code>&lt;script type="module" src="systems/fitgd/fitgd-core.js"&gt;</code></li>
+      <li><strong>Example usage:</strong>
+        <pre>
+// In Foundry VTT module
+import { configureStore, createGameAPI } from './fitgd-core.js';
+
+const store = configureStore();
+const game = createGameAPI(store);
+
+// Use the API
+game.character.create({ name, traits, actionDots });
+game.action.push({ crewId, type: 'extra-die' });
+game.harm.take({ characterId, harmType, position, effect });
+        </pre>
+      </li>
+    </ul>
+  </div>
+
+</body>
+</html>
