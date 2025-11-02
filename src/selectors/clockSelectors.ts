@@ -171,13 +171,29 @@ export const selectStimsAvailable = createSelector(
 );
 
 /**
- * Check if consumable is available (not frozen)
+ * Check if consumable is available (not frozen crew-wide)
+ *
+ * Consumables are tracked per-character but frozen crew-wide when ANY clock fills.
+ * This checks if ANY consumable clock with the given subtype is frozen.
  */
 export const selectConsumableAvailable = createSelector(
-  [selectConsumableClockBySubtype],
-  (consumableClock): boolean => {
-    if (!consumableClock) return true; // No clock yet, available
-    return !isClockFrozen(consumableClock);
+  [
+    selectClocksState,
+    (_state: RootState, _crewId: string, subtype: string) => subtype,
+  ],
+  (clocksState, subtype): boolean => {
+    // Find ALL consumable clocks with this subtype
+    const consumableClocks = clocksState.allIds
+      .map((id) => clocksState.byId[id])
+      .filter(
+        (clock) => clock.clockType === 'consumable' && clock.subtype === subtype
+      );
+
+    // If no clocks exist yet, available
+    if (consumableClocks.length === 0) return true;
+
+    // If ANY clock is frozen, consumable is not available
+    return !consumableClocks.some((clock) => isClockFrozen(clock));
   }
 );
 
