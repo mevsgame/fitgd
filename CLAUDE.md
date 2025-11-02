@@ -51,6 +51,92 @@ A **TypeScript + Redux Toolkit** event-sourced state management system for chara
 
 ---
 
+## Game Rules Configuration
+
+All game rules are defined in a central configuration object to avoid magic numbers:
+
+```typescript
+interface GameConfig {
+  character: {
+    startingTraitCount: number;           // 2
+    maxTraitCount?: number;               // Optional cap (TBD via playtesting)
+    startingActionDots: number;           // 12
+    maxActionDotsPerAction: number;       // 4
+    maxActionDotsAtCreation: number;      // 3
+  };
+
+  crew: {
+    startingMomentum: number;             // 5
+    maxMomentum: number;                  // 10
+    minMomentum: number;                  // 0
+  };
+
+  clocks: {
+    harm: {
+      maxClocks: number;                  // 3
+      segments: number;                   // 6
+    };
+    consumable: {
+      segments: {
+        common: number;                   // 8
+        uncommon: number;                 // 6
+        rare: number;                     // 4
+      };
+    };
+    addiction: {
+      segments: number;                   // 8
+      resetReduction: number;             // 2
+    };
+  };
+
+  rally: {
+    maxMomentumToUse: number;             // 3 (only available at 0-3 Momentum)
+  };
+}
+
+// Default configuration
+export const DEFAULT_CONFIG: GameConfig = {
+  character: {
+    startingTraitCount: 2,
+    startingActionDots: 12,
+    maxActionDotsPerAction: 4,
+    maxActionDotsAtCreation: 3,
+  },
+  crew: {
+    startingMomentum: 5,
+    maxMomentum: 10,
+    minMomentum: 0,
+  },
+  clocks: {
+    harm: {
+      maxClocks: 3,
+      segments: 6,
+    },
+    consumable: {
+      segments: {
+        common: 8,
+        uncommon: 6,
+        rare: 4,
+      },
+    },
+    addiction: {
+      segments: 8,
+      resetReduction: 2,
+    },
+  },
+  rally: {
+    maxMomentumToUse: 3,
+  },
+};
+```
+
+**Design Principle:** Game rules are data, not code. This allows:
+- Easy playtesting adjustments
+- Different rulesets per campaign
+- Foundry can override config via game settings
+
+---
+
 ## Data Model
 
 ### Command Schema
@@ -402,6 +488,157 @@ describe('command replay', () => {
 
 ---
 
+## API Layer
+
+**Design Principle:** Never expose Redux store directly to consumers. Instead, provide a clean functional API that abstracts Redux implementation details.
+
+### Character API
+```typescript
+// src/api/character.ts
+export interface CharacterAPI {
+  // Creation
+  createCharacter(name: string, traits: Trait[], actionDots: ActionDots): string;
+
+  // Traits
+  addTrait(characterId: string, trait: Trait): void;
+  disableTrait(characterId: string, traitId: string): void;
+  enableTrait(characterId: string, traitId: string): void;
+  groupTraits(characterId: string, traitIds: [string, string, string], newTrait: Trait): void;
+
+  // Action Dots
+  setActionDots(characterId: string, action: keyof ActionDots, dots: number): void;
+
+  // Equipment
+  addEquipment(characterId: string, equipment: Equipment): void;
+  removeEquipment(characterId: string, equipmentId: string): void;
+
+  // Rally
+  useRally(characterId: string): void;
+  resetRally(characterId: string): void;
+
+  // Queries
+  getCharacter(characterId: string): Character | null;
+  getCharacterTraits(characterId: string): Trait[];
+  canUseRally(characterId: string): boolean;
+}
+```
+
+### Crew API
+```typescript
+// src/api/crew.ts
+export interface CrewAPI {
+  // Creation
+  createCrew(name: string): string;
+
+  // Members
+  addCharacter(crewId: string, characterId: string): void;
+  removeCharacter(crewId: string, characterId: string): void;
+
+  // Momentum
+  setMomentum(crewId: string, amount: number): void;
+  addMomentum(crewId: string, amount: number): void;
+  spendMomentum(crewId: string, amount: number): void;
+  resetMomentum(crewId: string): void;
+
+  // Resources (validated against clocks)
+  canUseStim(crewId: string): boolean;
+  useStim(crewId: string, characterId: string): void;
+  canUseConsumable(crewId: string, consumableType: string): boolean;
+  useConsumable(crewId: string, consumableType: string): void;
+
+  // Queries
+  getCrew(crewId: string): Crew | null;
+  getCurrentMomentum(crewId: string): number;
+}
+```
+
+### Clock API
+```typescript
+// src/api/clock.ts
+export interface ClockAPI {
+  // Creation
+  createHarmClock(characterId: string, subtype: string): string;
+  createConsumableClock(crewId: string, subtype: string, rarity: 'common' | 'uncommon' | 'rare'): string;
+  createAddictionClock(crewId: string): string;
+
+  // Manipulation
+  addSegments(clockId: string, amount: number): void;
+  clearSegments(clockId: string, amount: number): void;
+  deleteClock(clockId: string): void;
+
+  // Queries
+  getClock(clockId: string): Clock | null;
+  getHarmClocks(characterId: string): Clock[];
+  getConsumableClocks(crewId: string): Clock[];
+  getAddictionClock(crewId: string): Clock | null;
+  isClockFilled(clockId: string): boolean;
+}
+```
+
+### Game State API
+```typescript
+// src/api/gameState.ts
+export interface GameStateAPI {
+  // Export/Import
+  exportState(): SerializedState;
+  importState(state: SerializedState): void;
+
+  // Command History
+  getCommandHistory(): Command[];
+  replayCommands(commands: Command[]): void;
+
+  // Undo/Redo (if implemented)
+  undo(): boolean;
+  redo(): boolean;
+
+  // Configuration
+  getConfig(): GameConfig;
+  setConfig(config: Partial<GameConfig>): void;
+}
+```
+
+### API Usage Example
+```typescript
+import { createGameAPI } from '@fitgd/core';
+
+// Initialize with optional config override
+const api = createGameAPI({
+  character: { maxTraitCount: 25 }  // Override default
+});
+
+// Create character
+const charId = api.character.createCharacter(
+  "Sergeant Kane",
+  [
+    { name: "Served with Elite Infantry", category: "role" },
+    { name: "Survived Hive Gangs", category: "background" }
+  ],
+  { shoot: 3, command: 2, /* ... */ }
+);
+
+// Create crew
+const crewId = api.crew.createCrew("Strike Team Alpha");
+api.crew.addCharacter(crewId, charId);
+
+// Take harm
+const harmId = api.clock.createHarmClock(charId, "Physical Harm");
+api.clock.addSegments(harmId, 3);  // 3 segments from Risky/Standard
+
+// Spend Momentum
+if (api.crew.getCurrentMomentum(crewId) >= 1) {
+  api.crew.spendMomentum(crewId, 1);  // Push yourself
+}
+```
+
+**Benefits:**
+- **Type-safe:** Full TypeScript support
+- **Validated:** All business rules enforced at API boundary
+- **Redux-agnostic:** Consumers don't need Redux knowledge
+- **Testable:** Easy to mock for integration tests
+- **Documented:** Clear contracts for Foundry developers
+
+---
+
 ## Foundry VTT Integration Points
 
 ### Data Export (Foundry → Redux)
@@ -432,17 +669,33 @@ interface FoundryAdapter {
 }
 ```
 
-### Command Dispatching
+### Using the API
 ```typescript
-// Foundry can dispatch commands via standard Redux pattern
-store.dispatch({
-  type: 'character/addTrait',
-  payload: { characterId: '...', trait: {...} },
-  timestamp: Date.now(),
-  version: 1,
-  userId: 'foundry-user-id',
-  commandId: uuid(),
-});
+// Foundry uses the high-level API, not Redux directly
+import { createGameAPI } from '@fitgd/core';
+
+const gameAPI = createGameAPI();
+
+// Character creation in Foundry sheet
+async function onCreateCharacter(name, traits, actionDots) {
+  const characterId = gameAPI.character.createCharacter(name, traits, actionDots);
+
+  // Store character ID in Foundry Actor
+  await actor.setFlag('fitgd', 'characterId', characterId);
+
+  return characterId;
+}
+
+// Taking harm from a roll
+function onHarmResult(characterId, harmType, segments) {
+  const harmId = gameAPI.clock.createHarmClock(characterId, harmType);
+  gameAPI.clock.addSegments(harmId, segments);
+
+  // Check if dying
+  if (gameAPI.clock.isClockFilled(harmId)) {
+    ui.notifications.warn("Character is dying!");
+  }
+}
 ```
 
 ### State Subscription
@@ -560,6 +813,13 @@ onTakingHarm(characterId, harmType, segments) {
 ```
 fitgd/
 ├── src/
+│   ├── api/
+│   │   ├── index.ts                 # Main API export
+│   │   ├── character.ts             # Character API functions
+│   │   ├── crew.ts                  # Crew API functions
+│   │   ├── clock.ts                 # Clock API functions
+│   │   └── gameState.ts             # State queries (get character, etc.)
+│   │
 │   ├── store/
 │   │   ├── index.ts                 # Configure store
 │   │   ├── rootReducer.ts           # Combine slices
@@ -577,6 +837,11 @@ fitgd/
 │   │   ├── crew.ts
 │   │   ├── clock.ts                 # Clock + ClockType + ClockMetadata
 │   │   ├── command.ts
+│   │   ├── config.ts                # GameConfig interface
+│   │   └── index.ts
+│   │
+│   ├── config/
+│   │   ├── gameConfig.ts            # DEFAULT_CONFIG constant
 │   │   └── index.ts
 │   │
 │   ├── validators/
@@ -603,6 +868,10 @@ fitgd/
 │   │   └── ...
 │   │
 │   ├── integration/
+│   │   ├── api/
+│   │   │   ├── characterApi.test.ts # Test API contracts
+│   │   │   ├── crewApi.test.ts
+│   │   │   └── clockApi.test.ts
 │   │   ├── momentum.test.ts
 │   │   ├── harmSystem.test.ts
 │   │   └── ...
@@ -643,12 +912,15 @@ fitgd/
 
 - [ ] Initialize project (Vite + TypeScript + Redux Toolkit)
 - [ ] Configure Jest + ts-jest
-- [ ] Define TypeScript types for all entities
+- [ ] Define TypeScript types for all entities (Character, Crew, Clock, Command)
+- [ ] Define GameConfig interface and DEFAULT_CONFIG constant
 - [ ] Define Command schema and factory
 - [ ] Implement UUID utility
+- [ ] Create API layer skeleton (interfaces only)
 - [ ] Write test fixtures (sample characters, crews)
+- [ ] First passing test (trivial, just to verify setup)
 
-**Deliverable:** Compiling TypeScript project with passing tests (even if trivial)
+**Deliverable:** Compiling TypeScript project with passing tests and clean API contracts
 
 ---
 
@@ -748,18 +1020,20 @@ fitgd/
 
 ---
 
-### Phase 6: Foundry Integration Layer (Session 13-14)
-**Goal:** Adapter pattern for Foundry VTT
+### Phase 6: API Implementation & Foundry Integration (Session 13-14)
+**Goal:** Complete API layer and Foundry adapter
 
 #### Tasks:
+- [ ] Implement complete API layer (Character, Crew, Clock, GameState APIs)
+- [ ] API integration tests (test contracts, not implementation)
 - [ ] Implement `FoundryAdapter` interface
 - [ ] State serialization/deserialization for Foundry Actor/Item system
 - [ ] Command replay mechanism
 - [ ] Export/import for single entities
 - [ ] Actor/Item mapping (Character → Actor, Trait → Item, etc.)
-- [ ] Integration tests with mock Foundry
+- [ ] Mock Foundry integration example
 
-**Deliverable:** Clean API for Foundry to consume, with proper Actor/Item mapping
+**Deliverable:** Production-ready API with Foundry adapter and comprehensive integration tests
 
 ---
 
@@ -802,19 +1076,23 @@ fitgd/
 
 ## Open Questions / Decisions Needed
 
-1. **Package Manager:** npm, yarn, or pnpm?
-2. **Trait Cap:** Should we enforce a maximum trait count, or leave it open for playtesting?
-3. **Command Versioning:** How aggressive should schema migration be? (We can defer this to Phase 7)
-4. **Middleware:** Should we log all commands to console in dev mode for debugging?
-5. **Selectors:** Use Reselect for memoization, or RTK's built-in `createSelector`?
-6. **Persistence:** Should we provide a LocalStorage adapter in addition to Foundry?
+### Before Phase 1:
+1. **Package Manager:** npm, yarn, or pnpm? (Recommendation: **pnpm** for speed)
+2. **Dev Logging:** Log all commands to console in dev mode?
+3. **Selectors:** Use Reselect or RTK's built-in `createSelector`? (Recommendation: **RTK built-in**)
+4. **LocalStorage Adapter:** Include for standalone testing or Foundry-only?
+
+### Can Defer to Later Phases:
+- **Trait Cap:** Now a `GameConfig` parameter, can be set during playtesting
+- **Command Versioning:** Defer to Phase 7 (Polish)
+- **Clock Sizes:** Now configurable in `GameConfig`
 
 ---
 
 ## Next Steps
 
-1. **Answer open questions** (package manager, etc.)
-2. **Session 1: Begin Phase 1** - Initialize project structure
+1. **Answer Phase 1 questions** above
+2. **Session 1: Begin Phase 1** - Initialize project with Vite + TypeScript + Redux Toolkit
 3. **Establish TDD workflow** - Write first failing test together
 
 Ready to proceed when you are! 🎲
