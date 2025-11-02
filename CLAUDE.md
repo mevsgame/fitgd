@@ -14,16 +14,16 @@ A **TypeScript + Redux Toolkit** event-sourced state management system for chara
 - Command history allows reconstruction, undo, and audit trails
 - Each command is immutable and timestamped
 
-### 2. Entity Separation
+### 2. Entity Separation & Abstraction
 **High-change entities** (separate stores with full history):
-- `HarmClock` - references `characterId`
-- `ConsumableClock` - team-wide depletion tracking
-- `AddictionClock` - team-wide stim addiction
+- `Clock` - **Abstract entity** used for harm, consumables, addiction, etc.
 - `Momentum` - crew-level shared resource
 
 **Low-change entities** (snapshot with history):
 - `Character` - traits, action dots, equipment
 - `Crew` - metadata, campaign info
+
+**Design Principle:** Clocks are generic/reusable. Different clock types (harm, consumable, addiction) are instances of the same `Clock` entity with different metadata. Crew validates actions against clock states but doesn't duplicate tracking.
 
 ### 3. TDD First
 - **Every feature** starts with failing tests
@@ -125,45 +125,60 @@ interface Crew {
 }
 ```
 
-#### HarmClock
+#### Clock (Abstract)
 ```typescript
-interface HarmClock {
+interface Clock {
   id: string;
-  characterId: string;
-  type: string;                    // e.g., "Physical Harm", "Shaken Morale"
-  segments: number;                // 0-6
-  maxSegments: 6;
+  entityId: string;                // characterId, crewId, or itemType
+  clockType: 'harm' | 'consumable' | 'addiction';
+  subtype?: string;                // For harm: "Physical", "Morale"; for consumable: "grenades", "stims"
+  segments: number;
+  maxSegments: number;             // 6 for harm, 8 for addiction, 4/6/8 for consumables
+  metadata?: {                     // Flexible storage for type-specific data
+    rarity?: 'common' | 'uncommon' | 'rare';
+    tier?: 'accessible' | 'inaccessible';
+    frozen?: boolean;              // For consumables when filled
+    [key: string]: unknown;
+  };
   createdAt: number;
   updatedAt: number;
 }
 ```
 
-#### ConsumableClock
+**Clock Type Examples:**
 ```typescript
-interface ConsumableClock {
-  id: string;
-  crewId: string;
-  itemType: string;                // e.g., "frag_grenades", "stims"
-  rarity: 'common' | 'uncommon' | 'rare';
-  segments: number;                // Current depletion
-  maxSegments: number;             // 8, 6, or 4
-  tier: 'accessible' | 'inaccessible';
-  frozen: boolean;                 // When clock fills
-  createdAt: number;
-  updatedAt: number;
+// Harm Clock
+{
+  id: "uuid-1",
+  entityId: "character-123",
+  clockType: "harm",
+  subtype: "Physical Harm",
+  segments: 3,
+  maxSegments: 6
 }
-```
 
-#### AddictionClock
-```typescript
-interface AddictionClock {
-  id: string;
-  crewId: string;
-  segments: number;                // 0-8
-  maxSegments: 8;
-  stimsLocked: boolean;            // True when filled
-  createdAt: number;
-  updatedAt: number;
+// Consumable Clock
+{
+  id: "uuid-2",
+  entityId: "crew-456",
+  clockType: "consumable",
+  subtype: "frag_grenades",
+  segments: 5,
+  maxSegments: 8,
+  metadata: {
+    rarity: "common",
+    tier: "accessible",
+    frozen: false
+  }
+}
+
+// Addiction Clock
+{
+  id: "uuid-3",
+  entityId: "crew-456",
+  clockType: "addiction",
+  segments: 6,
+  maxSegments: 8
 }
 ```
 
@@ -185,27 +200,31 @@ interface RootState {
     history: Command[];
   };
 
-  harmClocks: {
-    byId: Record<string, HarmClock>;
+  clocks: {
+    byId: Record<string, Clock>;
     allIds: string[];
-    byCharacterId: Record<string, string[]>; // Index for lookups
-    history: Command[];
-  };
-
-  consumableClocks: {
-    byId: Record<string, ConsumableClock>;
-    allIds: string[];
-    byCrewId: Record<string, string[]>;
-    history: Command[];
-  };
-
-  addictionClocks: {
-    byId: Record<string, AddictionClock>;
-    allIds: string[];
-    byCrewId: Record<string, string[]>;
+    // Indexes for efficient lookups
+    byEntityId: Record<string, string[]>;        // All clocks for an entity
+    byType: Record<string, string[]>;            // All clocks of a type
+    byTypeAndEntity: Record<string, string[]>;   // e.g., "harm:character-123"
     history: Command[];
   };
 }
+```
+
+**Index Usage Examples:**
+```typescript
+// Get all harm clocks for a character
+state.clocks.byTypeAndEntity[`harm:${characterId}`]
+
+// Get all consumable clocks for a crew
+state.clocks.byTypeAndEntity[`consumable:${crewId}`]
+
+// Get addiction clock for a crew
+state.clocks.byTypeAndEntity[`addiction:${crewId}`]
+
+// Get all clocks for any entity
+state.clocks.byEntityId[entityId]
 ```
 
 ---
@@ -230,28 +249,43 @@ interface RootState {
 - `crew/removeCharacter` - Remove character from crew
 - `crew/setMomentum` - Directly set Momentum (e.g., session start)
 - `crew/addMomentum` - Add Momentum (from consequences, leaning into trait)
-- `crew/spendMomentum` - Spend Momentum (push, flashback)
+- `crew/spendMomentum` - Spend Momentum (push, flashback) - **validates sufficient Momentum**
 - `crew/resetMomentum` - Reset to 5 after Reset event
+- `crew/useStim` - **Validates addiction clock not filled** before allowing
+- `crew/useConsumable` - **Validates consumable clock not frozen** before allowing
 
-### HarmClock Commands
-- `harmClock/create` - Create new harm clock for character
-- `harmClock/addSegments` - Add segments (taking harm)
-- `harmClock/clearSegments` - Remove segments (recovery)
-- `harmClock/delete` - Remove clock entirely (healed or converted to trait)
-- `harmClock/changeType` - Replace clock type (4th harm clock)
+### Clock Commands (Abstract)
+- `clock/create` - Create new clock (harm, consumable, or addiction)
+- `clock/addSegments` - Add segments to clock
+- `clock/clearSegments` - Remove segments from clock
+- `clock/delete` - Remove clock entirely
+- `clock/updateMetadata` - Update clock metadata (tier, frozen, etc.)
+- `clock/changeSubtype` - Change clock subtype (e.g., 4th harm clock replacement)
 
-### ConsumableClock Commands
-- `consumableClock/create` - Create consumable clock
-- `consumableClock/addSegments` - Advance depletion after use
-- `consumableClock/freeze` - Mark as frozen when filled
-- `consumableClock/changeTier` - Downgrade availability
-- `consumableClock/restore` - Story-based restoration
+**Command Examples:**
+```typescript
+// Create harm clock
+{ type: 'clock/create', payload: {
+  entityId: 'character-123',
+  clockType: 'harm',
+  subtype: 'Physical Harm',
+  maxSegments: 6
+}}
 
-### AddictionClock Commands
-- `addictionClock/create` - Initialize for crew
-- `addictionClock/addSegments` - Advance after stim use
-- `addictionClock/reduceSegments` - Reduce by 2 after Reset
-- `addictionClock/lockStims` - Lock stims when filled
+// Use consumable (validated at crew level)
+{ type: 'crew/useConsumable', payload: {
+  crewId: 'crew-456',
+  consumableType: 'frag_grenades'
+}}
+// This checks if consumable clock is frozen/filled before proceeding
+
+// Use stim (validated at crew level)
+{ type: 'crew/useStim', payload: {
+  crewId: 'crew-456',
+  characterId: 'character-123'
+}}
+// This checks if addiction clock is filled before proceeding
+```
 
 ---
 
@@ -262,28 +296,52 @@ interface RootState {
 - Starting total: 12 dots (at creation only)
 - Maximum total: TBD (advancement)
 - Starting traits: Exactly 2 (1 role, 1 background)
-- Max harm clocks: 3 active per character
+- Max harm clocks: 3 active per character (query: `clocks.byTypeAndEntity['harm:characterId']`)
 - Rally: Boolean state, one use per reset
 
 ### Crew Validation
 - Momentum: 0-10 (excess is lost)
 - Cannot spend more Momentum than available
 - Character IDs must reference existing characters
+- **Stim use validation:** Reject `crew/useStim` if addiction clock is filled (segments >= maxSegments)
+- **Consumable use validation:** Reject `crew/useConsumable` if that consumable's clock is frozen or filled
 
-### HarmClock Validation
+### Clock Validation (Type-Specific)
+
+#### Harm Clocks (`clockType: 'harm'`)
 - Segments: 0-6
 - Character can have max 3 active harm clocks
-- 4th harm replaces clock with fewest segments
+- 4th harm clock replaces existing clock with fewest segments
+- When clock fills (6/6): character is dying
 
-### ConsumableClock Validation
-- Max segments based on rarity: Common(8), Uncommon(6), Rare(4)
+#### Consumable Clocks (`clockType: 'consumable'`)
+- Max segments based on `metadata.rarity`: Common(8), Uncommon(6), Rare(4)
 - Segments cannot exceed max
-- When filled, tier downgrades and frozen=true
+- When filled: `metadata.frozen = true` AND `metadata.tier` downgrades (accessible → inaccessible)
+- All other clocks of same subtype freeze at current segment count
 
-### AddictionClock Validation
+#### Addiction Clocks (`clockType: 'addiction'`)
 - Max segments: 8
-- When filled: stimsLocked=true, trait "Addict" added to triggering character
+- One per crew (entityId = crewId)
+- When filled: Add "Addict" trait to character who triggered it, prevent all stim use for entire crew
 - Reduces by 2 (min 0) on Momentum Reset
+
+### Cross-Slice Validation (Crew ↔ Clocks)
+These validations happen in crew commands but query clock state:
+
+```typescript
+// crew/useStim validation logic
+const addictionClock = selectClockByTypeAndEntity(state, 'addiction', crewId);
+if (addictionClock && addictionClock.segments >= addictionClock.maxSegments) {
+  throw new Error('Stims are locked due to addiction');
+}
+
+// crew/useConsumable validation logic
+const consumableClock = selectClockByTypeAndSubtype(state, 'consumable', crewId, consumableType);
+if (consumableClock?.metadata?.frozen) {
+  throw new Error(`${consumableType} are no longer accessible`);
+}
+```
 
 ---
 
@@ -396,6 +454,105 @@ store.subscribe(() => {
 });
 ```
 
+### Foundry VTT Actor/Item Data Model Mapping
+
+Our Redux entities map cleanly to Foundry's Actor/Item system:
+
+#### Foundry Actors
+```typescript
+// Character → Foundry Actor (type: "character")
+{
+  _id: character.id,
+  name: character.name,
+  type: "character",
+  system: {
+    traits: character.traits,
+    actionDots: character.actionDots,
+    rallyAvailable: character.rallyAvailable,
+    // Derived data (computed from clocks)
+    harmClocks: [], // Fetched via selector: selectHarmClocksByCharacter(id)
+  }
+}
+
+// Crew → Foundry Actor (type: "crew")
+{
+  _id: crew.id,
+  name: crew.name,
+  type: "crew",
+  system: {
+    momentum: crew.currentMomentum,
+    characters: crew.characters, // References to character Actor IDs
+    // Derived data (computed from clocks)
+    addictionClock: null, // Fetched via selector: selectAddictionClockByCrew(id)
+    consumableClocks: [], // Fetched via selector: selectConsumableClocksByCrew(id)
+  }
+}
+```
+
+#### Foundry Items
+```typescript
+// Equipment → Foundry Item (type: "equipment")
+{
+  _id: equipment.id,
+  name: equipment.name,
+  type: "equipment",
+  system: {
+    tier: equipment.tier,
+    category: equipment.category,
+    description: equipment.description
+  }
+}
+
+// Trait → Foundry Item (type: "trait")
+{
+  _id: trait.id,
+  name: trait.name,
+  type: "trait",
+  system: {
+    category: trait.category,
+    disabled: trait.disabled,
+    description: trait.description,
+    acquiredAt: trait.acquiredAt
+  }
+}
+```
+
+#### Clock Storage
+Clocks are NOT stored as separate Foundry Items. Instead:
+- **Character harm clocks:** Stored in Redux, derived/computed when rendering character Actor sheet
+- **Crew clocks (consumable, addiction):** Stored in Redux, derived/computed when rendering crew Actor sheet
+
+**Why?** Clocks are high-frequency state that benefits from centralized management and event sourcing. Foundry persistence only needs the **current snapshot** of clocks, which is hydrated from Redux state.
+
+#### Data Flow
+```
+Foundry UI → Command Dispatch → Redux Store → Selector → Foundry Actor Update
+     ↑                                                            ↓
+     └────────────────── Subscription callback ──────────────────┘
+```
+
+**Example:**
+```typescript
+// In Foundry character sheet
+onTakingHarm(characterId, harmType, segments) {
+  // Dispatch Redux command
+  store.dispatch(createClockCommand({
+    entityId: characterId,
+    clockType: 'harm',
+    subtype: harmType,
+    segments: segments,
+    maxSegments: 6
+  }));
+
+  // Redux updates, selector recomputes, Foundry re-renders
+}
+```
+
+#### Persistence Strategy
+- **Foundry saves:** Full Redux state snapshot (RootState) to Foundry's world data or flags
+- **On world load:** Hydrate Redux store from saved snapshot
+- **Command history:** Optionally saved separately for audit/replay (could be a separate Foundry Journal Entry or world flag)
+
 ---
 
 ## Project Structure
@@ -411,31 +568,29 @@ fitgd/
 │   │       └── validator.ts         # Pre-dispatch validation
 │   │
 │   ├── slices/
-│   │   ├── characterSlice.ts
-│   │   ├── crewSlice.ts
-│   │   ├── harmClockSlice.ts
-│   │   ├── consumableClockSlice.ts
-│   │   └── addictionClockSlice.ts
+│   │   ├── characterSlice.ts        # Character entity + commands
+│   │   ├── crewSlice.ts             # Crew entity + Momentum + validation
+│   │   └── clockSlice.ts            # Abstract clock entity (harm, consumable, addiction)
 │   │
 │   ├── types/
 │   │   ├── character.ts
 │   │   ├── crew.ts
-│   │   ├── clocks.ts
-│   │   ├── commands.ts
+│   │   ├── clock.ts                 # Clock + ClockType + ClockMetadata
+│   │   ├── command.ts
 │   │   └── index.ts
 │   │
 │   ├── validators/
 │   │   ├── characterValidator.ts
-│   │   ├── crewValidator.ts
-│   │   └── clockValidator.ts
+│   │   ├── crewValidator.ts         # Includes stim/consumable validation
+│   │   └── clockValidator.ts        # Type-specific clock validation
 │   │
 │   ├── selectors/
 │   │   ├── characterSelectors.ts    # Memoized selectors
 │   │   ├── crewSelectors.ts
-│   │   └── clockSelectors.ts
+│   │   └── clockSelectors.ts        # selectByTypeAndEntity, etc.
 │   │
 │   ├── adapters/
-│   │   └── foundryAdapter.ts        # Foundry integration layer
+│   │   └── foundryAdapter.ts        # Foundry Actor/Item mapping
 │   │
 │   └── utils/
 │       ├── commandFactory.ts        # Helper to create commands
@@ -467,6 +622,21 @@ fitgd/
 ---
 
 ## Implementation Phases
+
+**Total:** 7 phases across ~15 sessions
+
+**Key Architecture Decision:** All clock types (harm, consumable, addiction) use a single abstract `Clock` entity with type-specific metadata, rather than separate entities. This reduces code duplication and simplifies the Redux store structure.
+
+**Phase Overview:**
+1. **Foundation** (Sessions 1-2) - Project setup, TypeScript types, TDD infrastructure
+2. **Character System** (Sessions 3-5) - Traits, action dots, equipment, rally
+3. **Crew & Momentum** (Sessions 6-7) - Shared Momentum pool, spending/generation
+4. **Clock System** (Sessions 8-10) - Unified clock abstraction for harm/consumables/addiction
+5. **Advanced Features** (Sessions 11-12) - Trait grouping, flashbacks, progression
+6. **Foundry Integration** (Sessions 13-14) - Actor/Item mapping, persistence adapter
+7. **Polish & Docs** (Session 15) - Documentation, performance, examples
+
+---
 
 ### Phase 1: Foundation (Session 1-2)
 **Goal:** Basic project setup, core entities, TDD infrastructure
@@ -531,51 +701,36 @@ fitgd/
 
 ---
 
-### Phase 4: Harm Clock System (Session 8-9)
-**Goal:** Harm tracking, recovery, dying state
+### Phase 4: Abstract Clock System (Session 8-10)
+**Goal:** Unified clock system for harm, consumables, and addiction
 
 #### TDD Cycle:
 1. **Tests First:**
-   - Create harm clock for character
-   - Add segments (Position × Effect table)
-   - Max 3 clocks per character
-   - 4th clock replaces lowest
-   - Clear segments (recovery)
-   - Delete clock (fully healed)
-   - Convert clock to trait (scar)
+   - Create abstract clock entity (harm, consumable, addiction)
+   - Add/clear segments with type-specific validation
+   - Index maintenance (byEntityId, byType, byTypeAndEntity)
+   - **Harm clocks:** Max 3 per character, 4th replaces lowest
+   - **Consumable clocks:** Depletion based on rarity, freeze when filled
+   - **Addiction clock:** Single per crew, reduce by 2 on Reset
+   - Delete/convert clocks (scar traits)
+   - Cross-slice validation (crew → clock state for stim/consumable use)
 
 2. **Implementation:**
-   - `harmClockSlice.ts`
-   - Index by characterId for fast lookups
-   - Validators for max 3 clocks, replacement logic
+   - `clockSlice.ts` - single unified slice
+   - Type-specific validators in `clockValidator.ts`
+   - Selectors for efficient queries (selectByTypeAndEntity, etc.)
+   - Update `crewSlice.ts` to validate stim/consumable use against clock state
 
-**Deliverable:** Complete harm system matching rules
+3. **Verification:**
+   - All clock types work with same commands
+   - Indexes correctly maintained
+   - Cross-slice validation prevents invalid crew actions
+
+**Deliverable:** Complete clock system supporting all game mechanics
 
 ---
 
-### Phase 5: Consumable & Addiction Clocks (Session 10-11)
-**Goal:** Depletion tracking, stim addiction
-
-#### TDD Cycle:
-1. **Tests First:**
-   - Create consumable clock (Common/Uncommon/Rare)
-   - Advance depletion after use
-   - Fill clock → freeze + tier downgrade
-   - Create addiction clock
-   - Advance after stim use
-   - Reduce by 2 on Reset
-   - Fill → lock stims + add "Addict" trait
-
-2. **Implementation:**
-   - `consumableClockSlice.ts`
-   - `addictionClockSlice.ts`
-   - Cross-slice logic (addiction → character trait)
-
-**Deliverable:** Resource management system
-
----
-
-### Phase 6: Advanced Features (Session 12-13)
+### Phase 5: Advanced Features (Session 11-12)
 **Goal:** Trait grouping, equipment tiers, flashback system
 
 #### TDD Cycle:
@@ -593,21 +748,22 @@ fitgd/
 
 ---
 
-### Phase 7: Foundry Integration Layer (Session 14-15)
+### Phase 6: Foundry Integration Layer (Session 13-14)
 **Goal:** Adapter pattern for Foundry VTT
 
 #### Tasks:
 - [ ] Implement `FoundryAdapter` interface
-- [ ] State serialization/deserialization
+- [ ] State serialization/deserialization for Foundry Actor/Item system
 - [ ] Command replay mechanism
 - [ ] Export/import for single entities
+- [ ] Actor/Item mapping (Character → Actor, Trait → Item, etc.)
 - [ ] Integration tests with mock Foundry
 
-**Deliverable:** Clean API for Foundry to consume
+**Deliverable:** Clean API for Foundry to consume, with proper Actor/Item mapping
 
 ---
 
-### Phase 8: Polish & Documentation (Session 16)
+### Phase 7: Polish & Documentation (Session 15)
 **Goal:** Production readiness
 
 - [ ] Write README with usage examples
@@ -615,6 +771,7 @@ fitgd/
 - [ ] Performance profiling
 - [ ] Bundle size optimization
 - [ ] Example integration with vanilla JS (Foundry simulation)
+- [ ] Migration guide for command schema versioning
 
 **Deliverable:** Production-ready library
 
