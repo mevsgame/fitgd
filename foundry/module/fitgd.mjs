@@ -117,7 +117,7 @@ Hooks.on('createActor', async function(actor, options, userId) {
   console.log(`FitGD | Creating ${actor.type}: ${actor.name} (${actor.id})`);
 
   if (actor.type === 'character') {
-    // Create character in Redux with default stats (12 action dots required)
+    // Create character in Redux with 0 dots (player allocates 12 during creation)
     try {
       const characterId = game.fitgd.api.character.create({
         name: actor.name,
@@ -126,9 +126,9 @@ Hooks.on('createActor', async function(actor, options, userId) {
           { name: 'Background Trait (edit me)', category: 'background', disabled: false }
         ],
         actionDots: {
-          shoot: 1, skirmish: 1, skulk: 1, wreck: 1,
-          finesse: 1, survey: 1, study: 1, tech: 1,
-          attune: 1, command: 1, consort: 1, sway: 1
+          shoot: 0, skirmish: 0, skulk: 0, wreck: 0,
+          finesse: 0, survey: 0, study: 0, tech: 0,
+          attune: 0, command: 0, consort: 0, sway: 0
         }
       });
 
@@ -783,18 +783,44 @@ class FitGDCrewSheet extends ActorSheet {
       const crew = game.fitgd.api.crew.getCrew(reduxId);
 
       if (crew) {
+        // Resolve character names from Redux IDs
+        const characterDetails = crew.characters.map(charId => {
+          const character = game.fitgd.api.character.getCharacter(charId);
+          return {
+            id: charId,
+            name: character?.name || 'Unknown Character',
+            // Find the Foundry actor for this character for linking
+            foundryActorId: this._findFoundryActorId(charId)
+          };
+        });
+
         context.system = {
           currentMomentum: crew.currentMomentum,
-          characters: crew.characters,
+          characters: characterDetails,
           addictionClock: game.fitgd.api.query.getAddictionClock(reduxId),
           consumableClocks: game.fitgd.api.query.getConsumableClocks(reduxId),
-          progressClocks: [] // TODO: Add progress clock query
+          progressClocks: game.fitgd.api.query.getProgressClocks(reduxId)
         };
         context.reduxId = reduxId;
       }
     }
 
     return context;
+  }
+
+  /**
+   * Find Foundry actor ID from Redux character ID
+   */
+  _findFoundryActorId(characterReduxId) {
+    for (const actor of game.actors) {
+      if (actor.type === 'character') {
+        const actorReduxId = actor.getFlag('forged-in-the-grimdark', 'reduxId');
+        if (actorReduxId === characterReduxId) {
+          return actor.id;
+        }
+      }
+    }
+    return null;
   }
 
   activateListeners(html) {

@@ -62,7 +62,7 @@ describe('CharacterAPI', () => {
             shoot: 4,
             command: 4,
             skirmish: 4,
-            skulk: 4, // Total > 12
+            skulk: 4, // Total = 16 > 12
             wreck: 0,
             finesse: 0,
             survey: 0,
@@ -73,7 +73,7 @@ describe('CharacterAPI', () => {
             sway: 0,
           },
         });
-      }).toThrow('Character must start with exactly 12 action dots');
+      }).toThrow('Character cannot have more than 12 action dots at creation');
     });
 
     it('should reject more than 3 dots in single action at creation', () => {

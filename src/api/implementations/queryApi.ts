@@ -6,6 +6,7 @@ import {
   selectIsCharacterDying,
   selectHarmClocksByCharacter,
   selectClocksByEntityId,
+  selectClocksByTypeAndEntity,
 } from '../../selectors/clockSelectors';
 import { DEFAULT_CONFIG } from '../../config';
 
@@ -139,6 +140,53 @@ export function createQueryAPI(store: Store) {
         maxSegments: clock.maxSegments,
         category: clock.metadata?.category as string | undefined,
         isCountdown: clock.metadata?.isCountdown as boolean | undefined,
+      }));
+    },
+
+    /**
+     * Get addiction clock for crew
+     */
+    getAddictionClock(crewId: string): {
+      id: string;
+      segments: number;
+      maxSegments: number;
+    } | null {
+      const state = store.getState();
+      const clock = selectClocksByTypeAndEntity(state, 'addiction', crewId)[0];
+
+      if (!clock) return null;
+
+      return {
+        id: clock.id,
+        segments: clock.segments,
+        maxSegments: clock.maxSegments,
+      };
+    },
+
+    /**
+     * Get consumable clocks for crew
+     */
+    getConsumableClocks(crewId: string): Array<{
+      id: string;
+      subtype: string;
+      segments: number;
+      maxSegments: number;
+      metadata: {
+        rarity?: string;
+        tier?: string;
+        frozen?: boolean;
+        [key: string]: unknown;
+      };
+    }> {
+      const state = store.getState();
+      const clocks = selectClocksByTypeAndEntity(state, 'consumable', crewId);
+
+      return clocks.map((clock) => ({
+        id: clock.id,
+        subtype: clock.subtype ?? 'Unknown',
+        segments: clock.segments,
+        maxSegments: clock.maxSegments,
+        metadata: clock.metadata ?? {},
       }));
     },
   };

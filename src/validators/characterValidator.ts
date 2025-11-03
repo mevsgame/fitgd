@@ -52,14 +52,16 @@ export function calculateTotalActionDots(actionDots: ActionDots): number {
 
 /**
  * Validate starting action dots for character creation
+ * Allows allocation from 0 up to 12 total dots (flexible for character creation UI)
  */
 export function validateStartingActionDots(actionDots: ActionDots): void {
   const config = DEFAULT_CONFIG;
   const total = calculateTotalActionDots(actionDots);
 
-  if (total !== config.character.startingActionDots) {
+  // Allow any allocation from 0 to 12 dots (user can allocate freely during creation)
+  if (total > config.character.startingActionDots) {
     throw new CharacterValidationError(
-      `Character must start with exactly ${config.character.startingActionDots} action dots (got ${total})`
+      `Character cannot have more than ${config.character.startingActionDots} action dots at creation (got ${total})`
     );
   }
 

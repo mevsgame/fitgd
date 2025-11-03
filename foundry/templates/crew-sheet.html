@@ -48,14 +48,19 @@
         </button>
       </div>
       <div class="members-list">
-        {{#each system.characters as |characterId|}}
+        {{#each system.characters as |character|}}
         <div class="member-item">
-          {{!-- This would link to the character actor --}}
-          <span>{{characterId}}</span>
+          {{#if character.foundryActorId}}
+          <a class="content-link" draggable="true" data-uuid="Actor.{{character.foundryActorId}}" data-id="{{character.foundryActorId}}" data-type="Actor">
+            <i class="fas fa-user"></i> {{character.name}}
+          </a>
+          {{else}}
+          <span><i class="fas fa-user"></i> {{character.name}}</span>
+          {{/if}}
         </div>
         {{/each}}
 
-        {{#unless system.characters}}
+        {{#unless system.characters.length}}
         <p class="no-members">No crew members yet. Use the Add Character button above.</p>
         {{/unless}}
       </div>
