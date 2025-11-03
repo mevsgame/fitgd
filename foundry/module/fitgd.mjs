@@ -113,6 +113,15 @@ Hooks.once('ready', async function() {
     saveCommandHistory();
   });
 
+  // Save on page unload to catch any unsaved changes
+  window.addEventListener('beforeunload', () => {
+    // Synchronous save (no await) for immediate execution
+    const history = game.fitgd.foundry.exportHistory();
+    game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
+    const total = history.characters.length + history.crews.length + history.clocks.length;
+    console.log(`FitGD | Saved ${total} commands (on unload)`);
+  });
+
   console.log('FitGD | Ready');
 });
 
@@ -146,6 +155,9 @@ Hooks.on('createActor', async function(actor, options, userId) {
       await actor.setFlag('forged-in-the-grimdark', 'reduxId', characterId);
       console.log(`FitGD | Character created in Redux: ${characterId}`);
 
+      // Save immediately
+      await saveCommandHistoryImmediate();
+
       // Force re-render the sheet if it's already open
       if (actor.sheet?.rendered) {
         console.log('FitGD | Re-rendering character sheet with Redux data');
@@ -164,6 +176,9 @@ Hooks.on('createActor', async function(actor, options, userId) {
       // Store the Redux ID in Foundry actor flags
       await actor.setFlag('forged-in-the-grimdark', 'reduxId', crewId);
       console.log(`FitGD | Crew created in Redux: ${crewId}`);
+
+      // Save immediately
+      await saveCommandHistoryImmediate();
 
       // Force re-render the sheet if it's already open
       if (actor.sheet?.rendered) {
@@ -437,17 +452,27 @@ function registerHandlebarsHelpers() {
 
 let autoSaveTimer = null;
 
+async function saveCommandHistoryImmediate() {
+  // Save immediately without debounce
+  try {
+    const history = game.fitgd.foundry.exportHistory();
+    await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
+    const total = history.characters.length + history.crews.length + history.clocks.length;
+    console.log(`FitGD | Saved ${total} commands (immediate)`);
+  } catch (error) {
+    console.error('FitGD | Error saving command history:', error);
+  }
+}
+
 function saveCommandHistory() {
-  // Debounce auto-save
+  // Debounced auto-save for non-critical updates
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
 
   const interval = game.settings.get('forged-in-the-grimdark', 'autoSaveInterval');
   if (interval === 0) return;
 
   autoSaveTimer = setTimeout(async () => {
-    const history = game.fitgd.foundry.exportHistory();
-    await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
-    console.log(`FitGD | Auto-saved ${history.characters.length + history.crews.length + history.clocks.length} commands`);
+    await saveCommandHistoryImmediate();
   }, interval * 1000);
 }
 
