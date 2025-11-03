@@ -87,7 +87,7 @@ export function createGameAPI(store: Store): GameAPI {
   };
 }
 
-// Re-export for convenience
+// Re-export types
 export type {
   CharacterAPI,
   ActionAPI,
@@ -97,3 +97,11 @@ export type {
   ClockAPI,
   QueryAPI,
 } from './types';
+
+// Re-export store utilities
+export { configureStore, rootReducer } from '../store';
+export type { RootState, AppDispatch } from '../store';
+
+// Re-export Foundry adapter
+export { createFoundryAdapter } from '../adapters/foundry';
+export type { FoundryAdapter, FoundryActor } from '../adapters/foundry';
