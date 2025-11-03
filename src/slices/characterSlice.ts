@@ -7,7 +7,9 @@ import {
   validateTraitCount,
   validateTraitGrouping,
   validateActionDotAdvancement,
+  calculateTotalActionDots,
 } from '../validators/characterValidator';
+import { DEFAULT_CONFIG } from '../config';
 import type {
   Character,
   Trait,
@@ -126,11 +128,17 @@ const characterSlice = createSlice({
         validateStartingActionDots(payload.actionDots);
 
         const now = Date.now();
+
+        // Calculate unallocated dots (12 - sum of allocated)
+        const allocatedDots = calculateTotalActionDots(payload.actionDots);
+        const unallocatedDots = DEFAULT_CONFIG.character.startingActionDots - allocatedDots;
+
         const character: Character = {
           id: generateId(),
           name: payload.name,
           traits: payload.traits,
           actionDots: payload.actionDots,
+          unallocatedActionDots: unallocatedDots,
           equipment: [],
           rallyAvailable: true,
           createdAt: now,
@@ -286,7 +294,19 @@ const characterSlice = createSlice({
         // Validate dots value
         validateActionDots(actionName, dots);
 
+        // Calculate difference and adjust unallocated dots
+        const oldDots = character.actionDots[actionName];
+        const difference = dots - oldDots;
+
+        // Check if we have enough unallocated dots
+        if (difference > character.unallocatedActionDots) {
+          throw new Error(
+            `Not enough unallocated action dots (need ${difference}, have ${character.unallocatedActionDots})`
+          );
+        }
+
         character.actionDots[actionName] = dots;
+        character.unallocatedActionDots -= difference;
         character.updatedAt = Date.now();
       },
       prepare: (payload: SetActionDotsPayload) => {
@@ -358,6 +378,42 @@ const characterSlice = createSlice({
       prepare: (payload: RemoveEquipmentPayload) => {
         const command: Command = {
           type: 'character/removeEquipment',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    addUnallocatedDots: {
+      reducer: (
+        state,
+        action: PayloadAction<{ characterId: string; amount: number }>
+      ) => {
+        const { characterId, amount } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        if (amount < 0) {
+          throw new Error('Cannot add negative unallocated dots');
+        }
+
+        character.unallocatedActionDots += amount;
+        character.updatedAt = Date.now();
+      },
+      prepare: (payload: { characterId: string; amount: number; userId?: string }) => {
+        const command: Command = {
+          type: 'character/addUnallocatedDots',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -566,6 +622,7 @@ export const {
   setActionDots,
   addEquipment,
   removeEquipment,
+  addUnallocatedDots,
   useRally,
   resetRally,
   groupTraits,

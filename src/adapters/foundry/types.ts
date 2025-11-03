@@ -41,6 +41,9 @@ export interface FoundryCharacterData {
     sway: ActionRating;
   };
 
+  // Unallocated action dots (for character creation and GM rewards)
+  unallocatedActionDots?: number;
+
   // Rally (available at 0-3 Momentum)
   rally: {
     available: boolean;

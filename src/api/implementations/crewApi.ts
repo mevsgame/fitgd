@@ -66,6 +66,30 @@ export function createCrewAPI(store: Store) {
     },
 
     /**
+     * Spend Momentum (for push, flashback, etc.)
+     */
+    spendMomentum(params: { crewId: string; amount: number }): number {
+      const { crewId, amount } = params;
+
+      const state = store.getState();
+      const crew = state.crews.byId[crewId];
+
+      if (!crew) {
+        throw new Error(`Crew ${crewId} not found`);
+      }
+
+      if (crew.currentMomentum < amount) {
+        throw new Error(`Insufficient Momentum (have ${crew.currentMomentum}, need ${amount})`);
+      }
+
+      // Spend momentum is just negative add
+      store.dispatch(addMomentum({ crewId, amount: -amount }));
+
+      const newState = store.getState();
+      return newState.crews.byId[crewId]?.currentMomentum ?? 0;
+    },
+
+    /**
      * Perform complete Momentum Reset (end of act)
      */
     performReset(crewId: string) {

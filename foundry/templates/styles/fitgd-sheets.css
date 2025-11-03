@@ -253,6 +253,61 @@
   margin-bottom: 15px;
 }
 
+.fitgd .actions-header .header-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+/* Dot Allocation Display */
+.fitgd .dot-allocation-display {
+  background: #2a2a2a;
+  border: 2px solid #444;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 15px;
+}
+
+.fitgd .allocation-track {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fitgd .allocation-label {
+  font-weight: bold;
+  color: #ddd;
+  margin-right: 5px;
+}
+
+.fitgd .allocation-dot {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #555;
+  border-radius: 50%;
+  background: #222;
+  display: inline-block;
+}
+
+.fitgd .allocation-dot.filled {
+  background: #ff6347;
+  border-color: #ff6347;
+  box-shadow: 0 0 4px rgba(255, 99, 71, 0.8);
+}
+
+.fitgd .allocation-text {
+  color: #ff6347;
+  font-weight: bold;
+  margin-left: 10px;
+}
+
+.fitgd .edit-mode-active {
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.1);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border-left: 3px solid #ffd700;
+}
+
 .fitgd .actions-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

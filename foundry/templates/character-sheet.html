@@ -27,11 +27,45 @@
     <div class="tab actions" data-group="primary" data-tab="actions">
       <div class="actions-header">
         <h2>Action Ratings</h2>
-        <button class="action-roll-btn" type="button">
-          <i class="fas fa-dice-d6"></i> Roll Action
-        </button>
+        <div class="header-buttons">
+          <button class="toggle-edit-btn" type="button">
+            {{#if editMode}}
+              <i class="fas fa-save"></i> Save
+            {{else}}
+              <i class="fas fa-edit"></i> Edit
+            {{/if}}
+          </button>
+          <button class="action-roll-btn" type="button">
+            <i class="fas fa-dice-d6"></i> Roll Action
+          </button>
+        </div>
       </div>
-      <p class="help-text">Click dots to allocate action ratings. Standard starting: 12 dots total, max 3 per action. Maximum: 4 dots per action.</p>
+
+      {{!-- Dot Allocation Display --}}
+      <div class="dot-allocation-display">
+        <div class="allocation-track">
+          <span class="allocation-label">Dots:</span>
+          {{#times system.totalActionDots}}
+            <span class="allocation-dot {{#if (lt this ../system.allocatedActionDots)}}filled{{/if}}"></span>
+          {{/times}}
+          <span class="allocation-text">
+            {{system.allocatedActionDots}}/{{system.totalActionDots}}
+            {{#if (eq system.unallocatedActionDots 0)}}
+              <i class="fas fa-check-circle" style="color: green;"></i>
+            {{else}}
+              ({{system.unallocatedActionDots}} to allocate)
+            {{/if}}
+          </span>
+        </div>
+      </div>
+
+      {{#if editMode}}
+        <p class="help-text edit-mode-active">
+          <i class="fas fa-edit"></i> Edit Mode Active: Click dots to allocate. Click Save when done.
+        </p>
+      {{else}}
+        <p class="help-text">Click Edit to allocate action dots. Maximum: 4 dots per action.</p>
+      {{/if}}
 
       <div class="actions-grid">
         {{#each system.actionDots as |dots action|}}

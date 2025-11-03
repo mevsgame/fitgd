@@ -10,6 +10,7 @@ import {
   advanceActionDots,
   addEquipment,
   removeEquipment,
+  addUnallocatedDots as addUnallocatedDotsAction,
   useRally,
 } from '../../slices/characterSlice';
 import { addMomentum, spendMomentum } from '../../slices/crewSlice';
@@ -265,6 +266,31 @@ export function createCharacterAPI(store: Store) {
       }
 
       return character.actionDots[action];
+    },
+
+    /**
+     * Add unallocated action dots (for GM rewards/milestones)
+     */
+    addUnallocatedDots(params: {
+      characterId: string;
+      amount: number;
+    }): number {
+      const { characterId, amount } = params;
+
+      if (amount < 1) {
+        throw new Error('Amount must be at least 1');
+      }
+
+      store.dispatch(addUnallocatedDotsAction({ characterId, amount }));
+
+      const state = store.getState();
+      const character = state.characters.byId[characterId];
+
+      if (!character) {
+        throw new Error(`Character ${characterId} not found`);
+      }
+
+      return character.unallocatedActionDots;
     },
 
     /**

@@ -9,6 +9,7 @@ export interface Character {
   name: string;
   traits: Trait[];
   actionDots: ActionDots;
+  unallocatedActionDots: number; // Dots not yet allocated (for milestones/rewards)
   equipment: Equipment[];
   rallyAvailable: boolean;
   createdAt: number;

@@ -152,6 +152,7 @@ export function importCharacterFromFoundry(
       consort: system.actions.consort.value,
       sway: system.actions.sway.value,
     },
+    unallocatedActionDots: system.unallocatedActionDots ?? 0,
     equipment,
     rallyAvailable: system.rally.available,
     createdAt: system.createdAt,

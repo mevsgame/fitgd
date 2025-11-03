@@ -149,7 +149,7 @@ Hooks.on('createActor', async function(actor, options, userId) {
   } else if (actor.type === 'crew') {
     // Create crew in Redux
     try {
-      const crewId = game.fitgd.api.crew.create({ name: actor.name });
+      const crewId = game.fitgd.api.crew.create(actor.name);
 
       // Store the Redux ID in Foundry actor flags
       await actor.setFlag('forged-in-the-grimdark', 'reduxId', crewId);
@@ -446,6 +446,11 @@ function saveCommandHistory() {
 /* -------------------------------------------- */
 
 class FitGDCharacterSheet extends ActorSheet {
+  constructor(...args) {
+    super(...args);
+    this.editMode = false; // Track edit mode for action dots
+  }
+
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ['fitgd', 'sheet', 'actor', 'character'],
@@ -458,6 +463,7 @@ class FitGDCharacterSheet extends ActorSheet {
 
   getData() {
     const context = super.getData();
+    context.editMode = this.editMode;
 
     // Get Redux ID from Foundry actor flags
     const reduxId = this.actor.getFlag('forged-in-the-grimdark', 'reduxId');
@@ -468,12 +474,20 @@ class FitGDCharacterSheet extends ActorSheet {
       console.log('FitGD | Character from Redux:', character);
 
       if (character) {
+        // Calculate total allocated dots
+        const allocatedDots = Object.values(character.actionDots).reduce((sum, dots) => sum + dots, 0);
+        const unallocatedDots = character.unallocatedActionDots;
+        const totalDots = allocatedDots + unallocatedDots;
+
         context.system = {
           actionDots: character.actionDots,
           traits: character.traits,
           equipment: character.equipment,
           rallyAvailable: character.rallyAvailable,
-          harmClocks: game.fitgd.api.query.getHarmClocks(reduxId)
+          harmClocks: game.fitgd.api.query.getHarmClocks(reduxId),
+          unallocatedActionDots: unallocatedDots,
+          allocatedActionDots: allocatedDots,
+          totalActionDots: totalDots
         };
 
         // Find crew for this character
@@ -506,6 +520,9 @@ class FitGDCharacterSheet extends ActorSheet {
     const dots = html.find('.dot');
     console.log('FitGD | Found action dots:', dots.length);
     dots.click(this._onDotClick.bind(this));
+
+    // Toggle Edit Mode for action dots
+    html.find('.toggle-edit-btn').click(this._onToggleEdit.bind(this));
 
     // Harm
     html.find('.add-harm-btn').click(this._onAddHarm.bind(this));
@@ -576,11 +593,17 @@ class FitGDCharacterSheet extends ActorSheet {
   }
 
   /**
-   * Handle clicking on action dots to set the value
+   * Handle clicking on action dots to set the value (only in edit mode)
    */
   async _onDotClick(event) {
     event.preventDefault();
     event.stopPropagation();
+
+    // Only allow editing in edit mode
+    if (!this.editMode) {
+      ui.notifications.warn('Click Edit to allocate action dots');
+      return;
+    }
 
     const characterId = this._getReduxId();
     if (!characterId) return;
@@ -591,29 +614,7 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!action || isNaN(value)) return;
 
     try {
-      // Get current character state
-      const character = game.fitgd.api.character.getCharacter(characterId);
-      if (!character) return;
-
-      // Calculate total dots if we make this change
-      const currentActionDots = character.actionDots;
-      const oldValue = currentActionDots[action] || 0;
-      const totalDots = Object.values(currentActionDots).reduce((sum, dots) => sum + dots, 0);
-      const newTotalDots = totalDots - oldValue + value;
-
-      // Check for validation at character creation (12 dots max, 3 per action max)
-      // Note: We'll be permissive and allow 4 dots for advancement, but warn if over 12 total
-      if (value > 4) {
-        ui.notifications.warn('Maximum 4 dots per action');
-        return;
-      }
-
-      // Warn if exceeding 12 total (but allow it for advancement)
-      if (newTotalDots > 12) {
-        ui.notifications.warn(`Setting ${action} to ${value} would give ${newTotalDots} total dots (standard starting is 12)`);
-      }
-
-      // Update the action dots
+      // Update the action dots (Redux will handle unallocated dots validation)
       game.fitgd.api.character.setActionDots({
         characterId,
         action,
@@ -627,6 +628,38 @@ class FitGDCharacterSheet extends ActorSheet {
       ui.notifications.error(`Error: ${error.message}`);
       console.error('FitGD | Set action dots error:', error);
     }
+  }
+
+  /**
+   * Toggle edit mode for action dots
+   */
+  async _onToggleEdit(event) {
+    event.preventDefault();
+
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    if (this.editMode) {
+      // Trying to save - validate that all dots are allocated
+      const character = game.fitgd.api.character.getCharacter(characterId);
+      if (!character) return;
+
+      if (character.unallocatedActionDots > 0) {
+        ui.notifications.warn(`You must allocate all ${character.unallocatedActionDots} remaining action dots before saving`);
+        return;
+      }
+
+      // All dots allocated, exit edit mode
+      this.editMode = false;
+      ui.notifications.info('Action dots saved');
+    } else {
+      // Enter edit mode
+      this.editMode = true;
+      ui.notifications.info('Edit mode: Click dots to allocate action ratings');
+    }
+
+    // Re-render to update button text and dot states
+    this.render(false);
   }
 
   /**
