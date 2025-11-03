@@ -169,9 +169,9 @@ export class ActionRollDialog extends Dialog {
       dicePool += 1;
     }
 
-    // Handle desperate position (0-1 dice = roll 2, keep lowest)
-    const isDesperate = dicePool < 2;
-    const rollFormula = isDesperate ? '2d6kl' : `${dicePool}d6`;
+    // Handle desperate position (0 dice = roll 2, keep lowest)
+    const isDesperate = dicePool === 0;
+    const rollFormula = isDesperate ? '2d6kl' : `${dicePool}d6kh`;
 
     // Roll the dice
     const roll = await new Roll(rollFormula).evaluate();
@@ -210,7 +210,8 @@ export class ActionRollDialog extends Dialog {
         </div>
         <div class="roll-result">
           <h4>${outcomeLabel}</h4>
-          <div class="dice-result">${roll.total}</div>
+          <div class="dice-result">Highest: ${highest}</div>
+          <div class="dice-rolled">Rolled: ${dice.join(', ')}</div>
         </div>
       </div>
     `;
