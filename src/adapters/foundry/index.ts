@@ -170,10 +170,35 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
       };
     },
 
-    replayCommands(_history: CommandHistory): void {
-      // TODO: Implement command replay
-      // Dispatch each command in order to reconstruct state
-      console.warn('replayCommands not yet implemented');
+    replayCommands(history: CommandHistory): void {
+      console.log('FitGD | Replaying commands from history');
+      console.log(`FitGD | Character commands: ${history.characters.length}`);
+      console.log(`FitGD | Crew commands: ${history.crews.length}`);
+      console.log(`FitGD | Clock commands: ${history.clocks.length}`);
+
+      // Replay all commands in order by timestamp
+      const allCommands = [
+        ...history.characters,
+        ...history.crews,
+        ...history.clocks,
+      ].sort((a, b) => a.timestamp - b.timestamp);
+
+      console.log(`FitGD | Total commands to replay: ${allCommands.length}`);
+
+      // Dispatch each command to reconstruct state
+      for (const command of allCommands) {
+        try {
+          store.dispatch({
+            type: command.type,
+            payload: command.payload,
+            meta: { command },
+          });
+        } catch (error) {
+          console.error(`FitGD | Error replaying command ${command.type}:`, error);
+        }
+      }
+
+      console.log('FitGD | Command replay complete');
     },
   };
 }
