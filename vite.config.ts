@@ -8,14 +8,13 @@ export default defineConfig({
       entry: path.resolve(__dirname, 'src/api/index.ts'),
       name: 'FitGD',
       fileName: (format) => `fitgd-core.${format}.js`,
-      formats: ['es', 'umd'],
+      formats: ['es'],
     },
     rollupOptions: {
-      external: ['@reduxjs/toolkit'],
+      // Bundle all dependencies (no externals for Foundry)
       output: {
-        globals: {
-          '@reduxjs/toolkit': 'RTK',
-        },
+        // Ensure imports/exports work in ES modules
+        inlineDynamicImports: true,
       },
     },
     minify: 'esbuild', // Use esbuild (included with Vite)
