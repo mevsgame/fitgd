@@ -169,9 +169,9 @@ export class ActionRollDialog extends Dialog {
       dicePool += 1;
     }
 
-    // Handle desperate position (0 dice = roll 2, keep lowest)
-    const isDesperate = dicePool === 0;
-    const rollFormula = isDesperate ? '2d6kl' : `${dicePool}d6kh`;
+    // Handle 0 dots (roll 2d6, keep lowest)
+    const hasZeroDots = dicePool === 0;
+    const rollFormula = hasZeroDots ? '2d6kl' : `${dicePool}d6kh`;
 
     // Roll the dice
     const roll = await new Roll(rollFormula).evaluate();
@@ -206,7 +206,7 @@ export class ActionRollDialog extends Dialog {
           <div><strong>Effect:</strong> ${effect.charAt(0).toUpperCase() + effect.slice(1)}</div>
           ${push ? '<div><em>Pushed (spent 1 Momentum)</em></div>' : ''}
           ${devilsBargain ? '<div><em>Devil\'s Bargain accepted</em></div>' : ''}
-          ${isDesperate ? '<div><em>Desperate position: rolled 2d6, kept lowest</em></div>' : ''}
+          ${hasZeroDots ? '<div><em>0 dots in action: rolled 2d6, kept lowest</em></div>' : ''}
         </div>
         <div class="roll-result">
           <h4>${outcomeLabel}</h4>
