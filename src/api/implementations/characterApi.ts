@@ -2,9 +2,11 @@ import type { Store } from '@reduxjs/toolkit';
 import type { Trait, ActionDots, Equipment } from '../../types';
 import {
   createCharacter,
+  addTrait as addTraitAction,
   disableTrait,
   enableTrait,
   groupTraits,
+  setActionDots as setActionDotsAction,
   advanceActionDots,
   addEquipment,
   removeEquipment,
@@ -217,6 +219,52 @@ export function createCharacterAPI(store: Store) {
     }): void {
       const { characterId, equipmentId } = params;
       store.dispatch(removeEquipment({ characterId, equipmentId }));
+    },
+
+    /**
+     * Add a trait to character
+     */
+    addTrait(params: {
+      characterId: string;
+      trait: Omit<Trait, 'id' | 'acquiredAt'>;
+    }): string {
+      const { characterId, trait } = params;
+
+      const traitWithId: Trait = {
+        ...trait,
+        id: generateId(),
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addTraitAction({ characterId, trait: traitWithId }));
+
+      return traitWithId.id;
+    },
+
+    /**
+     * Set action dots to a specific value
+     */
+    setActionDots(params: {
+      characterId: string;
+      action: keyof ActionDots;
+      dots: number;
+    }): number {
+      const { characterId, action, dots } = params;
+
+      if (dots < 0 || dots > 4) {
+        throw new Error(`Action dots must be between 0 and 4 (got ${dots})`);
+      }
+
+      store.dispatch(setActionDotsAction({ characterId, action, dots }));
+
+      const state = store.getState();
+      const character = state.characters.byId[characterId];
+
+      if (!character) {
+        throw new Error(`Character ${characterId} not found`);
+      }
+
+      return character.actionDots[action];
     },
 
     /**
