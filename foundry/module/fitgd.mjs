@@ -88,11 +88,21 @@ Hooks.once('ready', async function() {
   console.log('FitGD | World ready, loading state...');
 
   // Load command history from settings
-  const history = game.settings.get('forged-in-the-grimdark', 'commandHistory') || [];
+  const defaultHistory = { characters: [], crews: [], clocks: [] };
+  const history = game.settings.get('forged-in-the-grimdark', 'commandHistory') || defaultHistory;
 
-  if (history.length > 0) {
-    console.log(`FitGD | Replaying ${history.length} commands...`);
-    game.fitgd.foundry.replayCommands(history);
+  // Ensure history has the correct structure
+  const validHistory = {
+    characters: history.characters || [],
+    crews: history.crews || [],
+    clocks: history.clocks || []
+  };
+
+  const totalCommands = validHistory.characters.length + validHistory.crews.length + validHistory.clocks.length;
+
+  if (totalCommands > 0) {
+    console.log(`FitGD | Replaying ${totalCommands} commands...`);
+    game.fitgd.foundry.replayCommands(validHistory);
     console.log('FitGD | State restored from history');
   } else {
     console.log('FitGD | No command history found, starting fresh');
