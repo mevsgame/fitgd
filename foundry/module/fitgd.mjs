@@ -89,6 +89,45 @@ Hooks.once('ready', async function() {
 });
 
 /* -------------------------------------------- */
+/*  Actor Lifecycle Hooks                       */
+/* -------------------------------------------- */
+
+/**
+ * When a Foundry actor is created, create the corresponding Redux entity
+ */
+Hooks.on('createActor', async function(actor, options, userId) {
+  console.log(`FitGD | Creating ${actor.type}: ${actor.name} (${actor.id})`);
+
+  if (actor.type === 'character') {
+    // Create character in Redux with default stats
+    const result = game.fitgd.api.character.create({
+      name: actor.name,
+      traits: [
+        { name: 'Role Trait (edit me)', category: 'role', disabled: false },
+        { name: 'Background Trait (edit me)', category: 'background', disabled: false }
+      ],
+      actionDots: {
+        shoot: 0, skirmish: 0, skulk: 0, wreck: 0,
+        finesse: 0, survey: 0, study: 0, tech: 0,
+        attune: 0, command: 0, consort: 0, sway: 0
+      }
+    });
+
+    // Store the Redux ID in Foundry actor flags
+    await actor.setFlag('forged-in-the-grimdark', 'reduxId', result.characterId);
+    console.log(`FitGD | Character created in Redux: ${result.characterId}`);
+
+  } else if (actor.type === 'crew') {
+    // Create crew in Redux
+    const result = game.fitgd.api.crew.create({ name: actor.name });
+
+    // Store the Redux ID in Foundry actor flags
+    await actor.setFlag('forged-in-the-grimdark', 'reduxId', result.crewId);
+    console.log(`FitGD | Crew created in Redux: ${result.crewId}`);
+  }
+});
+
+/* -------------------------------------------- */
 /*  System Settings                             */
 /* -------------------------------------------- */
 
@@ -240,14 +279,25 @@ class FitGDCharacterSheet extends ActorSheet {
   getData() {
     const context = super.getData();
 
-    // Get character data from Redux
-    const characterId = this.actor.id;
-    const character = game.fitgd.api.character.getCharacter(characterId);
+    // Get Redux ID from Foundry actor flags
+    const reduxId = this.actor.getFlag('forged-in-the-grimdark', 'reduxId');
 
-    if (character) {
-      context.system = game.fitgd.foundry.exportCharacter(characterId).system;
-      // Find crew for this character
-      context.crewId = this._getCrewId();
+    if (reduxId) {
+      const character = game.fitgd.api.character.getCharacter(reduxId);
+
+      if (character) {
+        context.system = {
+          actionDots: character.actionDots,
+          traits: character.traits,
+          equipment: character.equipment,
+          rallyAvailable: character.rallyAvailable,
+          harmClocks: game.fitgd.api.query.getHarmClocks(reduxId)
+        };
+
+        // Find crew for this character
+        context.crewId = this._getCrewId(reduxId);
+        context.reduxId = reduxId;
+      }
     }
 
     return context;
@@ -258,7 +308,10 @@ class FitGDCharacterSheet extends ActorSheet {
 
     // Action Rolls
     html.find('.action-roll-btn').click(this._onActionRoll.bind(this));
-    html.find('.action-row').click(this._onQuickActionRoll.bind(this));
+    html.find('.action-roll-single-btn').click(this._onActionRollSingle.bind(this));
+
+    // Action Dots (clickable)
+    html.find('.dot').click(this._onDotClick.bind(this));
 
     // Harm
     html.find('.add-harm-btn').click(this._onAddHarm.bind(this));
@@ -275,10 +328,16 @@ class FitGDCharacterSheet extends ActorSheet {
   }
 
   /**
+   * Get Redux character ID from Foundry actor
+   */
+  _getReduxId() {
+    return this.actor.getFlag('forged-in-the-grimdark', 'reduxId');
+  }
+
+  /**
    * Find the crew that contains this character
    */
-  _getCrewId() {
-    const characterId = this.actor.id;
+  _getCrewId(characterId) {
     const state = game.fitgd.store.getState();
 
     // Search all crews for this character
@@ -292,10 +351,99 @@ class FitGDCharacterSheet extends ActorSheet {
     return null;
   }
 
+  /**
+   * Handle clicking on action dots to set the value
+   */
+  async _onDotClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    const action = event.currentTarget.dataset.action;
+    const value = parseInt(event.currentTarget.dataset.value);
+
+    if (!action || isNaN(value)) return;
+
+    try {
+      // Get current character state
+      const character = game.fitgd.api.character.getCharacter(characterId);
+      if (!character) return;
+
+      // Calculate total dots if we make this change
+      const currentActionDots = character.actionDots;
+      const oldValue = currentActionDots[action] || 0;
+      const totalDots = Object.values(currentActionDots).reduce((sum, dots) => sum + dots, 0);
+      const newTotalDots = totalDots - oldValue + value;
+
+      // Check for validation at character creation (12 dots max, 3 per action max)
+      // Note: We'll be permissive and allow 4 dots for advancement, but warn if over 12 total
+      if (value > 4) {
+        ui.notifications.warn('Maximum 4 dots per action');
+        return;
+      }
+
+      // Warn if exceeding 12 total (but allow it for advancement)
+      if (newTotalDots > 12) {
+        ui.notifications.warn(`Setting ${action} to ${value} would give ${newTotalDots} total dots (standard starting is 12)`);
+      }
+
+      // Update the action dots
+      game.fitgd.api.character.setActionDots({
+        characterId,
+        action,
+        dots: value
+      });
+
+      // Re-render sheet
+      this.render(false);
+
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Set action dots error:', error);
+    }
+  }
+
+  /**
+   * Handle clicking on single action roll button
+   */
+  async _onActionRollSingle(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    const crewId = this._getCrewId(characterId);
+
+    if (!crewId) {
+      ui.notifications.warn('Character must be part of a crew to make action rolls');
+      return;
+    }
+
+    const action = event.currentTarget.dataset.action;
+
+    if (action) {
+      const dialog = new ActionRollDialog(characterId, crewId);
+      dialog.render(true);
+
+      // Pre-select the action after dialog renders
+      setTimeout(() => {
+        const select = dialog.element.find('[name="action"]');
+        if (select.length) {
+          select.val(action.toLowerCase()).trigger('change');
+        }
+      }, 100);
+    }
+  }
+
   async _onActionRoll(event) {
     event.preventDefault();
-    const characterId = this.actor.id;
-    const crewId = this._getCrewId();
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    const crewId = this._getCrewId(characterId);
 
     if (!crewId) {
       ui.notifications.warn('Character must be part of a crew to make action rolls');
@@ -305,51 +453,22 @@ class FitGDCharacterSheet extends ActorSheet {
     new ActionRollDialog(characterId, crewId).render(true);
   }
 
-  async _onQuickActionRoll(event) {
-    event.preventDefault();
-
-    // Only trigger on action row clicks, not on child elements
-    if (!event.currentTarget.classList.contains('action-row')) {
-      return;
-    }
-
-    const characterId = this.actor.id;
-    const crewId = this._getCrewId();
-
-    if (!crewId) {
-      ui.notifications.warn('Character must be part of a crew to make action rolls');
-      return;
-    }
-
-    // Get the action from the clicked row
-    const actionLabel = event.currentTarget.querySelector('label')?.textContent.trim().toLowerCase();
-
-    if (actionLabel) {
-      const dialog = new ActionRollDialog(characterId, crewId);
-      dialog.render(true);
-
-      // Pre-select the action after dialog renders
-      setTimeout(() => {
-        const select = dialog.element.find('[name="action"]');
-        if (select.length) {
-          select.val(actionLabel).trigger('change');
-        }
-      }, 100);
-    }
-  }
-
   async _onAddHarm(event) {
     event.preventDefault();
-    const characterId = this.actor.id;
-    const crewId = this._getCrewId();
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    const crewId = this._getCrewId(characterId);
 
     new TakeHarmDialog(characterId, crewId).render(true);
   }
 
   async _onLeanIntoTrait(event) {
     event.preventDefault();
-    const characterId = this.actor.id;
-    const crewId = this._getCrewId();
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    const crewId = this._getCrewId(characterId);
     const traitId = event.currentTarget.dataset.traitId;
 
     if (!crewId) {
@@ -378,15 +497,18 @@ class FitGDCharacterSheet extends ActorSheet {
 
   async _onAddTrait(event) {
     event.preventDefault();
-    const characterId = this.actor.id;
+    const characterId = this._getReduxId();
+    if (!characterId) return;
 
     new AddTraitDialog(characterId).render(true);
   }
 
   async _onUseRally(event) {
     event.preventDefault();
-    const characterId = this.actor.id;
-    const crewId = this._getCrewId();
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    const crewId = this._getCrewId(characterId);
 
     if (!crewId) {
       ui.notifications.warn('Character must be part of a crew to use Rally');
@@ -398,8 +520,10 @@ class FitGDCharacterSheet extends ActorSheet {
 
   async _onFlashback(event) {
     event.preventDefault();
-    const characterId = this.actor.id;
-    const crewId = this._getCrewId();
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    const crewId = this._getCrewId(characterId);
 
     if (!crewId) {
       ui.notifications.warn('Character must be part of a crew to use Flashback');
@@ -428,12 +552,22 @@ class FitGDCrewSheet extends ActorSheet {
   getData() {
     const context = super.getData();
 
-    // Get crew data from Redux
-    const crewId = this.actor.id;
-    const crew = game.fitgd.api.crew.getCrew(crewId);
+    // Get Redux ID from Foundry actor flags
+    const reduxId = this.actor.getFlag('forged-in-the-grimdark', 'reduxId');
 
-    if (crew) {
-      context.system = game.fitgd.foundry.exportCrew(crewId).system;
+    if (reduxId) {
+      const crew = game.fitgd.api.crew.getCrew(reduxId);
+
+      if (crew) {
+        context.system = {
+          currentMomentum: crew.currentMomentum,
+          characters: crew.characters,
+          addictionClock: game.fitgd.api.query.getAddictionClock(reduxId),
+          consumableClocks: game.fitgd.api.query.getConsumableClocks(reduxId),
+          progressClocks: [] // TODO: Add progress clock query
+        };
+        context.reduxId = reduxId;
+      }
     }
 
     return context;
@@ -455,11 +589,23 @@ class FitGDCrewSheet extends ActorSheet {
 
     // Reset
     html.find('.reset-btn').click(this._onPerformReset.bind(this));
+
+    // Crew members
+    html.find('.add-character-btn').click(this._onAddCharacter.bind(this));
+  }
+
+  /**
+   * Get Redux crew ID from Foundry actor
+   */
+  _getReduxId() {
+    return this.actor.getFlag('forged-in-the-grimdark', 'reduxId');
   }
 
   async _onAddMomentum(event) {
     event.preventDefault();
-    const crewId = this.actor.id;
+    const crewId = this._getReduxId();
+    if (!crewId) return;
+
     const amount = parseInt(event.currentTarget.dataset.amount) || 1;
 
     try {
@@ -474,7 +620,9 @@ class FitGDCrewSheet extends ActorSheet {
 
   async _onSpendMomentum(event) {
     event.preventDefault();
-    const crewId = this.actor.id;
+    const crewId = this._getReduxId();
+    if (!crewId) return;
+
     const amount = parseInt(event.currentTarget.dataset.amount) || 1;
 
     try {
@@ -489,14 +637,16 @@ class FitGDCrewSheet extends ActorSheet {
 
   async _onPush(event) {
     event.preventDefault();
-    const crewId = this.actor.id;
+    const crewId = this._getReduxId();
+    if (!crewId) return;
 
     new PushDialog(crewId).render(true);
   }
 
   async _onAddClock(event) {
     event.preventDefault();
-    const crewId = this.actor.id;
+    const crewId = this._getReduxId();
+    if (!crewId) return;
 
     new AddClockDialog(crewId).render(true);
   }
@@ -537,9 +687,67 @@ class FitGDCrewSheet extends ActorSheet {
     }
   }
 
+  async _onAddCharacter(event) {
+    event.preventDefault();
+    const crewId = this._getReduxId();
+    if (!crewId) return;
+
+    // Show dialog to select character
+    const characters = game.actors.filter(a => a.type === 'character');
+
+    if (characters.length === 0) {
+      ui.notifications.warn('No characters exist. Create a character first.');
+      return;
+    }
+
+    // Create simple selection dialog
+    const options = characters.map(char => `<option value="${char.id}">${char.name}</option>`).join('');
+
+    const dialog = new Dialog({
+      title: 'Add Character to Crew',
+      content: `
+        <form>
+          <div class="form-group">
+            <label>Select Character:</label>
+            <select name="characterId">${options}</select>
+          </div>
+        </form>
+      `,
+      buttons: {
+        add: {
+          icon: '<i class="fas fa-check"></i>',
+          label: 'Add',
+          callback: async (html) => {
+            const selectedFoundryId = html.find('[name="characterId"]').val();
+            const selectedActor = game.actors.get(selectedFoundryId);
+            const characterReduxId = selectedActor?.getFlag('forged-in-the-grimdark', 'reduxId');
+
+            if (characterReduxId) {
+              try {
+                game.fitgd.api.crew.addCharacter({ crewId, characterId: characterReduxId });
+                ui.notifications.info(`Added ${selectedActor.name} to crew`);
+                this.render(false);
+              } catch (error) {
+                ui.notifications.error(`Error: ${error.message}`);
+              }
+            }
+          }
+        },
+        cancel: {
+          icon: '<i class="fas fa-times"></i>',
+          label: 'Cancel'
+        }
+      },
+      default: 'add'
+    });
+
+    dialog.render(true);
+  }
+
   async _onPerformReset(event) {
     event.preventDefault();
-    const crewId = this.actor.id;
+    const crewId = this._getReduxId();
+    if (!crewId) return;
 
     try {
       const result = game.fitgd.api.crew.performReset(crewId);

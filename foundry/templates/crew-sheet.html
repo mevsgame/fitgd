@@ -41,7 +41,12 @@
 
     {{!-- Members Tab --}}
     <div class="tab members" data-group="primary" data-tab="members">
-      <h2>Crew Members</h2>
+      <div class="members-header">
+        <h2>Crew Members</h2>
+        <button class="add-character-btn" type="button">
+          <i class="fas fa-user-plus"></i> Add Character
+        </button>
+      </div>
       <div class="members-list">
         {{#each system.characters as |characterId|}}
         <div class="member-item">
@@ -51,7 +56,7 @@
         {{/each}}
 
         {{#unless system.characters}}
-        <p class="no-members">No crew members yet.</p>
+        <p class="no-members">No crew members yet. Use the Add Character button above.</p>
         {{/unless}}
       </div>
     </div>

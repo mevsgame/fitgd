@@ -268,15 +268,13 @@
   background: #2a2a2a;
   border: 1px solid #444;
   border-radius: 4px;
-  cursor: pointer;
   transition: all 0.2s;
 }
 
-.fitgd .action-row:hover {
-  background: #333;
-  border-color: #666;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+.fitgd .action-roll-single-btn {
+  padding: 4px 8px;
+  font-size: 12px;
+  min-width: auto;
 }
 
 .fitgd .action-row label {
@@ -297,12 +295,24 @@
   border: 2px solid #555;
   border-radius: 50%;
   background: #222;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fitgd .action-dots .dot:hover {
+  border-color: #888;
+  transform: scale(1.2);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
 }
 
 .fitgd .action-dots .dot.filled {
   background: #ff6347;
   border-color: #ff6347;
   box-shadow: 0 0 4px rgba(255, 99, 71, 0.8);
+}
+
+.fitgd .action-dots .dot.filled:hover {
+  box-shadow: 0 0 8px rgba(255, 99, 71, 1.0);
 }
 
 .fitgd .action-value {
@@ -542,6 +552,13 @@
 /* -------------------------------------------- */
 /*  Equipment & Members                         */
 /* -------------------------------------------- */
+
+.fitgd .members-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
 
 .fitgd .equipment-list,
 .fitgd .members-list {
