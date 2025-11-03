@@ -599,6 +599,11 @@ class FitGDCharacterSheet extends ActorSheet {
     event.preventDefault();
     event.stopPropagation();
 
+    console.log('FitGD | Dot clicked, editMode:', this.editMode);
+    console.log('FitGD | Event target:', event.currentTarget);
+    console.log('FitGD | Data action:', event.currentTarget.dataset.action);
+    console.log('FitGD | Data value:', event.currentTarget.dataset.value);
+
     // Only allow editing in edit mode
     if (!this.editMode) {
       ui.notifications.warn('Click Edit to allocate action dots');
@@ -606,20 +611,32 @@ class FitGDCharacterSheet extends ActorSheet {
     }
 
     const characterId = this._getReduxId();
-    if (!characterId) return;
+    if (!characterId) {
+      console.error('FitGD | No character ID found');
+      return;
+    }
 
     const action = event.currentTarget.dataset.action;
     const value = parseInt(event.currentTarget.dataset.value);
 
-    if (!action || isNaN(value)) return;
+    console.log('FitGD | Parsed action:', action, 'value:', value);
+
+    if (!action || isNaN(value)) {
+      console.error('FitGD | Invalid action or value');
+      return;
+    }
 
     try {
+      console.log('FitGD | Calling setActionDots with:', { characterId, action, dots: value });
+
       // Update the action dots (Redux will handle unallocated dots validation)
       game.fitgd.api.character.setActionDots({
         characterId,
         action,
         dots: value
       });
+
+      console.log('FitGD | setActionDots succeeded, re-rendering');
 
       // Re-render sheet
       this.render(false);
@@ -636,13 +653,23 @@ class FitGDCharacterSheet extends ActorSheet {
   async _onToggleEdit(event) {
     event.preventDefault();
 
+    console.log('FitGD | Toggle edit clicked, current editMode:', this.editMode);
+
     const characterId = this._getReduxId();
-    if (!characterId) return;
+    if (!characterId) {
+      console.error('FitGD | No character ID for toggle edit');
+      return;
+    }
 
     if (this.editMode) {
       // Trying to save - validate that all dots are allocated
       const character = game.fitgd.api.character.getCharacter(characterId);
-      if (!character) return;
+      if (!character) {
+        console.error('FitGD | Character not found');
+        return;
+      }
+
+      console.log('FitGD | Attempting to save, unallocated dots:', character.unallocatedActionDots);
 
       if (character.unallocatedActionDots > 0) {
         ui.notifications.warn(`You must allocate all ${character.unallocatedActionDots} remaining action dots before saving`);
@@ -651,14 +678,17 @@ class FitGDCharacterSheet extends ActorSheet {
 
       // All dots allocated, exit edit mode
       this.editMode = false;
+      console.log('FitGD | Exiting edit mode');
       ui.notifications.info('Action dots saved');
     } else {
       // Enter edit mode
       this.editMode = true;
+      console.log('FitGD | Entering edit mode');
       ui.notifications.info('Edit mode: Click dots to allocate action ratings');
     }
 
     // Re-render to update button text and dot states
+    console.log('FitGD | Re-rendering with editMode:', this.editMode);
     this.render(false);
   }
 
