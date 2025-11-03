@@ -14,7 +14,7 @@
 }
 
 .fitgd .window-content {
-  background: url('systems/forged-in-the-grimdark/ui/parchment-dark.jpg') repeat;
+  /* background: url('../../ui/parchment-dark.jpg') repeat; */ /* Optional background texture */
   background-color: #1a1a1a;
   padding: 0;
 }

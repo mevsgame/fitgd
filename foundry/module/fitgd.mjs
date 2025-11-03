@@ -117,31 +117,53 @@ Hooks.on('createActor', async function(actor, options, userId) {
   console.log(`FitGD | Creating ${actor.type}: ${actor.name} (${actor.id})`);
 
   if (actor.type === 'character') {
-    // Create character in Redux with default stats
-    const result = game.fitgd.api.character.create({
-      name: actor.name,
-      traits: [
-        { name: 'Role Trait (edit me)', category: 'role', disabled: false },
-        { name: 'Background Trait (edit me)', category: 'background', disabled: false }
-      ],
-      actionDots: {
-        shoot: 0, skirmish: 0, skulk: 0, wreck: 0,
-        finesse: 0, survey: 0, study: 0, tech: 0,
-        attune: 0, command: 0, consort: 0, sway: 0
-      }
-    });
+    // Create character in Redux with default stats (12 action dots required)
+    try {
+      const characterId = game.fitgd.api.character.create({
+        name: actor.name,
+        traits: [
+          { name: 'Role Trait (edit me)', category: 'role', disabled: false },
+          { name: 'Background Trait (edit me)', category: 'background', disabled: false }
+        ],
+        actionDots: {
+          shoot: 1, skirmish: 1, skulk: 1, wreck: 1,
+          finesse: 1, survey: 1, study: 1, tech: 1,
+          attune: 1, command: 1, consort: 1, sway: 1
+        }
+      });
 
-    // Store the Redux ID in Foundry actor flags
-    await actor.setFlag('forged-in-the-grimdark', 'reduxId', result.characterId);
-    console.log(`FitGD | Character created in Redux: ${result.characterId}`);
+      // Store the Redux ID in Foundry actor flags
+      await actor.setFlag('forged-in-the-grimdark', 'reduxId', characterId);
+      console.log(`FitGD | Character created in Redux: ${characterId}`);
+
+      // Force re-render the sheet if it's already open
+      if (actor.sheet?.rendered) {
+        console.log('FitGD | Re-rendering character sheet with Redux data');
+        actor.sheet.render(false);
+      }
+    } catch (error) {
+      console.error('FitGD | Failed to create character in Redux:', error);
+      ui.notifications.error(`Failed to create character: ${error.message}`);
+    }
 
   } else if (actor.type === 'crew') {
     // Create crew in Redux
-    const result = game.fitgd.api.crew.create({ name: actor.name });
+    try {
+      const crewId = game.fitgd.api.crew.create({ name: actor.name });
 
-    // Store the Redux ID in Foundry actor flags
-    await actor.setFlag('forged-in-the-grimdark', 'reduxId', result.crewId);
-    console.log(`FitGD | Crew created in Redux: ${result.crewId}`);
+      // Store the Redux ID in Foundry actor flags
+      await actor.setFlag('forged-in-the-grimdark', 'reduxId', crewId);
+      console.log(`FitGD | Crew created in Redux: ${crewId}`);
+
+      // Force re-render the sheet if it's already open
+      if (actor.sheet?.rendered) {
+        console.log('FitGD | Re-rendering crew sheet with Redux data');
+        actor.sheet.render(false);
+      }
+    } catch (error) {
+      console.error('FitGD | Failed to create crew in Redux:', error);
+      ui.notifications.error(`Failed to create crew: ${error.message}`);
+    }
   }
 });
 
