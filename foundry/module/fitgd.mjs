@@ -37,15 +37,33 @@ Hooks.once('init', async function() {
 
   // Initialize Redux store
   console.log('FitGD | Creating Redux store...');
-  game.fitgd.store = configureStore();
+  try {
+    game.fitgd.store = configureStore();
+    console.log('FitGD | Redux store created successfully');
+  } catch (error) {
+    console.error('FitGD | Failed to create Redux store:', error);
+    return;
+  }
 
   // Initialize Game API
   console.log('FitGD | Creating Game API...');
-  game.fitgd.api = createGameAPI(game.fitgd.store);
+  try {
+    game.fitgd.api = createGameAPI(game.fitgd.store);
+    console.log('FitGD | Game API created successfully. Available APIs:', Object.keys(game.fitgd.api));
+  } catch (error) {
+    console.error('FitGD | Failed to create Game API:', error);
+    return;
+  }
 
   // Initialize Foundry adapter
   console.log('FitGD | Creating Foundry adapter...');
-  game.fitgd.foundry = createFoundryAdapter(game.fitgd.store);
+  try {
+    game.fitgd.foundry = createFoundryAdapter(game.fitgd.store);
+    console.log('FitGD | Foundry adapter created successfully');
+  } catch (error) {
+    console.error('FitGD | Failed to create Foundry adapter:', error);
+    return;
+  }
 
   // Register settings
   registerSystemSettings();
@@ -421,9 +439,11 @@ class FitGDCharacterSheet extends ActorSheet {
 
     // Get Redux ID from Foundry actor flags
     const reduxId = this.actor.getFlag('forged-in-the-grimdark', 'reduxId');
+    console.log('FitGD | Character Sheet getData - reduxId:', reduxId);
 
     if (reduxId) {
       const character = game.fitgd.api.character.getCharacter(reduxId);
+      console.log('FitGD | Character from Redux:', character);
 
       if (character) {
         context.system = {
@@ -437,7 +457,13 @@ class FitGDCharacterSheet extends ActorSheet {
         // Find crew for this character
         context.crewId = this._getCrewId(reduxId);
         context.reduxId = reduxId;
+
+        console.log('FitGD | Context system data:', context.system);
+      } else {
+        console.warn('FitGD | Character not found in Redux for ID:', reduxId);
       }
+    } else {
+      console.warn('FitGD | No Redux ID found in actor flags');
     }
 
     return context;
@@ -445,13 +471,19 @@ class FitGDCharacterSheet extends ActorSheet {
 
   activateListeners(html) {
     super.activateListeners(html);
+    console.log('FitGD | Character Sheet activateListeners called');
 
     // Action Rolls
-    html.find('.action-roll-btn').click(this._onActionRoll.bind(this));
-    html.find('.action-roll-single-btn').click(this._onActionRollSingle.bind(this));
+    const actionRollBtn = html.find('.action-roll-btn');
+    const actionRollSingleBtn = html.find('.action-roll-single-btn');
+    console.log('FitGD | Found action roll buttons:', actionRollBtn.length, 'single:', actionRollSingleBtn.length);
+    actionRollBtn.click(this._onActionRoll.bind(this));
+    actionRollSingleBtn.click(this._onActionRollSingle.bind(this));
 
     // Action Dots (clickable)
-    html.find('.dot').click(this._onDotClick.bind(this));
+    const dots = html.find('.dot');
+    console.log('FitGD | Found action dots:', dots.length);
+    dots.click(this._onDotClick.bind(this));
 
     // Harm
     html.find('.add-harm-btn').click(this._onAddHarm.bind(this));
