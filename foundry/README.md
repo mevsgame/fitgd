@@ -103,12 +103,67 @@ All core game mechanics from the rules primer are implemented:
 
 The system includes the following dialogs:
 
+- **ActionRollDialog** - Full dice rolling with Position/Effect, Push, Devil's Bargain
 - **TakeHarmDialog** - Select harm type, position, effect
 - **RallyDialog** - Choose trait to re-enable
 - **PushDialog** - Choose push type (extra die, improved effect/position)
 - **FlashbackDialog** - Add new trait and describe flashback
 - **AddTraitDialog** - Manually add trait
 - **AddClockDialog** - Create progress/threat clock
+
+## Macro System
+
+**FitGD fully supports Foundry VTT macros!** All game mechanics are accessible via the `game.fitgd.api` interface, allowing players and GMs to create custom hotbar macros for common actions.
+
+### Quick Start
+
+1. Open **Macro Directory** (dice icon in Foundry)
+2. Create new **Script** macro
+3. Use the game API: `game.fitgd.api.character.methodName()`
+4. Drag to hotbar for one-click access
+
+### Example Macros
+
+```javascript
+// Action Roll for selected character
+const tokens = canvas.tokens.controlled;
+const actor = tokens[0]?.actor;
+const reduxId = actor?.getFlag('forged-in-the-grimdark', 'reduxId');
+new ActionRollDialog(reduxId, crewId).render(true);
+
+// Add 2 Momentum (GM)
+game.fitgd.api.crew.addMomentum({ crewId, amount: 2 });
+
+// Lean into Trait
+game.fitgd.api.character.leanIntoTrait({
+  characterId,
+  traitId,
+  crewId
+});
+```
+
+### Available APIs
+
+- **game.fitgd.api.character** - Character management, traits, action dots
+- **game.fitgd.api.crew** - Crew management, Momentum
+- **game.fitgd.api.action** - Push, Flashback, Rally, Lean into Trait, Apply Consequences
+- **game.fitgd.api.harm** - Take harm, recover, convert to scars
+- **game.fitgd.api.clock** - Progress clocks, threat clocks
+- **game.fitgd.api.resource** - Consumables, stims, addiction
+- **game.fitgd.api.query** - Read-only state queries
+
+### Documentation
+
+See **[MACROS.md](./MACROS.md)** for:
+- 15+ ready-to-use macro examples
+- Player and GM macro libraries
+- Helper functions and patterns
+- Console debugging commands
+
+See **[VERBS_MAPPING.md](./VERBS_MAPPING.md)** for:
+- Complete mapping of game verbs to API methods
+- Implementation status (85% coverage)
+- Recommended macro setups
 
 ## Event Sourcing
 
