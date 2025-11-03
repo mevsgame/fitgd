@@ -284,6 +284,21 @@
   color: #ddd;
 }
 
+/* Draggable items (actions, traits) */
+.fitgd .draggable {
+  cursor: grab;
+  user-select: none;
+}
+
+.fitgd .draggable:active {
+  cursor: grabbing;
+}
+
+.fitgd .draggable:hover {
+  color: #ff6347;
+  text-shadow: 0 0 4px rgba(255, 99, 71, 0.5);
+}
+
 .fitgd .action-dots {
   display: flex;
   gap: 3px;

@@ -36,7 +36,13 @@
       <div class="actions-grid">
         {{#each system.actionDots as |dots action|}}
         <div class="action-row">
-          <label>{{action}}</label>
+          <label class="action-label draggable"
+                 draggable="true"
+                 data-action="{{action}}"
+                 data-action-type="roll"
+                 title="Drag to hotbar to create macro">
+            {{action}}
+          </label>
           <div class="action-dots" data-action="{{action}}">
             {{#times 4}}
               <span class="dot {{#if (lte this ../dots)}}filled{{/if}}"
@@ -73,7 +79,14 @@
         {{#each system.traits as |trait|}}
         <div class="trait-item {{#if trait.disabled}}disabled{{/if}}">
           <div class="trait-header">
-            <h4>{{trait.name}}</h4>
+            <h4 class="trait-name draggable"
+                draggable="true"
+                data-trait-id="{{trait.id}}"
+                data-trait-name="{{trait.name}}"
+                data-action-type="lean-trait"
+                title="Drag to hotbar to create 'Lean Into Trait' macro">
+              {{trait.name}}
+            </h4>
             <span class="trait-category">{{trait.category}}</span>
           </div>
           {{#if trait.description}}
