@@ -374,6 +374,11 @@ function registerHandlebarsHelpers() {
   Handlebars.registerHelper('checked', function(value) {
     return value ? 'checked' : '';
   });
+
+  // Add helper for arithmetic
+  Handlebars.registerHelper('add', function(a, b) {
+    return a + b;
+  });
 }
 
 /* -------------------------------------------- */
