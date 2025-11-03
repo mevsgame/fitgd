@@ -10,8 +10,8 @@
  * - Full event sourcing with command history
  */
 
-import { configureStore, createGameAPI } from '../dist/fitgd-core.js';
-import { createFoundryAdapter } from '../dist/fitgd-core.js';
+import { configureStore, createGameAPI } from '../dist/fitgd-core.es.js';
+import { createFoundryAdapter } from '../dist/fitgd-core.es.js';
 import {
   ActionRollDialog,
   TakeHarmDialog,
