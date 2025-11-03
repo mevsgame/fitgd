@@ -218,9 +218,10 @@ describe('Complete Gameplay Workflows', () => {
       // Rally should not be available again until reset
       expect(api.query.canUseRally({ characterId, crewId })).toBe(false);
 
-      // Reset should restore Rally
+      // Reset should restore Rally flag (but can't use Rally yet because Momentum is 5, not 0-3)
       api.crew.performReset(crewId);
-      expect(api.query.canUseRally({ characterId, crewId })).toBe(true);
+      const resetCharacter = api.character.getCharacter(characterId);
+      expect(resetCharacter.rallyAvailable).toBe(true);
     });
   });
 

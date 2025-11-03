@@ -276,8 +276,9 @@ describe('CrewAPI', () => {
       // Perform reset
       api.crew.performReset(crewId);
 
-      // Rally should be available again
-      expect(api.query.canUseRally({ characterId, crewId })).toBe(true);
+      // Rally flag should be reset (but can't use Rally yet because Momentum is 5, not 0-3)
+      const resetCharacter = api.character.getCharacter(characterId);
+      expect(resetCharacter.rallyAvailable).toBe(true);
     });
 
     it('should return reset summary', () => {
