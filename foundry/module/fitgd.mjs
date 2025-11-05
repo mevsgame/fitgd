@@ -514,8 +514,14 @@ class FitGDCharacterSheet extends ActorSheet {
         const unallocatedDots = character.unallocatedActionDots;
         const totalDots = allocatedDots + unallocatedDots;
 
+        // Convert actionDots object to array for easier template iteration
+        const actionDotsArray = Object.entries(character.actionDots).map(([action, dots]) => ({
+          action,
+          dots
+        }));
+
         context.system = {
-          actionDots: character.actionDots,
+          actionDots: actionDotsArray,
           traits: character.traits,
           equipment: character.equipment,
           rallyAvailable: character.rallyAvailable,
