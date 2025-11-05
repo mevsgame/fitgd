@@ -65,6 +65,21 @@ Hooks.once('init', async function() {
     return;
   }
 
+  // Initialize socketlib for reliable multi-client communication
+  console.log('FitGD | Initializing socketlib...');
+  try {
+    game.fitgd.socket = socketlib.registerSystem('forged-in-the-grimdark');
+    console.log('FitGD | socketlib registered successfully');
+
+    // Register socket handlers
+    game.fitgd.socket.register('syncCommands', receiveCommandsFromSocket);
+    console.log('FitGD | Socket handlers registered');
+  } catch (error) {
+    console.error('FitGD | Failed to initialize socketlib:', error);
+    console.error('FitGD | Make sure socketlib module is installed and enabled');
+    return;
+  }
+
   // Expose save function for dialogs and sheets to use
   game.fitgd.saveImmediate = async function() {
     try {
@@ -83,10 +98,10 @@ Hooks.once('init', async function() {
           timestamp: Date.now()
         };
 
-        const socketName = 'module.forged-in-the-grimdark';
-        console.log(`FitGD | Broadcasting to socket '${socketName}':`, socketData);
-        game.socket.emit(socketName, socketData);
-        console.log(`FitGD | Socket emit completed for ${newCommandCount} commands`);
+        console.log(`FitGD | Broadcasting ${newCommandCount} commands via socketlib:`, socketData);
+        // Use socketlib to broadcast to OTHER clients (not self)
+        await game.fitgd.socket.executeForOthers('syncCommands', socketData);
+        console.log(`FitGD | socketlib broadcast completed for ${newCommandCount} commands`);
       } else {
         console.log(`FitGD | No new commands to broadcast (count = 0)`);
       }
@@ -173,63 +188,7 @@ Hooks.once('ready', async function() {
     }
   });
 
-  // Set up socket listener for real-time synchronization across clients
-  // Use module namespace (standard Foundry pattern)
-  const socketName = 'module.forged-in-the-grimdark';
-  console.log(`FitGD | Setting up socket listener on '${socketName}'`);
-
-  game.socket.on(socketName, async (data) => {
-    console.log(`FitGD | Socket received data on '${socketName}':`, data);
-
-    // Ignore our own broadcasts
-    if (data.userId === game.user.id) {
-      console.log(`FitGD | Ignoring own broadcast (userId: ${data.userId})`);
-      return;
-    }
-
-    if (data.type === 'commandsAdded') {
-      const userName = data.userName || 'Unknown User';
-      console.log(`FitGD | Received ${data.commandCount || 0} new commands from ${userName}`);
-      console.log(`FitGD | Commands to apply:`, data.commands);
-
-      try {
-        // Apply commands incrementally (no store reset!)
-        const appliedCount = applyCommandsIncremental(data.commands);
-
-        if (appliedCount > 0) {
-          // Refresh affected sheets
-          refreshAffectedSheets(data.commands);
-
-          console.log(`FitGD | Sync complete - applied ${appliedCount} new commands`);
-
-          // GM persists changes from players to world settings
-          if (game.user.isGM) {
-            try {
-              const history = game.fitgd.foundry.exportHistory();
-              await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
-              console.log(`FitGD | GM persisted player changes to world settings`);
-            } catch (error) {
-              console.error('FitGD | GM failed to persist player changes:', error);
-            }
-          }
-        } else {
-          console.log(`FitGD | No commands were applied (all duplicates or empty)`);
-        }
-      } catch (error) {
-        console.error('FitGD | Error applying incremental commands:', error);
-        console.warn('FitGD | Falling back to full state reload...');
-        await reloadStateFromSettings();
-      }
-    } else if (data.type === 'stateUpdated') {
-      // Legacy fallback: full reload (for backwards compatibility)
-      console.log(`FitGD | Received legacy state update from user ${data.userId}, reloading...`);
-      await reloadStateFromSettings();
-    } else {
-      console.warn(`FitGD | Received unknown socket message type: ${data.type}`);
-    }
-  });
-
-  console.log('FitGD | Ready (socket listener active)');
+  console.log('FitGD | Ready (socketlib handlers active)');
 });
 
 /* -------------------------------------------- */
@@ -568,6 +527,52 @@ function registerHandlebarsHelpers() {
 }
 
 /* -------------------------------------------- */
+/*  Socket Communication (socketlib)            */
+/* -------------------------------------------- */
+
+/**
+ * Receive commands from other clients via socketlib
+ * This function is registered with socketlib and called automatically
+ * when other clients broadcast commands.
+ */
+async function receiveCommandsFromSocket(data) {
+  console.log(`FitGD | socketlib received data:`, data);
+
+  const userName = data.userName || 'Unknown User';
+  console.log(`FitGD | Received ${data.commandCount || 0} new commands from ${userName}`);
+  console.log(`FitGD | Commands to apply:`, data.commands);
+
+  try {
+    // Apply commands incrementally (no store reset!)
+    const appliedCount = applyCommandsIncremental(data.commands);
+
+    if (appliedCount > 0) {
+      // Refresh affected sheets
+      refreshAffectedSheets(data.commands);
+
+      console.log(`FitGD | Sync complete - applied ${appliedCount} new commands`);
+
+      // GM persists changes from players to world settings
+      if (game.user.isGM) {
+        try {
+          const history = game.fitgd.foundry.exportHistory();
+          await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
+          console.log(`FitGD | GM persisted player changes to world settings`);
+        } catch (error) {
+          console.error('FitGD | GM failed to persist player changes:', error);
+        }
+      }
+    } else {
+      console.log(`FitGD | No commands were applied (all duplicates or empty)`);
+    }
+  } catch (error) {
+    console.error('FitGD | Error applying incremental commands:', error);
+    console.warn('FitGD | Falling back to full state reload...');
+    await reloadStateFromSettings();
+  }
+}
+
+/* -------------------------------------------- */
 /*  Auto-save Functionality                     */
 /* -------------------------------------------- */
 
@@ -794,10 +799,10 @@ async function saveCommandHistoryImmediate() {
         timestamp: Date.now()
       };
 
-      const socketName = 'module.forged-in-the-grimdark';
-      console.log(`FitGD | Broadcasting to socket '${socketName}':`, socketData);
-      game.socket.emit(socketName, socketData);
-      console.log(`FitGD | Socket emit completed for ${newCommandCount} commands`);
+      console.log(`FitGD | Broadcasting ${newCommandCount} commands via socketlib:`, socketData);
+      // Use socketlib to broadcast to OTHER clients (not self)
+      await game.fitgd.socket.executeForOthers('syncCommands', socketData);
+      console.log(`FitGD | socketlib broadcast completed for ${newCommandCount} commands`);
     } else {
       console.log(`FitGD | No new commands to broadcast (count = 0)`);
     }
