@@ -220,9 +220,23 @@ Hooks.once('ready', async function() {
 
 /**
  * When a Foundry actor is created, create the corresponding Redux entity
+ *
+ * IMPORTANT: This hook fires on ALL clients, but only the creating user
+ * (or GM) should execute the logic. Other clients will receive the Redux
+ * commands via socket broadcast.
  */
 Hooks.on('createActor', async function(actor, options, userId) {
-  console.log(`FitGD | Creating ${actor.type}: ${actor.name} (${actor.id})`);
+  // Only execute on the client that created the actor, or on GM's client
+  // Other clients will receive updates via socket broadcast
+  const isCreatingUser = userId === game.user.id;
+  const isGM = game.user.isGM;
+
+  if (!isCreatingUser && !isGM) {
+    console.log(`FitGD | Skipping createActor hook (not creator, not GM) for ${actor.type}: ${actor.name}`);
+    return;
+  }
+
+  console.log(`FitGD | Creating ${actor.type}: ${actor.name} (${actor.id}) [user: ${userId}]`);
 
   if (actor.type === 'character') {
     // Create character in Redux with 0 dots (player allocates 12 during creation)
@@ -240,11 +254,11 @@ Hooks.on('createActor', async function(actor, options, userId) {
         }
       });
 
-      // Store the Redux ID in Foundry actor flags
+      // Store the Redux ID in Foundry actor flags (only creator/GM can do this)
       await actor.setFlag('forged-in-the-grimdark', 'reduxId', characterId);
       console.log(`FitGD | Character created in Redux: ${characterId}`);
 
-      // Save immediately
+      // Save immediately (will broadcast to other clients)
       await saveCommandHistoryImmediate();
 
       // Force re-render the sheet if it's already open
@@ -262,11 +276,11 @@ Hooks.on('createActor', async function(actor, options, userId) {
     try {
       const crewId = game.fitgd.api.crew.create(actor.name);
 
-      // Store the Redux ID in Foundry actor flags
+      // Store the Redux ID in Foundry actor flags (only creator/GM can do this)
       await actor.setFlag('forged-in-the-grimdark', 'reduxId', crewId);
       console.log(`FitGD | Crew created in Redux: ${crewId}`);
 
-      // Save immediately
+      // Save immediately (will broadcast to other clients)
       await saveCommandHistoryImmediate();
 
       // Force re-render the sheet if it's already open
