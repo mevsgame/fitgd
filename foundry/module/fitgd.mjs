@@ -83,8 +83,9 @@ Hooks.once('init', async function() {
           timestamp: Date.now()
         };
 
-        console.log(`FitGD | Broadcasting to socket 'system.fitgd.sync':`, socketData);
-        game.socket.emit('system.fitgd.sync', socketData);
+        const socketName = 'module.forged-in-the-grimdark';
+        console.log(`FitGD | Broadcasting to socket '${socketName}':`, socketData);
+        game.socket.emit(socketName, socketData);
         console.log(`FitGD | Socket emit completed for ${newCommandCount} commands`);
       } else {
         console.log(`FitGD | No new commands to broadcast (count = 0)`);
@@ -173,10 +174,12 @@ Hooks.once('ready', async function() {
   });
 
   // Set up socket listener for real-time synchronization across clients
-  console.log(`FitGD | Setting up socket listener on 'system.fitgd.sync'`);
+  // Use module namespace (standard Foundry pattern)
+  const socketName = 'module.forged-in-the-grimdark';
+  console.log(`FitGD | Setting up socket listener on '${socketName}'`);
 
-  game.socket.on('system.fitgd.sync', async (data) => {
-    console.log(`FitGD | Socket received data:`, data);
+  game.socket.on(socketName, async (data) => {
+    console.log(`FitGD | Socket received data on '${socketName}':`, data);
 
     // Ignore our own broadcasts
     if (data.userId === game.user.id) {
@@ -791,8 +794,9 @@ async function saveCommandHistoryImmediate() {
         timestamp: Date.now()
       };
 
-      console.log(`FitGD | Broadcasting to socket 'system.fitgd.sync':`, socketData);
-      game.socket.emit('system.fitgd.sync', socketData);
+      const socketName = 'module.forged-in-the-grimdark';
+      console.log(`FitGD | Broadcasting to socket '${socketName}':`, socketData);
+      game.socket.emit(socketName, socketData);
       console.log(`FitGD | Socket emit completed for ${newCommandCount} commands`);
     } else {
       console.log(`FitGD | No new commands to broadcast (count = 0)`);
