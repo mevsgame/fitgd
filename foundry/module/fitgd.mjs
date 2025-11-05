@@ -68,17 +68,27 @@ Hooks.once('init', async function() {
   // Expose save function for dialogs and sheets to use
   game.fitgd.saveImmediate = async function() {
     try {
+      // Get new commands since last broadcast
+      const newCommands = getNewCommandsSinceLastBroadcast();
+      const newCommandCount = newCommands.characters.length + newCommands.crews.length + newCommands.clocks.length;
+
+      // Save full history to Foundry settings (background persistence)
       const history = game.fitgd.foundry.exportHistory();
       await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
       const total = history.characters.length + history.crews.length + history.clocks.length;
       console.log(`FitGD | Saved ${total} commands (immediate)`);
 
-      // Broadcast state update to all other clients for real-time sync
-      game.socket.emit('system.forged-in-the-grimdark', {
-        type: 'stateUpdated',
-        userId: game.user.id
-      });
-      console.log('FitGD | Broadcast state update to other clients');
+      // Broadcast only NEW commands for incremental sync
+      if (newCommandCount > 0) {
+        game.socket.emit('system.fitgd.sync', {
+          type: 'commandsAdded',
+          userId: game.user.id,
+          commandCount: newCommandCount,
+          commands: newCommands,
+          timestamp: Date.now()
+        });
+        console.log(`FitGD | Broadcast ${newCommandCount} new commands to other clients`);
+      }
     } catch (error) {
       console.error('FitGD | Error saving command history:', error);
     }
@@ -123,6 +133,9 @@ Hooks.once('ready', async function() {
     console.log(`FitGD | Replaying ${totalCommands} commands...`);
     game.fitgd.foundry.replayCommands(validHistory);
     console.log('FitGD | State restored from history');
+
+    // Track all initial commands as applied (prevents re-application on sync)
+    trackInitialCommandsAsApplied();
   } else {
     console.log('FitGD | No command history found, starting fresh');
   }
@@ -142,9 +155,33 @@ Hooks.once('ready', async function() {
   });
 
   // Set up socket listener for real-time synchronization across clients
-  game.socket.on('system.forged-in-the-grimdark', async (data) => {
-    if (data.type === 'stateUpdated' && data.userId !== game.user.id) {
-      console.log(`FitGD | Received state update from user ${data.userId}, reloading...`);
+  game.socket.on('system.fitgd.sync', async (data) => {
+    // Ignore our own broadcasts
+    if (data.userId === game.user.id) {
+      return;
+    }
+
+    if (data.type === 'commandsAdded') {
+      console.log(`FitGD | Received ${data.commandCount || 0} new commands from user ${data.userId}`);
+
+      try {
+        // Apply commands incrementally (no store reset!)
+        const appliedCount = applyCommandsIncremental(data.commands);
+
+        if (appliedCount > 0) {
+          // Refresh affected sheets
+          refreshAffectedSheets(data.commands);
+
+          console.log(`FitGD | Sync complete - applied ${appliedCount} new commands`);
+        }
+      } catch (error) {
+        console.error('FitGD | Error applying incremental commands:', error);
+        console.warn('FitGD | Falling back to full state reload...');
+        await reloadStateFromSettings();
+      }
+    } else if (data.type === 'stateUpdated') {
+      // Legacy fallback: full reload (for backwards compatibility)
+      console.log(`FitGD | Received legacy state update from user ${data.userId}, reloading...`);
       await reloadStateFromSettings();
     }
   });
@@ -479,6 +516,150 @@ function registerHandlebarsHelpers() {
 
 let autoSaveTimer = null;
 
+// Track applied command IDs for idempotency (prevents re-applying same command)
+const appliedCommandIds = new Set();
+
+// Track last broadcast command counts to detect new commands
+let lastBroadcastCount = {
+  characters: 0,
+  crews: 0,
+  clocks: 0
+};
+
+/**
+ * Extract new commands since last broadcast (for incremental sync)
+ */
+function getNewCommandsSinceLastBroadcast() {
+  const history = game.fitgd.foundry.exportHistory();
+
+  const newCommands = {
+    characters: history.characters.slice(lastBroadcastCount.characters),
+    crews: history.crews.slice(lastBroadcastCount.crews),
+    clocks: history.clocks.slice(lastBroadcastCount.clocks)
+  };
+
+  // Update the tracking counts
+  lastBroadcastCount = {
+    characters: history.characters.length,
+    crews: history.crews.length,
+    clocks: history.clocks.length
+  };
+
+  const totalNew = newCommands.characters.length + newCommands.crews.length + newCommands.clocks.length;
+  console.log(`FitGD | Found ${totalNew} new commands to broadcast`);
+
+  return newCommands;
+}
+
+/**
+ * Apply commands incrementally to Redux store (for real-time sync)
+ */
+function applyCommandsIncremental(commands) {
+  let appliedCount = 0;
+  let skippedCount = 0;
+
+  // Merge all commands and sort by timestamp
+  const allCommands = [
+    ...commands.characters,
+    ...commands.crews,
+    ...commands.clocks
+  ].sort((a, b) => a.timestamp - b.timestamp);
+
+  console.log(`FitGD | Applying ${allCommands.length} commands incrementally...`);
+
+  for (const command of allCommands) {
+    // Skip if already applied (idempotency check)
+    if (appliedCommandIds.has(command.commandId)) {
+      skippedCount++;
+      continue;
+    }
+
+    try {
+      // Dispatch command to Redux
+      game.fitgd.store.dispatch({
+        type: command.type,
+        payload: command.payload,
+        meta: { command }
+      });
+
+      // Track as applied
+      appliedCommandIds.add(command.commandId);
+      appliedCount++;
+    } catch (error) {
+      console.error(`FitGD | Error applying command ${command.type}:`, error);
+    }
+  }
+
+  console.log(`FitGD | Applied ${appliedCount} commands, skipped ${skippedCount} duplicates`);
+  return appliedCount;
+}
+
+/**
+ * Track initial commands as applied (called on ready)
+ */
+function trackInitialCommandsAsApplied() {
+  const history = game.fitgd.foundry.exportHistory();
+
+  // Track all initial commands as applied
+  for (const command of history.characters) {
+    appliedCommandIds.add(command.commandId);
+  }
+  for (const command of history.crews) {
+    appliedCommandIds.add(command.commandId);
+  }
+  for (const command of history.clocks) {
+    appliedCommandIds.add(command.commandId);
+  }
+
+  // Set initial broadcast counts
+  lastBroadcastCount = {
+    characters: history.characters.length,
+    crews: history.crews.length,
+    clocks: history.clocks.length
+  };
+
+  const total = history.characters.length + history.crews.length + history.clocks.length;
+  console.log(`FitGD | Tracked ${total} initial commands as applied`);
+}
+
+/**
+ * Refresh only the sheets affected by the given commands (optimization)
+ */
+function refreshAffectedSheets(commands) {
+  const affectedEntityIds = new Set();
+
+  // Extract entity IDs from command payloads
+  for (const command of [...commands.characters, ...commands.crews, ...commands.clocks]) {
+    if (command.payload?.characterId) {
+      affectedEntityIds.add(command.payload.characterId);
+    }
+    if (command.payload?.crewId) {
+      affectedEntityIds.add(command.payload.crewId);
+    }
+    if (command.payload?.id) {
+      affectedEntityIds.add(command.payload.id);
+    }
+    if (command.payload?.entityId) {
+      affectedEntityIds.add(command.payload.entityId);
+    }
+  }
+
+  console.log(`FitGD | Refreshing sheets for ${affectedEntityIds.size} affected entities`);
+
+  // Refresh only affected sheets
+  for (const app of Object.values(ui.windows)) {
+    if (!app.rendered) continue;
+
+    if (app instanceof FitGDCharacterSheet || app instanceof FitGDCrewSheet) {
+      const reduxId = app.actor.getFlag('forged-in-the-grimdark', 'reduxId');
+      if (reduxId && affectedEntityIds.has(reduxId)) {
+        console.log(`FitGD | Re-rendering ${app.constructor.name} for ${reduxId}`);
+        app.render(false);
+      }
+    }
+  }
+}
+
 /**
  * Reload Redux state from Foundry settings (for multi-client sync)
  */
@@ -529,17 +710,27 @@ async function reloadStateFromSettings() {
 async function saveCommandHistoryImmediate() {
   // Save immediately without debounce
   try {
+    // Get new commands since last broadcast
+    const newCommands = getNewCommandsSinceLastBroadcast();
+    const newCommandCount = newCommands.characters.length + newCommands.crews.length + newCommands.clocks.length;
+
+    // Save full history to Foundry settings (background persistence)
     const history = game.fitgd.foundry.exportHistory();
     await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
     const total = history.characters.length + history.crews.length + history.clocks.length;
     console.log(`FitGD | Saved ${total} commands`);
 
-    // Broadcast state update to all other clients for real-time sync
-    game.socket.emit('system.forged-in-the-grimdark', {
-      type: 'stateUpdated',
-      userId: game.user.id
-    });
-    console.log('FitGD | Broadcast state update to other clients');
+    // Broadcast only NEW commands for incremental sync
+    if (newCommandCount > 0) {
+      game.socket.emit('system.fitgd.sync', {
+        type: 'commandsAdded',
+        userId: game.user.id,
+        commandCount: newCommandCount,
+        commands: newCommands,
+        timestamp: Date.now()
+      });
+      console.log(`FitGD | Broadcast ${newCommandCount} new commands to other clients`);
+    }
   } catch (error) {
     console.error('FitGD | Error saving command history:', error);
   }
