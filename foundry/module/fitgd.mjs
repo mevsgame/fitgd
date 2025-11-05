@@ -338,8 +338,8 @@ function registerSystemSettings() {
     hint: 'Event-sourced command history for state reconstruction',
     scope: 'world',
     config: false,
-    type: Array,
-    default: []
+    type: Object,
+    default: { characters: [], crews: [], clocks: [] }
   });
 
   // Game state snapshot (for performance)
