@@ -1,0 +1,152 @@
+{
+  "FITGD": {
+    "SystemName": "Forged in the Grimdark",
+
+    "Character": {
+      "Name": "Character Name",
+      "Actions": "Actions",
+      "Traits": "Traits",
+      "Harm": "Harm",
+      "Equipment": "Equipment",
+      "Rally": "Rally",
+      "RallyAvailable": "Rally Available",
+      "RallyUsed": "Rally Used"
+    },
+
+    "Crew": {
+      "Name": "Crew Name",
+      "Momentum": "Momentum",
+      "Members": "Members",
+      "Resources": "Resources",
+      "Clocks": "Clocks",
+      "Addiction": "Addiction",
+      "Consumables": "Consumables",
+      "ProgressClocks": "Progress Clocks"
+    },
+
+    "Actions": {
+      "Shoot": "Shoot",
+      "Skirmish": "Skirmish",
+      "Skulk": "Skulk",
+      "Wreck": "Wreck",
+      "Finesse": "Finesse",
+      "Survey": "Survey",
+      "Study": "Study",
+      "Tech": "Tech",
+      "Attune": "Attune",
+      "Command": "Command",
+      "Consort": "Consort",
+      "Sway": "Sway"
+    },
+
+    "ActionGroups": {
+      "Insight": "Insight",
+      "Prowess": "Prowess",
+      "Resolve": "Resolve"
+    },
+
+    "Traits": {
+      "Role": "Role",
+      "Background": "Background",
+      "Scar": "Scar",
+      "Flashback": "Flashback",
+      "Grouped": "Grouped",
+      "Disabled": "Disabled (Leaned Into)",
+      "LeanInto": "Lean Into Trait",
+      "Group": "Group Traits",
+      "Add": "Add Trait",
+      "Delete": "Delete Trait"
+    },
+
+    "Harm": {
+      "Physical": "Physical Harm",
+      "Morale": "Morale Harm",
+      "Take": "Take Harm",
+      "Recover": "Recover",
+      "ConvertToScar": "Convert to Scar",
+      "Dying": "DYING",
+      "MaxClocks": "Max 3 harm clocks"
+    },
+
+    "Equipment": {
+      "Accessible": "Accessible",
+      "Inaccessible": "Inaccessible",
+      "Epic": "Epic",
+      "Add": "Add Equipment",
+      "Delete": "Delete Equipment",
+      "Category": "Category",
+      "Tier": "Tier"
+    },
+
+    "Momentum": {
+      "Current": "Current Momentum",
+      "Max": "Maximum Momentum",
+      "Add": "Add Momentum",
+      "Spend": "Spend Momentum",
+      "Reset": "Reset to 5",
+      "RallyRange": "Rally available at 0-3"
+    },
+
+    "Clocks": {
+      "Segments": "Segments",
+      "Progress": "Progress",
+      "Threat": "Threat",
+      "Add": "Add Clock",
+      "Advance": "Advance",
+      "Reduce": "Reduce",
+      "Delete": "Delete",
+      "Filled": "Filled",
+      "Countdown": "Countdown"
+    },
+
+    "Buttons": {
+      "Push": "Push Yourself",
+      "Flashback": "Flashback",
+      "Rally": "Use Rally",
+      "Reset": "Perform Reset",
+      "Create": "Create",
+      "Edit": "Edit",
+      "Delete": "Delete",
+      "Save": "Save",
+      "Cancel": "Cancel"
+    },
+
+    "Messages": {
+      "RallyNotAvailable": "Rally only available at 0-3 Momentum",
+      "NotEnoughMomentum": "Not enough Momentum",
+      "AddictionFilled": "Stims locked due to addiction",
+      "ConsumableFrozen": "This consumable is depleted",
+      "CharacterDying": "Character is dying!",
+      "ResetComplete": "Reset complete!",
+      "MomentumGained": "Gained {amount} Momentum",
+      "MomentumSpent": "Spent {amount} Momentum"
+    },
+
+    "Dialogs": {
+      "TakeHarm": {
+        "Title": "Take Harm",
+        "Type": "Harm Type",
+        "Position": "Position",
+        "Effect": "Effect",
+        "Controlled": "Controlled",
+        "Risky": "Risky",
+        "Desperate": "Desperate",
+        "Limited": "Limited",
+        "Standard": "Standard",
+        "Great": "Great"
+      },
+      "UseRally": {
+        "Title": "Use Rally",
+        "SelectTrait": "Select trait to re-enable",
+        "MomentumToSpend": "Momentum to spend (0-3)",
+        "Confirm": "Use Rally"
+      },
+      "AddTrait": {
+        "Title": "Add Trait",
+        "Name": "Trait Name",
+        "Category": "Category",
+        "Description": "Description"
+      }
+    }
+  }
+}
