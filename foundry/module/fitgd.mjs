@@ -72,6 +72,13 @@ Hooks.once('init', async function() {
       await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
       const total = history.characters.length + history.crews.length + history.clocks.length;
       console.log(`FitGD | Saved ${total} commands (immediate)`);
+
+      // Broadcast state update to all other clients for real-time sync
+      game.socket.emit('system.forged-in-the-grimdark', {
+        type: 'stateUpdated',
+        userId: game.user.id
+      });
+      console.log('FitGD | Broadcast state update to other clients');
     } catch (error) {
       console.error('FitGD | Error saving command history:', error);
     }
@@ -134,7 +141,15 @@ Hooks.once('ready', async function() {
     console.log(`FitGD | Saved ${total} commands (on unload)`);
   });
 
-  console.log('FitGD | Ready');
+  // Set up socket listener for real-time synchronization across clients
+  game.socket.on('system.forged-in-the-grimdark', async (data) => {
+    if (data.type === 'stateUpdated' && data.userId !== game.user.id) {
+      console.log(`FitGD | Received state update from user ${data.userId}, reloading...`);
+      await reloadStateFromSettings();
+    }
+  });
+
+  console.log('FitGD | Ready (socket listener active)');
 });
 
 /* -------------------------------------------- */
@@ -464,6 +479,53 @@ function registerHandlebarsHelpers() {
 
 let autoSaveTimer = null;
 
+/**
+ * Reload Redux state from Foundry settings (for multi-client sync)
+ */
+async function reloadStateFromSettings() {
+  try {
+    console.log('FitGD | Reloading state from settings...');
+
+    // Load command history from settings
+    const defaultHistory = { characters: [], crews: [], clocks: [] };
+    const history = game.settings.get('forged-in-the-grimdark', 'commandHistory') || defaultHistory;
+
+    // Ensure history has the correct structure
+    const validHistory = {
+      characters: history.characters || [],
+      crews: history.crews || [],
+      clocks: history.clocks || []
+    };
+
+    const totalCommands = validHistory.characters.length + validHistory.crews.length + validHistory.clocks.length;
+
+    if (totalCommands > 0) {
+      console.log(`FitGD | Replaying ${totalCommands} commands...`);
+
+      // Reset store to initial state, then replay all commands
+      // This ensures we rebuild state from scratch rather than applying changes twice
+      const { configureStore } = await import('../dist/fitgd-core.es.js');
+      game.fitgd.store = configureStore();
+
+      // Replay commands
+      game.fitgd.foundry.replayCommands(validHistory);
+
+      console.log('FitGD | State reloaded successfully');
+
+      // Re-render all open sheets to show updated state
+      for (const app of Object.values(ui.windows)) {
+        if (app.rendered && (app instanceof FitGDCharacterSheet || app instanceof FitGDCrewSheet)) {
+          console.log(`FitGD | Re-rendering ${app.constructor.name}`);
+          app.render(false);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('FitGD | Error reloading state:', error);
+    ui.notifications.error('Failed to reload game state. Please refresh the page.');
+  }
+}
+
 async function saveCommandHistoryImmediate() {
   // Save immediately without debounce
   try {
@@ -471,6 +533,13 @@ async function saveCommandHistoryImmediate() {
     await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
     const total = history.characters.length + history.crews.length + history.clocks.length;
     console.log(`FitGD | Saved ${total} commands`);
+
+    // Broadcast state update to all other clients for real-time sync
+    game.socket.emit('system.forged-in-the-grimdark', {
+      type: 'stateUpdated',
+      userId: game.user.id
+    });
+    console.log('FitGD | Broadcast state update to other clients');
   } catch (error) {
     console.error('FitGD | Error saving command history:', error);
   }
