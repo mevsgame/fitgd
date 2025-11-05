@@ -13,6 +13,7 @@
       "flags": {}
     }
   ],
+  "socket": true,
   "relationships": {
     "requires": [
       {
