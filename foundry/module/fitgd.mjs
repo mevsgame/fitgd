@@ -74,15 +74,20 @@ Hooks.once('init', async function() {
 
       // Broadcast commands FIRST (before persistence) - all users can do this
       if (newCommandCount > 0) {
-        game.socket.emit('system.fitgd.sync', {
+        const socketData = {
           type: 'commandsAdded',
           userId: game.user.id,
           userName: game.user.name,
           commandCount: newCommandCount,
           commands: newCommands,
           timestamp: Date.now()
-        });
-        console.log(`FitGD | Broadcast ${newCommandCount} new commands to other clients`);
+        };
+
+        console.log(`FitGD | Broadcasting to socket 'system.fitgd.sync':`, socketData);
+        game.socket.emit('system.fitgd.sync', socketData);
+        console.log(`FitGD | Socket emit completed for ${newCommandCount} commands`);
+      } else {
+        console.log(`FitGD | No new commands to broadcast (count = 0)`);
       }
 
       // Save to Foundry settings (only if user has permission - typically GM)
@@ -168,15 +173,21 @@ Hooks.once('ready', async function() {
   });
 
   // Set up socket listener for real-time synchronization across clients
+  console.log(`FitGD | Setting up socket listener on 'system.fitgd.sync'`);
+
   game.socket.on('system.fitgd.sync', async (data) => {
+    console.log(`FitGD | Socket received data:`, data);
+
     // Ignore our own broadcasts
     if (data.userId === game.user.id) {
+      console.log(`FitGD | Ignoring own broadcast (userId: ${data.userId})`);
       return;
     }
 
     if (data.type === 'commandsAdded') {
       const userName = data.userName || 'Unknown User';
       console.log(`FitGD | Received ${data.commandCount || 0} new commands from ${userName}`);
+      console.log(`FitGD | Commands to apply:`, data.commands);
 
       try {
         // Apply commands incrementally (no store reset!)
@@ -198,6 +209,8 @@ Hooks.once('ready', async function() {
               console.error('FitGD | GM failed to persist player changes:', error);
             }
           }
+        } else {
+          console.log(`FitGD | No commands were applied (all duplicates or empty)`);
         }
       } catch (error) {
         console.error('FitGD | Error applying incremental commands:', error);
@@ -208,6 +221,8 @@ Hooks.once('ready', async function() {
       // Legacy fallback: full reload (for backwards compatibility)
       console.log(`FitGD | Received legacy state update from user ${data.userId}, reloading...`);
       await reloadStateFromSettings();
+    } else {
+      console.warn(`FitGD | Received unknown socket message type: ${data.type}`);
     }
   });
 
@@ -571,6 +586,9 @@ let lastBroadcastCount = {
 function getNewCommandsSinceLastBroadcast() {
   const history = game.fitgd.foundry.exportHistory();
 
+  console.log(`FitGD | Current history counts: chars=${history.characters.length}, crews=${history.crews.length}, clocks=${history.clocks.length}`);
+  console.log(`FitGD | Last broadcast counts: chars=${lastBroadcastCount.characters}, crews=${lastBroadcastCount.crews}, clocks=${lastBroadcastCount.clocks}`);
+
   const newCommands = {
     characters: history.characters.slice(lastBroadcastCount.characters),
     crews: history.crews.slice(lastBroadcastCount.crews),
@@ -585,7 +603,15 @@ function getNewCommandsSinceLastBroadcast() {
   };
 
   const totalNew = newCommands.characters.length + newCommands.crews.length + newCommands.clocks.length;
-  console.log(`FitGD | Found ${totalNew} new commands to broadcast`);
+  console.log(`FitGD | Found ${totalNew} new commands to broadcast:`, {
+    characters: newCommands.characters.length,
+    crews: newCommands.crews.length,
+    clocks: newCommands.clocks.length
+  });
+
+  if (totalNew > 0) {
+    console.log(`FitGD | New command types:`, newCommands.characters.map(c => c.type), newCommands.crews.map(c => c.type), newCommands.clocks.map(c => c.type));
+  }
 
   return newCommands;
 }
@@ -748,6 +774,7 @@ async function reloadStateFromSettings() {
 
 async function saveCommandHistoryImmediate() {
   // Save immediately without debounce
+  console.log(`FitGD | saveCommandHistoryImmediate() called`);
   try {
     // Get new commands since last broadcast
     const newCommands = getNewCommandsSinceLastBroadcast();
@@ -755,15 +782,20 @@ async function saveCommandHistoryImmediate() {
 
     // Broadcast commands FIRST (before persistence) - all users can do this
     if (newCommandCount > 0) {
-      game.socket.emit('system.fitgd.sync', {
+      const socketData = {
         type: 'commandsAdded',
         userId: game.user.id,
         userName: game.user.name,
         commandCount: newCommandCount,
         commands: newCommands,
         timestamp: Date.now()
-      });
-      console.log(`FitGD | Broadcast ${newCommandCount} new commands to other clients`);
+      };
+
+      console.log(`FitGD | Broadcasting to socket 'system.fitgd.sync':`, socketData);
+      game.socket.emit('system.fitgd.sync', socketData);
+      console.log(`FitGD | Socket emit completed for ${newCommandCount} commands`);
+    } else {
+      console.log(`FitGD | No new commands to broadcast (count = 0)`);
     }
 
     // Save to Foundry settings (only if user has permission - typically GM)
@@ -1020,7 +1052,10 @@ class FitGDCharacterSheet extends ActorSheet {
         dots: newDots
       });
 
-      console.log('FitGD | setActionDots succeeded, re-rendering');
+      console.log('FitGD | setActionDots succeeded');
+
+      // Save and broadcast changes to other clients
+      await game.fitgd.saveImmediate();
 
       // Re-render sheet
       this.render(false);
@@ -1062,7 +1097,11 @@ class FitGDCharacterSheet extends ActorSheet {
 
       // All dots allocated, exit edit mode
       this.editMode = false;
-      console.log('FitGD | Exiting edit mode');
+      console.log('FitGD | Exiting edit mode, saving changes');
+
+      // Save and broadcast final dot allocation to other clients
+      await game.fitgd.saveImmediate();
+
       ui.notifications.info('Action dots saved');
     } else {
       // Enter edit mode
