@@ -86,19 +86,30 @@ Hooks.once('init', async function() {
  */
 Hooks.once('ready', async function() {
   console.log('FitGD | World ready, loading state...');
+  console.log('FitGD | === LOAD DEBUG ===');
 
   // Load command history from settings
   const defaultHistory = { characters: [], crews: [], clocks: [] };
-  const history = game.settings.get('forged-in-the-grimdark', 'commandHistory') || defaultHistory;
+  const history = game.settings.get('forged-in-the-grimdark', 'commandHistory');
+
+  console.log(`FitGD | Raw history from settings:`, JSON.stringify(history, null, 2));
+  console.log(`FitGD | History type:`, typeof history);
+  console.log(`FitGD | History is null?`, history === null);
+  console.log(`FitGD | History is undefined?`, history === undefined);
+
+  const actualHistory = history || defaultHistory;
 
   // Ensure history has the correct structure
   const validHistory = {
-    characters: history.characters || [],
-    crews: history.crews || [],
-    clocks: history.clocks || []
+    characters: actualHistory.characters || [],
+    crews: actualHistory.crews || [],
+    clocks: actualHistory.clocks || []
   };
 
   const totalCommands = validHistory.characters.length + validHistory.crews.length + validHistory.clocks.length;
+  console.log(`FitGD | Total commands found: ${totalCommands}`);
+  console.log(`FitGD | Valid history structure:`, JSON.stringify(validHistory, null, 2));
+  console.log(`FitGD | === END LOAD DEBUG ===`);
 
   if (totalCommands > 0) {
     console.log(`FitGD | Replaying ${totalCommands} commands...`);
@@ -176,6 +187,23 @@ Hooks.on('createActor', async function(actor, options, userId) {
       // Store the Redux ID in Foundry actor flags
       await actor.setFlag('forged-in-the-grimdark', 'reduxId', crewId);
       console.log(`FitGD | Crew created in Redux: ${crewId}`);
+
+      // Debug: Check Redux state
+      const state = game.fitgd.store.getState();
+      console.log(`FitGD | Redux state after crew creation:`, JSON.stringify({
+        crews: {
+          allIds: state.crews.allIds,
+          historyLength: state.crews.history.length
+        },
+        characters: {
+          allIds: state.characters.allIds,
+          historyLength: state.characters.history.length
+        },
+        clocks: {
+          allIds: state.clocks.allIds,
+          historyLength: state.clocks.history.length
+        }
+      }, null, 2));
 
       // Save immediately
       await saveCommandHistoryImmediate();
@@ -456,11 +484,25 @@ async function saveCommandHistoryImmediate() {
   // Save immediately without debounce
   try {
     const history = game.fitgd.foundry.exportHistory();
-    await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
     const total = history.characters.length + history.crews.length + history.clocks.length;
+
+    console.log(`FitGD | === SAVE DEBUG ===`);
+    console.log(`FitGD | Exporting history with ${total} total commands`);
+    console.log(`FitGD | Characters: ${history.characters.length}, Crews: ${history.crews.length}, Clocks: ${history.clocks.length}`);
+    console.log(`FitGD | History object:`, JSON.stringify(history, null, 2));
+
+    const result = await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
+    console.log(`FitGD | game.settings.set() returned:`, result);
+
+    // Verify it was saved by reading it back
+    const verification = game.settings.get('forged-in-the-grimdark', 'commandHistory');
+    console.log(`FitGD | Verification read back:`, JSON.stringify(verification, null, 2));
+
     console.log(`FitGD | Saved ${total} commands (immediate)`);
+    console.log(`FitGD | === END SAVE DEBUG ===`);
   } catch (error) {
     console.error('FitGD | Error saving command history:', error);
+    console.error('FitGD | Error stack:', error.stack);
   }
 }
 
