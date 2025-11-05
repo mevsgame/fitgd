@@ -65,6 +65,18 @@ Hooks.once('init', async function() {
     return;
   }
 
+  // Expose save function for dialogs and sheets to use
+  game.fitgd.saveImmediate = async function() {
+    try {
+      const history = game.fitgd.foundry.exportHistory();
+      await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
+      const total = history.characters.length + history.crews.length + history.clocks.length;
+      console.log(`FitGD | Saved ${total} commands (immediate)`);
+    } catch (error) {
+      console.error('FitGD | Error saving command history:', error);
+    }
+  };
+
   // Register settings
   registerSystemSettings();
 
@@ -839,6 +851,9 @@ class FitGDCharacterSheet extends ActorSheet {
 
       ui.notifications.info(`Leaned into trait. Gained ${result.momentumGenerated} Momentum.`);
 
+      // Save immediately (critical state change)
+      await game.fitgd.saveImmediate();
+
       // Re-render sheets
       this.render(false);
       game.actors.get(crewId)?.sheet.render(false);
@@ -991,6 +1006,10 @@ class FitGDCrewSheet extends ActorSheet {
     try {
       game.fitgd.api.crew.addMomentum({ crewId, amount });
       ui.notifications.info(`Added ${amount} Momentum`);
+
+      // Save immediately (critical state change)
+      await game.fitgd.saveImmediate();
+
       this.render(false);
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
@@ -1008,6 +1027,10 @@ class FitGDCrewSheet extends ActorSheet {
     try {
       game.fitgd.api.crew.spendMomentum({ crewId, amount });
       ui.notifications.info(`Spent ${amount} Momentum`);
+
+      // Save immediately (critical state change)
+      await game.fitgd.saveImmediate();
+
       this.render(false);
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
@@ -1060,6 +1083,9 @@ class FitGDCrewSheet extends ActorSheet {
         ui.notifications.info(`Clock advanced to ${segment + 1} segments`);
       }
 
+      // Save immediately (critical state change)
+      await game.fitgd.saveImmediate();
+
       this.render(false);
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
@@ -1106,6 +1132,10 @@ class FitGDCrewSheet extends ActorSheet {
               try {
                 game.fitgd.api.crew.addCharacter({ crewId, characterId: characterReduxId });
                 ui.notifications.info(`Added ${selectedActor.name} to crew`);
+
+                // Save immediately (critical state change)
+                await game.fitgd.saveImmediate();
+
                 this.render(false);
               } catch (error) {
                 ui.notifications.error(`Error: ${error.message}`);
@@ -1133,6 +1163,9 @@ class FitGDCrewSheet extends ActorSheet {
       const result = game.fitgd.api.crew.performReset(crewId);
 
       ui.notifications.info(`Reset complete! Momentum: ${result.newMomentum}, Addiction: -${result.addictionReduced}`);
+
+      // Save immediately (critical state change)
+      await game.fitgd.saveImmediate();
 
       // Re-render sheet
       this.render(false);
