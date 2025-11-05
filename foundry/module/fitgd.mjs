@@ -65,6 +65,25 @@ Hooks.once('init', async function() {
     return;
   }
 
+  // Expose save function for dialogs and sheets to use
+  game.fitgd.saveImmediate = async function() {
+    try {
+      const history = game.fitgd.foundry.exportHistory();
+      await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
+      const total = history.characters.length + history.crews.length + history.clocks.length;
+      console.log(`FitGD | Saved ${total} commands (immediate)`);
+
+      // Broadcast state update to all other clients for real-time sync
+      game.socket.emit('system.forged-in-the-grimdark', {
+        type: 'stateUpdated',
+        userId: game.user.id
+      });
+      console.log('FitGD | Broadcast state update to other clients');
+    } catch (error) {
+      console.error('FitGD | Error saving command history:', error);
+    }
+  };
+
   // Register settings
   registerSystemSettings();
 
@@ -122,7 +141,15 @@ Hooks.once('ready', async function() {
     console.log(`FitGD | Saved ${total} commands (on unload)`);
   });
 
-  console.log('FitGD | Ready');
+  // Set up socket listener for real-time synchronization across clients
+  game.socket.on('system.forged-in-the-grimdark', async (data) => {
+    if (data.type === 'stateUpdated' && data.userId !== game.user.id) {
+      console.log(`FitGD | Received state update from user ${data.userId}, reloading...`);
+      await reloadStateFromSettings();
+    }
+  });
+
+  console.log('FitGD | Ready (socket listener active)');
 });
 
 /* -------------------------------------------- */
@@ -452,6 +479,53 @@ function registerHandlebarsHelpers() {
 
 let autoSaveTimer = null;
 
+/**
+ * Reload Redux state from Foundry settings (for multi-client sync)
+ */
+async function reloadStateFromSettings() {
+  try {
+    console.log('FitGD | Reloading state from settings...');
+
+    // Load command history from settings
+    const defaultHistory = { characters: [], crews: [], clocks: [] };
+    const history = game.settings.get('forged-in-the-grimdark', 'commandHistory') || defaultHistory;
+
+    // Ensure history has the correct structure
+    const validHistory = {
+      characters: history.characters || [],
+      crews: history.crews || [],
+      clocks: history.clocks || []
+    };
+
+    const totalCommands = validHistory.characters.length + validHistory.crews.length + validHistory.clocks.length;
+
+    if (totalCommands > 0) {
+      console.log(`FitGD | Replaying ${totalCommands} commands...`);
+
+      // Reset store to initial state, then replay all commands
+      // This ensures we rebuild state from scratch rather than applying changes twice
+      const { configureStore } = await import('../dist/fitgd-core.es.js');
+      game.fitgd.store = configureStore();
+
+      // Replay commands
+      game.fitgd.foundry.replayCommands(validHistory);
+
+      console.log('FitGD | State reloaded successfully');
+
+      // Re-render all open sheets to show updated state
+      for (const app of Object.values(ui.windows)) {
+        if (app.rendered && (app instanceof FitGDCharacterSheet || app instanceof FitGDCrewSheet)) {
+          console.log(`FitGD | Re-rendering ${app.constructor.name}`);
+          app.render(false);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('FitGD | Error reloading state:', error);
+    ui.notifications.error('Failed to reload game state. Please refresh the page.');
+  }
+}
+
 async function saveCommandHistoryImmediate() {
   // Save immediately without debounce
   try {
@@ -459,6 +533,13 @@ async function saveCommandHistoryImmediate() {
     await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
     const total = history.characters.length + history.crews.length + history.clocks.length;
     console.log(`FitGD | Saved ${total} commands`);
+
+    // Broadcast state update to all other clients for real-time sync
+    game.socket.emit('system.forged-in-the-grimdark', {
+      type: 'stateUpdated',
+      userId: game.user.id
+    });
+    console.log('FitGD | Broadcast state update to other clients');
   } catch (error) {
     console.error('FitGD | Error saving command history:', error);
   }
@@ -514,8 +595,14 @@ class FitGDCharacterSheet extends ActorSheet {
         const unallocatedDots = character.unallocatedActionDots;
         const totalDots = allocatedDots + unallocatedDots;
 
+        // Convert actionDots object to array for easier template iteration
+        const actionDotsArray = Object.entries(character.actionDots).map(([action, dots]) => ({
+          action,
+          dots
+        }));
+
         context.system = {
-          actionDots: character.actionDots,
+          actionDots: actionDotsArray,
           traits: character.traits,
           equipment: character.equipment,
           rallyAvailable: character.rallyAvailable,
@@ -635,9 +722,8 @@ class FitGDCharacterSheet extends ActorSheet {
     event.stopPropagation();
 
     console.log('FitGD | Dot clicked, editMode:', this.editMode);
-    console.log('FitGD | Event target:', event.currentTarget);
-    console.log('FitGD | Data action:', event.currentTarget.dataset.action);
-    console.log('FitGD | Data value:', event.currentTarget.dataset.value);
+    console.log('FitGD | Event target:', event.target);
+    console.log('FitGD | Event currentTarget:', event.currentTarget);
 
     // Only allow editing in edit mode
     if (!this.editMode) {
@@ -651,24 +737,51 @@ class FitGDCharacterSheet extends ActorSheet {
       return;
     }
 
-    const action = event.currentTarget.dataset.action;
-    const value = parseInt(event.currentTarget.dataset.value);
+    // Try to get data attributes from both target and currentTarget
+    // Prefer event.target (the actual clicked element) first, as it has both data-action and data-value
+    // Fall back to currentTarget only if target doesn't have the required attributes
+    const element = (event.target.dataset?.action && event.target.dataset?.value)
+      ? event.target
+      : event.currentTarget;
+    const action = element.dataset?.action;
+    const value = parseInt(element.dataset?.value);
 
+    console.log('FitGD | Element used:', element);
+    console.log('FitGD | Data action:', action);
+    console.log('FitGD | Data value:', value);
     console.log('FitGD | Parsed action:', action, 'value:', value);
 
     if (!action || isNaN(value)) {
       console.error('FitGD | Invalid action or value');
+      console.error('FitGD | Element dataset:', element.dataset);
+      console.error('FitGD | Element:', element);
       return;
     }
 
     try {
-      console.log('FitGD | Calling setActionDots with:', { characterId, action, dots: value });
+      // Get current character state to check if we should toggle to 0
+      const character = game.fitgd.api.character.getCharacter(characterId);
+      if (!character) {
+        console.error('FitGD | Character not found');
+        return;
+      }
+
+      const currentDots = character.actionDots[action];
+      let newDots = value;
+
+      // Feature: If clicking on a single filled dot (current dots is 1 and clicking dot 1), set to 0
+      if (currentDots === 1 && value === 1) {
+        newDots = 0;
+        console.log('FitGD | Toggling single dot to 0');
+      }
+
+      console.log('FitGD | Calling setActionDots with:', { characterId, action, dots: newDots });
 
       // Update the action dots (Redux will handle unallocated dots validation)
       game.fitgd.api.character.setActionDots({
         characterId,
         action,
-        dots: value
+        dots: newDots
       });
 
       console.log('FitGD | setActionDots succeeded, re-rendering');
@@ -806,6 +919,9 @@ class FitGDCharacterSheet extends ActorSheet {
       });
 
       ui.notifications.info(`Leaned into trait. Gained ${result.momentumGenerated} Momentum.`);
+
+      // Save immediately (critical state change)
+      await game.fitgd.saveImmediate();
 
       // Re-render sheets
       this.render(false);
@@ -959,6 +1075,10 @@ class FitGDCrewSheet extends ActorSheet {
     try {
       game.fitgd.api.crew.addMomentum({ crewId, amount });
       ui.notifications.info(`Added ${amount} Momentum`);
+
+      // Save immediately (critical state change)
+      await game.fitgd.saveImmediate();
+
       this.render(false);
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
@@ -976,6 +1096,10 @@ class FitGDCrewSheet extends ActorSheet {
     try {
       game.fitgd.api.crew.spendMomentum({ crewId, amount });
       ui.notifications.info(`Spent ${amount} Momentum`);
+
+      // Save immediately (critical state change)
+      await game.fitgd.saveImmediate();
+
       this.render(false);
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
@@ -1028,6 +1152,9 @@ class FitGDCrewSheet extends ActorSheet {
         ui.notifications.info(`Clock advanced to ${segment + 1} segments`);
       }
 
+      // Save immediately (critical state change)
+      await game.fitgd.saveImmediate();
+
       this.render(false);
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
@@ -1074,6 +1201,10 @@ class FitGDCrewSheet extends ActorSheet {
               try {
                 game.fitgd.api.crew.addCharacter({ crewId, characterId: characterReduxId });
                 ui.notifications.info(`Added ${selectedActor.name} to crew`);
+
+                // Save immediately (critical state change)
+                await game.fitgd.saveImmediate();
+
                 this.render(false);
               } catch (error) {
                 ui.notifications.error(`Error: ${error.message}`);
@@ -1101,6 +1232,9 @@ class FitGDCrewSheet extends ActorSheet {
       const result = game.fitgd.api.crew.performReset(crewId);
 
       ui.notifications.info(`Reset complete! Momentum: ${result.newMomentum}, Addiction: -${result.addictionReduced}`);
+
+      // Save immediately (critical state change)
+      await game.fitgd.saveImmediate();
 
       // Re-render sheet
       this.render(false);

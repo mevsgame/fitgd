@@ -163,6 +163,9 @@ export class ActionRollDialog extends Dialog {
       dicePool += 1;
       // Spend Momentum
       game.fitgd.api.crew.spendMomentum({ crewId, amount: 1 });
+
+      // Save immediately (critical state change)
+      await game.fitgd.saveImmediate();
     }
 
     if (devilsBargain) {
@@ -367,6 +370,9 @@ export class TakeHarmDialog extends Dialog {
         harmType
       });
 
+      // Save immediately (critical state change)
+      await game.fitgd.saveImmediate();
+
       // Notify
       ui.notifications.info(`Took ${result.segmentsAdded} segments of ${harmType}. Gained ${consequence.momentumGenerated} Momentum.`);
 
@@ -474,6 +480,9 @@ export class RallyDialog extends Dialog {
         momentumToSpend
       });
 
+      // Save immediately (critical state change)
+      await game.fitgd.saveImmediate();
+
       ui.notifications.info(`Rally used! Trait re-enabled. Momentum: ${result.newMomentum}/10`);
 
       // Re-render sheets
@@ -548,6 +557,9 @@ export class PushDialog extends Dialog {
         crewId,
         type: pushType
       });
+
+      // Save immediately (critical state change)
+      await game.fitgd.saveImmediate();
 
       const typeLabel = {
         'extra-die': '+1d to roll',
@@ -641,6 +653,9 @@ export class FlashbackDialog extends Dialog {
           description: traitDescription || undefined
         }
       });
+
+      // Save immediately (critical state change)
+      await game.fitgd.saveImmediate();
 
       ui.notifications.info(`Flashback! New trait "${traitName}" added. Momentum: ${result.newMomentum}/10`);
 
@@ -830,6 +845,9 @@ export class AddClockDialog extends Dialog {
         isCountdown: category === 'threat',
         description: description || undefined
       });
+
+      // Save immediately (critical state change)
+      await game.fitgd.saveImmediate();
 
       ui.notifications.info(`Clock "${clockName}" created`);
 
