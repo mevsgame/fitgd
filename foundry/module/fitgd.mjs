@@ -635,9 +635,8 @@ class FitGDCharacterSheet extends ActorSheet {
     event.stopPropagation();
 
     console.log('FitGD | Dot clicked, editMode:', this.editMode);
-    console.log('FitGD | Event target:', event.currentTarget);
-    console.log('FitGD | Data action:', event.currentTarget.dataset.action);
-    console.log('FitGD | Data value:', event.currentTarget.dataset.value);
+    console.log('FitGD | Event target:', event.target);
+    console.log('FitGD | Event currentTarget:', event.currentTarget);
 
     // Only allow editing in edit mode
     if (!this.editMode) {
@@ -651,24 +650,48 @@ class FitGDCharacterSheet extends ActorSheet {
       return;
     }
 
-    const action = event.currentTarget.dataset.action;
-    const value = parseInt(event.currentTarget.dataset.value);
+    // Try to get data attributes from both target and currentTarget
+    // This handles cases where the click might be on a child element
+    const element = event.currentTarget.dataset?.action ? event.currentTarget : event.target;
+    const action = element.dataset?.action;
+    const value = parseInt(element.dataset?.value);
 
+    console.log('FitGD | Element used:', element);
+    console.log('FitGD | Data action:', action);
+    console.log('FitGD | Data value:', value);
     console.log('FitGD | Parsed action:', action, 'value:', value);
 
     if (!action || isNaN(value)) {
       console.error('FitGD | Invalid action or value');
+      console.error('FitGD | Element dataset:', element.dataset);
+      console.error('FitGD | Element:', element);
       return;
     }
 
     try {
-      console.log('FitGD | Calling setActionDots with:', { characterId, action, dots: value });
+      // Get current character state to check if we should toggle to 0
+      const character = game.fitgd.api.character.getCharacter(characterId);
+      if (!character) {
+        console.error('FitGD | Character not found');
+        return;
+      }
+
+      const currentDots = character.actionDots[action];
+      let newDots = value;
+
+      // Feature: If clicking on a single filled dot (current dots is 1 and clicking dot 1), set to 0
+      if (currentDots === 1 && value === 1) {
+        newDots = 0;
+        console.log('FitGD | Toggling single dot to 0');
+      }
+
+      console.log('FitGD | Calling setActionDots with:', { characterId, action, dots: newDots });
 
       // Update the action dots (Redux will handle unallocated dots validation)
       game.fitgd.api.character.setActionDots({
         characterId,
         action,
-        dots: value
+        dots: newDots
       });
 
       console.log('FitGD | setActionDots succeeded, re-rendering');
