@@ -1,0 +1,18 @@
+--- tests/integration/gameplayWorkflow.test.ts
++++ tests/integration/gameplayWorkflow.test.ts
+@@ -220,7 +220,14 @@
+ 
+     // Reset should restore Rally
+     api.crew.performReset(crewId);
+-    expect(api.query.canUseRally({ characterId, crewId })).toBe(true);
++    
++    // Rally availability is restored (not spent)
++    const characterAfterReset = api.character.getCharacter(characterId);
++    expect(characterAfterReset.rallyAvailable).toBe(true);
++    
++    // But Momentum is 5, so can't USE Rally yet (need 0-3)
++    expect(api.query.canUseRally({ characterId, crewId })).toBe(false);
++    expect(api.query.getMomentum(crewId)).toBe(5);
+   });
+ });
+ 

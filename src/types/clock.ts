@@ -1,0 +1,48 @@
+/**
+ * Clock Types
+ *
+ * Abstract entity for tracking harm, consumables, addiction, and progress.
+ * High-change entity with separate store and full command history.
+ */
+
+export type ClockType = 'harm' | 'consumable' | 'addiction' | 'progress';
+
+export interface Clock {
+  id: string;
+
+  /** Entity this clock belongs to (characterId, crewId, sceneId, campaignId, etc.) */
+  entityId: string;
+
+  /** Type of clock */
+  clockType: ClockType;
+
+  /** Optional subtype (e.g., "Physical Harm", "grenades", "Infiltrate the Hive", etc.) */
+  subtype?: string;
+
+  /** Current segments filled */
+  segments: number;
+
+  /** Maximum segments (6 for harm, 8 for addiction, 4/6/8 for consumables, 4/6/8/12 for progress) */
+  maxSegments: number;
+
+  /** Flexible metadata for type-specific data */
+  metadata?: ClockMetadata;
+
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ClockMetadata {
+  /** For consumable clocks */
+  rarity?: 'common' | 'uncommon' | 'rare';
+  tier?: 'accessible' | 'inaccessible';
+  frozen?: boolean;
+
+  /** For progress clocks */
+  category?: 'long-term-project' | 'threat' | 'personal-goal' | 'obstacle' | 'faction';
+  isCountdown?: boolean; // True if clock represents threat/danger increasing
+  description?: string; // Detailed description of what the clock represents
+
+  /** Extensible for future clock types */
+  [key: string]: unknown;
+}

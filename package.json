@@ -1,0 +1,44 @@
+{
+  "name": "@fitgd/core",
+  "version": "0.1.0",
+  "description": "Event-sourced Redux state management for Forged in the Grimdark RPG system",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "build": "tsc --noEmit && vite build",
+    "build:lib": "vite build",
+    "build:watch": "vite build --watch",
+    "dev": "vite build --watch",
+    "type-check": "tsc --noEmit",
+    "docs": "typedoc",
+    "docs:watch": "typedoc --watch",
+    "benchmark": "tsx benchmark/selectors.bench.ts"
+  },
+  "keywords": [
+    "rpg",
+    "forged-in-the-dark",
+    "redux",
+    "event-sourcing",
+    "foundry-vtt"
+  ],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.19.0",
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.9.2",
+    "immer": "^10.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.2",
+    "@vitest/ui": "^4.0.6",
+    "tsx": "^4.20.6",
+    "typedoc": "^0.28.14",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.12",
+    "vitest": "^4.0.6"
+  }
+}

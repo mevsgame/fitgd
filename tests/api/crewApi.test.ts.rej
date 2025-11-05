@@ -1,0 +1,17 @@
+--- tests/api/crewApi.test.ts
++++ tests/api/crewApi.test.ts
+@@ -277,8 +277,12 @@
+     // Perform reset
+     api.crew.performReset(crewId);
+ 
+-    // Rally should be available again
+-    expect(api.query.canUseRally({ characterId, crewId })).toBe(true);
++    // Rally availability should be restored (not spent)
++    const character = api.character.getCharacter(characterId);
++    expect(character.rallyAvailable).toBe(true);
++
++    // But can't USE it yet because Momentum is 5 (need 0-3)
++    expect(api.query.canUseRally({ characterId, crewId })).toBe(false);
+   });
+ 
+   it('should return reset summary', () => {
