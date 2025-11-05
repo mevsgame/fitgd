@@ -200,7 +200,7 @@ const clockSlice = createSlice({
 
               // Log command to history
               state.history.push({
-                type: 'clock/createClock',
+                type: 'clocks/createClock',
                 payload: { ...clock, replaced: clockToReplace.id },
                 timestamp: clock.createdAt,
                 version: 1,
@@ -230,7 +230,7 @@ const clockSlice = createSlice({
 
         // Log command to history
         state.history.push({
-          type: 'clock/createClock',
+          type: 'clocks/createClock',
           payload: clock,
           timestamp: clock.createdAt,
           version: 1,
@@ -341,7 +341,7 @@ const clockSlice = createSlice({
 
         // Log command to history
         state.history.push({
-          type: 'clock/addSegments',
+          type: 'clocks/addSegments',
           payload: action.payload,
           timestamp: clock.updatedAt,
           version: 1,
@@ -368,7 +368,7 @@ const clockSlice = createSlice({
 
         // Log command to history
         state.history.push({
-          type: 'clock/clearSegments',
+          type: 'clocks/clearSegments',
           payload: action.payload,
           timestamp: clock.updatedAt,
           version: 1,
@@ -397,7 +397,7 @@ const clockSlice = createSlice({
 
         // Log command to history
         state.history.push({
-          type: 'clock/deleteClock',
+          type: 'clocks/deleteClock',
           payload: action.payload,
           timestamp: Date.now(),
           version: 1,
@@ -423,7 +423,7 @@ const clockSlice = createSlice({
 
         // Log command to history
         state.history.push({
-          type: 'clock/updateMetadata',
+          type: 'clocks/updateMetadata',
           payload: action.payload,
           timestamp: clock.updatedAt,
           version: 1,
@@ -448,7 +448,7 @@ const clockSlice = createSlice({
 
         // Log command to history
         state.history.push({
-          type: 'clock/changeSubtype',
+          type: 'clocks/changeSubtype',
           payload: action.payload,
           timestamp: clock.updatedAt,
           version: 1,

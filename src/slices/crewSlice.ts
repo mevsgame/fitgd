@@ -84,7 +84,7 @@ const crewSlice = createSlice({
 
         // Log command to history
         state.history.push({
-          type: 'crew/createCrew',
+          type: 'crews/createCrew',
           payload: crew,
           timestamp: crew.createdAt,
           version: 1,
@@ -124,7 +124,7 @@ const crewSlice = createSlice({
 
         // Log command to history
         state.history.push({
-          type: 'crew/addCharacterToCrew',
+          type: 'crews/addCharacterToCrew',
           payload: action.payload,
           timestamp: crew.updatedAt,
           version: 1,
@@ -154,7 +154,7 @@ const crewSlice = createSlice({
 
         // Log command to history
         state.history.push({
-          type: 'crew/removeCharacterFromCrew',
+          type: 'crews/removeCharacterFromCrew',
           payload: action.payload,
           timestamp: crew.updatedAt,
           version: 1,
@@ -184,7 +184,7 @@ const crewSlice = createSlice({
 
         // Log command to history
         state.history.push({
-          type: 'crew/setMomentum',
+          type: 'crews/setMomentum',
           payload: action.payload,
           timestamp: crew.updatedAt,
           version: 1,
@@ -216,7 +216,7 @@ const crewSlice = createSlice({
 
         // Log command to history
         state.history.push({
-          type: 'crew/addMomentum',
+          type: 'crews/addMomentum',
           payload: action.payload,
           timestamp: crew.updatedAt,
           version: 1,
@@ -246,7 +246,7 @@ const crewSlice = createSlice({
 
         // Log command to history
         state.history.push({
-          type: 'crew/spendMomentum',
+          type: 'crews/spendMomentum',
           payload: action.payload,
           timestamp: crew.updatedAt,
           version: 1,
@@ -274,7 +274,7 @@ const crewSlice = createSlice({
 
         // Log command to history
         state.history.push({
-          type: 'crew/resetMomentum',
+          type: 'crews/resetMomentum',
           payload: action.payload,
           timestamp: crew.updatedAt,
           version: 1,

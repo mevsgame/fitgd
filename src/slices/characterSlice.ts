@@ -121,6 +121,16 @@ const characterSlice = createSlice({
         const character = action.payload;
         state.byId[character.id] = character;
         state.allIds.push(character.id);
+
+        // Log command to history
+        state.history.push({
+          type: 'characters/createCharacter',
+          payload: character,
+          timestamp: character.createdAt,
+          version: 1,
+          commandId: generateId(),
+          userId: undefined,
+        });
       },
       prepare: (payload: CreateCharacterPayload) => {
         // Validate
@@ -147,7 +157,7 @@ const characterSlice = createSlice({
 
         // Create command for history
         const command: Command = {
-          type: 'character/createCharacter',
+          type: 'characters/createCharacter',
           payload: character,
           timestamp: now,
           version: 1,
@@ -179,10 +189,20 @@ const characterSlice = createSlice({
 
         // Validate trait count if configured
         validateTraitCount(character);
+
+        // Log command to history
+        state.history.push({
+          type: 'characters/addTrait',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: undefined,
+        });
       },
       prepare: (payload: AddTraitPayload) => {
         const command: Command = {
-          type: 'character/addTrait',
+          type: 'characters/addTrait',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -218,10 +238,20 @@ const characterSlice = createSlice({
 
         trait.disabled = true;
         character.updatedAt = Date.now();
+
+        // Log command to history
+        state.history.push({
+          type: 'characters/disableTrait',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: undefined,
+        });
       },
       prepare: (payload: DisableTraitPayload) => {
         const command: Command = {
-          type: 'character/disableTrait',
+          type: 'characters/disableTrait',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -257,10 +287,20 @@ const characterSlice = createSlice({
 
         trait.disabled = false;
         character.updatedAt = Date.now();
+
+        // Log command to history
+        state.history.push({
+          type: 'characters/enableTrait',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: undefined,
+        });
       },
       prepare: (payload: EnableTraitPayload) => {
         const command: Command = {
-          type: 'character/enableTrait',
+          type: 'characters/enableTrait',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -308,10 +348,20 @@ const characterSlice = createSlice({
         character.actionDots[actionName] = dots;
         character.unallocatedActionDots -= difference;
         character.updatedAt = Date.now();
+
+        // Log command to history
+        state.history.push({
+          type: 'characters/setActionDots',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: undefined,
+        });
       },
       prepare: (payload: SetActionDotsPayload) => {
         const command: Command = {
-          type: 'character/setActionDots',
+          type: 'characters/setActionDots',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -340,10 +390,20 @@ const characterSlice = createSlice({
 
         character.equipment.push(equipment);
         character.updatedAt = Date.now();
+
+        // Log command to history
+        state.history.push({
+          type: 'characters/addEquipment',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: undefined,
+        });
       },
       prepare: (payload: AddEquipmentPayload) => {
         const command: Command = {
-          type: 'character/addEquipment',
+          type: 'characters/addEquipment',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -374,10 +434,20 @@ const characterSlice = createSlice({
           (e) => e.id !== equipmentId
         );
         character.updatedAt = Date.now();
+
+        // Log command to history
+        state.history.push({
+          type: 'characters/removeEquipment',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: undefined,
+        });
       },
       prepare: (payload: RemoveEquipmentPayload) => {
         const command: Command = {
-          type: 'character/removeEquipment',
+          type: 'characters/removeEquipment',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -410,10 +480,20 @@ const characterSlice = createSlice({
 
         character.unallocatedActionDots += amount;
         character.updatedAt = Date.now();
+
+        // Log command to history
+        state.history.push({
+          type: 'characters/addUnallocatedDots',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: undefined,
+        });
       },
       prepare: (payload: { characterId: string; amount: number; userId?: string }) => {
         const command: Command = {
-          type: 'character/addUnallocatedDots',
+          type: 'characters/addUnallocatedDots',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -445,10 +525,20 @@ const characterSlice = createSlice({
 
         character.rallyAvailable = false;
         character.updatedAt = Date.now();
+
+        // Log command to history
+        state.history.push({
+          type: 'characters/useRally',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: undefined,
+        });
       },
       prepare: (payload: UseRallyPayload) => {
         const command: Command = {
-          type: 'character/useRally',
+          type: 'characters/useRally',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -474,10 +564,20 @@ const characterSlice = createSlice({
 
         character.rallyAvailable = true;
         character.updatedAt = Date.now();
+
+        // Log command to history
+        state.history.push({
+          type: 'characters/resetRally',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: undefined,
+        });
       },
       prepare: (payload: ResetRallyPayload) => {
         const command: Command = {
-          type: 'character/resetRally',
+          type: 'characters/resetRally',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -519,10 +619,20 @@ const characterSlice = createSlice({
         // Add the grouped trait
         character.traits.push(groupedTrait);
         character.updatedAt = Date.now();
+
+        // Log command to history
+        state.history.push({
+          type: 'characters/groupTraits',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: undefined,
+        });
       },
       prepare: (payload: GroupTraitsPayload) => {
         const command: Command = {
-          type: 'character/groupTraits',
+          type: 'characters/groupTraits',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -558,10 +668,20 @@ const characterSlice = createSlice({
 
         character.traits.push(trait);
         character.updatedAt = Date.now();
+
+        // Log command to history
+        state.history.push({
+          type: 'characters/createTraitFromFlashback',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: undefined,
+        });
       },
       prepare: (payload: CreateTraitFromFlashbackPayload) => {
         const command: Command = {
-          type: 'character/createTraitFromFlashback',
+          type: 'characters/createTraitFromFlashback',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -594,10 +714,20 @@ const characterSlice = createSlice({
         // Advance by 1
         character.actionDots[actionType] += 1;
         character.updatedAt = Date.now();
+
+        // Log command to history
+        state.history.push({
+          type: 'characters/advanceActionDots',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: undefined,
+        });
       },
       prepare: (payload: AdvanceActionDotsPayload) => {
         const command: Command = {
-          type: 'character/advanceActionDots',
+          type: 'characters/advanceActionDots',
           payload,
           timestamp: Date.now(),
           version: 1,
