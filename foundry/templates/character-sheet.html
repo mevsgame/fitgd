@@ -68,25 +68,25 @@
       {{/if}}
 
       <div class="actions-grid">
-        {{#each system.actionDots as |dots action|}}
+        {{#each system.actionDots}}
         <div class="action-row">
           <label class="action-label draggable"
                  draggable="true"
-                 data-action="{{action}}"
+                 data-action="{{@key}}"
                  data-action-type="roll"
                  title="Drag to hotbar to create macro">
-            {{action}}
+            {{@key}}
           </label>
-          <div class="action-dots" data-action="{{action}}">
+          <div class="action-dots" data-action="{{@key}}">
             {{#times 4}}
-              <span class="dot {{#if (lt this ../dots)}}filled{{/if}}"
-                    data-action="{{../action}}"
+              <span class="dot {{#if (lt this ../this)}}filled{{/if}}"
+                    data-action="{{../@key}}"
                     data-value="{{add this 1}}"
-                    title="Set {{../action}} to {{add this 1}} dots"></span>
+                    title="Set {{../@key}} to {{add this 1}} dots"></span>
             {{/times}}
           </div>
-          <span class="action-value">{{dots}}</span>
-          <button class="action-roll-single-btn" type="button" data-action="{{action}}" title="Roll {{action}}">
+          <span class="action-value">{{this}}</span>
+          <button class="action-roll-single-btn" type="button" data-action="{{@key}}" title="Roll {{@key}}">
             <i class="fas fa-dice-d6"></i>
           </button>
         </div>

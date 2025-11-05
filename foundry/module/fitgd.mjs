@@ -651,8 +651,11 @@ class FitGDCharacterSheet extends ActorSheet {
     }
 
     // Try to get data attributes from both target and currentTarget
-    // This handles cases where the click might be on a child element
-    const element = event.currentTarget.dataset?.action ? event.currentTarget : event.target;
+    // Prefer event.target (the actual clicked element) first, as it has both data-action and data-value
+    // Fall back to currentTarget only if target doesn't have the required attributes
+    const element = (event.target.dataset?.action && event.target.dataset?.value)
+      ? event.target
+      : event.currentTarget;
     const action = element.dataset?.action;
     const value = parseInt(element.dataset?.value);
 
