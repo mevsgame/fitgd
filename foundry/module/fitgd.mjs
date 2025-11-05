@@ -67,13 +67,21 @@ Hooks.once('init', async function() {
 
   // Initialize socketlib for reliable multi-client communication
   console.log('FitGD | Initializing socketlib...');
+  console.log('FitGD | socketlib available?', typeof socketlib !== 'undefined');
+
   try {
+    if (typeof socketlib === 'undefined') {
+      throw new Error('socketlib is not defined - module may not be installed or enabled');
+    }
+
     game.fitgd.socket = socketlib.registerSystem('forged-in-the-grimdark');
-    console.log('FitGD | socketlib registered successfully');
+    console.log('FitGD | socketlib registered successfully, socket object:', game.fitgd.socket);
 
     // Register socket handlers
+    // Note: Handler function must be defined before registration
     game.fitgd.socket.register('syncCommands', receiveCommandsFromSocket);
-    console.log('FitGD | Socket handlers registered');
+    console.log('FitGD | Socket handlers registered for "syncCommands"');
+    console.log('FitGD | Handler function:', receiveCommandsFromSocket);
   } catch (error) {
     console.error('FitGD | Failed to initialize socketlib:', error);
     console.error('FitGD | Make sure socketlib module is installed and enabled');
@@ -99,9 +107,16 @@ Hooks.once('init', async function() {
         };
 
         console.log(`FitGD | Broadcasting ${newCommandCount} commands via socketlib:`, socketData);
-        // Use socketlib to broadcast to OTHER clients (not self)
-        await game.fitgd.socket.executeForOthers('syncCommands', socketData);
-        console.log(`FitGD | socketlib broadcast completed for ${newCommandCount} commands`);
+        console.log(`FitGD | game.fitgd.socket exists?`, !!game.fitgd.socket);
+        console.log(`FitGD | game.fitgd.socket.executeForOthers exists?`, typeof game.fitgd.socket?.executeForOthers);
+
+        try {
+          // Use socketlib to broadcast to OTHER clients (not self)
+          const result = await game.fitgd.socket.executeForOthers('syncCommands', socketData);
+          console.log(`FitGD | socketlib broadcast completed, result:`, result);
+        } catch (error) {
+          console.error('FitGD | socketlib broadcast error:', error);
+        }
       } else {
         console.log(`FitGD | No new commands to broadcast (count = 0)`);
       }
@@ -188,7 +203,30 @@ Hooks.once('ready', async function() {
     }
   });
 
+  // Expose test function for manual socket testing
+  game.fitgd.testSocket = async function() {
+    console.log('FitGD | Testing socketlib...');
+    console.log('FitGD | Socket object:', game.fitgd.socket);
+
+    const testData = {
+      test: 'Hello from ' + game.user.name,
+      timestamp: Date.now(),
+      userId: game.user.id
+    };
+
+    try {
+      console.log('FitGD | Sending test message:', testData);
+      const result = await game.fitgd.socket.executeForOthers('syncCommands', testData);
+      console.log('FitGD | Test message sent, result:', result);
+      return result;
+    } catch (error) {
+      console.error('FitGD | Test message failed:', error);
+      throw error;
+    }
+  };
+
   console.log('FitGD | Ready (socketlib handlers active)');
+  console.log('FitGD | Test socket with: game.fitgd.testSocket()');
 });
 
 /* -------------------------------------------- */
@@ -800,9 +838,15 @@ async function saveCommandHistoryImmediate() {
       };
 
       console.log(`FitGD | Broadcasting ${newCommandCount} commands via socketlib:`, socketData);
-      // Use socketlib to broadcast to OTHER clients (not self)
-      await game.fitgd.socket.executeForOthers('syncCommands', socketData);
-      console.log(`FitGD | socketlib broadcast completed for ${newCommandCount} commands`);
+      console.log(`FitGD | game.fitgd.socket exists?`, !!game.fitgd.socket);
+
+      try {
+        // Use socketlib to broadcast to OTHER clients (not self)
+        const result = await game.fitgd.socket.executeForOthers('syncCommands', socketData);
+        console.log(`FitGD | socketlib broadcast completed, result:`, result);
+      } catch (error) {
+        console.error('FitGD | socketlib broadcast error:', error);
+      }
     } else {
       console.log(`FitGD | No new commands to broadcast (count = 0)`);
     }
