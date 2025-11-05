@@ -72,25 +72,32 @@ Hooks.once('init', async function() {
       const newCommands = getNewCommandsSinceLastBroadcast();
       const newCommandCount = newCommands.characters.length + newCommands.crews.length + newCommands.clocks.length;
 
-      // Save full history to Foundry settings (background persistence)
-      const history = game.fitgd.foundry.exportHistory();
-      await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
-      const total = history.characters.length + history.crews.length + history.clocks.length;
-      console.log(`FitGD | Saved ${total} commands (immediate)`);
-
-      // Broadcast only NEW commands for incremental sync
+      // Broadcast commands FIRST (before persistence) - all users can do this
       if (newCommandCount > 0) {
         game.socket.emit('system.fitgd.sync', {
           type: 'commandsAdded',
           userId: game.user.id,
+          userName: game.user.name,
           commandCount: newCommandCount,
           commands: newCommands,
           timestamp: Date.now()
         });
         console.log(`FitGD | Broadcast ${newCommandCount} new commands to other clients`);
       }
+
+      // Save to Foundry settings (only if user has permission - typically GM)
+      // Players will broadcast but won't persist; GM will persist when receiving broadcasts
+      if (game.user.isGM) {
+        const history = game.fitgd.foundry.exportHistory();
+        await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
+        const total = history.characters.length + history.crews.length + history.clocks.length;
+        console.log(`FitGD | Saved ${total} commands to world settings (GM only)`);
+      } else {
+        console.log(`FitGD | Skipped settings save (player - GM will persist on receipt)`);
+      }
     } catch (error) {
-      console.error('FitGD | Error saving command history:', error);
+      console.error('FitGD | Error in saveImmediate:', error);
+      // Don't throw - we still want broadcasts to work even if save fails
     }
   };
 
@@ -145,13 +152,19 @@ Hooks.once('ready', async function() {
     saveCommandHistory();
   });
 
-  // Save on page unload to catch any unsaved changes
+  // Save on page unload to catch any unsaved changes (GM only)
   window.addEventListener('beforeunload', () => {
-    // Synchronous save (no await) for immediate execution
-    const history = game.fitgd.foundry.exportHistory();
-    game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
-    const total = history.characters.length + history.crews.length + history.clocks.length;
-    console.log(`FitGD | Saved ${total} commands (on unload)`);
+    if (game.user.isGM) {
+      // Synchronous save (no await) for immediate execution
+      try {
+        const history = game.fitgd.foundry.exportHistory();
+        game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
+        const total = history.characters.length + history.crews.length + history.clocks.length;
+        console.log(`FitGD | Saved ${total} commands (on unload - GM)`);
+      } catch (error) {
+        console.error('FitGD | Failed to save on unload:', error);
+      }
+    }
   });
 
   // Set up socket listener for real-time synchronization across clients
@@ -162,7 +175,8 @@ Hooks.once('ready', async function() {
     }
 
     if (data.type === 'commandsAdded') {
-      console.log(`FitGD | Received ${data.commandCount || 0} new commands from user ${data.userId}`);
+      const userName = data.userName || 'Unknown User';
+      console.log(`FitGD | Received ${data.commandCount || 0} new commands from ${userName}`);
 
       try {
         // Apply commands incrementally (no store reset!)
@@ -173,6 +187,17 @@ Hooks.once('ready', async function() {
           refreshAffectedSheets(data.commands);
 
           console.log(`FitGD | Sync complete - applied ${appliedCount} new commands`);
+
+          // GM persists changes from players to world settings
+          if (game.user.isGM) {
+            try {
+              const history = game.fitgd.foundry.exportHistory();
+              await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
+              console.log(`FitGD | GM persisted player changes to world settings`);
+            } catch (error) {
+              console.error('FitGD | GM failed to persist player changes:', error);
+            }
+          }
         }
       } catch (error) {
         console.error('FitGD | Error applying incremental commands:', error);
@@ -714,25 +739,31 @@ async function saveCommandHistoryImmediate() {
     const newCommands = getNewCommandsSinceLastBroadcast();
     const newCommandCount = newCommands.characters.length + newCommands.crews.length + newCommands.clocks.length;
 
-    // Save full history to Foundry settings (background persistence)
-    const history = game.fitgd.foundry.exportHistory();
-    await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
-    const total = history.characters.length + history.crews.length + history.clocks.length;
-    console.log(`FitGD | Saved ${total} commands`);
-
-    // Broadcast only NEW commands for incremental sync
+    // Broadcast commands FIRST (before persistence) - all users can do this
     if (newCommandCount > 0) {
       game.socket.emit('system.fitgd.sync', {
         type: 'commandsAdded',
         userId: game.user.id,
+        userName: game.user.name,
         commandCount: newCommandCount,
         commands: newCommands,
         timestamp: Date.now()
       });
       console.log(`FitGD | Broadcast ${newCommandCount} new commands to other clients`);
     }
+
+    // Save to Foundry settings (only if user has permission - typically GM)
+    if (game.user.isGM) {
+      const history = game.fitgd.foundry.exportHistory();
+      await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
+      const total = history.characters.length + history.crews.length + history.clocks.length;
+      console.log(`FitGD | Saved ${total} commands to world settings (GM only)`);
+    } else {
+      console.log(`FitGD | Skipped settings save (player - GM will persist on receipt)`);
+    }
   } catch (error) {
-    console.error('FitGD | Error saving command history:', error);
+    console.error('FitGD | Error in saveCommandHistoryImmediate:', error);
+    // Don't throw - we still want broadcasts to work even if save fails
   }
 }
 
