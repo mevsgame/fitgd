@@ -11,7 +11,7 @@
  */
 
 import { configureStore, createGameAPI } from '../dist/fitgd-core.es.js';
-import { createFoundryAdapter, getClockRenderData } from '../dist/fitgd-core.es.js';
+import { createFoundryAdapter } from '../dist/fitgd-core.es.js';
 import {
   ActionRollDialog,
   TakeHarmDialog,
@@ -603,7 +603,43 @@ function registerHandlebarsHelpers() {
   Handlebars.registerHelper('clockSVG', function(clockData, options) {
     if (!clockData) return '';
 
-    const { color, size, value, svgPath } = getClockRenderData(clockData);
+    // Determine clock color based on type and metadata
+    let color = 'blue'; // default
+    switch (clockData.clockType) {
+      case 'harm':
+        // Morale harm uses grey, physical harm uses red
+        if (clockData.subtype?.toLowerCase().includes('morale') ||
+            clockData.subtype?.toLowerCase().includes('shaken')) {
+          color = 'grey';
+        } else {
+          color = 'red';
+        }
+        break;
+      case 'consumable':
+        color = 'green';
+        break;
+      case 'addiction':
+        color = 'yellow';
+        break;
+      case 'progress':
+        // Check if it's a threat/countdown
+        const metadata = clockData.metadata || {};
+        if (metadata.isCountdown || metadata.category === 'threat') {
+          color = 'red';
+        } else if (metadata.category === 'personal-goal') {
+          color = 'white';
+        } else if (metadata.category === 'faction') {
+          color = 'black';
+        } else {
+          color = 'blue';
+        }
+        break;
+    }
+
+    const size = clockData.maxSegments;
+    const value = clockData.segments;
+    const svgPath = `assets/clocks/themes/${color}/${size}clock_${value}.svg`;
+
     const width = options.hash.width || '100px';
     const height = options.hash.height || '100px';
     const cssClass = options.hash.class || 'clock';
