@@ -2,7 +2,6 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { generateId } from '../utils/uuid';
 import {
   validateSegmentAmount,
-  validateSegmentAddition,
   getMaxSegments,
   findClockWithFewestSegments,
   validateSingleAddictionClock,
@@ -305,12 +304,24 @@ const clockSlice = createSlice({
 
         validateClockExists(clock, clockId);
         validateSegmentAmount(amount);
-        validateSegmentAddition(clock, amount);
 
         const wasFilled = isClockFilled(clock);
+        const oldSegments = clock.segments;
 
-        clock.segments += amount;
+        // Cap segments at maxSegments instead of throwing error
+        // This allows harm to "fill" the clock when overflow would occur
+        const newSegments = clock.segments + amount;
+        clock.segments = Math.min(newSegments, clock.maxSegments);
         clock.updatedAt = Date.now();
+
+        // Log if we capped the overflow
+        if (newSegments > clock.maxSegments) {
+          console.log(
+            `FitGD | Clock ${clockId} capped at max: ` +
+            `tried to add ${amount} to ${oldSegments}/${clock.maxSegments}, ` +
+            `capped to ${clock.segments}/${clock.maxSegments}`
+          );
+        }
 
         // Special handling for consumable clocks when filled
         if (
