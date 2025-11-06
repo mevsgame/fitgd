@@ -201,6 +201,9 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
       console.log(`FitGD | Total commands to replay: ${allCommands.length}`);
 
       // Dispatch each command to reconstruct state
+      let successCount = 0;
+      let skippedCount = 0;
+
       for (const command of allCommands) {
         try {
           store.dispatch({
@@ -208,12 +211,25 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
             payload: command.payload,
             meta: { command },
           });
+          successCount++;
         } catch (error) {
-          console.error(`FitGD | Error replaying command ${command.type}:`, error);
+          // Check if this is an expected error (operation on deleted entity)
+          const isEntityNotFoundError = error instanceof Error &&
+            (error.message.includes('not found') ||
+             error.message.includes('does not exist'));
+
+          if (isEntityNotFoundError) {
+            // This is expected - commands for deleted entities can safely be skipped
+            console.warn(`FitGD | Skipped command ${command.type} for deleted entity (${error.message})`);
+            skippedCount++;
+          } else {
+            // Unexpected error - log as error
+            console.error(`FitGD | Error replaying command ${command.type}:`, error);
+          }
         }
       }
 
-      console.log('FitGD | Command replay complete');
+      console.log(`FitGD | Command replay complete: ${successCount} applied, ${skippedCount} skipped (deleted entities)`);
     },
 
     // ===== History management =====
