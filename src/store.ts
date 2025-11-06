@@ -8,7 +8,6 @@ import { configureStore as rtk_configureStore } from '@reduxjs/toolkit';
 import characterReducer from './slices/characterSlice';
 import crewReducer from './slices/crewSlice';
 import clockReducer from './slices/clockSlice';
-import playerRoundStateReducer from './slices/playerRoundStateSlice';
 
 /**
  * Root reducer combining all slices
@@ -17,7 +16,6 @@ export const rootReducer = {
   characters: characterReducer,
   crews: crewReducer,
   clocks: clockReducer,
-  playerRoundState: playerRoundStateReducer,
 };
 
 /**

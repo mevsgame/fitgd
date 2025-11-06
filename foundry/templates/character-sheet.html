@@ -159,31 +159,19 @@
 
       <div class="harm-clocks">
         {{#each system.harmClocks as |clock|}}
-        <div class="clock-item harm-clock" data-clock-id="{{clock.id}}">
-          <div class="clock-header">
-            <h4 class="clock-name {{#if @root.editable}}editable{{/if}}"
-                data-clock-id="{{clock.id}}"
-                contenteditable="{{@root.editable}}">{{clock.subtype}}</h4>
-            {{#if @root.editable}}
-            <button class="delete-clock-btn" type="button" data-clock-id="{{clock.id}}" title="Delete Clock">
-              <i class="fas fa-trash"></i>
-            </button>
-            {{/if}}
-          </div>
+        <div class="clock-item harm-clock">
+          <h4>{{clock.subtype}}</h4>
           <div class="clock-display">
-            {{clockSVG clock width="100px" height="100px" class="harm-clock-svg"}}
-          </div>
-          <div class="clock-controls">
-            {{#if @root.editable}}
-            <input type="number" class="clock-value-input"
-                   data-clock-id="{{clock.id}}"
-                   value="{{clock.segments}}"
-                   min="0"
-                   max="{{clock.maxSegments}}"
-                   title="Click to edit value directly"/>
-            {{else}}
+            <div class="clock-segments">
+              {{#times clock.maxSegments}}
+                <span class="clock-segment {{#if (lt this ../clock.segments)}}filled{{/if}}"
+                      data-clock-id="{{../clock.id}}"
+                      data-segment="{{this}}"
+                      data-current-segments="{{../clock.segments}}">
+                </span>
+              {{/times}}
+            </div>
             <span class="clock-value">{{clock.segments}}/{{clock.maxSegments}}</span>
-            {{/if}}
           </div>
         </div>
         {{/each}}

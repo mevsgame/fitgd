@@ -99,27 +99,19 @@ export function createQueryAPI(store: Store) {
      */
     getHarmClocks(characterId: string): Array<{
       id: string;
-      subtype: string;
-      clockType: string;
+      harmType: string;
       segments: number;
       maxSegments: number;
-      metadata?: any;
     }> {
       const state = store.getState();
       const harmClocks = selectHarmClocksByCharacter(state, characterId);
-      console.log(`FitGD | queryApi.getHarmClocks(${characterId}): found ${harmClocks.length} clocks`, harmClocks);
 
-      const result = harmClocks.map((clock) => ({
+      return harmClocks.map((clock) => ({
         id: clock.id,
-        subtype: clock.subtype ?? 'Unknown',
-        clockType: clock.clockType,
+        harmType: clock.subtype ?? 'Unknown',
         segments: clock.segments,
         maxSegments: clock.maxSegments,
-        metadata: clock.metadata,
       }));
-      console.log(`FitGD | queryApi.getHarmClocks result:`, result);
-
-      return result;
     },
 
     /**

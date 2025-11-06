@@ -10,4 +10,3 @@ export * from './clock';
 export * from './command';
 export * from './config';
 export * from './resolution';
-export * from './playerRoundState';

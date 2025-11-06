@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { generateId } from '../utils/uuid';
 import {
   validateSegmentAmount,
+  validateSegmentAddition,
   getMaxSegments,
   findClockWithFewestSegments,
   validateSingleAddictionClock,
@@ -63,12 +64,6 @@ interface AddSegmentsPayload {
 interface ClearSegmentsPayload {
   clockId: string;
   amount: number;
-  userId?: string;
-}
-
-interface SetSegmentsPayload {
-  clockId: string;
-  segments: number;
   userId?: string;
 }
 
@@ -304,24 +299,12 @@ const clockSlice = createSlice({
 
         validateClockExists(clock, clockId);
         validateSegmentAmount(amount);
+        validateSegmentAddition(clock, amount);
 
         const wasFilled = isClockFilled(clock);
-        const oldSegments = clock.segments;
 
-        // Cap segments at maxSegments instead of throwing error
-        // This allows harm to "fill" the clock when overflow would occur
-        const newSegments = clock.segments + amount;
-        clock.segments = Math.min(newSegments, clock.maxSegments);
+        clock.segments += amount;
         clock.updatedAt = Date.now();
-
-        // Log if we capped the overflow
-        if (newSegments > clock.maxSegments) {
-          console.log(
-            `FitGD | Clock ${clockId} capped at max: ` +
-            `tried to add ${amount} to ${oldSegments}/${clock.maxSegments}, ` +
-            `capped to ${clock.segments}/${clock.maxSegments}`
-          );
-        }
 
         // Special handling for consumable clocks when filled
         if (
@@ -394,38 +377,6 @@ const clockSlice = createSlice({
         });
       },
       prepare: (payload: ClearSegmentsPayload) => {
-        return { payload };
-      },
-    },
-
-    setSegments: {
-      reducer: (state, action: PayloadAction<SetSegmentsPayload>) => {
-        const { clockId, segments } = action.payload;
-        const clock = state.byId[clockId];
-
-        validateClockExists(clock, clockId);
-
-        // Validate segments range
-        if (segments < 0 || segments > clock.maxSegments) {
-          throw new Error(
-            `Invalid segments value ${segments}. Must be between 0 and ${clock.maxSegments}`
-          );
-        }
-
-        clock.segments = segments;
-        clock.updatedAt = Date.now();
-
-        // Log command to history
-        state.history.push({
-          type: 'clocks/setSegments',
-          payload: action.payload,
-          timestamp: clock.updatedAt,
-          version: 1,
-          commandId: generateId(),
-          userId: action.payload.userId,
-        });
-      },
-      prepare: (payload: SetSegmentsPayload) => {
         return { payload };
       },
     },
@@ -550,7 +501,6 @@ export const {
   createClock,
   addSegments,
   clearSegments,
-  setSegments,
   deleteClock,
   updateMetadata,
   changeSubtype,

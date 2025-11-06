@@ -520,105 +520,14 @@
   border-left: 4px solid #4169e1;
 }
 
-/* Clock Container */
-.fitgd .clock-container {
-  display: inline-block;
-  position: relative;
-}
-
-.fitgd .clock-container.editable img.clock {
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.fitgd .clock-container.editable img.clock:hover {
-  transform: scale(1.05);
-  filter: brightness(1.2);
-}
-
 .fitgd .clock-display {
   margin: 10px 0;
-  text-align: center;
 }
 
 .fitgd .clock-display.large {
   margin: 15px 0;
 }
 
-/* Clock Header with editable name and delete button */
-.fitgd .clock-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.fitgd .clock-name {
-  margin: 0;
-  flex: 1;
-}
-
-.fitgd .clock-name.editable {
-  cursor: text;
-  padding: 2px 4px;
-  border-radius: 3px;
-  transition: background 0.2s;
-}
-
-.fitgd .clock-name.editable:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.fitgd .clock-name.editable:focus {
-  background: rgba(255, 255, 255, 0.1);
-  outline: 1px solid #4169e1;
-}
-
-.fitgd .delete-clock-btn {
-  background: transparent;
-  border: none;
-  color: #ff6347;
-  cursor: pointer;
-  padding: 4px 8px;
-  font-size: 14px;
-  opacity: 0.6;
-  transition: opacity 0.2s;
-}
-
-.fitgd .delete-clock-btn:hover {
-  opacity: 1;
-}
-
-/* Clock Controls */
-.fitgd .clock-controls {
-  margin-top: 8px;
-  text-align: center;
-}
-
-.fitgd .clock-value-input {
-  width: 60px;
-  text-align: center;
-  font-weight: bold;
-  color: #ff6347;
-  font-size: 14px;
-  background: rgba(255, 99, 71, 0.1);
-  border: 1px solid rgba(255, 99, 71, 0.3);
-  border-radius: 4px;
-  padding: 4px 8px;
-}
-
-.fitgd .clock-value-input:focus {
-  outline: none;
-  border-color: #ff6347;
-}
-
-.fitgd .clock-value {
-  font-weight: bold;
-  color: #ff6347;
-  font-size: 14px;
-}
-
-/* Legacy dot-based clock segments (for backwards compatibility) */
 .fitgd .clock-segments {
   display: flex;
   flex-wrap: wrap;
@@ -650,6 +559,12 @@
   background: #ff6347;
   border-color: #ff6347;
   box-shadow: 0 0 6px rgba(255, 99, 71, 0.8);
+}
+
+.fitgd .clock-value {
+  font-weight: bold;
+  color: #ff6347;
+  font-size: 14px;
 }
 
 .fitgd .clock-rarity {
