@@ -741,6 +741,16 @@ const characterSlice = createSlice({
         };
       },
     },
+
+    /**
+     * Prune command history
+     *
+     * Clears all command history, keeping only the current state snapshot.
+     * This reduces memory/storage usage while maintaining current game state.
+     */
+    pruneHistory: (state) => {
+      state.history = [];
+    },
   },
 });
 
@@ -758,6 +768,7 @@ export const {
   groupTraits,
   createTraitFromFlashback,
   advanceActionDots,
+  pruneHistory,
 } = characterSlice.actions;
 
 export default characterSlice.reducer;

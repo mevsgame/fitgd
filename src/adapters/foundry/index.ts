@@ -10,8 +10,11 @@ import {
   importCrewFromFoundry,
   syncCrewToFoundry,
 } from './crewAdapter';
-import { createCharacter } from '../../slices/characterSlice';
-import { createCrew } from '../../slices/crewSlice';
+import { createCharacter, pruneHistory as pruneCharacterHistory } from '../../slices/characterSlice';
+import { createCrew, pruneCrewHistory } from '../../slices/crewSlice';
+import { pruneClockHistory } from '../../slices/clockSlice';
+import { selectHistoryStats } from '../../selectors/historySelectors';
+import type { HistoryStats } from '../../selectors/historySelectors';
 
 /**
  * Foundry VTT Adapter for FitGD
@@ -44,6 +47,10 @@ export interface FoundryAdapter {
   // Command history (for replay/audit)
   exportHistory(): CommandHistory;
   replayCommands(commands: CommandHistory): void;
+
+  // History management
+  getHistoryStats(): HistoryStats;
+  pruneAllHistory(): void;
 }
 
 /**
@@ -199,6 +206,28 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
       }
 
       console.log('FitGD | Command replay complete');
+    },
+
+    // ===== History management =====
+    getHistoryStats(): HistoryStats {
+      const state = store.getState();
+      return selectHistoryStats(state);
+    },
+
+    pruneAllHistory(): void {
+      console.log('FitGD | Pruning all command history');
+
+      const statsBefore = this.getHistoryStats();
+      console.log(`FitGD | History before pruning: ${statsBefore.totalCommands} commands (~${statsBefore.estimatedSizeKB}KB)`);
+
+      // Dispatch prune actions to all slices
+      store.dispatch(pruneCharacterHistory());
+      store.dispatch(pruneCrewHistory());
+      store.dispatch(pruneClockHistory());
+
+      const statsAfter = this.getHistoryStats();
+      console.log(`FitGD | History after pruning: ${statsAfter.totalCommands} commands (~${statsAfter.estimatedSizeKB}KB)`);
+      console.log('FitGD | History pruning complete - current state snapshot retained');
     },
   };
 }

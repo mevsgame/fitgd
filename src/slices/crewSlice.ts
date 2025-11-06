@@ -286,6 +286,16 @@ const crewSlice = createSlice({
         return { payload };
       },
     },
+
+    /**
+     * Prune command history
+     *
+     * Clears all command history, keeping only the current state snapshot.
+     * This reduces memory/storage usage while maintaining current game state.
+     */
+    pruneHistory: (state) => {
+      state.history = [];
+    },
   },
 });
 
@@ -297,6 +307,7 @@ export const {
   addMomentum,
   spendMomentum,
   resetMomentum,
+  pruneHistory: pruneCrewHistory,
 } = crewSlice.actions;
 
 export default crewSlice.reducer;

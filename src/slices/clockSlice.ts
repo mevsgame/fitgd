@@ -460,6 +460,16 @@ const clockSlice = createSlice({
         return { payload };
       },
     },
+
+    /**
+     * Prune command history
+     *
+     * Clears all command history, keeping only the current state snapshot.
+     * This reduces memory/storage usage while maintaining current game state.
+     */
+    pruneHistory: (state) => {
+      state.history = [];
+    },
   },
 });
 
@@ -470,6 +480,7 @@ export const {
   deleteClock,
   updateMetadata,
   changeSubtype,
+  pruneHistory: pruneClockHistory,
 } = clockSlice.actions;
 
 export default clockSlice.reducer;
