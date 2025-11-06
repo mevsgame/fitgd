@@ -306,19 +306,25 @@ export class TakeHarmDialog extends Dialog {
         <div class="form-group">
           <label>Position</label>
           <select name="position">
-            <option value="controlled">Controlled (1 segment)</option>
-            <option value="risky" selected>Risky (2 segments)</option>
-            <option value="desperate">Desperate (3 segments)</option>
+            <option value="controlled">Controlled</option>
+            <option value="risky" selected>Risky</option>
+            <option value="desperate">Desperate</option>
           </select>
         </div>
         <div class="form-group">
-          <label>Effect</label>
+          <label>Effect (Harm Severity)</label>
           <select name="effect">
             <option value="limited">Limited</option>
             <option value="standard" selected>Standard</option>
             <option value="great">Great</option>
           </select>
         </div>
+        <p class="help-text" style="font-size: 0.9em; color: #666; margin-top: 8px;">
+          <strong>Harm Segments:</strong><br/>
+          Controlled: 0/1/2 (Limited/Standard/Great)<br/>
+          Risky: 2/3/4 (Limited/Standard/Great)<br/>
+          Desperate: 4/5/6 (Limited/Standard/Great)
+        </p>
       </form>
     `;
 

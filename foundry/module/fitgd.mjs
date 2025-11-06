@@ -707,6 +707,15 @@ async function receiveCommandsFromSocket(data) {
     const appliedCount = applyCommandsIncremental(data.commands);
 
     if (appliedCount > 0) {
+      // Update lastBroadcastCount to prevent re-broadcasting received commands
+      const history = game.fitgd.foundry.exportHistory();
+      lastBroadcastCount = {
+        characters: history.characters.length,
+        crews: history.crews.length,
+        clocks: history.clocks.length
+      };
+      console.log(`FitGD | Updated broadcast tracking after receiving commands`);
+
       // Refresh affected sheets
       refreshAffectedSheets(data.commands);
 
@@ -715,7 +724,6 @@ async function receiveCommandsFromSocket(data) {
       // GM persists changes from players to world settings
       if (game.user.isGM) {
         try {
-          const history = game.fitgd.foundry.exportHistory();
           await game.settings.set('forged-in-the-grimdark', 'commandHistory', history);
           console.log(`FitGD | GM persisted player changes to world settings`);
         } catch (error) {
