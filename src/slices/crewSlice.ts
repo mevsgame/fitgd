@@ -296,6 +296,20 @@ const crewSlice = createSlice({
     pruneHistory: (state) => {
       state.history = [];
     },
+
+    /**
+     * Hydrate state from serialized snapshot
+     *
+     * Used when loading saved state from Foundry world settings.
+     * Replaces entire state with the provided snapshot.
+     */
+    hydrateCrews: (state, action: PayloadAction<Record<string, Crew>>) => {
+      const crews = action.payload;
+
+      state.byId = crews;
+      state.allIds = Object.keys(crews);
+      state.history = []; // No history in snapshots
+    },
   },
 });
 
@@ -308,6 +322,7 @@ export const {
   spendMomentum,
   resetMomentum,
   pruneHistory: pruneCrewHistory,
+  hydrateCrews,
 } = crewSlice.actions;
 
 export default crewSlice.reducer;

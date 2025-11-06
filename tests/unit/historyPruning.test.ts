@@ -209,6 +209,180 @@ describe('History Pruning', () => {
     });
   });
 
+  describe('State hydration (importState/exportState)', () => {
+    it('should export and import state correctly', () => {
+      const store = configureStore();
+      const adapter = createFoundryAdapter(store);
+
+      // Create some entities
+      store.dispatch(
+        createCharacter({
+          name: 'Test Character',
+          traits: [
+            { id: 'trait-1', name: 'Soldier', category: 'role', disabled: false, acquiredAt: Date.now() },
+            { id: 'trait-2', name: 'Veteran', category: 'background', disabled: false, acquiredAt: Date.now() },
+          ],
+          actionDots: {
+            shoot: 2,
+            skirmish: 1,
+            skulk: 0,
+            wreck: 0,
+            finesse: 0,
+            survey: 1,
+            study: 0,
+            tech: 0,
+            attune: 0,
+            command: 2,
+            consort: 0,
+            sway: 0,
+          } as ActionDots,
+        })
+      );
+
+      store.dispatch(createCrew({ name: 'Strike Team' }));
+
+      const characterId = store.getState().characters.allIds[0];
+      store.dispatch(
+        createClock({
+          entityId: characterId,
+          clockType: 'harm',
+          subtype: 'Physical',
+        })
+      );
+
+      // Export state
+      const exported = adapter.exportState();
+
+      // Create new store
+      const newStore = configureStore();
+      const newAdapter = createFoundryAdapter(newStore);
+
+      // Import into new store
+      newAdapter.importState(exported);
+
+      // Verify state matches
+      const oldState = store.getState();
+      const newState = newStore.getState();
+
+      expect(newState.characters.allIds).toEqual(oldState.characters.allIds);
+      expect(newState.crews.allIds).toEqual(oldState.crews.allIds);
+      expect(newState.clocks.allIds).toEqual(oldState.clocks.allIds);
+
+      // Verify entities are identical
+      const charId = oldState.characters.allIds[0];
+      expect(newState.characters.byId[charId].name).toBe('Test Character');
+
+      const crewId = oldState.crews.allIds[0];
+      expect(newState.crews.byId[crewId].name).toBe('Strike Team');
+    });
+
+    it('should rebuild clock indexes after hydration', () => {
+      const store = configureStore();
+      const adapter = createFoundryAdapter(store);
+
+      // Create character and harm clock
+      store.dispatch(
+        createCharacter({
+          name: 'Character',
+          traits: [
+            { id: 'trait-1', name: 'Soldier', category: 'role', disabled: false, acquiredAt: Date.now() },
+            { id: 'trait-2', name: 'Veteran', category: 'background', disabled: false, acquiredAt: Date.now() },
+          ],
+          actionDots: {
+            shoot: 2,
+            skirmish: 1,
+            skulk: 0,
+            wreck: 0,
+            finesse: 0,
+            survey: 1,
+            study: 0,
+            tech: 0,
+            attune: 0,
+            command: 2,
+            consort: 0,
+            sway: 0,
+          } as ActionDots,
+        })
+      );
+
+      const characterId = store.getState().characters.allIds[0];
+
+      store.dispatch(
+        createClock({
+          entityId: characterId,
+          clockType: 'harm',
+          subtype: 'Physical',
+        })
+      );
+
+      // Export and import
+      const exported = adapter.exportState();
+      const newStore = configureStore();
+      const newAdapter = createFoundryAdapter(newStore);
+      newAdapter.importState(exported);
+
+      // Verify indexes are rebuilt
+      const newState = newStore.getState();
+      const clockKey = `harm:${characterId}`;
+
+      expect(newState.clocks.byTypeAndEntity[clockKey]).toBeDefined();
+      expect(newState.clocks.byTypeAndEntity[clockKey].length).toBe(1);
+      expect(newState.clocks.byEntityId[characterId]).toBeDefined();
+      expect(newState.clocks.byType['harm']).toBeDefined();
+    });
+
+    it('should not include history in exported state', () => {
+      const store = configureStore();
+      const adapter = createFoundryAdapter(store);
+
+      // Create entities (builds history)
+      for (let i = 0; i < 5; i++) {
+        store.dispatch(
+          createCharacter({
+            name: `Character ${i}`,
+            traits: [
+              { id: `trait-${i}-1`, name: 'Soldier', category: 'role', disabled: false, acquiredAt: Date.now() },
+              { id: `trait-${i}-2`, name: 'Veteran', category: 'background', disabled: false, acquiredAt: Date.now() },
+            ],
+            actionDots: {
+              shoot: 2,
+              skirmish: 1,
+              skulk: 0,
+              wreck: 0,
+              finesse: 0,
+              survey: 1,
+              study: 0,
+              tech: 0,
+              attune: 0,
+              command: 2,
+              consort: 0,
+              sway: 0,
+            } as ActionDots,
+          })
+        );
+      }
+
+      // Verify history exists
+      expect(store.getState().characters.history.length).toBe(5);
+
+      // Export state
+      const exported = adapter.exportState();
+
+      // Verify exported state doesn't include history
+      expect(exported.characters).toBeDefined();
+      expect(Object.keys(exported.characters).length).toBe(5);
+
+      // Import into new store
+      const newStore = configureStore();
+      const newAdapter = createFoundryAdapter(newStore);
+      newAdapter.importState(exported);
+
+      // Verify new store has no history
+      expect(newStore.getState().characters.history.length).toBe(0);
+      expect(newStore.getState().characters.allIds.length).toBe(5);
+    });
+  });
+
   describe('Foundry adapter pruneAllHistory', () => {
     it('should prune all history across all slices', () => {
       const store = configureStore();

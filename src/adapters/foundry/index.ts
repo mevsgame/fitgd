@@ -10,9 +10,9 @@ import {
   importCrewFromFoundry,
   syncCrewToFoundry,
 } from './crewAdapter';
-import { createCharacter, pruneHistory as pruneCharacterHistory } from '../../slices/characterSlice';
-import { createCrew, pruneCrewHistory } from '../../slices/crewSlice';
-import { pruneClockHistory } from '../../slices/clockSlice';
+import { createCharacter, pruneHistory as pruneCharacterHistory, hydrateCharacters } from '../../slices/characterSlice';
+import { createCrew, pruneCrewHistory, hydrateCrews } from '../../slices/crewSlice';
+import { pruneClockHistory, hydrateClocks } from '../../slices/clockSlice';
 import { selectHistoryStats } from '../../selectors/historySelectors';
 import type { HistoryStats } from '../../selectors/historySelectors';
 
@@ -160,10 +160,18 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
       };
     },
 
-    importState(_serializedState: SerializedState): void {
-      // TODO: Implement state hydration
-      // This should replay commands or directly set state
-      console.warn('importState not yet implemented');
+    importState(serializedState: SerializedState): void {
+      console.log('FitGD | Importing state from snapshot');
+      console.log(`FitGD | Snapshot timestamp: ${new Date(serializedState.timestamp).toISOString()}`);
+      console.log(`FitGD | Snapshot version: ${serializedState.version}`);
+
+      // Hydrate each slice with the serialized data
+      store.dispatch(hydrateCharacters(serializedState.characters));
+      store.dispatch(hydrateCrews(serializedState.crews));
+      store.dispatch(hydrateClocks(serializedState.clocks));
+
+      const state = store.getState();
+      console.log(`FitGD | State hydrated - ${state.characters.allIds.length} characters, ${state.crews.allIds.length} crews, ${state.clocks.allIds.length} clocks`);
     },
 
     // ===== Command history =====

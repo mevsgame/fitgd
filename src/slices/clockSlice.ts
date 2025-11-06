@@ -470,6 +470,30 @@ const clockSlice = createSlice({
     pruneHistory: (state) => {
       state.history = [];
     },
+
+    /**
+     * Hydrate state from serialized snapshot
+     *
+     * Used when loading saved state from Foundry world settings.
+     * Replaces entire state with the provided snapshot and rebuilds indexes.
+     */
+    hydrateClocks: (state, action: PayloadAction<Record<string, Clock>>) => {
+      const clocks = action.payload;
+
+      // Reset state
+      state.byId = clocks;
+      state.allIds = Object.keys(clocks);
+      state.history = [];
+
+      // Rebuild indexes
+      state.byEntityId = {};
+      state.byType = {};
+      state.byTypeAndEntity = {};
+
+      for (const clock of Object.values(clocks)) {
+        addToIndexes(state, clock);
+      }
+    },
   },
 });
 
@@ -481,6 +505,7 @@ export const {
   updateMetadata,
   changeSubtype,
   pruneHistory: pruneClockHistory,
+  hydrateClocks,
 } = clockSlice.actions;
 
 export default clockSlice.reducer;
