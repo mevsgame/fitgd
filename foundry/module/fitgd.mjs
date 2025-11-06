@@ -21,6 +21,7 @@ import {
   AddTraitDialog,
   AddClockDialog
 } from './dialogs.mjs';
+import { HistoryManagementConfig } from './history-management.mjs';
 
 /* -------------------------------------------- */
 /*  System Initialization                       */
@@ -450,6 +451,16 @@ try {
 /* -------------------------------------------- */
 
 function registerSystemSettings() {
+  // History Management Menu
+  game.settings.registerMenu('forged-in-the-grimdark', 'historyManagement', {
+    name: game.i18n.localize('FITGD.Settings.HistoryManagement.Name'),
+    label: game.i18n.localize('FITGD.Settings.HistoryManagement.Label'),
+    hint: game.i18n.localize('FITGD.Settings.HistoryManagement.Hint'),
+    icon: 'fas fa-database',
+    type: HistoryManagementConfig,
+    restricted: true // GM only
+  });
+
   // Command history (for event sourcing)
   game.settings.register('forged-in-the-grimdark', 'commandHistory', {
     name: 'Command History',
@@ -472,8 +483,8 @@ function registerSystemSettings() {
 
   // Auto-save interval
   game.settings.register('forged-in-the-grimdark', 'autoSaveInterval', {
-    name: 'Auto-save Interval',
-    hint: 'Seconds between auto-saves (0 to disable)',
+    name: game.i18n.localize('FITGD.Settings.AutoSaveInterval.Name'),
+    hint: game.i18n.localize('FITGD.Settings.AutoSaveInterval.Hint'),
     scope: 'world',
     config: true,
     type: Number,

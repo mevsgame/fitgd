@@ -2,6 +2,47 @@
   "FITGD": {
     "SystemName": "Forged in the Grimdark",
 
+    "Settings": {
+      "AutoSaveInterval": {
+        "Name": "Auto-save Interval",
+        "Hint": "Seconds between auto-saves (0 to disable)"
+      },
+      "HistoryManagement": {
+        "Name": "History Management",
+        "Label": "Manage Command History",
+        "Hint": "View command history statistics and prune old history to reduce storage usage",
+        "Title": "FitGD History Management",
+        "StatsTitle": "Command History Statistics",
+        "NoHistory": "No command history recorded yet.",
+        "Error": "Error",
+        "TotalCommands": "Total Commands",
+        "CharacterCommands": "Character Commands",
+        "CrewCommands": "Crew Commands",
+        "ClockCommands": "Clock Commands",
+        "EstimatedSize": "Estimated Size",
+        "TimeSpan": "Time Span",
+        "Hours": "hours",
+        "OldestCommand": "Oldest Command",
+        "NewestCommand": "Newest Command",
+        "WarningTitle": "Warning:",
+        "WarningText": "Pruning history is permanent and cannot be undone!",
+        "RefreshStats": "Refresh Stats",
+        "PruneHistory": "Prune History",
+        "PruneSuccess": "Command history has been pruned successfully.",
+        "PruneError": "Failed to prune history",
+        "PruneDialog": {
+          "Title": "Prune Command History",
+          "Warning": "Warning: This action cannot be undone!",
+          "Description": "All command history will be permanently deleted, keeping only the current state.",
+          "WillLose": "You will lose the ability to:",
+          "LoseUndo": "Undo past actions",
+          "LoseHistory": "View action history",
+          "LoseReplay": "Replay commands",
+          "Confirm": "Are you sure you want to continue?"
+        }
+      }
+    },
+
     "Character": {
       "Name": "Character Name",
       "Actions": "Actions",
