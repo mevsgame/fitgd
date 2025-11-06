@@ -30,6 +30,29 @@
       </div>
     </div>
 
+    <!-- GM Controls for Position & Effect -->
+    {{#if isGM}}
+    <div class="gm-controls">
+      <h4>⚙️ GM CONTROLS:</h4>
+      <div class="form-group">
+        <label>Set Position:</label>
+        <select name="position" class="position-select">
+          <option value="controlled" {{#if (eq playerState.position "controlled")}}selected{{/if}}>Controlled</option>
+          <option value="risky" {{#if (eq (default playerState.position "risky") "risky")}}selected{{/if}}>Risky</option>
+          <option value="desperate" {{#if (eq playerState.position "desperate")}}selected{{/if}}>Desperate</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Set Effect:</label>
+        <select name="effect" class="effect-select">
+          <option value="limited" {{#if (eq playerState.effect "limited")}}selected{{/if}}>Limited</option>
+          <option value="standard" {{#if (eq (default playerState.effect "standard") "standard")}}selected{{/if}}>Standard</option>
+          <option value="great" {{#if (eq playerState.effect "great")}}selected{{/if}}>Great</option>
+        </select>
+      </div>
+    </div>
+    {{/if}}
+
     <!-- Harm Clocks Display -->
     {{#if harmClocks.length}}
     <div class="harm-clocks-display">
@@ -295,6 +318,32 @@
 .position-desperate {
   background: #c62828;
   color: #fff;
+}
+
+.gm-controls {
+  margin: 15px 0;
+  padding: 10px;
+  background: #3a1a5a;
+  border: 2px solid #9c27b0;
+  border-radius: 4px;
+}
+
+.gm-controls h4 {
+  margin: 0 0 10px 0;
+  color: #ce93d8;
+}
+
+.gm-controls .form-group {
+  margin-bottom: 10px;
+}
+
+.gm-controls select {
+  width: 100%;
+  padding: 8px;
+  background: #2a2a2a;
+  border: 1px solid #9c27b0;
+  color: #e0e0e0;
+  border-radius: 4px;
 }
 
 .harm-clocks-display {

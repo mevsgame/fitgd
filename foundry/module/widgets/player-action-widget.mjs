@@ -56,6 +56,12 @@ export class PlayerActionWidget extends Application {
 
     if (crewId) {
       this.crew = game.fitgd.api.crew.getCrew(crewId);
+      this.crewId = crewId; // Store crewId separately for easy access
+      console.log(`FitGD | Widget found crew ${crewId} for character ${this.characterId}`);
+    } else {
+      console.warn(`FitGD | No crew found for character ${this.characterId}`);
+      this.crew = null;
+      this.crewId = null;
     }
 
     // Get player round state
@@ -66,6 +72,7 @@ export class PlayerActionWidget extends Application {
       ...data,
       character: this.character,
       crew: this.crew,
+      crewId: this.crewId,
       playerState: this.playerState,
 
       // State flags
@@ -91,6 +98,9 @@ export class PlayerActionWidget extends Application {
 
       // Computed improvements preview
       improvements: this._computeImprovements(),
+
+      // GM controls
+      isGM: game.user.isGM,
     };
   }
 
@@ -100,6 +110,10 @@ export class PlayerActionWidget extends Application {
 
     // Action selection
     html.find('.action-select').change(this._onActionChange.bind(this));
+
+    // GM position/effect controls
+    html.find('.position-select').change(this._onPositionChange.bind(this));
+    html.find('.effect-select').change(this._onEffectChange.bind(this));
 
     // Prepare action buttons
     html.find('[data-action="rally"]').click(this._onRally.bind(this));
@@ -200,6 +214,44 @@ export class PlayerActionWidget extends Application {
         action,
         position: this.playerState?.position || 'risky',
         effect: this.playerState?.effect || 'standard',
+      },
+    });
+
+    this.render();
+  }
+
+  /**
+   * Handle GM position change
+   */
+  _onPositionChange(event) {
+    const position = event.currentTarget.value;
+
+    game.fitgd.store.dispatch({
+      type: 'playerRoundState/setActionPlan',
+      payload: {
+        characterId: this.characterId,
+        action: this.playerState?.selectedAction,
+        position,
+        effect: this.playerState?.effect || 'standard',
+      },
+    });
+
+    this.render();
+  }
+
+  /**
+   * Handle GM effect change
+   */
+  _onEffectChange(event) {
+    const effect = event.currentTarget.value;
+
+    game.fitgd.store.dispatch({
+      type: 'playerRoundState/setActionPlan',
+      payload: {
+        characterId: this.characterId,
+        action: this.playerState?.selectedAction,
+        position: this.playerState?.position || 'risky',
+        effect,
       },
     });
 
@@ -327,8 +379,8 @@ export class PlayerActionWidget extends Application {
     });
 
     // Spend Momentum if pushed
-    if (this.playerState.pushed && this.crew) {
-      game.fitgd.api.crew.spendMomentum(this.crew.id, 1);
+    if (this.playerState.pushed && this.crewId) {
+      game.fitgd.api.crew.spendMomentum({ crewId: this.crewId, amount: 1 });
     }
 
     // Transition based on outcome
@@ -458,8 +510,8 @@ export class PlayerActionWidget extends Application {
     ui.notifications.info(`Taking ${segments} harm. +${momentumGain} Momentum`);
 
     // Add Momentum
-    if (this.crew) {
-      game.fitgd.api.crew.addMomentum(this.crew.id, momentumGain);
+    if (this.crewId) {
+      game.fitgd.api.crew.addMomentum({ crewId: this.crewId, amount: momentumGain });
     }
 
     // End turn

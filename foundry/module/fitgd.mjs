@@ -365,10 +365,21 @@ Hooks.on('combatTurn', async function(combat, updateData, updateOptions) {
   const isOwner = actor.isOwner;
   const isGM = game.user.isGM;
 
+  console.log(`FitGD | Widget visibility check:`, {
+    actorName: actor.name,
+    currentUser: game.user.name,
+    isOwner,
+    isGM,
+    permission: actor.permission,
+    willShow: isOwner || isGM
+  });
+
   if (isOwner || isGM) {
     console.log(`FitGD | Opening Player Action Widget for character ${characterId}`);
     const widget = new PlayerActionWidget(characterId);
     widget.render(true);
+  } else {
+    console.log(`FitGD | Widget NOT shown - user is not owner or GM`);
   }
 });
 
