@@ -11,7 +11,7 @@
  */
 
 import { configureStore, createGameAPI } from '../dist/fitgd-core.es.js';
-import { createFoundryAdapter } from '../dist/fitgd-core.es.js';
+import { createFoundryAdapter, getClockRenderData } from '../dist/fitgd-core.es.js';
 import {
   ActionRollDialog,
   TakeHarmDialog,
@@ -598,6 +598,37 @@ function registerHandlebarsHelpers() {
   Handlebars.registerHelper('add', function(a, b) {
     return a + b;
   });
+
+  // Clock rendering helper
+  Handlebars.registerHelper('clockSVG', function(clockData, options) {
+    if (!clockData) return '';
+
+    const { color, size, value, svgPath } = getClockRenderData(clockData);
+    const width = options.hash.width || '100px';
+    const height = options.hash.height || '100px';
+    const cssClass = options.hash.class || 'clock';
+    const editable = options.hash.editable !== undefined ? options.hash.editable : game.user.isGM;
+
+    const alt = `${clockData.subtype || clockData.name || 'Clock'} (${value}/${size})`;
+
+    return new Handlebars.SafeString(`
+      <div class="clock-container ${editable ? 'editable' : ''}">
+        <img
+          src="${svgPath}"
+          alt="${alt}"
+          class="${cssClass} clock-${size} clock-${color}"
+          width="${width}"
+          height="${height}"
+          data-clock-id="${clockData.id}"
+          data-clock-type="${clockData.clockType}"
+          data-clock-value="${value}"
+          data-clock-max="${size}"
+          data-clock-color="${color}"
+          ${editable ? 'style="cursor: pointer;"' : ''}
+        />
+      </div>
+    `);
+  });
 }
 
 /* -------------------------------------------- */
@@ -1051,6 +1082,12 @@ class FitGDCharacterSheet extends ActorSheet {
     // Harm
     html.find('.add-harm-btn').click(this._onAddHarm.bind(this));
 
+    // Clock controls (GM-only editing)
+    html.find('.clock-container img.clock').click(this._onClickClockSVG.bind(this));
+    html.find('.clock-value-input').change(this._onChangeClockValue.bind(this));
+    html.find('.clock-name').blur(this._onRenameClockBlur.bind(this));
+    html.find('.delete-clock-btn').click(this._onDeleteClock.bind(this));
+
     // Traits
     html.find('.trait-lean-btn').click(this._onLeanIntoTrait.bind(this));
     html.find('.add-trait-btn').click(this._onAddTrait.bind(this));
@@ -1307,6 +1344,113 @@ class FitGDCharacterSheet extends ActorSheet {
     new TakeHarmDialog(characterId, crewId).render(true);
   }
 
+  /**
+   * Handle clicking on clock SVG image (GM-only)
+   * Cycles through clock segments
+   */
+  async _onClickClockSVG(event) {
+    if (!game.user.isGM) return;
+
+    event.preventDefault();
+    const img = event.currentTarget;
+    const clockId = img.dataset.clockId;
+    const currentValue = parseInt(img.dataset.clockValue);
+    const maxValue = parseInt(img.dataset.clockMax);
+
+    if (!clockId) return;
+
+    try {
+      // Cycle: 0 -> max, then back to 0
+      const newValue = currentValue >= maxValue ? 0 : currentValue + 1;
+
+      game.fitgd.api.clock.setSegments({ clockId, segments: newValue });
+      await game.fitgd.saveImmediate();
+      this.render(false);
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Clock SVG click error:', error);
+    }
+  }
+
+  /**
+   * Handle clock value input change (GM-only)
+   * Directly sets clock segments
+   */
+  async _onChangeClockValue(event) {
+    if (!game.user.isGM) return;
+
+    event.preventDefault();
+    const input = event.currentTarget;
+    const clockId = input.dataset.clockId;
+    const newValue = parseInt(input.value);
+
+    if (!clockId) return;
+
+    try {
+      game.fitgd.api.clock.setSegments({ clockId, segments: newValue });
+      await game.fitgd.saveImmediate();
+      this.render(false);
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Clock value change error:', error);
+    }
+  }
+
+  /**
+   * Handle clock name blur (GM-only)
+   * Renames clock when contenteditable loses focus
+   */
+  async _onRenameClockBlur(event) {
+    if (!game.user.isGM) return;
+
+    const element = event.currentTarget;
+    const clockId = element.dataset.clockId;
+    const newName = element.textContent.trim();
+
+    if (!clockId || !newName) return;
+
+    try {
+      game.fitgd.api.clock.rename({ clockId, name: newName });
+      await game.fitgd.saveImmediate();
+      ui.notifications.info(`Clock renamed to "${newName}"`);
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Clock rename error:', error);
+      this.render(false); // Reset to original name
+    }
+  }
+
+  /**
+   * Handle delete clock button (GM-only)
+   */
+  async _onDeleteClock(event) {
+    if (!game.user.isGM) return;
+
+    event.preventDefault();
+    const clockId = event.currentTarget.dataset.clockId;
+
+    if (!clockId) return;
+
+    const confirmed = await Dialog.confirm({
+      title: 'Delete Clock',
+      content: '<p>Are you sure you want to delete this clock?</p>',
+      yes: () => true,
+      no: () => false
+    });
+
+    if (!confirmed) return;
+
+    try {
+      game.fitgd.api.clock.delete(clockId);
+      await game.fitgd.saveImmediate();
+      this.render(false);
+      ui.notifications.info('Clock deleted');
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Clock delete error:', error);
+    }
+  }
+
   async _onLeanIntoTrait(event) {
     event.preventDefault();
     const characterId = this._getReduxId();
@@ -1460,6 +1604,12 @@ class FitGDCrewSheet extends ActorSheet {
     html.find('.add-clock-btn').click(this._onAddClock.bind(this));
     html.find('.clock-segment').click(this._onClickClockSegment.bind(this));
 
+    // Clock controls (GM-only editing)
+    html.find('.clock-container img.clock').click(this._onClickClockSVG.bind(this));
+    html.find('.clock-value-input').change(this._onChangeClockValue.bind(this));
+    html.find('.clock-name').blur(this._onRenameClockBlur.bind(this));
+    html.find('.delete-clock-btn').click(this._onDeleteClock.bind(this));
+
     // Reset
     html.find('.reset-btn').click(this._onPerformReset.bind(this));
 
@@ -1568,6 +1718,113 @@ class FitGDCrewSheet extends ActorSheet {
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
       console.error('FitGD | Clock segment error:', error);
+    }
+  }
+
+  /**
+   * Handle clicking on clock SVG image (GM-only)
+   * Cycles through clock segments
+   */
+  async _onClickClockSVG(event) {
+    if (!game.user.isGM) return;
+
+    event.preventDefault();
+    const img = event.currentTarget;
+    const clockId = img.dataset.clockId;
+    const currentValue = parseInt(img.dataset.clockValue);
+    const maxValue = parseInt(img.dataset.clockMax);
+
+    if (!clockId) return;
+
+    try {
+      // Cycle: 0 -> max, then back to 0
+      const newValue = currentValue >= maxValue ? 0 : currentValue + 1;
+
+      game.fitgd.api.clock.setSegments({ clockId, segments: newValue });
+      await game.fitgd.saveImmediate();
+      this.render(false);
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Clock SVG click error:', error);
+    }
+  }
+
+  /**
+   * Handle clock value input change (GM-only)
+   * Directly sets clock segments
+   */
+  async _onChangeClockValue(event) {
+    if (!game.user.isGM) return;
+
+    event.preventDefault();
+    const input = event.currentTarget;
+    const clockId = input.dataset.clockId;
+    const newValue = parseInt(input.value);
+
+    if (!clockId) return;
+
+    try {
+      game.fitgd.api.clock.setSegments({ clockId, segments: newValue });
+      await game.fitgd.saveImmediate();
+      this.render(false);
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Clock value change error:', error);
+    }
+  }
+
+  /**
+   * Handle clock name blur (GM-only)
+   * Renames clock when contenteditable loses focus
+   */
+  async _onRenameClockBlur(event) {
+    if (!game.user.isGM) return;
+
+    const element = event.currentTarget;
+    const clockId = element.dataset.clockId;
+    const newName = element.textContent.trim();
+
+    if (!clockId || !newName) return;
+
+    try {
+      game.fitgd.api.clock.rename({ clockId, name: newName });
+      await game.fitgd.saveImmediate();
+      ui.notifications.info(`Clock renamed to "${newName}"`);
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Clock rename error:', error);
+      this.render(false); // Reset to original name
+    }
+  }
+
+  /**
+   * Handle delete clock button (GM-only)
+   */
+  async _onDeleteClock(event) {
+    if (!game.user.isGM) return;
+
+    event.preventDefault();
+    const clockId = event.currentTarget.dataset.clockId;
+
+    if (!clockId) return;
+
+    const confirmed = await Dialog.confirm({
+      title: 'Delete Clock',
+      content: '<p>Are you sure you want to delete this clock?</p>',
+      yes: () => true,
+      no: () => false
+    });
+
+    if (!confirmed) return;
+
+    try {
+      game.fitgd.api.clock.delete(clockId);
+      await game.fitgd.saveImmediate();
+      this.render(false);
+      ui.notifications.info('Clock deleted');
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Clock delete error:', error);
     }
   }
 

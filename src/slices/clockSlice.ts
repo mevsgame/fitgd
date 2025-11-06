@@ -67,6 +67,12 @@ interface ClearSegmentsPayload {
   userId?: string;
 }
 
+interface SetSegmentsPayload {
+  clockId: string;
+  segments: number;
+  userId?: string;
+}
+
 interface DeleteClockPayload {
   clockId: string;
   userId?: string;
@@ -381,6 +387,38 @@ const clockSlice = createSlice({
       },
     },
 
+    setSegments: {
+      reducer: (state, action: PayloadAction<SetSegmentsPayload>) => {
+        const { clockId, segments } = action.payload;
+        const clock = state.byId[clockId];
+
+        validateClockExists(clock, clockId);
+
+        // Validate segments range
+        if (segments < 0 || segments > clock.maxSegments) {
+          throw new Error(
+            `Invalid segments value ${segments}. Must be between 0 and ${clock.maxSegments}`
+          );
+        }
+
+        clock.segments = segments;
+        clock.updatedAt = Date.now();
+
+        // Log command to history
+        state.history.push({
+          type: 'clocks/setSegments',
+          payload: action.payload,
+          timestamp: clock.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: action.payload.userId,
+        });
+      },
+      prepare: (payload: SetSegmentsPayload) => {
+        return { payload };
+      },
+    },
+
     deleteClock: {
       reducer: (state, action: PayloadAction<DeleteClockPayload>) => {
         const { clockId } = action.payload;
@@ -501,6 +539,7 @@ export const {
   createClock,
   addSegments,
   clearSegments,
+  setSegments,
   deleteClock,
   updateMetadata,
   changeSubtype,

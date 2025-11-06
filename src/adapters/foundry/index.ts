@@ -244,3 +244,13 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
 export * from './types';
 export { exportCharacterToFoundry, importCharacterFromFoundry } from './characterAdapter';
 export { exportCrewToFoundry, importCrewFromFoundry } from './crewAdapter';
+
+// Re-export clock renderer utilities
+export {
+  getClockSVGPath,
+  getClockRenderData,
+  getClockHTML,
+  getClockHandlebarsHelper,
+  getClockClickValue,
+  preloadClockAssets,
+} from './clockRenderer';
