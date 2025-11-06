@@ -703,6 +703,19 @@ async function receiveCommandsFromSocket(data) {
   console.log(`FitGD | Commands to apply:`, data.commands);
 
   try {
+    // BEFORE applying commands, capture entityIds for clocks that will be deleted
+    // (so we can refresh sheets even after the clock is gone)
+    const state = game.fitgd.store.getState();
+    const clockEntityIds = new Map();
+    for (const command of data.commands.clocks) {
+      if (command.payload?.clockId) {
+        const clock = state.clocks.byId[command.payload.clockId];
+        if (clock) {
+          clockEntityIds.set(command.payload.clockId, clock.entityId);
+        }
+      }
+    }
+
     // Apply commands incrementally (no store reset!)
     const appliedCount = applyCommandsIncremental(data.commands);
 
@@ -716,8 +729,8 @@ async function receiveCommandsFromSocket(data) {
       };
       console.log(`FitGD | Updated broadcast tracking after receiving commands`);
 
-      // Refresh affected sheets
-      refreshAffectedSheets(data.commands);
+      // Refresh affected sheets (pass the captured entityIds for deleted clocks)
+      refreshAffectedSheets(data.commands, clockEntityIds);
 
       console.log(`FitGD | Sync complete - applied ${appliedCount} new commands`);
 
@@ -865,8 +878,10 @@ function trackInitialCommandsAsApplied() {
 
 /**
  * Refresh only the sheets affected by the given commands (optimization)
+ * @param {Object} commands - Commands to process
+ * @param {Map} clockEntityIds - Map of clockId to entityId (captured before deletion)
  */
-function refreshAffectedSheets(commands) {
+function refreshAffectedSheets(commands, clockEntityIds = new Map()) {
   const affectedEntityIds = new Set();
   const state = game.fitgd.store.getState();
 
@@ -888,10 +903,18 @@ function refreshAffectedSheets(commands) {
 
     // Clock commands: resolve clockId to entityId
     if (command.payload?.clockId) {
-      const clock = state.clocks.byId[command.payload.clockId];
-      if (clock && clock.entityId) {
-        affectedEntityIds.add(clock.entityId);
-        console.log(`FitGD | Resolved clockId ${command.payload.clockId} to entityId ${clock.entityId}`);
+      // First try the pre-captured map (for deleted clocks)
+      if (clockEntityIds.has(command.payload.clockId)) {
+        const entityId = clockEntityIds.get(command.payload.clockId);
+        affectedEntityIds.add(entityId);
+        console.log(`FitGD | Resolved clockId ${command.payload.clockId} to entityId ${entityId} (from pre-delete capture)`);
+      } else {
+        // Otherwise try current state (for non-deleted clocks)
+        const clock = state.clocks.byId[command.payload.clockId];
+        if (clock && clock.entityId) {
+          affectedEntityIds.add(clock.entityId);
+          console.log(`FitGD | Resolved clockId ${command.payload.clockId} to entityId ${clock.entityId}`);
+        }
       }
     }
   }

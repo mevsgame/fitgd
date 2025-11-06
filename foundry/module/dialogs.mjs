@@ -385,10 +385,10 @@ export class TakeHarmDialog extends Dialog {
         ui.notifications.info(`Gained ${consequence.momentumGenerated} Momentum.`);
       }
 
-      // Re-render sheets
-      game.actors.get(characterId)?.sheet.render(false);
+      // Force re-render sheets (true = force refresh to ensure GM sees new clock)
+      game.actors.get(characterId)?.sheet.render(true);
       if (crewId) {
-        game.actors.get(crewId)?.sheet.render(false);
+        game.actors.get(crewId)?.sheet.render(true);
       }
 
     } catch (error) {
