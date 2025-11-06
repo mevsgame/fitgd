@@ -1,0 +1,527 @@
+<div class="player-action-widget-container">
+  <!-- Header -->
+  <div class="widget-header">
+    <h2>🎯 {{character.name}} - YOUR TURN</h2>
+  </div>
+
+  <!-- ==================== DECISION PHASE ==================== -->
+  {{#if isDecisionPhase}}
+  <div class="widget-content decision-phase">
+    <!-- Action Selection -->
+    <div class="form-group">
+      <label>Action:</label>
+      <select name="action" class="action-select">
+        <option value="">-- Select Action --</option>
+        {{#each actions}}
+        <option value="{{this}}" {{#if (eq ../playerState.selectedAction this)}}selected{{/if}}>
+          {{capitalize this}} ({{lookup ../character.actionDots this}}d)
+        </option>
+        {{/each}}
+      </select>
+    </div>
+
+    <!-- Position & Effect Display -->
+    <div class="position-effect-display">
+      <div class="position">
+        Position: <span class="position-{{playerState.position}}">{{uppercase (default playerState.position "RISKY")}}</span>
+      </div>
+      <div class="effect">
+        Effect: <span class="effect-level">{{uppercase (default playerState.effect "STANDARD")}}</span>
+      </div>
+    </div>
+
+    <!-- Harm Clocks Display -->
+    {{#if harmClocks.length}}
+    <div class="harm-clocks-display">
+      <h4>💔 HARM CLOCKS:</h4>
+      <div class="clocks-list">
+        {{#each harmClocks}}
+        <div class="clock-item">
+          <span class="clock-name">{{this.subtype}}:</span>
+          <span class="clock-segments">{{this.segments}}/{{this.maxSegments}}</span>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+    {{/if}}
+
+    <!-- Prepare Action Buttons -->
+    <div class="prepare-actions">
+      <h4>PREPARE ACTION:</h4>
+      <div class="button-row">
+        <button type="button" data-action="rally" {{#unless canRally}}disabled{{/unless}}>
+          Rally
+        </button>
+        <button type="button" data-action="flashback" {{#if (lt momentum 1)}}disabled{{/if}}>
+          Flashback
+        </button>
+        <button type="button" data-action="equipment">
+          Equipment
+        </button>
+        <button type="button" data-action="traits">
+          Traits
+        </button>
+        <button type="button" data-action="push" class="{{#if playerState.pushed}}active{{/if}}" {{#if (lt momentum 1)}}disabled{{/if}}>
+          Push
+        </button>
+      </div>
+    </div>
+
+    <!-- Current Plan Preview -->
+    {{#if playerState.selectedAction}}
+    <div class="action-plan-preview">
+      <h4>📋 Current Plan:</h4>
+      <div class="plan-box">
+        <div class="plan-line">Action: {{capitalize playerState.selectedAction}} ({{lookup character.actionDots playerState.selectedAction}}d)</div>
+        <div class="plan-line">Position: {{uppercase playerState.position}} → <span class="improved">{{uppercase playerState.position}}</span></div>
+        <div class="plan-line">Effect: {{uppercase playerState.effect}} → <span class="improved">{{uppercase playerState.effect}}</span></div>
+
+        {{#if improvements.length}}
+        <div class="plan-line improvements">
+          <strong>Improvements:</strong>
+          <ul>
+            {{#each improvements}}
+            <li>{{this}}</li>
+            {{/each}}
+          </ul>
+        </div>
+        {{/if}}
+
+        <div class="plan-line total">
+          <strong>TOTAL: {{playerState.dicePool}}d6</strong>
+        </div>
+        {{#if playerState.pushed}}
+        <div class="plan-line momentum-cost">
+          Momentum Cost: -1M ({{momentum}}→{{subtract momentum 1}})
+        </div>
+        {{/if}}
+      </div>
+    </div>
+    {{/if}}
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+      <button type="button" data-action="cancel" class="secondary">Cancel</button>
+      <button type="button" data-action="roll" class="primary" {{#unless playerState.selectedAction}}disabled{{/unless}}>
+        🎲 ROLL ACTION
+      </button>
+    </div>
+  </div>
+  {{/if}}
+
+  <!-- ==================== ROLL CONFIRM ==================== -->
+  {{#if isRollConfirm}}
+  <div class="widget-content roll-confirm">
+    <h3>🎯 CONFIRM ACTION</h3>
+    <p>Ready to roll?</p>
+
+    <div class="confirm-details">
+      <div>Action: {{capitalize playerState.selectedAction}} ({{playerState.dicePool}}d6)</div>
+      <div>Position: <span class="position-{{playerState.position}}">{{uppercase playerState.position}}</span></div>
+      <div>Effect: <span class="effect-level">{{uppercase playerState.effect}}</span></div>
+      {{#if playerState.pushed}}
+      <div>Momentum Cost: -1M (Current: {{momentum}}→{{subtract momentum 1}} after roll)</div>
+      {{/if}}
+    </div>
+
+    <div class="action-buttons">
+      <button type="button" data-action="back" class="secondary">← Back</button>
+      <button type="button" data-action="commit-roll" class="primary">🎲 COMMIT & ROLL</button>
+    </div>
+  </div>
+  {{/if}}
+
+  <!-- ==================== ROLLING ==================== -->
+  {{#if isRolling}}
+  <div class="widget-content rolling">
+    <h3>🎲 ROLLING...</h3>
+    <div class="dice-animation">
+      <!-- Dice animation would go here -->
+      <p>Rolling {{playerState.dicePool}}d6...</p>
+    </div>
+  </div>
+  {{/if}}
+
+  <!-- ==================== SUCCESS ==================== -->
+  {{#if isSuccess}}
+  <div class="widget-content success">
+    <h3>✅ SUCCESS!</h3>
+    <p>Roll: {{join playerState.rollResult ", "}}</p>
+    <p>You succeed without complications!</p>
+    <p class="fade-text">Ending turn...</p>
+  </div>
+  {{/if}}
+
+  <!-- ==================== CONSEQUENCE CHOICE ==================== -->
+  {{#if isConsequenceChoice}}
+  <div class="widget-content consequence-choice">
+    <h3>⚠️ {{#if (eq playerState.outcome "partial")}}PARTIAL SUCCESS{{else}}FAILURE{{/if}}</h3>
+    <p>Roll: {{join playerState.rollResult ", "}} = {{uppercase playerState.outcome}}</p>
+    <p>You face consequences...</p>
+
+    <div class="action-buttons">
+      <button type="button" data-action="use-stims">Use Stims & Reroll</button>
+      <button type="button" data-action="accept-consequences" class="primary">Accept Consequences</button>
+    </div>
+  </div>
+  {{/if}}
+
+  <!-- ==================== CONSEQUENCE RESOLUTION ==================== -->
+  {{#if isConsequenceResolution}}
+  <div class="widget-content consequence-resolution">
+    <h3>⚠️ CONSEQUENCE ({{uppercase playerState.position}} Position)</h3>
+
+    <div class="consequence-options">
+      <p>Choose consequence type:</p>
+      <button type="button" data-action="take-harm" class="consequence-btn">Take Harm</button>
+      <button type="button" data-action="advance-clock" class="consequence-btn">Advance Threat Clock</button>
+    </div>
+
+    <!-- Harm Table Reference -->
+    <div class="harm-reference">
+      <h4>Harm Consequence Reference:</h4>
+      <table class="harm-table">
+        <thead>
+          <tr>
+            <th>Pos/Eff</th>
+            <th>Limited</th>
+            <th>Std</th>
+            <th>Great</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Control</td>
+            <td>0</td>
+            <td>1</td>
+            <td>2</td>
+          </tr>
+          <tr class="{{#if (eq playerState.position 'risky')}}current-row{{/if}}">
+            <td>Risky</td>
+            <td>2</td>
+            <td>3</td>
+            <td>4</td>
+          </tr>
+          <tr class="{{#if (eq playerState.position 'desperate')}}current-row{{/if}}">
+            <td>Desprt</td>
+            <td>4</td>
+            <td>5</td>
+            <td>6 (DIE)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="momentum-gain">
+      💎 Momentum Gain: +{{#if (eq playerState.position "controlled")}}1{{else}}{{#if (eq playerState.position "risky")}}2{{else}}4{{/if}}{{/if}} (auto-applied)
+    </div>
+
+    <p class="protect-notice">⚡ Teammates can <strong>[Protect]</strong> you</p>
+  </div>
+  {{/if}}
+</div>
+
+<style>
+.player-action-widget-container {
+  padding: 10px;
+  font-family: "Signika", sans-serif;
+  color: #e0e0e0;
+  background: #1a1a1a;
+}
+
+.widget-header {
+  background: linear-gradient(135deg, #8b0000 0%, #5a0000 100%);
+  padding: 10px;
+  margin: -10px -10px 10px -10px;
+  border-bottom: 2px solid #ff6347;
+}
+
+.widget-header h2 {
+  margin: 0;
+  font-size: 1.2em;
+  text-align: center;
+  color: #fff;
+}
+
+.widget-content {
+  margin-top: 10px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #ffd700;
+}
+
+.action-select {
+  width: 100%;
+  padding: 8px;
+  background: #2a2a2a;
+  border: 1px solid #555;
+  color: #e0e0e0;
+  border-radius: 4px;
+}
+
+.position-effect-display {
+  display: flex;
+  justify-content: space-around;
+  margin: 15px 0;
+  padding: 10px;
+  background: #2a2a2a;
+  border-radius: 4px;
+}
+
+.position span {
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.position-controlled {
+  background: #2e7d32;
+  color: #fff;
+}
+
+.position-risky {
+  background: #f57c00;
+  color: #fff;
+}
+
+.position-desperate {
+  background: #c62828;
+  color: #fff;
+}
+
+.harm-clocks-display {
+  margin: 15px 0;
+  padding: 10px;
+  background: #2a2a2a;
+  border-left: 3px solid #dc143c;
+}
+
+.harm-clocks-display h4 {
+  margin: 0 0 10px 0;
+  color: #ff6347;
+}
+
+.clocks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.clock-item {
+  display: flex;
+  justify-content: space-between;
+}
+
+.clock-segments {
+  color: #ff6347;
+  font-weight: bold;
+}
+
+.prepare-actions {
+  margin: 15px 0;
+}
+
+.prepare-actions h4 {
+  margin-bottom: 10px;
+  color: #ffd700;
+}
+
+.button-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.button-row button {
+  flex: 1;
+  min-width: 80px;
+  padding: 8px;
+  background: linear-gradient(135deg, #4a4a4a 0%, #2a2a2a 100%);
+  border: 1px solid #666;
+  color: #e0e0e0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.button-row button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5a5a5a 0%, #3a3a3a 100%);
+  box-shadow: 0 0 10px rgba(255, 99, 71, 0.5);
+}
+
+.button-row button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.button-row button.active {
+  background: linear-gradient(135deg, #8b0000 0%, #5a0000 100%);
+  border-color: #ff6347;
+  box-shadow: 0 0 10px rgba(255, 99, 71, 0.7);
+}
+
+.action-plan-preview {
+  margin: 15px 0;
+  padding: 10px;
+  background: #2a2a2a;
+  border: 2px solid #555;
+  border-radius: 4px;
+}
+
+.action-plan-preview h4 {
+  margin: 0 0 10px 0;
+  color: #ffd700;
+}
+
+.plan-box {
+  background: #1a1a1a;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.plan-line {
+  margin-bottom: 5px;
+}
+
+.plan-line.improvements ul {
+  margin: 5px 0 0 20px;
+  padding: 0;
+}
+
+.plan-line.total {
+  margin-top: 10px;
+  font-size: 1.1em;
+  color: #ffd700;
+}
+
+.plan-line.momentum-cost {
+  color: #ff6347;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.action-buttons button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 4px;
+  font-size: 1em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-buttons button.primary {
+  background: linear-gradient(135deg, #8b0000 0%, #5a0000 100%);
+  color: #fff;
+  border: 2px solid #ff6347;
+}
+
+.action-buttons button.primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #a00000 0%, #700000 100%);
+  box-shadow: 0 0 15px rgba(255, 99, 71, 0.8);
+}
+
+.action-buttons button.secondary {
+  background: #4a4a4a;
+  color: #e0e0e0;
+  border: 1px solid #666;
+}
+
+.action-buttons button.secondary:hover {
+  background: #5a5a5a;
+}
+
+.action-buttons button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.consequence-options {
+  margin: 15px 0;
+}
+
+.consequence-btn {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, #4a4a4a 0%, #2a2a2a 100%);
+  border: 1px solid #666;
+  color: #e0e0e0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.consequence-btn:hover {
+  background: linear-gradient(135deg, #5a5a5a 0%, #3a3a3a 100%);
+  box-shadow: 0 0 10px rgba(255, 99, 71, 0.5);
+}
+
+.harm-reference {
+  margin: 15px 0;
+  padding: 10px;
+  background: #2a2a2a;
+  border-radius: 4px;
+}
+
+.harm-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.harm-table th,
+.harm-table td {
+  padding: 8px;
+  text-align: center;
+  border: 1px solid #555;
+}
+
+.harm-table th {
+  background: #3a3a3a;
+  color: #ffd700;
+}
+
+.harm-table .current-row {
+  background: rgba(255, 99, 71, 0.2);
+  border: 2px solid #ff6347;
+}
+
+.momentum-gain {
+  margin: 15px 0;
+  padding: 10px;
+  background: rgba(255, 215, 0, 0.1);
+  border-left: 3px solid #ffd700;
+  color: #ffd700;
+  font-weight: bold;
+}
+
+.protect-notice {
+  margin-top: 10px;
+  color: #aaa;
+  font-style: italic;
+}
+
+.fade-text {
+  animation: fadeInOut 2s ease-in-out infinite;
+}
+
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+</style>
