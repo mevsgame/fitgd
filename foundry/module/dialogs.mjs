@@ -353,20 +353,14 @@ export class TakeHarmDialog extends Dialog {
     const effect = form.effect.value;
 
     try {
-      // Apply harm through API
-      const result = game.fitgd.api.harm.take({
-        characterId,
-        harmType,
-        position,
-        effect
-      });
-
-      // Apply consequences (gain Momentum)
+      // Apply consequences (generates Momentum AND applies harm)
+      // Using 'failure' as default result since taking harm implies a consequence
       const consequence = game.fitgd.api.action.applyConsequences({
         crewId,
         characterId,
         position,
         effect,
+        result: 'failure',  // Default to failure when taking harm
         harmType
       });
 
@@ -374,10 +368,15 @@ export class TakeHarmDialog extends Dialog {
       await game.fitgd.saveImmediate();
 
       // Notify
-      ui.notifications.info(`Took ${result.segmentsAdded} segments of ${harmType}. Gained ${consequence.momentumGenerated} Momentum.`);
+      const harmInfo = consequence.harmApplied;
+      if (harmInfo) {
+        ui.notifications.info(`Took ${harmInfo.segmentsAdded} segments of ${harmType}. Gained ${consequence.momentumGenerated} Momentum.`);
 
-      if (result.isDying) {
-        ui.notifications.error(`${game.actors.get(characterId).name} is DYING! (6/6 harm clock)`);
+        if (harmInfo.isDying) {
+          ui.notifications.error(`Character is DYING! (6/6 harm clock)`);
+        }
+      } else {
+        ui.notifications.info(`Gained ${consequence.momentumGenerated} Momentum.`);
       }
 
       // Re-render sheets
