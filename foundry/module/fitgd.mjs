@@ -638,7 +638,7 @@ function registerHandlebarsHelpers() {
 
     const size = clockData.maxSegments;
     const value = clockData.segments;
-    const svgPath = `assets/clocks/themes/${color}/${size}clock_${value}.svg`;
+    const svgPath = `systems/forged-in-the-grimdark/assets/clocks/themes/${color}/${size}clock_${value}.svg`;
 
     const width = options.hash.width || '100px';
     const height = options.hash.height || '100px';
