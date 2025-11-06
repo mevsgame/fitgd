@@ -12,6 +12,47 @@
  */
 
 /* -------------------------------------------- */
+/*  Helper Functions                            */
+/* -------------------------------------------- */
+
+/**
+ * Refresh sheets for the given Redux entity IDs
+ *
+ * This properly handles the fact that characterId/crewId are Redux IDs,
+ * not Foundry Actor IDs. We need to find sheets by matching the Redux ID
+ * stored in the actor's flags.
+ *
+ * @param {string[]} reduxIds - Array of Redux entity IDs to refresh
+ * @param {boolean} force - Whether to force re-render (default: true)
+ */
+function refreshSheetsByReduxId(reduxIds, force = true) {
+  const affectedReduxIds = new Set(reduxIds.filter(id => id)); // Remove nulls/undefined
+  if (affectedReduxIds.size === 0) return;
+
+  console.log(`FitGD | Refreshing sheets for Redux IDs:`, Array.from(affectedReduxIds));
+
+  let refreshedCount = 0;
+  for (const app of Object.values(ui.windows)) {
+    if (!app.rendered) continue;
+
+    if (app.constructor.name === 'FitGDCharacterSheet' || app.constructor.name === 'FitGDCrewSheet') {
+      try {
+        const reduxId = app.actor?.getFlag('forged-in-the-grimdark', 'reduxId');
+        if (reduxId && affectedReduxIds.has(reduxId)) {
+          console.log(`FitGD | Re-rendering ${app.constructor.name} for Redux ID ${reduxId}`);
+          app.render(force);
+          refreshedCount++;
+        }
+      } catch (error) {
+        console.warn(`FitGD | Could not refresh sheet:`, error);
+      }
+    }
+  }
+
+  console.log(`FitGD | Refreshed ${refreshedCount} sheet(s)`);
+}
+
+/* -------------------------------------------- */
 /*  Action Roll Dialog                          */
 /* -------------------------------------------- */
 
@@ -229,10 +270,7 @@ export class ActionRollDialog extends Dialog {
     await this._handleConsequences(outcome, position, characterId, crewId, devilsBargain);
 
     // Re-render sheets
-    game.actors.get(characterId)?.sheet.render(false);
-    if (crewId) {
-      game.actors.get(crewId)?.sheet.render(false);
-    }
+    refreshSheetsByReduxId([characterId, crewId], false);
   }
 
   async _handleConsequences(outcome, position, characterId, crewId, devilsBargain) {
@@ -385,11 +423,9 @@ export class TakeHarmDialog extends Dialog {
         ui.notifications.info(`Gained ${consequence.momentumGenerated} Momentum.`);
       }
 
-      // Force re-render sheets (true = force refresh to ensure GM sees new clock)
-      game.actors.get(characterId)?.sheet.render(true);
-      if (crewId) {
-        game.actors.get(crewId)?.sheet.render(true);
-      }
+      // Force re-render affected sheets
+      refreshSheetsByReduxId([characterId, crewId], true);
+
 
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
@@ -491,8 +527,7 @@ export class RallyDialog extends Dialog {
       ui.notifications.info(`Rally used! Trait re-enabled. Momentum: ${result.newMomentum}/10`);
 
       // Re-render sheets
-      game.actors.get(characterId)?.sheet.render(false);
-      game.actors.get(crewId)?.sheet.render(false);
+      refreshSheetsByReduxId([characterId, crewId], false);
 
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
@@ -575,7 +610,7 @@ export class PushDialog extends Dialog {
       ui.notifications.info(`Pushed! ${typeLabel}. Momentum: ${result.newMomentum}/10`);
 
       // Re-render crew sheet
-      game.actors.get(crewId)?.sheet.render(false);
+      refreshSheetsByReduxId([crewId], false);
 
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
@@ -664,9 +699,8 @@ export class FlashbackDialog extends Dialog {
 
       ui.notifications.info(`Flashback! New trait "${traitName}" added. Momentum: ${result.newMomentum}/10`);
 
-      // Re-render sheets
-      game.actors.get(characterId)?.sheet.render(false);
-      game.actors.get(crewId)?.sheet.render(false);
+      // Re-render sheets (force = true to ensure new trait appears)
+      refreshSheetsByReduxId([characterId, crewId], true);
 
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
@@ -758,8 +792,8 @@ export class AddTraitDialog extends Dialog {
 
       ui.notifications.info(`Trait "${traitName}" added`);
 
-      // Re-render sheet
-      game.actors.get(characterId)?.sheet.render(false);
+      // Re-render sheet (force = true to ensure new trait appears)
+      refreshSheetsByReduxId([characterId], true);
 
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
@@ -856,8 +890,8 @@ export class AddClockDialog extends Dialog {
 
       ui.notifications.info(`Clock "${clockName}" created`);
 
-      // Re-render sheet
-      game.actors.get(crewId)?.sheet.render(false);
+      // Re-render sheet (force = true to ensure new clock appears)
+      refreshSheetsByReduxId([crewId], true);
 
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
