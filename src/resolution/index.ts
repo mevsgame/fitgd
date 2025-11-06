@@ -119,6 +119,7 @@ export function applyHarmConsequence(
 
   // Get harm segments from config
   const segments = DEFAULT_CONFIG.resolution.harmSegments[position][effect];
+  console.log(`FitGD | applyHarmConsequence: characterId=${characterId}, harmType=${harmType}, position=${position}, effect=${effect}, segments=${segments}`);
 
   // Get existing harm clocks for character
   const state = store.getState() as any;
@@ -127,6 +128,7 @@ export function applyHarmConsequence(
   const existingHarmClocks = existingHarmClockIds.map(
     (id: string) => state.clocks.byId[id]
   );
+  console.log(`FitGD | Existing harm clocks for ${characterId}:`, existingHarmClocks.length, existingHarmClocks);
 
   // Check if clock already exists for this harm type
   const existingClock = existingHarmClocks.find(
@@ -137,10 +139,12 @@ export function applyHarmConsequence(
 
   if (existingClock) {
     // Add to existing clock
+    console.log(`FitGD | Found existing clock ${existingClock.id}, adding ${segments} segments`);
     clockId = existingClock.id;
     store.dispatch(addSegments({ clockId, amount: segments }));
   } else {
     // Create new clock
+    console.log(`FitGD | Creating new harm clock: entityId=${characterId}, harmType=${harmType}`);
     store.dispatch(
       createClock({
         entityId: characterId,
@@ -152,9 +156,12 @@ export function applyHarmConsequence(
     // Get the newly created clock ID (last one in allIds)
     const newState = store.getState() as any;
     clockId = newState.clocks.allIds[newState.clocks.allIds.length - 1];
+    const newClock = newState.clocks.byId[clockId];
+    console.log(`FitGD | Created clock ${clockId}, initial segments: ${newClock.segments}, maxSegments: ${newClock.maxSegments}`);
 
     // Add segments if any
     if (segments > 0) {
+      console.log(`FitGD | Adding ${segments} segments to new clock ${clockId}`);
       store.dispatch(addSegments({ clockId, amount: segments }));
     }
   }
@@ -163,6 +170,7 @@ export function applyHarmConsequence(
   const finalState = store.getState() as any;
   const clock = finalState.clocks.byId[clockId];
   const isDying = clock.segments >= clock.maxSegments;
+  console.log(`FitGD | Final clock state: ${clockId}, segments=${clock.segments}/${clock.maxSegments}, isDying=${isDying}`);
 
   return {
     clockId,
