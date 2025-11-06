@@ -313,7 +313,8 @@ Hooks.on('combatStart', async function(combat, updateData) {
 
   if (crews.length > 0) {
     const crew = crews[0]; // Assuming single crew for now
-    game.fitgd.api.crew.resetMomentum(crew.id);
+    // Use setMomentum with object parameter (API uses object params)
+    game.fitgd.api.crew.setMomentum({ crewId: crew.id, amount: 5 });
     ui.notifications.info('Momentum reset to 5 - Combat Start!');
   }
 

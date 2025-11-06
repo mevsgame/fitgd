@@ -23,7 +23,7 @@ export class PlayerActionWidget extends Application {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ['fitgd', 'player-action-widget'],
-      template: 'modules/forged-in-the-grimdark/templates/widgets/player-action-widget.html',
+      template: 'systems/forged-in-the-grimdark/templates/widgets/player-action-widget.html',
       width: 600,
       height: 'auto',
       minimizable: false,
