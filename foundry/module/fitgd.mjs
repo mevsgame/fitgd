@@ -803,6 +803,34 @@ function registerHandlebarsHelpers() {
       </div>
     `);
   });
+
+  // Default value helper (returns second arg if first is falsy)
+  Handlebars.registerHelper('default', function(value, defaultValue) {
+    return value != null ? value : defaultValue;
+  });
+
+  // Capitalize first letter
+  Handlebars.registerHelper('capitalize', function(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  });
+
+  // Uppercase entire string
+  Handlebars.registerHelper('uppercase', function(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.toUpperCase();
+  });
+
+  // Subtract helper for arithmetic
+  Handlebars.registerHelper('subtract', function(a, b) {
+    return a - b;
+  });
+
+  // Join array with separator
+  Handlebars.registerHelper('join', function(arr, separator) {
+    if (!Array.isArray(arr)) return '';
+    return arr.join(separator || ', ');
+  });
 }
 
 /* -------------------------------------------- */
