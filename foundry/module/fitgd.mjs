@@ -1061,9 +1061,12 @@ class FitGDCharacterSheet extends ActorSheet {
     const context = super.getData();
     context.editMode = this.editMode;
 
+    // Override editable to be GM-only for clock editing
+    context.editable = game.user.isGM;
+
     // Get Redux ID from Foundry actor flags
     const reduxId = this.actor.getFlag('forged-in-the-grimdark', 'reduxId');
-    console.log('FitGD | Character Sheet getData - reduxId:', reduxId);
+    console.log('FitGD | Character Sheet getData - reduxId:', reduxId, 'editable:', context.editable);
 
     if (reduxId) {
       const character = game.fitgd.api.character.getCharacter(reduxId);
@@ -1097,6 +1100,7 @@ class FitGDCharacterSheet extends ActorSheet {
         context.reduxId = reduxId;
 
         console.log('FitGD | Context system data:', context.system);
+        console.log('FitGD | Harm clocks:', context.system.harmClocks);
       } else {
         console.warn('FitGD | Character not found in Redux for ID:', reduxId);
       }
@@ -1590,8 +1594,12 @@ class FitGDCrewSheet extends ActorSheet {
   getData() {
     const context = super.getData();
 
+    // Override editable to be GM-only for clock editing
+    context.editable = game.user.isGM;
+
     // Get Redux ID from Foundry actor flags
     const reduxId = this.actor.getFlag('forged-in-the-grimdark', 'reduxId');
+    console.log('FitGD | Crew Sheet getData - reduxId:', reduxId, 'editable:', context.editable);
 
     if (reduxId) {
       const crew = game.fitgd.api.crew.getCrew(reduxId);
@@ -1616,6 +1624,8 @@ class FitGDCrewSheet extends ActorSheet {
           progressClocks: game.fitgd.api.query.getProgressClocks(reduxId)
         };
         context.reduxId = reduxId;
+
+        console.log('FitGD | Crew system data:', context.system);
       }
     }
 
