@@ -774,20 +774,46 @@ function refreshAffectedSheets(commands) {
     }
   }
 
-  console.log(`FitGD | Refreshing sheets for ${affectedEntityIds.size} affected entities`);
+  console.log(`FitGD | Refreshing sheets for ${affectedEntityIds.size} affected entities:`, Array.from(affectedEntityIds));
+  console.log(`FitGD | Open windows: ${Object.keys(ui.windows).length}`);
 
-  // Refresh only affected sheets
+  // Refresh only affected sheets (works for all permission levels: owner, observer, etc.)
+  let refreshedCount = 0;
   for (const app of Object.values(ui.windows)) {
-    if (!app.rendered) continue;
+    if (!app.rendered) {
+      continue;
+    }
 
     if (app instanceof FitGDCharacterSheet || app instanceof FitGDCrewSheet) {
-      const reduxId = app.actor.getFlag('forged-in-the-grimdark', 'reduxId');
+      // Try to get Redux ID from the actor flags
+      let reduxId = null;
+      try {
+        reduxId = app.actor?.getFlag('forged-in-the-grimdark', 'reduxId');
+      } catch (error) {
+        console.warn(`FitGD | Could not read reduxId flag from actor (permission issue?):`, error);
+        continue;
+      }
+
+      console.log(`FitGD | Checking ${app.constructor.name} - Actor: ${app.actor?.name}, ReduxId: ${reduxId}, Match: ${affectedEntityIds.has(reduxId)}`);
+
       if (reduxId && affectedEntityIds.has(reduxId)) {
-        console.log(`FitGD | Re-rendering ${app.constructor.name} for ${reduxId}`);
-        app.render(false);
+        try {
+          const permission = app.actor?.testUserPermission(game.user, 'OBSERVER') ? 'observer+' :
+                           app.actor?.testUserPermission(game.user, 'OWNER') ? 'owner' : 'limited';
+          console.log(`FitGD | Re-rendering ${app.constructor.name} for ${reduxId} (user: ${game.user.name}, permission: ${permission})`);
+
+          // Force a full re-render (true = force) to ensure observers see updates
+          // The sheet's getData() will read from Redux which has the latest state
+          app.render(true);
+          refreshedCount++;
+        } catch (error) {
+          console.error(`FitGD | Error re-rendering sheet for ${reduxId}:`, error);
+        }
       }
     }
   }
+
+  console.log(`FitGD | Refreshed ${refreshedCount} sheets`);
 }
 
 /**
