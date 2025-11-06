@@ -576,8 +576,27 @@ function registerHandlebarsHelpers() {
 async function receiveCommandsFromSocket(data) {
   console.log(`FitGD | socketlib received data:`, data);
 
+  // Handle test messages (for diagnostics)
+  if (data.test) {
+    console.log(`FitGD | Received test message: "${data.test}"`);
+    return;
+  }
+
+  // Handle real command sync messages
+  if (data.type !== 'commandsAdded') {
+    console.warn(`FitGD | Received unknown message type: ${data.type}`);
+    return;
+  }
+
   const userName = data.userName || 'Unknown User';
   console.log(`FitGD | Received ${data.commandCount || 0} new commands from ${userName}`);
+
+  // Validate commands structure
+  if (!data.commands) {
+    console.error(`FitGD | No commands in message data`);
+    return;
+  }
+
   console.log(`FitGD | Commands to apply:`, data.commands);
 
   try {
