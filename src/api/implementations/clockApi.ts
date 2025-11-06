@@ -3,7 +3,9 @@ import {
   createClock,
   addSegments,
   clearSegments,
+  setSegments,
   deleteClock,
+  changeSubtype,
 } from '../../slices/clockSlice';
 import { isClockFilled } from '../../validators/clockValidator';
 
@@ -102,6 +104,45 @@ export function createClockAPI(store: Store) {
         newSegments: clock.segments,
         isCleared: clock.segments === 0,
       };
+    },
+
+    /**
+     * Set clock segments directly
+     */
+    setSegments(params: {
+      clockId: string;
+      segments: number;
+    }): {
+      newSegments: number;
+      isFilled: boolean;
+    } {
+      const { clockId, segments } = params;
+
+      store.dispatch(setSegments({ clockId, segments }));
+
+      const state = store.getState();
+      const clock = state.clocks.byId[clockId];
+
+      if (!clock) {
+        throw new Error(`Clock ${clockId} not found`);
+      }
+
+      return {
+        newSegments: clock.segments,
+        isFilled: isClockFilled(clock),
+      };
+    },
+
+    /**
+     * Rename a clock (changes subtype which is displayed as the name)
+     */
+    rename(params: {
+      clockId: string;
+      name: string;
+    }): void {
+      const { clockId, name } = params;
+
+      store.dispatch(changeSubtype({ clockId, newSubtype: name }));
     },
 
     /**

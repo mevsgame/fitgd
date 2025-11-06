@@ -79,18 +79,21 @@
       {{#if system.addictionClock}}
       <div class="clock-section">
         <h3>Addiction Clock</h3>
-        <div class="clock-item addiction-clock">
+        <div class="clock-item addiction-clock" data-clock-id="{{system.addictionClock.id}}">
           <div class="clock-display large">
-            <div class="clock-segments">
-              {{#times system.addictionClock.maxSegments}}
-                <span class="clock-segment {{#if (lt this ../system.addictionClock.segments)}}filled{{/if}}"
-                      data-clock-id="{{../system.addictionClock.id}}"
-                      data-segment="{{this}}"
-                      data-current-segments="{{../system.addictionClock.segments}}">
-                </span>
-              {{/times}}
-            </div>
+            {{clockSVG system.addictionClock width="150px" height="150px" class="addiction-clock-svg"}}
+          </div>
+          <div class="clock-controls">
+            {{#if @root.editable}}
+            <input type="number" class="clock-value-input"
+                   data-clock-id="{{system.addictionClock.id}}"
+                   value="{{system.addictionClock.segments}}"
+                   min="0"
+                   max="{{system.addictionClock.maxSegments}}"
+                   title="Click to edit value directly"/>
+            {{else}}
             <span class="clock-value">{{system.addictionClock.segments}}/{{system.addictionClock.maxSegments}}</span>
+            {{/if}}
           </div>
           {{#if (gte system.addictionClock.segments system.addictionClock.maxSegments)}}
           <p class="warning"><i class="fas fa-exclamation-triangle"></i> Stims are locked due to addiction!</p>
@@ -105,20 +108,32 @@
         <h3>Consumables</h3>
         <div class="clocks-grid">
           {{#each system.consumableClocks as |clock|}}
-          <div class="clock-item consumable-clock {{#if clock.metadata.frozen}}frozen{{/if}}">
-            <h4>{{clock.subtype}}</h4>
-            <span class="clock-rarity">{{clock.metadata.rarity}}</span>
+          <div class="clock-item consumable-clock {{#if clock.metadata.frozen}}frozen{{/if}}" data-clock-id="{{clock.id}}">
+            <div class="clock-header">
+              <h4 class="clock-name {{#if @root.editable}}editable{{/if}}"
+                  data-clock-id="{{clock.id}}"
+                  contenteditable="{{@root.editable}}">{{clock.subtype}}</h4>
+              <span class="clock-rarity">{{clock.metadata.rarity}}</span>
+              {{#if @root.editable}}
+              <button class="delete-clock-btn" type="button" data-clock-id="{{clock.id}}" title="Delete Clock">
+                <i class="fas fa-trash"></i>
+              </button>
+              {{/if}}
+            </div>
             <div class="clock-display">
-              <div class="clock-segments">
-                {{#times clock.maxSegments}}
-                  <span class="clock-segment {{#if (lt this ../clock.segments)}}filled{{/if}}"
-                        data-clock-id="{{../clock.id}}"
-                        data-segment="{{this}}"
-                        data-current-segments="{{../clock.segments}}">
-                  </span>
-                {{/times}}
-              </div>
+              {{clockSVG clock width="100px" height="100px" class="consumable-clock-svg"}}
+            </div>
+            <div class="clock-controls">
+              {{#if @root.editable}}
+              <input type="number" class="clock-value-input"
+                     data-clock-id="{{clock.id}}"
+                     value="{{clock.segments}}"
+                     min="0"
+                     max="{{clock.maxSegments}}"
+                     title="Click to edit value directly"/>
+              {{else}}
               <span class="clock-value">{{clock.segments}}/{{clock.maxSegments}}</span>
+              {{/if}}
             </div>
             {{#if clock.metadata.frozen}}
             <p class="clock-status"><i class="fas fa-snowflake"></i> Depleted</p>
@@ -135,20 +150,32 @@
         <h3>Progress & Threat Clocks</h3>
         <div class="clocks-grid">
           {{#each system.progressClocks as |clock|}}
-          <div class="clock-item progress-clock">
-            <h4>{{clock.name}}</h4>
-            <span class="clock-category">{{clock.category}}</span>
+          <div class="clock-item progress-clock" data-clock-id="{{clock.id}}">
+            <div class="clock-header">
+              <h4 class="clock-name {{#if @root.editable}}editable{{/if}}"
+                  data-clock-id="{{clock.id}}"
+                  contenteditable="{{@root.editable}}">{{clock.name}}</h4>
+              <span class="clock-category">{{clock.category}}</span>
+              {{#if @root.editable}}
+              <button class="delete-clock-btn" type="button" data-clock-id="{{clock.id}}" title="Delete Clock">
+                <i class="fas fa-trash"></i>
+              </button>
+              {{/if}}
+            </div>
             <div class="clock-display">
-              <div class="clock-segments">
-                {{#times clock.maxSegments}}
-                  <span class="clock-segment {{#if (lt this ../clock.segments)}}filled{{/if}}"
-                        data-clock-id="{{../clock.id}}"
-                        data-segment="{{this}}"
-                        data-current-segments="{{../clock.segments}}">
-                  </span>
-                {{/times}}
-              </div>
+              {{clockSVG clock width="100px" height="100px" class="progress-clock-svg"}}
+            </div>
+            <div class="clock-controls">
+              {{#if @root.editable}}
+              <input type="number" class="clock-value-input"
+                     data-clock-id="{{clock.id}}"
+                     value="{{clock.segments}}"
+                     min="0"
+                     max="{{clock.maxSegments}}"
+                     title="Click to edit value directly"/>
+              {{else}}
               <span class="clock-value">{{clock.segments}}/{{clock.maxSegments}}</span>
+              {{/if}}
             </div>
             {{#if clock.description}}
             <p class="clock-description">{{clock.description}}</p>
