@@ -22,6 +22,7 @@ import {
   AddClockDialog
 } from './dialogs.mjs';
 import { HistoryManagementConfig } from './history-management.mjs';
+import { PlayerActionWidget } from './widgets/player-action-widget.mjs';
 
 /* -------------------------------------------- */
 /*  Helper Functions                            */
@@ -294,6 +295,101 @@ Hooks.once('ready', async function() {
 
   console.log('FitGD | Ready (socketlib handlers active)');
   console.log('FitGD | Test socket with: game.fitgd.testSocket()');
+});
+
+/* -------------------------------------------- */
+/*  Combat Tracker Hooks                        */
+/* -------------------------------------------- */
+
+/**
+ * When combat starts, reset Momentum to 5 (per spec)
+ */
+Hooks.on('combatStart', async function(combat, updateData) {
+  console.log('FitGD | Combat started, resetting Momentum to 5');
+
+  // Find crew for this combat
+  const state = game.fitgd.store.getState();
+  const crews = Object.values(state.crews.byId);
+
+  if (crews.length > 0) {
+    const crew = crews[0]; // Assuming single crew for now
+    game.fitgd.api.crew.resetMomentum(crew.id);
+    ui.notifications.info('Momentum reset to 5 - Combat Start!');
+  }
+
+  // Initialize player states for all combatants
+  for (const combatant of combat.combatants) {
+    const actor = combatant.actor;
+    if (!actor) continue;
+
+    const characterId = actor.getFlag('forged-in-the-grimdark', 'reduxId');
+    if (characterId) {
+      game.fitgd.store.dispatch({
+        type: 'playerRoundState/initializePlayerState',
+        payload: { characterId },
+      });
+    }
+  }
+});
+
+/**
+ * When a turn starts, show the Player Action Widget for the active combatant
+ */
+Hooks.on('combatTurn', async function(combat, updateData, updateOptions) {
+  console.log('FitGD | Turn changed');
+
+  const activeCombatant = combat.combatant;
+  if (!activeCombatant || !activeCombatant.actor) {
+    console.log('FitGD | No active combatant or actor');
+    return;
+  }
+
+  const characterId = activeCombatant.actor.getFlag('forged-in-the-grimdark', 'reduxId');
+  if (!characterId) {
+    console.log('FitGD | Active combatant has no Redux characterId');
+    return;
+  }
+
+  console.log(`FitGD | Setting active player: ${characterId}`);
+
+  // Update Redux state to mark this player as active
+  game.fitgd.store.dispatch({
+    type: 'playerRoundState/setActivePlayer',
+    payload: { characterId },
+  });
+
+  // Show the Player Action Widget for this character
+  // Only show for the owning player or GM
+  const actor = activeCombatant.actor;
+  const isOwner = actor.isOwner;
+  const isGM = game.user.isGM;
+
+  if (isOwner || isGM) {
+    console.log(`FitGD | Opening Player Action Widget for character ${characterId}`);
+    const widget = new PlayerActionWidget(characterId);
+    widget.render(true);
+  }
+});
+
+/**
+ * When combat ends, clear all player states
+ */
+Hooks.on('combatEnd', async function(combat) {
+  console.log('FitGD | Combat ended, clearing player states');
+
+  // Clear all player round states
+  game.fitgd.store.dispatch({
+    type: 'playerRoundState/clearAllStates',
+  });
+
+  // Close any open Player Action Widgets
+  for (const app of Object.values(ui.windows)) {
+    if (app instanceof PlayerActionWidget) {
+      app.close();
+    }
+  }
+
+  ui.notifications.info('Combat ended');
 });
 
 /* -------------------------------------------- */
