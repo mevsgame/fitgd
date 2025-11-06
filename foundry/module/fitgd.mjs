@@ -21,6 +21,7 @@ import {
   AddTraitDialog,
   AddClockDialog
 } from './dialogs.mjs';
+import { HistoryManagementConfig } from './history-management.mjs';
 
 /* -------------------------------------------- */
 /*  System Initialization                       */
@@ -159,7 +160,8 @@ Hooks.once('init', async function() {
 Hooks.once('ready', async function() {
   console.log('FitGD | World ready, loading state...');
 
-  // Load command history from settings
+  // Check for state snapshot first (used after history pruning)
+  const stateSnapshot = game.settings.get('forged-in-the-grimdark', 'stateSnapshot');
   const defaultHistory = { characters: [], crews: [], clocks: [] };
   const history = game.settings.get('forged-in-the-grimdark', 'commandHistory') || defaultHistory;
 
@@ -172,15 +174,39 @@ Hooks.once('ready', async function() {
 
   const totalCommands = validHistory.characters.length + validHistory.crews.length + validHistory.clocks.length;
 
-  if (totalCommands > 0) {
-    console.log(`FitGD | Replaying ${totalCommands} commands...`);
+  if (stateSnapshot && stateSnapshot.timestamp) {
+    // Load from snapshot first
+    console.log('FitGD | State snapshot found, hydrating from snapshot...');
+    console.log(`FitGD | Snapshot timestamp: ${new Date(stateSnapshot.timestamp).toLocaleString()}`);
+
+    try {
+      // Hydrate Redux store from snapshot
+      game.fitgd.foundry.importState(stateSnapshot);
+      console.log('FitGD | State restored from snapshot');
+
+      // Then replay any new commands that occurred after the snapshot
+      if (totalCommands > 0) {
+        console.log(`FitGD | Replaying ${totalCommands} commands on top of snapshot...`);
+        game.fitgd.foundry.replayCommands(validHistory);
+        console.log('FitGD | New commands applied');
+      }
+
+      // Track all commands as applied
+      trackInitialCommandsAsApplied();
+    } catch (error) {
+      console.error('FitGD | Error loading from snapshot:', error);
+      ui.notifications.error('Failed to load game state from snapshot');
+    }
+  } else if (totalCommands > 0) {
+    // No snapshot, use command history replay (old behavior)
+    console.log(`FitGD | Replaying ${totalCommands} commands from history...`);
     game.fitgd.foundry.replayCommands(validHistory);
-    console.log('FitGD | State restored from history');
+    console.log('FitGD | State restored from command history');
 
     // Track all initial commands as applied (prevents re-application on sync)
     trackInitialCommandsAsApplied();
   } else {
-    console.log('FitGD | No command history found, starting fresh');
+    console.log('FitGD | No command history or snapshot found, starting fresh');
   }
 
   // Subscribe to store changes to auto-save
@@ -450,6 +476,16 @@ try {
 /* -------------------------------------------- */
 
 function registerSystemSettings() {
+  // History Management Menu
+  game.settings.registerMenu('forged-in-the-grimdark', 'historyManagement', {
+    name: game.i18n.localize('FITGD.Settings.HistoryManagement.Name'),
+    label: game.i18n.localize('FITGD.Settings.HistoryManagement.Label'),
+    hint: game.i18n.localize('FITGD.Settings.HistoryManagement.Hint'),
+    icon: 'fas fa-database',
+    type: HistoryManagementConfig,
+    restricted: true // GM only
+  });
+
   // Command history (for event sourcing)
   game.settings.register('forged-in-the-grimdark', 'commandHistory', {
     name: 'Command History',
@@ -472,8 +508,8 @@ function registerSystemSettings() {
 
   // Auto-save interval
   game.settings.register('forged-in-the-grimdark', 'autoSaveInterval', {
-    name: 'Auto-save Interval',
-    hint: 'Seconds between auto-saves (0 to disable)',
+    name: game.i18n.localize('FITGD.Settings.AutoSaveInterval.Name'),
+    hint: game.i18n.localize('FITGD.Settings.AutoSaveInterval.Hint'),
     scope: 'world',
     config: true,
     type: Number,

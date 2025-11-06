@@ -10,8 +10,11 @@ import {
   importCrewFromFoundry,
   syncCrewToFoundry,
 } from './crewAdapter';
-import { createCharacter } from '../../slices/characterSlice';
-import { createCrew } from '../../slices/crewSlice';
+import { createCharacter, pruneHistory as pruneCharacterHistory, hydrateCharacters } from '../../slices/characterSlice';
+import { createCrew, pruneCrewHistory, hydrateCrews } from '../../slices/crewSlice';
+import { pruneClockHistory, hydrateClocks } from '../../slices/clockSlice';
+import { selectHistoryStats } from '../../selectors/historySelectors';
+import type { HistoryStats } from '../../selectors/historySelectors';
 
 /**
  * Foundry VTT Adapter for FitGD
@@ -44,6 +47,10 @@ export interface FoundryAdapter {
   // Command history (for replay/audit)
   exportHistory(): CommandHistory;
   replayCommands(commands: CommandHistory): void;
+
+  // History management
+  getHistoryStats(): HistoryStats;
+  pruneAllHistory(): void;
 }
 
 /**
@@ -153,10 +160,18 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
       };
     },
 
-    importState(_serializedState: SerializedState): void {
-      // TODO: Implement state hydration
-      // This should replay commands or directly set state
-      console.warn('importState not yet implemented');
+    importState(serializedState: SerializedState): void {
+      console.log('FitGD | Importing state from snapshot');
+      console.log(`FitGD | Snapshot timestamp: ${new Date(serializedState.timestamp).toISOString()}`);
+      console.log(`FitGD | Snapshot version: ${serializedState.version}`);
+
+      // Hydrate each slice with the serialized data
+      store.dispatch(hydrateCharacters(serializedState.characters));
+      store.dispatch(hydrateCrews(serializedState.crews));
+      store.dispatch(hydrateClocks(serializedState.clocks));
+
+      const state = store.getState();
+      console.log(`FitGD | State hydrated - ${state.characters.allIds.length} characters, ${state.crews.allIds.length} crews, ${state.clocks.allIds.length} clocks`);
     },
 
     // ===== Command history =====
@@ -199,6 +214,28 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
       }
 
       console.log('FitGD | Command replay complete');
+    },
+
+    // ===== History management =====
+    getHistoryStats(): HistoryStats {
+      const state = store.getState();
+      return selectHistoryStats(state);
+    },
+
+    pruneAllHistory(): void {
+      console.log('FitGD | Pruning all command history');
+
+      const statsBefore = this.getHistoryStats();
+      console.log(`FitGD | History before pruning: ${statsBefore.totalCommands} commands (~${statsBefore.estimatedSizeKB}KB)`);
+
+      // Dispatch prune actions to all slices
+      store.dispatch(pruneCharacterHistory());
+      store.dispatch(pruneCrewHistory());
+      store.dispatch(pruneClockHistory());
+
+      const statsAfter = this.getHistoryStats();
+      console.log(`FitGD | History after pruning: ${statsAfter.totalCommands} commands (~${statsAfter.estimatedSizeKB}KB)`);
+      console.log('FitGD | History pruning complete - current state snapshot retained');
     },
   };
 }

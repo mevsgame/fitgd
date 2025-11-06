@@ -741,6 +741,30 @@ const characterSlice = createSlice({
         };
       },
     },
+
+    /**
+     * Prune command history
+     *
+     * Clears all command history, keeping only the current state snapshot.
+     * This reduces memory/storage usage while maintaining current game state.
+     */
+    pruneHistory: (state) => {
+      state.history = [];
+    },
+
+    /**
+     * Hydrate state from serialized snapshot
+     *
+     * Used when loading saved state from Foundry world settings.
+     * Replaces entire state with the provided snapshot.
+     */
+    hydrateCharacters: (state, action: PayloadAction<Record<string, Character>>) => {
+      const characters = action.payload;
+
+      state.byId = characters;
+      state.allIds = Object.keys(characters);
+      state.history = []; // No history in snapshots
+    },
   },
 });
 
@@ -758,6 +782,8 @@ export const {
   groupTraits,
   createTraitFromFlashback,
   advanceActionDots,
+  pruneHistory,
+  hydrateCharacters,
 } = characterSlice.actions;
 
 export default characterSlice.reducer;

@@ -1,0 +1,129 @@
+<form class="fitgd-history-management">
+  <div class="form-group">
+    <h2>{{localize "FITGD.Settings.HistoryManagement.StatsTitle"}}</h2>
+
+    {{#if error}}
+      <div class="notification error">
+        <p>{{localize "FITGD.Settings.HistoryManagement.Error"}}: {{error}}</p>
+      </div>
+    {{else if stats.isEmpty}}
+      <div class="notification info">
+        <p>{{localize "FITGD.Settings.HistoryManagement.NoHistory"}}</p>
+      </div>
+    {{else}}
+      <table class="history-stats">
+        <tr>
+          <td><strong>{{localize "FITGD.Settings.HistoryManagement.TotalCommands"}}:</strong></td>
+          <td>{{stats.totalCommands}}</td>
+        </tr>
+        <tr>
+          <td><strong>{{localize "FITGD.Settings.HistoryManagement.CharacterCommands"}}:</strong></td>
+          <td>{{stats.characterCommands}}</td>
+        </tr>
+        <tr>
+          <td><strong>{{localize "FITGD.Settings.HistoryManagement.CrewCommands"}}:</strong></td>
+          <td>{{stats.crewCommands}}</td>
+        </tr>
+        <tr>
+          <td><strong>{{localize "FITGD.Settings.HistoryManagement.ClockCommands"}}:</strong></td>
+          <td>{{stats.clockCommands}}</td>
+        </tr>
+        <tr>
+          <td><strong>{{localize "FITGD.Settings.HistoryManagement.EstimatedSize"}}:</strong></td>
+          <td>~{{stats.estimatedSizeKB}} KB</td>
+        </tr>
+        {{#if stats.timeSpanHours}}
+          <tr>
+            <td><strong>{{localize "FITGD.Settings.HistoryManagement.TimeSpan"}}:</strong></td>
+            <td>{{stats.timeSpanHours}} {{localize "FITGD.Settings.HistoryManagement.Hours"}}</td>
+          </tr>
+        {{/if}}
+        {{#if stats.oldestDate}}
+          <tr>
+            <td><strong>{{localize "FITGD.Settings.HistoryManagement.OldestCommand"}}:</strong></td>
+            <td>{{stats.oldestDate}}</td>
+          </tr>
+        {{/if}}
+        {{#if stats.newestDate}}
+          <tr>
+            <td><strong>{{localize "FITGD.Settings.HistoryManagement.NewestCommand"}}:</strong></td>
+            <td>{{stats.newestDate}}</td>
+          </tr>
+        {{/if}}
+      </table>
+
+      <div class="notification warning" style="margin-top: 1em;">
+        <p><strong>{{localize "FITGD.Settings.HistoryManagement.WarningTitle"}}</strong> {{localize "FITGD.Settings.HistoryManagement.WarningText"}}</p>
+      </div>
+    {{/if}}
+  </div>
+
+  <div class="form-group button-group">
+    <button type="button" name="refresh" style="margin-right: 0.5em;">
+      <i class="fas fa-sync"></i> {{localize "FITGD.Settings.HistoryManagement.RefreshStats"}}
+    </button>
+
+    {{#unless stats.isEmpty}}
+      <button type="button" name="prune" class="danger">
+        <i class="fas fa-trash"></i> {{localize "FITGD.Settings.HistoryManagement.PruneHistory"}}
+      </button>
+    {{/unless}}
+  </div>
+</form>
+
+<style>
+  .fitgd-history-management .history-stats {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1em 0;
+  }
+
+  .fitgd-history-management .history-stats td {
+    padding: 0.5em;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .fitgd-history-management .history-stats tr:last-child td {
+    border-bottom: none;
+  }
+
+  .fitgd-history-management .notification {
+    padding: 1em;
+    border-radius: 4px;
+    margin: 1em 0;
+  }
+
+  .fitgd-history-management .notification.info {
+    background-color: #d1ecf1;
+    border: 1px solid #bee5eb;
+    color: #0c5460;
+  }
+
+  .fitgd-history-management .notification.warning {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+  }
+
+  .fitgd-history-management .notification.error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+  }
+
+  .fitgd-history-management .button-group {
+    display: flex;
+    justify-content: flex-start;
+    gap: 0.5em;
+    margin-top: 1em;
+  }
+
+  .fitgd-history-management button.danger {
+    background-color: #c92a2a;
+    color: white;
+  }
+
+  .fitgd-history-management button.danger:hover {
+    background-color: #a61e1e;
+  }
+</style>
