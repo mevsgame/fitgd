@@ -860,9 +860,11 @@ function trackInitialCommandsAsApplied() {
  */
 function refreshAffectedSheets(commands) {
   const affectedEntityIds = new Set();
+  const state = game.fitgd.store.getState();
 
   // Extract entity IDs from command payloads
   for (const command of [...commands.characters, ...commands.crews, ...commands.clocks]) {
+    // Direct entity references
     if (command.payload?.characterId) {
       affectedEntityIds.add(command.payload.characterId);
     }
@@ -874,6 +876,15 @@ function refreshAffectedSheets(commands) {
     }
     if (command.payload?.entityId) {
       affectedEntityIds.add(command.payload.entityId);
+    }
+
+    // Clock commands: resolve clockId to entityId
+    if (command.payload?.clockId) {
+      const clock = state.clocks.byId[command.payload.clockId];
+      if (clock && clock.entityId) {
+        affectedEntityIds.add(clock.entityId);
+        console.log(`FitGD | Resolved clockId ${command.payload.clockId} to entityId ${clock.entityId}`);
+      }
     }
   }
 
