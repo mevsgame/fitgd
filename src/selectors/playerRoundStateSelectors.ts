@@ -8,7 +8,6 @@
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
 import type { PlayerRoundState, Position, Effect } from '../types/playerRoundState';
-import type { ActionDots } from '../types/character';
 
 /**
  * Select player state by character ID
@@ -224,7 +223,7 @@ export const selectAvailableActions = createSelector(
 export const selectCanUseRally = createSelector(
   [
     (state: RootState, characterId: string) => state.characters.byId[characterId],
-    (state: RootState, characterId: string, crewId: string) => state.crews.byId[crewId],
+    (state: RootState, _characterId: string, crewId: string) => state.crews.byId[crewId],
   ],
   (character, crew) => {
     if (!character || !crew) {

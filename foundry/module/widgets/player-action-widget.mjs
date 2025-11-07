@@ -5,6 +5,16 @@
  * Drives the action resolution flow through the state machine.
  */
 
+import {
+  selectDicePool,
+  selectConsequenceSeverity,
+  selectMomentumGain,
+  selectMomentumCost,
+  selectCanUseRally,
+  selectHarmClocksWithStatus,
+  selectIsDying,
+} from '../dist/fitgd-core.es.js';
+
 /* -------------------------------------------- */
 /*  Player Action Widget Application            */
 /* -------------------------------------------- */
@@ -86,15 +96,22 @@ export class PlayerActionWidget extends Application {
       // Available actions
       actions: Object.keys(this.character.actionDots),
 
-      // Harm clocks (for display)
-      harmClocks: this._getHarmClocks(),
+      // Harm clocks (for display) - using selector
+      harmClocks: selectHarmClocksWithStatus(state, this.characterId),
+      isDying: selectIsDying(state, this.characterId),
 
       // Current momentum
       momentum: this.crew?.currentMomentum || 0,
       maxMomentum: 10,
 
-      // Rally availability
-      canRally: this.character.rallyAvailable && (this.crew?.currentMomentum || 0) <= 3,
+      // Rally availability - using selector
+      canRally: this.crewId ? selectCanUseRally(state, this.characterId, this.crewId) : false,
+
+      // Computed dice pool - using selector
+      dicePool: selectDicePool(state, this.characterId),
+
+      // Momentum cost - using selector
+      momentumCost: selectMomentumCost(this.playerState),
 
       // Computed improvements preview
       improvements: this._computeImprovements(),
@@ -142,21 +159,6 @@ export class PlayerActionWidget extends Application {
   /* -------------------------------------------- */
   /*  Helper Methods                              */
   /* -------------------------------------------- */
-
-  /**
-   * Get harm clocks for this character
-   */
-  _getHarmClocks() {
-    const state = game.fitgd.store.getState();
-    const allClocks = Object.values(state.clocks.byId);
-
-    return allClocks
-      .filter(clock =>
-        clock.entityId === this.characterId &&
-        clock.clockType === 'harm'
-      )
-      .sort((a, b) => b.segments - a.segments); // Highest segments first
-  }
 
   /**
    * Compute improvements preview text
@@ -354,16 +356,11 @@ export class PlayerActionWidget extends Application {
 
     this.render();
 
-    // Calculate dice pool
-    const actionDots = this.character.actionDots[this.playerState.selectedAction];
-    let dicePool = actionDots;
+    // Calculate dice pool using selector
+    const state = game.fitgd.store.getState();
+    const dicePool = selectDicePool(state, this.characterId);
 
-    // Add Push dice
-    if (this.playerState.pushed) {
-      dicePool += 1;
-    }
-
-    // Roll dice
+    // Roll dice using Foundry dice roller
     const rollResult = await this._rollDice(dicePool);
     const outcome = this._calculateOutcome(rollResult);
 
@@ -415,22 +412,29 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Roll dice and return results
+   * Roll dice and return results using Foundry's Roll class
    */
   async _rollDice(dicePool) {
+    let roll;
+    let results;
+
     if (dicePool === 0) {
-      // Roll 2d6, take lowest
-      const roll1 = Math.floor(Math.random() * 6) + 1;
-      const roll2 = Math.floor(Math.random() * 6) + 1;
-      return [Math.min(roll1, roll2)];
+      // Roll 2d6, take lowest (desperate roll)
+      roll = await new Roll('2d6kl').evaluate();
+      results = [roll.total];
     } else {
       // Roll Nd6
-      const results = [];
-      for (let i = 0; i < dicePool; i++) {
-        results.push(Math.floor(Math.random() * 6) + 1);
-      }
-      return results.sort((a, b) => b - a); // Descending order
+      roll = await new Roll(`${dicePool}d6`).evaluate();
+      results = roll.dice[0].results.map(r => r.result).sort((a, b) => b - a);
     }
+
+    // Post roll to chat
+    await roll.toMessage({
+      speaker: ChatMessage.getSpeaker({ actor: game.actors.get(this.characterId) }),
+      flavor: `${this.character.name} - ${this.playerState.selectedAction} action`,
+    });
+
+    return results;
   }
 
   /**
@@ -476,23 +480,23 @@ export class PlayerActionWidget extends Application {
   /**
    * Handle Take Harm button
    */
-  _onTakeHarm(event) {
+  async _onTakeHarm(event) {
     event.preventDefault();
 
-    // Calculate harm segments based on Position and Effect
+    // Calculate harm segments and momentum gain using selectors
     const position = this.playerState.position || 'risky';
     const effect = this.playerState.effect || 'standard';
+    const segments = selectConsequenceSeverity(position, effect);
+    const momentumGain = selectMomentumGain(position);
 
-    const harmTable = {
-      controlled: { limited: 0, standard: 1, great: 2 },
-      risky: { limited: 2, standard: 3, great: 4 },
-      desperate: { limited: 4, standard: 5, great: 6 },
-    };
-
-    const segments = harmTable[position][effect];
-
-    // Calculate Momentum gain
-    const momentumGain = position === 'controlled' ? 1 : position === 'risky' ? 2 : 4;
+    // Transition to CONSEQUENCE_RESOLUTION
+    game.fitgd.store.dispatch({
+      type: 'playerRoundState/transitionState',
+      payload: {
+        characterId: this.characterId,
+        newState: 'CONSEQUENCE_RESOLUTION',
+      },
+    });
 
     // Store consequence data
     game.fitgd.store.dispatch({
@@ -505,14 +509,37 @@ export class PlayerActionWidget extends Application {
       },
     });
 
-    // Apply harm (TODO: Open harm dialog to select clock type)
-    // For now, just notify
-    ui.notifications.info(`Taking ${segments} harm. +${momentumGain} Momentum`);
+    this.render();
+
+    // Apply harm - use harm API
+    if (segments > 0) {
+      try {
+        await game.fitgd.api.harm.take({
+          characterId: this.characterId,
+          harmType: 'Physical Harm', // Default to physical
+          position,
+          effect,
+        });
+        ui.notifications.info(`Taking ${segments} harm. +${momentumGain} Momentum`);
+      } catch (error) {
+        console.error('FitGD | Error applying harm:', error);
+        ui.notifications.error(`Failed to apply harm: ${error.message}`);
+      }
+    }
 
     // Add Momentum
     if (this.crewId) {
       game.fitgd.api.crew.addMomentum({ crewId: this.crewId, amount: momentumGain });
     }
+
+    // Transition to APPLYING_EFFECTS
+    game.fitgd.store.dispatch({
+      type: 'playerRoundState/transitionState',
+      payload: {
+        characterId: this.characterId,
+        newState: 'APPLYING_EFFECTS',
+      },
+    });
 
     // End turn
     this._endTurn();

@@ -6,6 +6,10 @@
  */
 
 import type { ActionDots } from './character';
+import type { Position, Effect } from './resolution';
+
+// Re-export for convenience
+export type { Position, Effect };
 
 /**
  * All possible states a player can be in during their round
@@ -25,16 +29,6 @@ export type PlayerRoundStateType =
   | 'PROTECT_ACCEPTING'          // Taking consequence for teammate
   | 'STIMS_ROLLING'              // Using stims, rolling addiction
   | 'STIMS_LOCKED';              // Stims locked due to addiction
-
-/**
- * Position levels
- */
-export type Position = 'controlled' | 'risky' | 'desperate';
-
-/**
- * Effect levels
- */
-export type Effect = 'limited' | 'standard' | 'great';
 
 /**
  * Roll outcome types
