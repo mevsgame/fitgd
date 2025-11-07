@@ -8,6 +8,7 @@ import characterReducer, {
   setActionDots,
   addEquipment,
   removeEquipment,
+  addUnallocatedDots,
   useRally,
   resetRally,
 } from '../../src/slices/characterSlice';
@@ -340,12 +341,19 @@ describe('characterSlice', () => {
     });
 
     it('should set action dots during advancement (up to 4)', () => {
+      // Character starts with shoot: 2, needs 2 more to reach 4
+      // Grant 2 unallocated dots first
+      store.dispatch(
+        addUnallocatedDots({ characterId, amount: 2 })
+      );
+
       store.dispatch(
         setActionDots({ characterId, action: 'shoot', dots: 4 })
       );
 
       const character = store.getState().characters.byId[characterId];
       expect(character.actionDots.shoot).toBe(4);
+      expect(character.unallocatedActionDots).toBe(0); // All used up
     });
 
     it('should reject setting action dots above 4', () => {
