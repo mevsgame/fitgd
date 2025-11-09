@@ -73,7 +73,7 @@ function refreshSheetsByReduxId(reduxIds, force = true) {
  * Initialize the FitGD system
  */
 Hooks.once('init', async function() {
-  console.log(`FitGD | Initializing Forged in the Grimdark for user: ${game?.user?.name || 'UNKNOWN'} (isGM: ${game?.user?.isGM || 'UNKNOWN'})`);
+  console.log('FitGD | Initializing Forged in the Grimdark system');
 
   // Create global namespace
   game.fitgd = game.fitgd || {};
