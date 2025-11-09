@@ -138,20 +138,23 @@ Hooks.once('init', async function() {
       const newCommands = getNewCommandsSinceLastBroadcast();
       const newCommandCount = newCommands.characters.length + newCommands.crews.length + newCommands.clocks.length;
 
+      // Also get current playerRoundState for real-time collaboration
+      const state = game.fitgd.store.getState();
+      const playerRoundState = state.playerRoundState;
+
       // Broadcast commands FIRST (before persistence) - all users can do this
-      if (newCommandCount > 0) {
+      if (newCommandCount > 0 || Object.keys(playerRoundState.byCharacterId).length > 0) {
         const socketData = {
           type: 'commandsAdded',
           userId: game.user.id,
           userName: game.user.name,
           commandCount: newCommandCount,
           commands: newCommands,
+          playerRoundState: playerRoundState, // Include ephemeral UI state
           timestamp: Date.now()
         };
 
-        console.log(`FitGD | Broadcasting ${newCommandCount} commands via socketlib:`, socketData);
-        console.log(`FitGD | game.fitgd.socket exists?`, !!game.fitgd.socket);
-        console.log(`FitGD | game.fitgd.socket.executeForOthers exists?`, typeof game.fitgd.socket?.executeForOthers);
+        console.log(`FitGD | Broadcasting ${newCommandCount} commands + playerRoundState via socketlib`);
 
         try {
           // Use socketlib to broadcast to OTHER clients (not self)
@@ -161,7 +164,7 @@ Hooks.once('init', async function() {
           console.error('FitGD | socketlib broadcast error:', error);
         }
       } else {
-        console.log(`FitGD | No new commands to broadcast (count = 0)`);
+        console.log(`FitGD | No new commands or playerRoundState to broadcast`);
       }
 
       // Save to Foundry settings (only if user has permission - typically GM)
@@ -918,7 +921,36 @@ async function receiveCommandsFromSocket(data) {
     // Apply commands incrementally (no store reset!)
     const appliedCount = applyCommandsIncremental(data.commands);
 
-    if (appliedCount > 0) {
+    // Also apply playerRoundState if present (ephemeral UI state)
+    if (data.playerRoundState) {
+      console.log(`FitGD | Applying received playerRoundState:`, data.playerRoundState);
+
+      // Merge received playerRoundState into local state
+      const currentState = game.fitgd.store.getState();
+      for (const [characterId, playerState] of Object.entries(data.playerRoundState.byCharacterId)) {
+        // Only update if different from current state
+        const currentPlayerState = currentState.playerRoundState.byCharacterId[characterId];
+        if (JSON.stringify(currentPlayerState) !== JSON.stringify(playerState)) {
+          game.fitgd.store.dispatch({
+            type: 'playerRoundState/initializePlayerState',
+            payload: { characterId }
+          });
+
+          // Update with received state
+          Object.assign(game.fitgd.store.getState().playerRoundState.byCharacterId[characterId], playerState);
+        }
+      }
+
+      // Update active player if changed
+      if (data.playerRoundState.activeCharacterId !== currentState.playerRoundState.activeCharacterId) {
+        game.fitgd.store.dispatch({
+          type: 'playerRoundState/setActivePlayer',
+          payload: { characterId: data.playerRoundState.activeCharacterId }
+        });
+      }
+    }
+
+    if (appliedCount > 0 || data.playerRoundState) {
       // Update lastBroadcastCount to prevent re-broadcasting received commands
       const history = game.fitgd.foundry.exportHistory();
       lastBroadcastCount = {
@@ -931,7 +963,7 @@ async function receiveCommandsFromSocket(data) {
       // Refresh affected sheets (pass the captured entityIds for deleted clocks)
       refreshAffectedSheets(data.commands, clockEntityIds);
 
-      console.log(`FitGD | Sync complete - applied ${appliedCount} new commands`);
+      console.log(`FitGD | Sync complete - applied ${appliedCount} new commands + playerRoundState`);
 
       // GM persists changes from players to world settings
       if (game.user.isGM) {
@@ -943,7 +975,7 @@ async function receiveCommandsFromSocket(data) {
         }
       }
     } else {
-      console.log(`FitGD | No commands were applied (all duplicates or empty)`);
+      console.log(`FitGD | No commands or playerRoundState were applied (all duplicates or empty)`);
     }
   } catch (error) {
     console.error('FitGD | Error applying incremental commands:', error);
