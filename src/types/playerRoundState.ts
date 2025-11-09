@@ -73,6 +73,11 @@ export interface PlayerRoundState {
   /** Flashback applied flag */
   flashbackApplied?: boolean;
 
+  // ===== GM APPROVAL =====
+
+  /** GM has approved the roll (enables player's Commit Roll button) */
+  gmApproved?: boolean;
+
   // ===== ROLL DATA =====
 
   /** Total dice pool (action dots + modifiers) */

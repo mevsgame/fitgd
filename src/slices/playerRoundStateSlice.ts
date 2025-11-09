@@ -67,6 +67,11 @@ interface SetEffectPayload {
   effect: Effect;
 }
 
+interface SetGmApprovedPayload {
+  characterId: string;
+  approved: boolean;
+}
+
 interface SetImprovementsPayload {
   characterId: string;
   selectedTraitId?: string;
@@ -224,6 +229,23 @@ const playerRoundStateSlice = createSlice({
     },
 
     /**
+     * Set GM approved flag (enables player's Commit Roll button)
+     */
+    setGmApproved: (state, action: PayloadAction<SetGmApprovedPayload>) => {
+      const { characterId, approved } = action.payload;
+      const currentState = state.byCharacterId[characterId];
+
+      if (!currentState) {
+        throw new Error(`No state found for character ${characterId}`);
+      }
+
+      state.byCharacterId[characterId] = {
+        ...currentState,
+        gmApproved: approved,
+      };
+    },
+
+    /**
      * Set improvements (traits, equipment, push, flashback)
      */
     setImprovements: (state, action: PayloadAction<SetImprovementsPayload>) => {
@@ -327,6 +349,7 @@ export const {
   setActionPlan,
   setPosition,
   setEffect,
+  setGmApproved,
   setImprovements,
   setRollResult,
   setConsequence,
