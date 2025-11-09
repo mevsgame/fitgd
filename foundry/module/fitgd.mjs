@@ -73,7 +73,7 @@ function refreshSheetsByReduxId(reduxIds, force = true) {
  * Initialize the FitGD system
  */
 Hooks.once('init', async function() {
-  console.log('FitGD | Initializing Forged in the Grimdark');
+  console.log(`FitGD | Initializing Forged in the Grimdark for user: ${game?.user?.name || 'UNKNOWN'} (isGM: ${game?.user?.isGM || 'UNKNOWN'})`);
 
   // Create global namespace
   game.fitgd = game.fitgd || {};
@@ -200,7 +200,8 @@ Hooks.once('init', async function() {
  * Load saved game state when world is ready
  */
 Hooks.once('ready', async function() {
-  console.log('FitGD | World ready, loading state...');
+  console.log(`FitGD | World ready for user: ${game.user.name} (isGM: ${game.user.isGM})`);
+  console.log(`FitGD | game.fitgd initialized: ${!!game.fitgd}, has store: ${!!game.fitgd?.store}, has api: ${!!game.fitgd?.api}`);
 
   // Check for state snapshot first (used after history pruning)
   const stateSnapshot = game.settings.get('forged-in-the-grimdark', 'stateSnapshot');
@@ -337,13 +338,15 @@ Hooks.on('combatStart', async function(combat, updateData) {
  * When a turn starts, show the Player Action Widget for the active combatant
  */
 Hooks.on('combatTurn', async function(combat, updateData, updateOptions) {
-  console.log('FitGD | Turn changed');
+  console.log(`FitGD | combatTurn hook fired for user: ${game.user.name} (${game.user.id}), isGM: ${game.user.isGM}`);
 
   const activeCombatant = combat.combatant;
   if (!activeCombatant || !activeCombatant.actor) {
     console.log('FitGD | No active combatant or actor');
     return;
   }
+
+  console.log(`FitGD | Active combatant: ${activeCombatant.actor.name}`);
 
   const characterId = activeCombatant.actor.getFlag('forged-in-the-grimdark', 'reduxId');
   if (!characterId) {
