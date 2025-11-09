@@ -986,6 +986,16 @@ export class FlashbackTraitsDialog extends Application {
       return;
     }
 
+    // Get current position from playerRoundState
+    const state = game.fitgd.store.getState();
+    const playerState = state.playerRoundState.byCharacterId[this.characterId];
+    const currentPosition = playerState?.position || 'risky';
+
+    // Calculate improved position
+    let improvedPosition = currentPosition;
+    if (currentPosition === 'desperate') improvedPosition = 'risky';
+    else if (currentPosition === 'risky') improvedPosition = 'controlled';
+
     // Dispatch trait transaction to Redux
     game.fitgd.store.dispatch({
       type: 'playerRoundState/setTraitTransaction',
@@ -999,6 +1009,17 @@ export class FlashbackTraitsDialog extends Application {
         },
       },
     });
+
+    // CRITICAL: Actually update the position in Redux
+    if (improvedPosition !== currentPosition) {
+      game.fitgd.store.dispatch({
+        type: 'playerRoundState/setPosition',
+        payload: {
+          characterId: this.characterId,
+          position: improvedPosition,
+        },
+      });
+    }
 
     // Broadcast to all clients
     await game.fitgd.saveImmediate();
@@ -1033,6 +1054,16 @@ export class FlashbackTraitsDialog extends Application {
       return;
     }
 
+    // Get current position from playerRoundState
+    const state = game.fitgd.store.getState();
+    const playerState = state.playerRoundState.byCharacterId[this.characterId];
+    const currentPosition = playerState?.position || 'risky';
+
+    // Calculate improved position
+    let improvedPosition = currentPosition;
+    if (currentPosition === 'desperate') improvedPosition = 'risky';
+    else if (currentPosition === 'risky') improvedPosition = 'controlled';
+
     // Dispatch trait transaction to Redux
     game.fitgd.store.dispatch({
       type: 'playerRoundState/setTraitTransaction',
@@ -1050,6 +1081,17 @@ export class FlashbackTraitsDialog extends Application {
         },
       },
     });
+
+    // CRITICAL: Actually update the position in Redux
+    if (improvedPosition !== currentPosition) {
+      game.fitgd.store.dispatch({
+        type: 'playerRoundState/setPosition',
+        payload: {
+          characterId: this.characterId,
+          position: improvedPosition,
+        },
+      });
+    }
 
     // Broadcast to all clients
     await game.fitgd.saveImmediate();
@@ -1089,6 +1131,16 @@ export class FlashbackTraitsDialog extends Application {
       return;
     }
 
+    // Get current position from playerRoundState
+    const state = game.fitgd.store.getState();
+    const playerState = state.playerRoundState.byCharacterId[this.characterId];
+    const currentPosition = playerState?.position || 'risky';
+
+    // Calculate improved position
+    let improvedPosition = currentPosition;
+    if (currentPosition === 'desperate') improvedPosition = 'risky';
+    else if (currentPosition === 'risky') improvedPosition = 'controlled';
+
     // Dispatch trait transaction to Redux
     game.fitgd.store.dispatch({
       type: 'playerRoundState/setTraitTransaction',
@@ -1109,6 +1161,17 @@ export class FlashbackTraitsDialog extends Application {
         },
       },
     });
+
+    // CRITICAL: Actually update the position in Redux
+    if (improvedPosition !== currentPosition) {
+      game.fitgd.store.dispatch({
+        type: 'playerRoundState/setPosition',
+        payload: {
+          characterId: this.characterId,
+          position: improvedPosition,
+        },
+      });
+    }
 
     // Broadcast to all clients
     await game.fitgd.saveImmediate();

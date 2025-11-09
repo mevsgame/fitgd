@@ -1289,6 +1289,202 @@ if (isEntityNotFoundError) {
 
 ---
 
+### Universal Broadcasting Pattern (CRITICAL)
+
+**Date:** 2025-11-09
+**Issue:** Redux state changes not propagating to other clients (especially GM), position improvements not being applied
+
+#### The Problem
+This is a **recurring issue** that has appeared multiple times:
+1. Player makes a change (toggle push, select trait, etc.)
+2. Change is stored in Redux state
+3. Player's UI updates locally
+4. **BUT**: Other clients (especially GM) don't see the change
+5. **ALSO**: Sometimes the change is only stored in a transaction/pending state, but not actually applied to the real state that affects mechanics
+
+#### Root Causes
+1. **Missing broadcast:** Forgot to call `game.fitgd.saveImmediate()` after dispatching Redux action
+2. **Incomplete state update:** Stored data in a transaction object for display, but didn't dispatch the actual state-changing action
+3. **Example from trait flashback:** Position improvement was calculated and shown in UI, but `setPosition` was never dispatched, so the improved position wasn't used in the roll
+
+#### The Universal Pattern
+
+**ALWAYS follow this exact pattern when making Redux state changes in Foundry:**
+
+```javascript
+async function makeStateChange() {
+  // 1. Get current state if needed
+  const state = game.fitgd.store.getState();
+  const currentValue = state.someSlice.someValue;
+
+  // 2. Calculate new values
+  const newValue = calculateNewValue(currentValue);
+
+  // 3. Dispatch ALL necessary Redux actions
+  //    (Not just transaction/pending, but the ACTUAL state changes!)
+  game.fitgd.store.dispatch({
+    type: 'slice/action',
+    payload: { /* ... */ }
+  });
+
+  // If you're showing a "pending" change, ALSO dispatch the real change!
+  if (needsActualStateChange) {
+    game.fitgd.store.dispatch({
+      type: 'slice/actualStateChange',
+      payload: { /* ... */ }
+    });
+  }
+
+  // 4. CRITICAL: Broadcast to all clients
+  await game.fitgd.saveImmediate();
+
+  // 5. Refresh affected sheets
+  refreshSheetsByReduxId([affectedCharacterId], false);
+
+  // 6. User feedback
+  ui.notifications.info('Change applied');
+}
+```
+
+#### Specific Examples
+
+**Example 1: Toggle Push (Widget Button)**
+```javascript
+async _onTogglePushDie(event) {
+  event.preventDefault();
+
+  const currentlyPushedDie = this.playerState?.pushed && this.playerState?.pushType === 'extra-die';
+
+  // Dispatch action
+  game.fitgd.store.dispatch({
+    type: 'playerRoundState/setImprovements',
+    payload: {
+      characterId: this.characterId,
+      pushed: !currentlyPushedDie,
+      pushType: !currentlyPushedDie ? 'extra-die' : undefined,
+    },
+  });
+
+  // CRITICAL: Broadcast to GM and all clients
+  await game.fitgd.saveImmediate();
+
+  // Refresh local UI
+  this.render();
+}
+```
+
+**Example 2: Trait Flashback with Position Improvement**
+```javascript
+async _applyUseExisting() {
+  // Get current position
+  const state = game.fitgd.store.getState();
+  const playerState = state.playerRoundState.byCharacterId[this.characterId];
+  const currentPosition = playerState?.position || 'risky';
+
+  // Calculate improved position
+  let improvedPosition = currentPosition;
+  if (currentPosition === 'desperate') improvedPosition = 'risky';
+  else if (currentPosition === 'risky') improvedPosition = 'controlled';
+
+  // Store the transaction (for display/tracking)
+  game.fitgd.store.dispatch({
+    type: 'playerRoundState/setTraitTransaction',
+    payload: {
+      characterId: this.characterId,
+      transaction: {
+        mode: 'existing',
+        selectedTraitId: this.selectedTraitId,
+        positionImprovement: true,
+        momentumCost: 1,
+      },
+    },
+  });
+
+  // CRITICAL: Actually update the position in Redux
+  // (Not just in the transaction for display!)
+  if (improvedPosition !== currentPosition) {
+    game.fitgd.store.dispatch({
+      type: 'playerRoundState/setPosition',
+      payload: {
+        characterId: this.characterId,
+        position: improvedPosition,
+      },
+    });
+  }
+
+  // CRITICAL: Broadcast to all clients
+  await game.fitgd.saveImmediate();
+
+  // Refresh sheets
+  refreshSheetsByReduxId([this.characterId], false);
+}
+```
+
+#### Checklist for Every State Change
+
+When implementing any feature that modifies Redux state, **ALWAYS**:
+
+- [ ] Dispatch Redux action(s) for the state change
+- [ ] If there's a "pending" state, ALSO dispatch the actual state change if it should take effect immediately
+- [ ] Call `await game.fitgd.saveImmediate()` to broadcast
+- [ ] Call `refreshSheetsByReduxId([...affectedIds], force)` to update UI
+- [ ] Test that GM sees the change immediately
+- [ ] Test that the change actually affects game mechanics (not just display)
+
+#### Common Mistakes
+
+**❌ WRONG: Only storing in transaction**
+```javascript
+// This only stores for display, doesn't actually improve position!
+game.fitgd.store.dispatch({
+  type: 'playerRoundState/setTraitTransaction',
+  payload: {
+    transaction: { positionImprovement: true }
+  }
+});
+// Missing: actual setPosition dispatch!
+```
+
+**❌ WRONG: Forgetting to broadcast**
+```javascript
+game.fitgd.store.dispatch({ /* ... */ });
+this.render(); // Only updates local client!
+// Missing: await game.fitgd.saveImmediate()
+```
+
+**✅ CORRECT: Complete pattern**
+```javascript
+// Store transaction
+game.fitgd.store.dispatch({ type: 'setTransaction', /* ... */ });
+
+// Apply actual state change
+game.fitgd.store.dispatch({ type: 'setPosition', /* ... */ });
+
+// Broadcast to all clients
+await game.fitgd.saveImmediate();
+
+// Refresh UI
+refreshSheetsByReduxId([characterId], false);
+```
+
+#### Why This Is Hard to Remember
+
+1. **Local testing works** - Your own client updates immediately, creating false confidence
+2. **Split responsibility** - Transaction vs. actual state creates cognitive overhead
+3. **Async timing** - Easy to forget `await` and move on before broadcast completes
+4. **Silent failure** - Other clients just don't update, no error thrown
+
+#### Prevention Strategy
+
+1. **Code review checkpoint:** Search for `store.dispatch` and verify every occurrence has `saveImmediate()` after it
+2. **Testing protocol:** ALWAYS test with GM + Player clients open, verify GM sees changes immediately
+3. **Template code:** Copy-paste the universal pattern above instead of writing from scratch
+4. **JSDoc reminder:** Add comment `// CRITICAL: Broadcast required!` above dispatch blocks
+
+**Key Principle:** If you dispatch a Redux action in Foundry code, you MUST broadcast it with `saveImmediate()`, no exceptions.
+
+---
+
 ## Next Steps
 
 1. **Answer Phase 1 questions** above
