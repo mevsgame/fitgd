@@ -13,6 +13,7 @@ import {
   Effect,
   RollOutcome,
   ConsequenceType,
+  TraitTransaction,
   createInitialPlayerRoundState,
   isValidTransition,
 } from '../types/playerRoundState';
@@ -96,6 +97,15 @@ interface SetConsequencePayload {
 }
 
 interface ResetPlayerStatePayload {
+  characterId: string;
+}
+
+interface SetTraitTransactionPayload {
+  characterId: string;
+  transaction: TraitTransaction;
+}
+
+interface ClearTraitTransactionPayload {
   characterId: string;
 }
 
@@ -313,6 +323,40 @@ const playerRoundStateSlice = createSlice({
     },
 
     /**
+     * Set trait transaction (pending changes to apply on roll commit)
+     */
+    setTraitTransaction: (state, action: PayloadAction<SetTraitTransactionPayload>) => {
+      const { characterId, transaction } = action.payload;
+      const currentState = state.byCharacterId[characterId];
+
+      if (!currentState) {
+        throw new Error(`No state found for character ${characterId}`);
+      }
+
+      state.byCharacterId[characterId] = {
+        ...currentState,
+        traitTransaction: transaction,
+      };
+    },
+
+    /**
+     * Clear trait transaction (e.g., on cancellation)
+     */
+    clearTraitTransaction: (state, action: PayloadAction<ClearTraitTransactionPayload>) => {
+      const { characterId } = action.payload;
+      const currentState = state.byCharacterId[characterId];
+
+      if (!currentState) {
+        throw new Error(`No state found for character ${characterId}`);
+      }
+
+      state.byCharacterId[characterId] = {
+        ...currentState,
+        traitTransaction: undefined,
+      };
+    },
+
+    /**
      * Reset player state (clear all data, return to IDLE)
      */
     resetPlayerState: (state, action: PayloadAction<ResetPlayerStatePayload>) => {
@@ -354,6 +398,8 @@ export const {
   setEffect,
   setGmApproved,
   setImprovements,
+  setTraitTransaction,
+  clearTraitTransaction,
   setRollResult,
   setConsequence,
   resetPlayerState,

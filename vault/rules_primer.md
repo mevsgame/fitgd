@@ -35,7 +35,7 @@ This is a collaborative storytelling game. You describe what your character does
 
 - **Push Yourself (1 Momentum):** Add +1d to a roll OR improve its Effect by one level: Limited to Standard, or Standard to Great (declare before rolling and explain how you're doing it).
 
-- **Flashback (1 Momentum):** Reveal prior preparation that grants a mechanical advantage. This requires a relevant Trait (you can establish a new Trait through this flashback), cannot contradict facts already established in the fiction, and must respond to an immediate challenge or situation. Mechanical advantages include: improving Position or Effect, enabling new approaches, justifying equipment access, or taking actions that influence rolls. (Narrative flashbacks that don't influence Position, Effect, or available actions cost 0 Momentum).
+- **Flashback (1 Momentum):** Reveal prior preparation that grants a mechanical advantage. This requires a relevant Trait - you can use an existing trait OR establish a new trait through this flashback. The flashback cannot contradict facts already established in the fiction, and must respond to an immediate challenge or situation. Mechanical advantages include: improving Position by one step (Desperate→Risky or Risky→Controlled), improving Effect, enabling new approaches, justifying equipment access, or taking actions that influence rolls. (Narrative use of traits that don't influence Position, Effect, or available actions cost 0 Momentum).
 
 #### **Generating Momentum**
 
@@ -176,7 +176,7 @@ At the end of a campaign milestone or other important moment, the GM will grant 
 
 #### **Traits**
 
-**Traits** are specific experiences from your past. To use a trait, explain how it grants you relevant capabilities, knowledge, or advantages for your current action. Through conversation with the GM, this may improve your **Position** or **Effect**. You can also use traits to justify **Flashbacks** or create complications via **Leaning into a Trait**. Use one trait per roll. Your character grows by acquiring new Traits, not by increasing stats.
+**Traits** are specific experiences from your past. To use a trait for narrative flavor (describing how your background influences your approach), there is no cost. To gain a mechanical advantage (improving **Position** by one step: Desperate→Risky or Risky→Controlled, or improving **Effect**), you must spend 1 Momentum for a **Flashback** using that trait. You can also use traits to create complications via **Leaning into a Trait**. Use one trait per roll. Your character grows by acquiring new Traits, not by increasing stats.
 
 #### **Acquiring New Traits**
 
@@ -188,7 +188,11 @@ You can gain new Traits in two ways:
 
 #### **Grouping Traits**
 
-Between sessions or after a Momentum Reset, you may consolidate three similar traits into a single broader one. The three original traits are consumed. The GM approves the grouped trait's scope and phrasing.
+You may consolidate three similar traits into a single broader one in two situations:
+
+1. **Between sessions or after a Momentum Reset:** Freely consolidate three traits. The GM approves the grouped trait's scope and phrasing.
+
+2. **During a Flashback (1 Momentum):** If you have the fewest traits among your crew (or tied for fewest), you may consolidate three traits into one broader trait as part of a flashback action. This costs 1 Momentum total (the flashback cost). The three original traits are consumed, and you may immediately use the new consolidated trait to improve Position or Effect. Role and background traits cannot be consolidated.
 
 #### **Equipment Tiers**
 

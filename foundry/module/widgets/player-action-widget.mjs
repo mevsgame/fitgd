@@ -14,7 +14,7 @@ import {
   selectHarmClocksWithStatus,
   selectIsDying,
 } from '../../dist/fitgd-core.es.js';
-import { FlashbackDialog } from '../dialogs.mjs';
+import { FlashbackTraitsDialog } from '../dialogs.mjs';
 
 /* -------------------------------------------- */
 /*  Player Action Widget Application            */
@@ -177,9 +177,8 @@ export class PlayerActionWidget extends Application {
 
     // Prepare action buttons
     html.find('[data-action="rally"]').click(this._onRally.bind(this));
-    html.find('[data-action="flashback"]').click(this._onFlashback.bind(this));
+    html.find('[data-action="use-trait"]').click(this._onUseTrait.bind(this));
     html.find('[data-action="equipment"]').click(this._onEquipment.bind(this));
-    html.find('[data-action="traits"]').click(this._onTraits.bind(this));
     html.find('[data-action="push-die"]').click(this._onTogglePushDie.bind(this));
     html.find('[data-action="push-effect"]').click(this._onTogglePushEffect.bind(this));
 
@@ -372,24 +371,24 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Handle Flashback button
+   * Handle Use Trait button (merged flashback + traits)
    */
-  _onFlashback(event) {
+  _onUseTrait(event) {
     event.preventDefault();
 
     if (!this.crewId) {
-      ui.notifications.warn('Character must be in a crew to use flashback');
+      ui.notifications.warn('Character must be in a crew to use trait');
       return;
     }
 
-    const crew = game.fitgd.api.crew.getCrew(this.crewId);
-    if (crew.currentMomentum < 1) {
-      ui.notifications.warn('Not enough Momentum for flashback (need 1)');
+    // Check if position is already controlled (can't improve further)
+    if (this.playerState?.position === 'controlled') {
+      ui.notifications.warn('Position is already Controlled - cannot improve further');
       return;
     }
 
-    // Open flashback dialog
-    const dialog = new FlashbackDialog(this.characterId, this.crewId);
+    // Open flashback traits dialog
+    const dialog = new FlashbackTraitsDialog(this.characterId, this.crewId);
     dialog.render(true);
   }
 
@@ -403,18 +402,9 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Handle Traits button
-   */
-  _onTraits(event) {
-    event.preventDefault();
-    // TODO: Open Traits dialog
-    ui.notifications.info('Traits dialog - to be implemented');
-  }
-
-  /**
    * Handle Push (+1d) toggle
    */
-  _onTogglePushDie(event) {
+  async _onTogglePushDie(event) {
     event.preventDefault();
 
     const currentlyPushedDie = this.playerState?.pushed && this.playerState?.pushType === 'extra-die';
@@ -428,13 +418,16 @@ export class PlayerActionWidget extends Application {
       },
     });
 
+    // Broadcast to all clients (GM needs to see this change)
+    await game.fitgd.saveImmediate();
+
     this.render();
   }
 
   /**
    * Handle Push (Effect) toggle
    */
-  _onTogglePushEffect(event) {
+  async _onTogglePushEffect(event) {
     event.preventDefault();
 
     const currentlyPushedEffect = this.playerState?.pushed && this.playerState?.pushType === 'improved-effect';
@@ -447,6 +440,9 @@ export class PlayerActionWidget extends Application {
         pushType: !currentlyPushedEffect ? 'improved-effect' : undefined,
       },
     });
+
+    // Broadcast to all clients (GM needs to see this change)
+    await game.fitgd.saveImmediate();
 
     this.render();
   }

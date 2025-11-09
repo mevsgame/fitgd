@@ -117,14 +117,11 @@
         <button type="button" data-action="rally" {{#unless canRally}}disabled{{/unless}}>
           Rally
         </button>
-        <button type="button" data-action="flashback" {{#if (lt momentum 1)}}disabled{{/if}}>
-          Flashback
+        <button type="button" data-action="use-trait" {{#if (and (eq playerState.position "controlled") (lt momentum 1))}}disabled{{/if}}>
+          Use Trait
         </button>
         <button type="button" data-action="equipment">
           Equipment
-        </button>
-        <button type="button" data-action="traits">
-          Traits
         </button>
         <button type="button" data-action="push-die" class="{{#if (and playerState.pushed (eq playerState.pushType 'extra-die'))}}active{{/if}}" {{#if (lt momentum 1)}}disabled{{/if}}>
           Push (+1d)

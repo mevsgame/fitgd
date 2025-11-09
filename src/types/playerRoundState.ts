@@ -41,6 +41,47 @@ export type RollOutcome = 'critical' | 'success' | 'partial' | 'failure';
 export type ConsequenceType = 'harm' | 'clock' | 'position' | 'effect';
 
 /**
+ * Trait transaction modes
+ */
+export type TraitTransactionMode = 'existing' | 'new' | 'consolidate';
+
+/**
+ * Trait transaction (pending changes that happen on roll commit)
+ */
+export interface TraitTransaction {
+  /** Mode: use existing, create new, or consolidate 3 into 1 */
+  mode: TraitTransactionMode;
+
+  /** Selected trait ID (for 'existing' mode) */
+  selectedTraitId?: string;
+
+  /** New trait to create (for 'new' mode) */
+  newTrait?: {
+    name: string;
+    description?: string;
+    category: 'flashback';
+  };
+
+  /** Consolidation data (for 'consolidate' mode) */
+  consolidation?: {
+    /** IDs of 3 traits being consolidated */
+    traitIdsToRemove: string[];
+    /** New consolidated trait to create */
+    newTrait: {
+      name: string;
+      description?: string;
+      category: 'grouped';
+    };
+  };
+
+  /** Whether this transaction improves position */
+  positionImprovement: boolean;
+
+  /** Momentum cost (always 1 for position improvement) */
+  momentumCost: number;
+}
+
+/**
  * State data for a player's current round
  */
 export interface PlayerRoundState {
@@ -75,6 +116,9 @@ export interface PlayerRoundState {
 
   /** Flashback applied flag */
   flashbackApplied?: boolean;
+
+  /** Trait transaction (pending changes to apply on roll commit) */
+  traitTransaction?: TraitTransaction;
 
   // ===== GM APPROVAL =====
 
