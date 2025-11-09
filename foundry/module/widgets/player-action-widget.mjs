@@ -444,6 +444,32 @@ export class PlayerActionWidget extends Application {
   async _onCommitRoll(event) {
     event.preventDefault();
 
+    // Get current state BEFORE any mutations
+    const state = game.fitgd.store.getState();
+    const playerState = state.playerRoundState.byCharacterId[this.characterId];
+
+    // Calculate pending momentum cost
+    let momentumCost = 0;
+    if (playerState?.pushed) momentumCost += 1;
+    if (playerState?.flashbackApplied) momentumCost += 1;
+
+    // Validate sufficient momentum BEFORE committing
+    if (this.crewId && momentumCost > 0) {
+      const crew = game.fitgd.api.crew.getCrew(this.crewId);
+      if (crew.currentMomentum < momentumCost) {
+        ui.notifications.error(`Insufficient Momentum! Need ${momentumCost}, have ${crew.currentMomentum}`);
+        return;
+      }
+
+      // Spend momentum NOW (before rolling)
+      try {
+        game.fitgd.api.crew.spendMomentum({ crewId: this.crewId, amount: momentumCost });
+      } catch (error) {
+        ui.notifications.error(`Failed to spend Momentum: ${error.message}`);
+        return;
+      }
+    }
+
     // Transition to ROLLING
     game.fitgd.store.dispatch({
       type: 'playerRoundState/transitionState',
@@ -456,7 +482,6 @@ export class PlayerActionWidget extends Application {
     this.render();
 
     // Calculate dice pool using selector
-    const state = game.fitgd.store.getState();
     const dicePool = selectDicePool(state, this.characterId);
 
     // Roll dice using Foundry dice roller
@@ -473,11 +498,6 @@ export class PlayerActionWidget extends Application {
         outcome,
       },
     });
-
-    // Spend Momentum if pushed
-    if (this.playerState.pushed && this.crewId) {
-      game.fitgd.api.crew.spendMomentum({ crewId: this.crewId, amount: 1 });
-    }
 
     // Transition based on outcome
     if (outcome === 'critical' || outcome === 'success') {
