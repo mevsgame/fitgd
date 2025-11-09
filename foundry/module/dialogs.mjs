@@ -880,6 +880,9 @@ export class FlashbackTraitsDialog extends Application {
   activateListeners(html) {
     super.activateListeners(html);
 
+    // Store html for later use
+    this.html = html;
+
     // Mode selection (if editable)
     html.find('[name="mode"]').change(this._onModeChange.bind(this));
 
@@ -1011,14 +1014,13 @@ export class FlashbackTraitsDialog extends Application {
    */
   async _applyCreateNew() {
     // Get trait name and description from form
-    const form = this.element.find('form')[0];
-    if (!form) {
-      ui.notifications.error('Form not found');
+    if (!this.html) {
+      ui.notifications.error('Dialog HTML not found');
       return;
     }
 
-    const newTraitName = form.newTraitName?.value?.trim();
-    const newTraitDescription = form.newTraitDescription?.value?.trim();
+    const newTraitName = this.html.find('[name="newTraitName"]').val()?.trim();
+    const newTraitDescription = this.html.find('[name="newTraitDescription"]').val()?.trim();
 
     if (!newTraitName) {
       ui.notifications.warn('Please enter a trait name');
@@ -1068,14 +1070,13 @@ export class FlashbackTraitsDialog extends Application {
     }
 
     // Get consolidated trait name and description from form
-    const form = this.element.find('form')[0];
-    if (!form) {
-      ui.notifications.error('Form not found');
+    if (!this.html) {
+      ui.notifications.error('Dialog HTML not found');
       return;
     }
 
-    const newTraitName = form.newTraitName?.value?.trim();
-    const newTraitDescription = form.newTraitDescription?.value?.trim();
+    const newTraitName = this.html.find('[name="newTraitName"]').val()?.trim();
+    const newTraitDescription = this.html.find('[name="newTraitDescription"]').val()?.trim();
 
     if (!newTraitName) {
       ui.notifications.warn('Please enter a name for the consolidated trait');
