@@ -14,6 +14,7 @@ import {
   selectHarmClocksWithStatus,
   selectIsDying,
 } from '../../dist/fitgd-core.es.js';
+import { FlashbackDialog } from '../dialogs.mjs';
 
 /* -------------------------------------------- */
 /*  Player Action Widget Application            */
@@ -179,7 +180,8 @@ export class PlayerActionWidget extends Application {
     html.find('[data-action="flashback"]').click(this._onFlashback.bind(this));
     html.find('[data-action="equipment"]').click(this._onEquipment.bind(this));
     html.find('[data-action="traits"]').click(this._onTraits.bind(this));
-    html.find('[data-action="push"]').click(this._onTogglePush.bind(this));
+    html.find('[data-action="push-die"]').click(this._onTogglePushDie.bind(this));
+    html.find('[data-action="push-effect"]').click(this._onTogglePushEffect.bind(this));
 
     // Roll button
     html.find('[data-action="roll"]').click(this._onRoll.bind(this));
@@ -230,7 +232,8 @@ export class PlayerActionWidget extends Application {
 
     // Push improvement
     if (this.playerState.pushed) {
-      improvements.push('Push Yourself (+1d or +Effect) [1M]');
+      const pushLabel = this.playerState.pushType === 'extra-die' ? '+1d' : 'Effect +1';
+      improvements.push(`Push Yourself (${pushLabel}) [1M]`);
     }
 
     // Flashback
@@ -373,8 +376,21 @@ export class PlayerActionWidget extends Application {
    */
   _onFlashback(event) {
     event.preventDefault();
-    // TODO: Open Flashback dialog
-    ui.notifications.info('Flashback dialog - to be implemented');
+
+    if (!this.crewId) {
+      ui.notifications.warn('Character must be in a crew to use flashback');
+      return;
+    }
+
+    const crew = game.fitgd.api.crew.getCrew(this.crewId);
+    if (crew.currentMomentum < 1) {
+      ui.notifications.warn('Not enough Momentum for flashback (need 1)');
+      return;
+    }
+
+    // Open flashback dialog
+    const dialog = new FlashbackDialog(this.characterId, this.crewId);
+    dialog.render(true);
   }
 
   /**
@@ -396,18 +412,39 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Handle Push toggle
+   * Handle Push (+1d) toggle
    */
-  _onTogglePush(event) {
+  _onTogglePushDie(event) {
     event.preventDefault();
 
-    const currentlyPushed = this.playerState?.pushed || false;
+    const currentlyPushedDie = this.playerState?.pushed && this.playerState?.pushType === 'extra-die';
 
     game.fitgd.store.dispatch({
       type: 'playerRoundState/setImprovements',
       payload: {
         characterId: this.characterId,
-        pushed: !currentlyPushed,
+        pushed: !currentlyPushedDie,
+        pushType: !currentlyPushedDie ? 'extra-die' : undefined,
+      },
+    });
+
+    this.render();
+  }
+
+  /**
+   * Handle Push (Effect) toggle
+   */
+  _onTogglePushEffect(event) {
+    event.preventDefault();
+
+    const currentlyPushedEffect = this.playerState?.pushed && this.playerState?.pushType === 'improved-effect';
+
+    game.fitgd.store.dispatch({
+      type: 'playerRoundState/setImprovements',
+      payload: {
+        characterId: this.characterId,
+        pushed: !currentlyPushedEffect,
+        pushType: !currentlyPushedEffect ? 'improved-effect' : undefined,
       },
     });
 
@@ -661,7 +698,7 @@ export class PlayerActionWidget extends Application {
     });
 
     // Give a brief moment for UI to update, then complete turn
-    setTimeout(() => {
+    setTimeout(async () => {
       game.fitgd.store.dispatch({
         type: 'playerRoundState/transitionState',
         payload: {
@@ -669,6 +706,17 @@ export class PlayerActionWidget extends Application {
           newState: 'TURN_COMPLETE',
         },
       });
+
+      // Reset player state (clear all improvements, GM approval, etc.)
+      game.fitgd.store.dispatch({
+        type: 'playerRoundState/resetPlayerState',
+        payload: {
+          characterId: this.characterId,
+        },
+      });
+
+      // Broadcast state changes
+      await game.fitgd.saveImmediate();
 
       // Close widget after completing
       setTimeout(() => this.close(), 500);
@@ -750,7 +798,7 @@ export class PlayerActionWidget extends Application {
   /**
    * End turn and close widget
    */
-  _endTurn() {
+  async _endTurn() {
     // Transition to TURN_COMPLETE
     game.fitgd.store.dispatch({
       type: 'playerRoundState/transitionState',
@@ -759,6 +807,17 @@ export class PlayerActionWidget extends Application {
         newState: 'TURN_COMPLETE',
       },
     });
+
+    // Reset player state (clear all improvements, GM approval, etc.)
+    game.fitgd.store.dispatch({
+      type: 'playerRoundState/resetPlayerState',
+      payload: {
+        characterId: this.characterId,
+      },
+    });
+
+    // Broadcast state changes
+    await game.fitgd.saveImmediate();
 
     // Close widget
     this.close();

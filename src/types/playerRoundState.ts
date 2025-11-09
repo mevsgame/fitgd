@@ -70,6 +70,9 @@ export interface PlayerRoundState {
   /** Push Yourself flag (costs 1M) */
   pushed?: boolean;
 
+  /** Type of push: 'extra-die' (+1d) or 'improved-effect' (Effect +1) */
+  pushType?: 'extra-die' | 'improved-effect';
+
   /** Flashback applied flag */
   flashbackApplied?: boolean;
 

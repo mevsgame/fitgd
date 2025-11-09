@@ -110,9 +110,9 @@
     </div>
     {{/if}}
 
-    <!-- Prepare Action Buttons -->
+    <!-- Action Modifiers Buttons -->
     <div class="prepare-actions">
-      <h4>PREPARE ACTION:</h4>
+      <h4>ACTION MODIFIERS:</h4>
       <div class="button-row">
         <button type="button" data-action="rally" {{#unless canRally}}disabled{{/unless}}>
           Rally
@@ -126,8 +126,11 @@
         <button type="button" data-action="traits">
           Traits
         </button>
-        <button type="button" data-action="push" class="{{#if playerState.pushed}}active{{/if}}" {{#if (lt momentum 1)}}disabled{{/if}}>
-          Push
+        <button type="button" data-action="push-die" class="{{#if (and playerState.pushed (eq playerState.pushType 'extra-die'))}}active{{/if}}" {{#if (lt momentum 1)}}disabled{{/if}}>
+          Push (+1d)
+        </button>
+        <button type="button" data-action="push-effect" class="{{#if (and playerState.pushed (eq playerState.pushType 'improved-effect'))}}active{{/if}}" {{#if (lt momentum 1)}}disabled{{/if}}>
+          Push (Effect)
         </button>
       </div>
     </div>

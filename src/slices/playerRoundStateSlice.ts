@@ -77,6 +77,7 @@ interface SetImprovementsPayload {
   selectedTraitId?: string;
   equippedForAction?: string[];
   pushed?: boolean;
+  pushType?: 'extra-die' | 'improved-effect';
   flashbackApplied?: boolean;
 }
 
@@ -254,6 +255,7 @@ const playerRoundStateSlice = createSlice({
         selectedTraitId,
         equippedForAction,
         pushed,
+        pushType,
         flashbackApplied,
       } = action.payload;
       const currentState = state.byCharacterId[characterId];
@@ -267,6 +269,7 @@ const playerRoundStateSlice = createSlice({
         selectedTraitId,
         equippedForAction,
         pushed,
+        pushType,
         flashbackApplied,
       };
     },
