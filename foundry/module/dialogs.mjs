@@ -25,7 +25,7 @@
  * @param {string[]} reduxIds - Array of Redux entity IDs to refresh
  * @param {boolean} force - Whether to force re-render (default: true)
  */
-function refreshSheetsByReduxId(reduxIds, force = true) {
+export function refreshSheetsByReduxId(reduxIds, force = true) {
   const affectedReduxIds = new Set(reduxIds.filter(id => id)); // Remove nulls/undefined
   if (affectedReduxIds.size === 0) return;
 
@@ -1010,8 +1010,52 @@ export class FlashbackTraitsDialog extends Application {
    * Apply create new trait (flashback)
    */
   async _applyCreateNew() {
-    // TODO: Open secondary dialog to enter trait name
-    ui.notifications.warn('Create new trait - not yet implemented');
+    // Get trait name and description from form
+    const form = this.element.find('form')[0];
+    if (!form) {
+      ui.notifications.error('Form not found');
+      return;
+    }
+
+    const newTraitName = form.newTraitName?.value?.trim();
+    const newTraitDescription = form.newTraitDescription?.value?.trim();
+
+    if (!newTraitName) {
+      ui.notifications.warn('Please enter a trait name');
+      return;
+    }
+
+    // Check Momentum (costs 1M for flashback)
+    if (this.crew.currentMomentum < 1) {
+      ui.notifications.warn('Not enough Momentum (need 1 for flashback)');
+      return;
+    }
+
+    // Dispatch trait transaction to Redux
+    game.fitgd.store.dispatch({
+      type: 'playerRoundState/setTraitTransaction',
+      payload: {
+        characterId: this.characterId,
+        transaction: {
+          mode: 'new',
+          newTrait: {
+            name: newTraitName,
+            description: newTraitDescription || undefined,
+            category: 'flashback',
+          },
+          positionImprovement: true,
+          momentumCost: 1,
+        },
+      },
+    });
+
+    // Broadcast to all clients
+    await game.fitgd.saveImmediate();
+
+    // Re-render widget
+    refreshSheetsByReduxId([this.characterId], false);
+
+    ui.notifications.info(`New trait "${newTraitName}" will be created on roll (costs 1M)`);
   }
 
   /**
@@ -1023,13 +1067,55 @@ export class FlashbackTraitsDialog extends Application {
       return;
     }
 
-    if (!this.selectedTraitId) {
-      ui.notifications.warn('Please select which consolidated trait to use');
+    // Get consolidated trait name and description from form
+    const form = this.element.find('form')[0];
+    if (!form) {
+      ui.notifications.error('Form not found');
       return;
     }
 
-    // TODO: Open secondary dialog to enter new consolidated trait name
-    ui.notifications.warn('Consolidate traits - not yet implemented');
+    const newTraitName = form.newTraitName?.value?.trim();
+    const newTraitDescription = form.newTraitDescription?.value?.trim();
+
+    if (!newTraitName) {
+      ui.notifications.warn('Please enter a name for the consolidated trait');
+      return;
+    }
+
+    // Check Momentum (costs 1M for flashback)
+    if (this.crew.currentMomentum < 1) {
+      ui.notifications.warn('Not enough Momentum (need 1 for flashback)');
+      return;
+    }
+
+    // Dispatch trait transaction to Redux
+    game.fitgd.store.dispatch({
+      type: 'playerRoundState/setTraitTransaction',
+      payload: {
+        characterId: this.characterId,
+        transaction: {
+          mode: 'consolidate',
+          consolidation: {
+            traitIdsToRemove: this.selectedTraitIds,
+            newTrait: {
+              name: newTraitName,
+              description: newTraitDescription || undefined,
+              category: 'grouped',
+            },
+          },
+          positionImprovement: true,
+          momentumCost: 1,
+        },
+      },
+    });
+
+    // Broadcast to all clients
+    await game.fitgd.saveImmediate();
+
+    // Re-render widget
+    refreshSheetsByReduxId([this.characterId], false);
+
+    ui.notifications.info(`Traits consolidated into "${newTraitName}" (costs 1M)`);
   }
 }
 

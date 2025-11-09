@@ -14,7 +14,7 @@ import {
   selectHarmClocksWithStatus,
   selectIsDying,
 } from '../../dist/fitgd-core.es.js';
-import { FlashbackTraitsDialog } from '../dialogs.mjs';
+import { FlashbackTraitsDialog, refreshSheetsByReduxId } from '../dialogs.mjs';
 
 /* -------------------------------------------- */
 /*  Player Action Widget Application            */
@@ -156,6 +156,9 @@ export class PlayerActionWidget extends Application {
       // Computed improvements preview
       improvements: this._computeImprovements(),
 
+      // Improved position (if trait improves it)
+      improvedPosition: this._computeImprovedPosition(),
+
       // GM controls
       isGM: game.user.isGM,
     };
@@ -204,6 +207,97 @@ export class PlayerActionWidget extends Application {
   /* -------------------------------------------- */
 
   /**
+   * Apply trait transaction to character
+   * @param {TraitTransaction} transaction - The transaction to apply
+   */
+  async _applyTraitTransaction(transaction) {
+    if (transaction.mode === 'existing') {
+      // No character changes needed for using existing trait
+      console.log(`FitGD | Using existing trait: ${transaction.selectedTraitId}`);
+
+    } else if (transaction.mode === 'new') {
+      // Create new flashback trait
+      const newTrait = {
+        id: foundry.utils.randomID(),
+        name: transaction.newTrait.name,
+        description: transaction.newTrait.description,
+        category: 'flashback',
+        disabled: false,
+        acquiredAt: Date.now(),
+      };
+
+      game.fitgd.store.dispatch({
+        type: 'characters/addTrait',
+        payload: {
+          characterId: this.characterId,
+          trait: newTrait,
+        },
+      });
+
+      console.log(`FitGD | Created new trait: ${newTrait.name}`);
+
+    } else if (transaction.mode === 'consolidate') {
+      // Remove 3 traits and create consolidated trait
+      const consolidation = transaction.consolidation;
+
+      // Remove the 3 traits
+      for (const traitId of consolidation.traitIdsToRemove) {
+        game.fitgd.store.dispatch({
+          type: 'characters/removeTrait',
+          payload: {
+            characterId: this.characterId,
+            traitId,
+          },
+        });
+      }
+
+      // Create consolidated trait
+      const consolidatedTrait = {
+        id: foundry.utils.randomID(),
+        name: consolidation.newTrait.name,
+        description: consolidation.newTrait.description,
+        category: 'grouped',
+        disabled: false,
+        acquiredAt: Date.now(),
+      };
+
+      game.fitgd.store.dispatch({
+        type: 'characters/addTrait',
+        payload: {
+          characterId: this.characterId,
+          trait: consolidatedTrait,
+        },
+      });
+
+      console.log(`FitGD | Consolidated traits into: ${consolidatedTrait.name}`);
+    }
+
+    // Save immediately (critical state change)
+    await game.fitgd.saveImmediate();
+
+    // Re-render character sheet
+    refreshSheetsByReduxId([this.characterId], true);
+  }
+
+  /**
+   * Compute improved position (if trait transaction improves it)
+   */
+  _computeImprovedPosition() {
+    if (!this.playerState?.traitTransaction?.positionImprovement) {
+      return this.playerState?.position || 'risky';
+    }
+
+    const currentPosition = this.playerState.position || 'risky';
+
+    // Improve position by one step
+    if (currentPosition === 'desperate') return 'risky';
+    if (currentPosition === 'risky') return 'controlled';
+
+    // Already controlled, no improvement
+    return currentPosition;
+  }
+
+  /**
    * Compute improvements preview text
    */
   _computeImprovements() {
@@ -211,8 +305,27 @@ export class PlayerActionWidget extends Application {
 
     const improvements = [];
 
-    // Trait improvement
-    if (this.playerState.selectedTraitId) {
+    // Trait transaction (new system)
+    if (this.playerState.traitTransaction) {
+      const transaction = this.playerState.traitTransaction;
+
+      if (transaction.mode === 'existing') {
+        const trait = this.character.traits.find(t => t.id === transaction.selectedTraitId);
+        if (trait) {
+          improvements.push(`Using trait: '${trait.name}' (Position +1) [1M]`);
+        }
+      } else if (transaction.mode === 'new') {
+        improvements.push(`Creating new trait: '${transaction.newTrait.name}' (Position +1) [1M]`);
+      } else if (transaction.mode === 'consolidate') {
+        const traitNames = transaction.consolidation.traitIdsToRemove
+          .map(id => this.character.traits.find(t => t.id === id)?.name)
+          .filter(Boolean);
+        improvements.push(`Consolidating: ${traitNames.join(', ')} → '${transaction.consolidation.newTrait.name}' (Position +1) [1M]`);
+      }
+    }
+
+    // Legacy trait improvement (fallback)
+    if (this.playerState.selectedTraitId && !this.playerState.traitTransaction) {
       const trait = this.character.traits.find(t => t.id === this.playerState.selectedTraitId);
       if (trait) {
         improvements.push(`Using '${trait.name}' trait`);
@@ -235,7 +348,7 @@ export class PlayerActionWidget extends Application {
       improvements.push(`Push Yourself (${pushLabel}) [1M]`);
     }
 
-    // Flashback
+    // Flashback (legacy)
     if (this.playerState.flashbackApplied) {
       improvements.push('Flashback applied');
     }
@@ -481,10 +594,8 @@ export class PlayerActionWidget extends Application {
     const state = game.fitgd.store.getState();
     const playerState = state.playerRoundState.byCharacterId[this.characterId];
 
-    // Calculate pending momentum cost
-    let momentumCost = 0;
-    if (playerState?.pushed) momentumCost += 1;
-    if (playerState?.flashbackApplied) momentumCost += 1;
+    // Calculate pending momentum cost (using selector)
+    const momentumCost = selectMomentumCost(playerState);
 
     // Validate sufficient momentum BEFORE committing
     if (this.crewId && momentumCost > 0) {
@@ -499,6 +610,17 @@ export class PlayerActionWidget extends Application {
         game.fitgd.api.crew.spendMomentum({ crewId: this.crewId, amount: momentumCost });
       } catch (error) {
         ui.notifications.error(`Failed to spend Momentum: ${error.message}`);
+        return;
+      }
+    }
+
+    // Apply trait transaction (if exists)
+    if (playerState?.traitTransaction) {
+      try {
+        await this._applyTraitTransaction(playerState.traitTransaction);
+      } catch (error) {
+        console.error('FitGD | Error applying trait transaction:', error);
+        ui.notifications.error(`Failed to apply trait changes: ${error.message}`);
         return;
       }
     }

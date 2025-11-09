@@ -18,7 +18,7 @@
         <h4>Action Plan:</h4>
         <div class="plan-box">
           <div class="plan-line"><strong>Action:</strong> {{capitalize playerState.selectedAction}} ({{lookup character.actionDots playerState.selectedAction}}d base)</div>
-          <div class="plan-line"><strong>Position:</strong> {{uppercase (default playerState.position "RISKY")}} → {{uppercase (default playerState.position "RISKY")}}</div>
+          <div class="plan-line"><strong>Position:</strong> {{uppercase (default playerState.position "RISKY")}} → <span class="{{#if playerState.traitTransaction}}improved{{/if}}">{{uppercase improvedPosition}}</span></div>
           <div class="plan-line"><strong>Effect:</strong> {{uppercase (default playerState.effect "STANDARD")}} → {{uppercase (default playerState.effect "STANDARD")}}</div>
 
           {{#if improvements.length}}
@@ -138,7 +138,7 @@
       <h4>📋 Current Plan:</h4>
       <div class="plan-box">
         <div class="plan-line">Action: {{capitalize playerState.selectedAction}} ({{lookup character.actionDots playerState.selectedAction}}d)</div>
-        <div class="plan-line">Position: {{uppercase playerState.position}} → <span class="improved">{{uppercase playerState.position}}</span></div>
+        <div class="plan-line">Position: {{uppercase playerState.position}} → <span class="{{#if playerState.traitTransaction}}improved{{/if}}">{{uppercase improvedPosition}}</span></div>
         <div class="plan-line">Effect: {{uppercase playerState.effect}} → <span class="improved">{{uppercase playerState.effect}}</span></div>
 
         {{#if improvements.length}}

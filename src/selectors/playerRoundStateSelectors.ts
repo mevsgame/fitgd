@@ -148,7 +148,12 @@ export const selectMomentumCost = (playerState: PlayerRoundState | undefined): n
     cost += 1;
   }
 
-  // Flashback: varies by scope (for now, assume 1)
+  // Trait transaction: 1 Momentum for position improvement
+  if (playerState.traitTransaction) {
+    cost += playerState.traitTransaction.momentumCost;
+  }
+
+  // Legacy flashback: varies by scope (for now, assume 1)
   // In future, this could be passed as a parameter
   if (playerState.flashbackApplied) {
     cost += 1;
