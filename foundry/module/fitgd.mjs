@@ -962,6 +962,13 @@ async function receiveCommandsFromSocket(data) {
             }
           });
         }
+
+        if (receivedPlayerState.gmApproved !== currentPlayerState?.gmApproved) {
+          game.fitgd.store.dispatch({
+            type: 'playerRoundState/setGmApproved',
+            payload: { characterId, approved: receivedPlayerState.gmApproved || false }
+          });
+        }
       }
 
       // Update active player if changed

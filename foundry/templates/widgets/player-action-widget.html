@@ -7,51 +7,80 @@
   <!-- ==================== DECISION PHASE ==================== -->
   {{#if isDecisionPhase}}
   <div class="widget-content decision-phase">
-    <!-- Action Selection -->
-    <div class="form-group">
-      <label>Action:</label>
-      <select name="action" class="action-select">
-        <option value="">-- Select Action --</option>
-        {{#each actions}}
-        <option value="{{this}}" {{#if (eq ../playerState.selectedAction this)}}selected{{/if}}>
-          {{capitalize this}} ({{lookup ../character.actionDots this}}d)
-        </option>
-        {{/each}}
-      </select>
-    </div>
 
-    <!-- Position & Effect Display -->
-    <div class="position-effect-display">
-      <div class="position">
-        Position: <span class="position-{{playerState.position}}">{{uppercase (default playerState.position "RISKY")}}</span>
-      </div>
-      <div class="effect">
-        Effect: <span class="effect-level">{{uppercase (default playerState.effect "STANDARD")}}</span>
-      </div>
-    </div>
-
-    <!-- GM Controls for Position & Effect -->
     {{#if isGM}}
-    <div class="gm-controls">
-      <h4>⚙️ GM CONTROLS:</h4>
-      <div class="form-group">
-        <label>Set Position:</label>
-        <select name="position" class="position-select">
-          <option value="controlled" {{#if (eq playerState.position "controlled")}}selected{{/if}}>Controlled</option>
-          <option value="risky" {{#if (eq (default playerState.position "risky") "risky")}}selected{{/if}}>Risky</option>
-          <option value="desperate" {{#if (eq playerState.position "desperate")}}selected{{/if}}>Desperate</option>
-        </select>
+    <!-- ==================== GM VIEW ==================== -->
+    <div class="gm-view">
+      <h3>📋 Player's Proposed Plan</h3>
+
+      {{#if playerState.selectedAction}}
+      <div class="plan-summary">
+        <div class="plan-line"><strong>Action:</strong> {{capitalize playerState.selectedAction}} ({{lookup character.actionDots playerState.selectedAction}}d)</div>
+        {{#if playerState.pushed}}
+        <div class="plan-line">• Push for +1 Dice (costs 1M)</div>
+        {{/if}}
+        {{#if playerState.selectedTraitId}}
+        <div class="plan-line">• Using trait ({{playerState.selectedTraitId}})</div>
+        {{/if}}
+        {{#if playerState.equippedForAction.length}}
+        <div class="plan-line">• Equipped items: {{playerState.equippedForAction.length}}</div>
+        {{/if}}
+        {{#if playerState.flashbackApplied}}
+        <div class="plan-line">• Flashback applied</div>
+        {{/if}}
+        <div class="plan-line total"><strong>Total Dice Pool: {{dicePool}}d6</strong></div>
       </div>
-      <div class="form-group">
-        <label>Set Effect:</label>
-        <select name="effect" class="effect-select">
-          <option value="limited" {{#if (eq playerState.effect "limited")}}selected{{/if}}>Limited</option>
-          <option value="standard" {{#if (eq (default playerState.effect "standard") "standard")}}selected{{/if}}>Standard</option>
-          <option value="great" {{#if (eq playerState.effect "great")}}selected{{/if}}>Great</option>
-        </select>
+      {{else}}
+      <p class="waiting">⏳ Waiting for player to select an action...</p>
+      {{/if}}
+
+      <div class="gm-controls">
+        <h4>⚙️ GM Controls:</h4>
+        <div class="form-group">
+          <label>Set Position:</label>
+          <select name="position" class="position-select">
+            <option value="controlled" {{#if (eq playerState.position "controlled")}}selected{{/if}}>Controlled</option>
+            <option value="risky" {{#if (eq (default playerState.position "risky") "risky")}}selected{{/if}}>Risky</option>
+            <option value="desperate" {{#if (eq playerState.position "desperate")}}selected{{/if}}>Desperate</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Set Effect:</label>
+          <select name="effect" class="effect-select">
+            <option value="limited" {{#if (eq playerState.effect "limited")}}selected{{/if}}>Limited</option>
+            <option value="standard" {{#if (eq (default playerState.effect "standard") "standard")}}selected{{/if}}>Standard</option>
+            <option value="great" {{#if (eq playerState.effect "great")}}selected{{/if}}>Great</option>
+          </select>
+        </div>
       </div>
     </div>
-    {{/if}}
+
+    {{else}}
+    <!-- ==================== PLAYER VIEW ==================== -->
+    <div class="player-view">
+      <!-- Action Selection -->
+      <div class="form-group">
+        <label>Action:</label>
+        <select name="action" class="action-select">
+          <option value="">-- Select Action --</option>
+          {{#each actions}}
+          <option value="{{this}}" {{#if (eq ../playerState.selectedAction this)}}selected{{/if}}>
+            {{capitalize this}} ({{lookup ../character.actionDots this}}d)
+          </option>
+          {{/each}}
+        </select>
+      </div>
+
+      <!-- Position & Effect Display (Read-Only for Player) -->
+      <div class="position-effect-display">
+        <div class="position">
+          Position: <span class="position-{{playerState.position}}">{{uppercase (default playerState.position "RISKY")}}</span>
+        </div>
+        <div class="effect">
+          Effect: <span class="effect-level">{{uppercase (default playerState.effect "STANDARD")}}</span>
+        </div>
+        <p class="gm-set-note">(Set by GM)</p>
+      </div>
 
     <!-- Harm Clocks Display -->
     {{#if harmClocks.length}}
@@ -122,12 +151,23 @@
     </div>
     {{/if}}
 
-    <!-- Action Buttons -->
+    </div>
+    {{/if}}
+
+    <!-- Action Buttons (different for GM vs Player) -->
     <div class="action-buttons">
-      <button type="button" data-action="cancel" class="secondary">Cancel</button>
-      <button type="button" data-action="roll" class="primary" {{#unless playerState.selectedAction}}disabled{{/unless}}>
-        🎲 ROLL ACTION
+      {{#if isGM}}
+      <!-- GM sees "Accept Roll" button -->
+      <button type="button" data-action="approve-roll" class="primary {{#if playerState.gmApproved}}approved{{/if}}" {{#unless playerState.selectedAction}}disabled{{/unless}}>
+        {{#if playerState.gmApproved}}✅ Roll Approved{{else}}✓ Accept Roll{{/if}}
       </button>
+      {{else}}
+      <!-- Player sees "Commit Roll" button (disabled until GM approves) -->
+      <button type="button" data-action="cancel" class="secondary">Cancel</button>
+      <button type="button" data-action="roll" class="primary {{#if playerState.gmApproved}}approved{{/if}}" {{#unless (and playerState.selectedAction playerState.gmApproved)}}disabled{{/unless}}>
+        {{#if playerState.gmApproved}}🎲 ROLL ACTION{{else}}⏳ Waiting for GM Approval{{/if}}
+      </button>
+      {{/if}}
     </div>
   </div>
   {{/if}}

@@ -171,6 +171,9 @@ export class PlayerActionWidget extends Application {
     html.find('.position-select').change(this._onPositionChange.bind(this));
     html.find('.effect-select').change(this._onEffectChange.bind(this));
 
+    // GM approve roll button
+    html.find('[data-action="approve-roll"]').click(this._onApproveRoll.bind(this));
+
     // Prepare action buttons
     html.find('[data-action="rally"]').click(this._onRally.bind(this));
     html.find('[data-action="flashback"]').click(this._onFlashback.bind(this));
@@ -245,9 +248,10 @@ export class PlayerActionWidget extends Application {
   /**
    * Handle action selection change
    */
-  _onActionChange(event) {
+  async _onActionChange(event) {
     const action = event.currentTarget.value;
 
+    // Dispatch Redux action
     game.fitgd.store.dispatch({
       type: 'playerRoundState/setActionPlan',
       payload: {
@@ -258,7 +262,15 @@ export class PlayerActionWidget extends Application {
       },
     });
 
-    this.render();
+    // Broadcast to all clients
+    await game.fitgd.saveImmediate();
+
+    // Post chat message
+    const actionName = action.charAt(0).toUpperCase() + action.slice(1);
+    ChatMessage.create({
+      content: `<strong>${this.character.name}</strong> selected action: <strong>${actionName}</strong>`,
+      speaker: ChatMessage.getSpeaker(),
+    });
   }
 
   /**
@@ -309,6 +321,42 @@ export class PlayerActionWidget extends Application {
       content: `GM set effect to <strong>${effect.charAt(0).toUpperCase() + effect.slice(1)}</strong> for ${this.character.name}`,
       speaker: ChatMessage.getSpeaker(),
     });
+  }
+
+  /**
+   * Handle GM approve roll button
+   */
+  async _onApproveRoll(event) {
+    event.preventDefault();
+
+    // Toggle approval state
+    const currentlyApproved = this.playerState?.gmApproved || false;
+    const newApprovalState = !currentlyApproved;
+
+    // Dispatch Redux action
+    game.fitgd.store.dispatch({
+      type: 'playerRoundState/setGmApproved',
+      payload: {
+        characterId: this.characterId,
+        approved: newApprovalState,
+      },
+    });
+
+    // Broadcast to all clients
+    await game.fitgd.saveImmediate();
+
+    // Post chat message
+    if (newApprovalState) {
+      ChatMessage.create({
+        content: `<strong>GM approved ${this.character.name}'s action plan!</strong> ✅<br>Player may now roll.`,
+        speaker: ChatMessage.getSpeaker(),
+      });
+    } else {
+      ChatMessage.create({
+        content: `GM revoked approval for ${this.character.name}'s action plan.`,
+        speaker: ChatMessage.getSpeaker(),
+      });
+    }
   }
 
   /**
