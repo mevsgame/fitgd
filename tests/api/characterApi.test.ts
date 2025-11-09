@@ -198,6 +198,13 @@ describe('CharacterAPI', () => {
     });
 
     it('should set action dots to specific value', () => {
+      // Character starts with shoot: 3, needs 1 more to reach 4
+      // Grant 1 unallocated dot first
+      api.character.addUnallocatedDots({
+        characterId,
+        amount: 1,
+      });
+
       api.character.setActionDots({
         characterId,
         action: 'shoot',
@@ -206,6 +213,7 @@ describe('CharacterAPI', () => {
 
       const character = api.character.getCharacter(characterId);
       expect(character.actionDots.shoot).toBe(4);
+      expect(character.unallocatedActionDots).toBe(0); // All used up
     });
 
     it('should set action dots to 0', () => {

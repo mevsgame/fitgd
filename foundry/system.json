@@ -39,8 +39,34 @@
       "path": "lang/en.json"
     }
   ],
-  "gridDistance": 5,
-  "gridUnits": "m",
+  "documentTypes": {
+    "Actor": {
+      "character": {
+        "htmlFields": ["description"],
+        "filePathFields": {
+          "img": ["IMAGE"]
+        }
+      },
+      "crew": {
+        "htmlFields": ["description"],
+        "filePathFields": {
+          "img": ["IMAGE"]
+        }
+      }
+    },
+    "Item": {
+      "trait": {
+        "htmlFields": ["description"]
+      },
+      "equipment": {
+        "htmlFields": ["description"]
+      }
+    }
+  },
+  "grid": {
+    "distance": 5,
+    "units": "m"
+  },
   "primaryTokenAttribute": null,
   "secondaryTokenAttribute": null,
   "url": "https://github.com/mevsgame/fitgd",

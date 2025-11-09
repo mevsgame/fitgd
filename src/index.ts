@@ -22,6 +22,9 @@ export * from './api';
 export { configureStore, rootReducer } from './store';
 export type { RootState, AppDispatch } from './store';
 
+// Selectors
+export * from './selectors/playerRoundStateSelectors';
+
 // Foundry Adapter
 export { createFoundryAdapter } from './adapters/foundry';
 export type { FoundryAdapter, SerializedState, CommandHistory } from './adapters/foundry';

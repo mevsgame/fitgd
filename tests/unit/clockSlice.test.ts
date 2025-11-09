@@ -412,10 +412,12 @@ describe('clockSlice', () => {
 
       const clockId = store.getState().clocks.allIds[0];
 
-      // Try to add 10 segments (max is 6)
-      expect(() => {
-        store.dispatch(addSegments({ clockId, amount: 10 }));
-      }).toThrow();
+      // Try to add 10 segments (max is 6) - should cap at 6
+      store.dispatch(addSegments({ clockId, amount: 10 }));
+
+      const clock = store.getState().clocks.byId[clockId];
+      expect(clock.segments).toBe(6); // Capped at max
+      expect(clock.maxSegments).toBe(6);
     });
 
     it('should reject negative segment amounts', () => {

@@ -22,6 +22,7 @@ import {
   AddClockDialog
 } from './dialogs.mjs';
 import { HistoryManagementConfig } from './history-management.mjs';
+import { PlayerActionWidget } from './widgets/player-action-widget.mjs';
 
 /* -------------------------------------------- */
 /*  Helper Functions                            */
@@ -72,7 +73,7 @@ function refreshSheetsByReduxId(reduxIds, force = true) {
  * Initialize the FitGD system
  */
 Hooks.once('init', async function() {
-  console.log('FitGD | Initializing Forged in the Grimdark');
+  console.log('FitGD | Initializing Forged in the Grimdark system');
 
   // Create global namespace
   game.fitgd = game.fitgd || {};
@@ -137,20 +138,23 @@ Hooks.once('init', async function() {
       const newCommands = getNewCommandsSinceLastBroadcast();
       const newCommandCount = newCommands.characters.length + newCommands.crews.length + newCommands.clocks.length;
 
+      // Also get current playerRoundState for real-time collaboration
+      const state = game.fitgd.store.getState();
+      const playerRoundState = state.playerRoundState;
+
       // Broadcast commands FIRST (before persistence) - all users can do this
-      if (newCommandCount > 0) {
+      if (newCommandCount > 0 || Object.keys(playerRoundState.byCharacterId).length > 0) {
         const socketData = {
           type: 'commandsAdded',
           userId: game.user.id,
           userName: game.user.name,
           commandCount: newCommandCount,
           commands: newCommands,
+          playerRoundState: playerRoundState, // Include ephemeral UI state
           timestamp: Date.now()
         };
 
-        console.log(`FitGD | Broadcasting ${newCommandCount} commands via socketlib:`, socketData);
-        console.log(`FitGD | game.fitgd.socket exists?`, !!game.fitgd.socket);
-        console.log(`FitGD | game.fitgd.socket.executeForOthers exists?`, typeof game.fitgd.socket?.executeForOthers);
+        console.log(`FitGD | Broadcasting ${newCommandCount} commands + playerRoundState via socketlib`);
 
         try {
           // Use socketlib to broadcast to OTHER clients (not self)
@@ -160,7 +164,7 @@ Hooks.once('init', async function() {
           console.error('FitGD | socketlib broadcast error:', error);
         }
       } else {
-        console.log(`FitGD | No new commands to broadcast (count = 0)`);
+        console.log(`FitGD | No new commands or playerRoundState to broadcast`);
       }
 
       // Save to Foundry settings (only if user has permission - typically GM)
@@ -199,7 +203,8 @@ Hooks.once('init', async function() {
  * Load saved game state when world is ready
  */
 Hooks.once('ready', async function() {
-  console.log('FitGD | World ready, loading state...');
+  console.log(`FitGD | World ready for user: ${game.user.name} (isGM: ${game.user.isGM})`);
+  console.log(`FitGD | game.fitgd initialized: ${!!game.fitgd}, has store: ${!!game.fitgd?.store}, has api: ${!!game.fitgd?.api}`);
 
   // Check for state snapshot first (used after history pruning)
   const stateSnapshot = game.settings.get('forged-in-the-grimdark', 'stateSnapshot');
@@ -294,6 +299,134 @@ Hooks.once('ready', async function() {
 
   console.log('FitGD | Ready (socketlib handlers active)');
   console.log('FitGD | Test socket with: game.fitgd.testSocket()');
+});
+
+/* -------------------------------------------- */
+/*  Combat Tracker Hooks                        */
+/* -------------------------------------------- */
+
+/**
+ * When combat starts, reset Momentum to 5 (per spec)
+ */
+Hooks.on('combatStart', async function(combat, updateData) {
+  console.log('FitGD | Combat started, resetting Momentum to 5');
+
+  // Find crew for this combat
+  const state = game.fitgd.store.getState();
+  const crews = Object.values(state.crews.byId);
+
+  if (crews.length > 0) {
+    const crew = crews[0]; // Assuming single crew for now
+    // Use setMomentum with object parameter (API uses object params)
+    game.fitgd.api.crew.setMomentum({ crewId: crew.id, amount: 5 });
+    ui.notifications.info('Momentum reset to 5 - Combat Start!');
+  }
+
+  // Initialize player states for all combatants
+  for (const combatant of combat.combatants) {
+    const actor = combatant.actor;
+    if (!actor) continue;
+
+    const characterId = actor.getFlag('forged-in-the-grimdark', 'reduxId');
+    if (characterId) {
+      game.fitgd.store.dispatch({
+        type: 'playerRoundState/initializePlayerState',
+        payload: { characterId },
+      });
+    }
+  }
+});
+
+/**
+ * When a turn starts, show the Player Action Widget for the active combatant
+ *
+ * NOTE: Using 'updateCombat' instead of 'combatTurn' because 'combatTurn' only
+ * fires on the client that initiated the turn change (usually the GM), not on
+ * all connected clients. 'updateCombat' fires on ALL clients when combat data changes.
+ */
+Hooks.on('updateCombat', async function(combat, updateData, options, userId) {
+  // Only trigger when the turn actually changes (not for other combat updates)
+  if (!updateData.turn && updateData.turn !== 0) {
+    return; // Not a turn change, ignore
+  }
+
+  console.log(`FitGD | updateCombat (turn change) hook fired for user: ${game.user.name} (${game.user.id}), isGM: ${game.user.isGM}`);
+
+  const activeCombatant = combat.combatant;
+  if (!activeCombatant || !activeCombatant.actor) {
+    console.log('FitGD | No active combatant or actor');
+    return;
+  }
+
+  console.log(`FitGD | Active combatant: ${activeCombatant.actor.name}`);
+
+  const characterId = activeCombatant.actor.getFlag('forged-in-the-grimdark', 'reduxId');
+  if (!characterId) {
+    console.log('FitGD | Active combatant has no Redux characterId');
+    return;
+  }
+
+  console.log(`FitGD | Setting active player: ${characterId}`);
+
+  // Update Redux state to mark this player as active
+  game.fitgd.store.dispatch({
+    type: 'playerRoundState/setActivePlayer',
+    payload: { characterId },
+  });
+
+  // Show the Player Action Widget for this character
+  // Only show for the owning player or GM
+  const actor = activeCombatant.actor;
+  const isOwner = actor.isOwner;
+  const isGM = game.user.isGM;
+
+  console.log(`FitGD | Widget visibility check:`, {
+    actorName: actor.name,
+    currentUser: game.user.name,
+    isOwner,
+    isGM,
+    permission: actor.permission,
+    willShow: isOwner || isGM
+  });
+
+  if (isOwner || isGM) {
+    // Check if widget already exists for this character
+    const existingWidget = Object.values(ui.windows).find(
+      app => app instanceof PlayerActionWidget && app.characterId === characterId
+    );
+
+    if (existingWidget) {
+      console.log(`FitGD | Refreshing existing Player Action Widget for character ${characterId}`);
+      existingWidget.render(true); // Just refresh existing widget
+    } else {
+      console.log(`FitGD | Creating new Player Action Widget for character ${characterId}`);
+      const widget = new PlayerActionWidget(characterId);
+      widget.render(true);
+    }
+  } else {
+    console.log(`FitGD | Widget NOT shown - user is not owner or GM`);
+  }
+});
+
+/**
+ * When combat ends, clear all player states
+ */
+Hooks.on('combatEnd', async function(combat) {
+  console.log('FitGD | Combat ended, clearing player states');
+
+  // Clear all player round states
+  game.fitgd.store.dispatch({
+    type: 'playerRoundState/clearAllStates',
+  });
+
+  // Close any open Player Action Widgets
+  for (const app of Object.values(ui.windows)) {
+    if (app instanceof PlayerActionWidget) {
+      app.close();
+    }
+  }
+
+  ui.notifications.info('Combat ended');
 });
 
 /* -------------------------------------------- */
@@ -706,6 +839,34 @@ function registerHandlebarsHelpers() {
       </div>
     `);
   });
+
+  // Default value helper (returns second arg if first is falsy)
+  Handlebars.registerHelper('default', function(value, defaultValue) {
+    return value != null ? value : defaultValue;
+  });
+
+  // Capitalize first letter
+  Handlebars.registerHelper('capitalize', function(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  });
+
+  // Uppercase entire string
+  Handlebars.registerHelper('uppercase', function(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.toUpperCase();
+  });
+
+  // Subtract helper for arithmetic
+  Handlebars.registerHelper('subtract', function(a, b) {
+    return a - b;
+  });
+
+  // Join array with separator
+  Handlebars.registerHelper('join', function(arr, separator) {
+    if (!Array.isArray(arr)) return '';
+    return arr.join(separator || ', ');
+  });
 }
 
 /* -------------------------------------------- */
@@ -760,7 +921,66 @@ async function receiveCommandsFromSocket(data) {
     // Apply commands incrementally (no store reset!)
     const appliedCount = applyCommandsIncremental(data.commands);
 
-    if (appliedCount > 0) {
+    // Also apply playerRoundState if present (ephemeral UI state)
+    if (data.playerRoundState) {
+      console.log(`FitGD | Applying received playerRoundState:`, data.playerRoundState);
+
+      const currentState = game.fitgd.store.getState();
+
+      // Update each character's playerRoundState by dispatching actions
+      for (const [characterId, receivedPlayerState] of Object.entries(data.playerRoundState.byCharacterId)) {
+        const currentPlayerState = currentState.playerRoundState.byCharacterId[characterId];
+
+        // Skip if identical (avoid unnecessary updates)
+        if (JSON.stringify(currentPlayerState) === JSON.stringify(receivedPlayerState)) {
+          continue;
+        }
+
+        // Dispatch individual property updates
+        if (receivedPlayerState.position && receivedPlayerState.position !== currentPlayerState?.position) {
+          game.fitgd.store.dispatch({
+            type: 'playerRoundState/setPosition',
+            payload: { characterId, position: receivedPlayerState.position }
+          });
+        }
+
+        if (receivedPlayerState.effect && receivedPlayerState.effect !== currentPlayerState?.effect) {
+          game.fitgd.store.dispatch({
+            type: 'playerRoundState/setEffect',
+            payload: { characterId, effect: receivedPlayerState.effect }
+          });
+        }
+
+        if (receivedPlayerState.selectedAction && receivedPlayerState.selectedAction !== currentPlayerState?.selectedAction) {
+          game.fitgd.store.dispatch({
+            type: 'playerRoundState/setActionPlan',
+            payload: {
+              characterId,
+              action: receivedPlayerState.selectedAction,
+              position: receivedPlayerState.position || 'risky',
+              effect: receivedPlayerState.effect || 'standard'
+            }
+          });
+        }
+
+        if (receivedPlayerState.gmApproved !== currentPlayerState?.gmApproved) {
+          game.fitgd.store.dispatch({
+            type: 'playerRoundState/setGmApproved',
+            payload: { characterId, approved: receivedPlayerState.gmApproved || false }
+          });
+        }
+      }
+
+      // Update active player if changed
+      if (data.playerRoundState.activeCharacterId !== currentState.playerRoundState.activeCharacterId) {
+        game.fitgd.store.dispatch({
+          type: 'playerRoundState/setActivePlayer',
+          payload: { characterId: data.playerRoundState.activeCharacterId }
+        });
+      }
+    }
+
+    if (appliedCount > 0 || data.playerRoundState) {
       // Update lastBroadcastCount to prevent re-broadcasting received commands
       const history = game.fitgd.foundry.exportHistory();
       lastBroadcastCount = {
@@ -773,7 +993,7 @@ async function receiveCommandsFromSocket(data) {
       // Refresh affected sheets (pass the captured entityIds for deleted clocks)
       refreshAffectedSheets(data.commands, clockEntityIds);
 
-      console.log(`FitGD | Sync complete - applied ${appliedCount} new commands`);
+      console.log(`FitGD | Sync complete - applied ${appliedCount} new commands + playerRoundState`);
 
       // GM persists changes from players to world settings
       if (game.user.isGM) {
@@ -785,7 +1005,7 @@ async function receiveCommandsFromSocket(data) {
         }
       }
     } else {
-      console.log(`FitGD | No commands were applied (all duplicates or empty)`);
+      console.log(`FitGD | No commands or playerRoundState were applied (all duplicates or empty)`);
     }
   } catch (error) {
     console.error('FitGD | Error applying incremental commands:', error);

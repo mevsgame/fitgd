@@ -17,7 +17,8 @@ export interface CharacterAPI {
   groupTraits(characterId: string, traitIds: [string, string, string], newTrait: Trait): void;
 
   // Action Dots
-  setActionDots(characterId: string, action: keyof ActionDots, dots: number): void;
+  setActionDots(params: { characterId: string; action: keyof ActionDots; dots: number }): void;
+  addUnallocatedDots(params: { characterId: string; amount: number }): void;
 
   // Equipment
   addEquipment(characterId: string, equipment: Equipment): void;

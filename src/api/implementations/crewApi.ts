@@ -5,6 +5,7 @@ import {
   removeCharacterFromCrew,
   setMomentum,
   addMomentum,
+  spendMomentum as spendMomentumAction,
 } from '../../slices/crewSlice';
 import { performMomentumReset } from '../../resources';
 
@@ -82,8 +83,8 @@ export function createCrewAPI(store: Store) {
         throw new Error(`Insufficient Momentum (have ${crew.currentMomentum}, need ${amount})`);
       }
 
-      // Spend momentum is just negative add
-      store.dispatch(addMomentum({ crewId, amount: -amount }));
+      // Use the proper spendMomentum action
+      store.dispatch(spendMomentumAction({ crewId, amount }));
 
       const newState = store.getState();
       return newState.crews.byId[crewId]?.currentMomentum ?? 0;

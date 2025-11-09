@@ -8,7 +8,7 @@ export default defineConfig({
   build: {
     outDir: 'foundry/dist', // Output to foundry/dist for symlink
     lib: {
-      entry: path.resolve(__dirname, 'src/api/index.ts'),
+      entry: path.resolve(__dirname, 'src/index.ts'),
       name: 'FitGD',
       fileName: (format) => `fitgd-core.${format}.js`,
       formats: ['es'],
