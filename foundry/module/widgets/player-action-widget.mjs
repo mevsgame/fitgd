@@ -617,7 +617,29 @@ export class PlayerActionWidget extends Application {
     // Apply trait transaction (if exists)
     if (playerState?.traitTransaction) {
       try {
+        // Apply trait changes (create/consolidate traits)
         await this._applyTraitTransaction(playerState.traitTransaction);
+
+        // Apply position improvement if transaction includes it
+        if (playerState.traitTransaction.positionImprovement) {
+          const currentPosition = playerState.position || 'risky';
+          let improvedPosition = currentPosition;
+
+          // Improve position by one step
+          if (currentPosition === 'desperate') improvedPosition = 'risky';
+          else if (currentPosition === 'risky') improvedPosition = 'controlled';
+
+          // Dispatch position change if it actually improved
+          if (improvedPosition !== currentPosition) {
+            game.fitgd.store.dispatch({
+              type: 'playerRoundState/setPosition',
+              payload: {
+                characterId: this.characterId,
+                position: improvedPosition,
+              },
+            });
+          }
+        }
       } catch (error) {
         console.error('FitGD | Error applying trait transaction:', error);
         ui.notifications.error(`Failed to apply trait changes: ${error.message}`);

@@ -1373,20 +1373,15 @@ async _onTogglePushDie(event) {
 }
 ```
 
-**Example 2: Trait Flashback with Position Improvement**
+**Example 2: Transaction Pattern (Trait Flashback)**
+
+**IMPORTANT:** Transactions store pending changes that only apply when committed (e.g., on roll). Don't confuse "showing the plan" with "applying the changes"!
+
+**Dialog - Store Transaction (Pending Changes)**
 ```javascript
 async _applyUseExisting() {
-  // Get current position
-  const state = game.fitgd.store.getState();
-  const playerState = state.playerRoundState.byCharacterId[this.characterId];
-  const currentPosition = playerState?.position || 'risky';
-
-  // Calculate improved position
-  let improvedPosition = currentPosition;
-  if (currentPosition === 'desperate') improvedPosition = 'risky';
-  else if (currentPosition === 'risky') improvedPosition = 'controlled';
-
-  // Store the transaction (for display/tracking)
+  // Store the transaction (PENDING changes only!)
+  // This shows the PLAN, doesn't change actual state yet
   game.fitgd.store.dispatch({
     type: 'playerRoundState/setTraitTransaction',
     payload: {
@@ -1394,29 +1389,52 @@ async _applyUseExisting() {
       transaction: {
         mode: 'existing',
         selectedTraitId: this.selectedTraitId,
-        positionImprovement: true,
+        positionImprovement: true,  // WILL improve position (not yet applied)
         momentumCost: 1,
       },
     },
   });
 
-  // CRITICAL: Actually update the position in Redux
-  // (Not just in the transaction for display!)
-  if (improvedPosition !== currentPosition) {
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/setPosition',
-      payload: {
-        characterId: this.characterId,
-        position: improvedPosition,
-      },
-    });
-  }
-
-  // CRITICAL: Broadcast to all clients
+  // CRITICAL: Broadcast so GM sees the updated PLAN
   await game.fitgd.saveImmediate();
 
-  // Refresh sheets
+  // Refresh sheets to show the plan
   refreshSheetsByReduxId([this.characterId], false);
+}
+```
+
+**Widget - Apply Transaction (On Commit Roll)**
+```javascript
+async _onCommitRoll(event) {
+  const playerState = state.playerRoundState.byCharacterId[this.characterId];
+
+  // Apply trait transaction (if exists)
+  if (playerState?.traitTransaction) {
+    // Apply trait changes (create/consolidate traits)
+    await this._applyTraitTransaction(playerState.traitTransaction);
+
+    // NOW apply position improvement
+    if (playerState.traitTransaction.positionImprovement) {
+      const currentPosition = playerState.position || 'risky';
+      let improvedPosition = currentPosition;
+
+      if (currentPosition === 'desperate') improvedPosition = 'risky';
+      else if (currentPosition === 'risky') improvedPosition = 'controlled';
+
+      // Dispatch position change
+      if (improvedPosition !== currentPosition) {
+        game.fitgd.store.dispatch({
+          type: 'playerRoundState/setPosition',
+          payload: {
+            characterId: this.characterId,
+            position: improvedPosition,
+          },
+        });
+      }
+    }
+  }
+
+  // Continue with roll...
 }
 ```
 
@@ -1433,46 +1451,65 @@ When implementing any feature that modifies Redux state, **ALWAYS**:
 
 #### Common Mistakes
 
-**❌ WRONG: Only storing in transaction**
+**❌ WRONG: Applying transaction immediately instead of on commit**
 ```javascript
-// This only stores for display, doesn't actually improve position!
+// In dialog - DON'T dispatch setPosition here!
 game.fitgd.store.dispatch({
   type: 'playerRoundState/setTraitTransaction',
-  payload: {
-    transaction: { positionImprovement: true }
-  }
+  payload: { transaction: { positionImprovement: true } }
 });
-// Missing: actual setPosition dispatch!
+
+// ❌ WRONG: Applying position immediately
+game.fitgd.store.dispatch({
+  type: 'playerRoundState/setPosition',
+  payload: { position: 'controlled' }
+});
+// This breaks the transaction pattern - position should only
+// change when the roll is committed, not when planning!
 ```
 
-**❌ WRONG: Forgetting to broadcast**
+**❌ WRONG: Forgetting to broadcast transaction**
 ```javascript
-game.fitgd.store.dispatch({ /* ... */ });
+// Store transaction but forget to broadcast
+game.fitgd.store.dispatch({
+  type: 'playerRoundState/setTraitTransaction',
+  payload: { /* ... */ }
+});
 this.render(); // Only updates local client!
 // Missing: await game.fitgd.saveImmediate()
+// Result: GM doesn't see the updated plan!
 ```
 
-**✅ CORRECT: Complete pattern**
+**❌ WRONG: Not applying transaction changes on commit**
 ```javascript
-// Store transaction
-game.fitgd.store.dispatch({ type: 'setTransaction', /* ... */ });
+// In _onCommitRoll - forgetting to apply the transaction
+await this._applyTraitTransaction(transaction); // Creates/consolidates traits
+// Missing: position improvement dispatch!
+// Result: Position doesn't improve even though plan showed it would!
+```
 
-// Apply actual state change
-game.fitgd.store.dispatch({ type: 'setPosition', /* ... */ });
-
-// Broadcast to all clients
+**✅ CORRECT: Transaction pattern**
+```javascript
+// Dialog: Store transaction + broadcast (show plan to GM)
+game.fitgd.store.dispatch({ type: 'setTraitTransaction', /* ... */ });
 await game.fitgd.saveImmediate();
-
-// Refresh UI
 refreshSheetsByReduxId([characterId], false);
+
+// Widget on commit: Apply transaction changes
+await this._applyTraitTransaction(transaction);
+if (transaction.positionImprovement) {
+  game.fitgd.store.dispatch({ type: 'setPosition', /* improved position */ });
+}
+await game.fitgd.saveImmediate();
 ```
 
 #### Why This Is Hard to Remember
 
 1. **Local testing works** - Your own client updates immediately, creating false confidence
-2. **Split responsibility** - Transaction vs. actual state creates cognitive overhead
-3. **Async timing** - Easy to forget `await` and move on before broadcast completes
-4. **Silent failure** - Other clients just don't update, no error thrown
+2. **Transaction pattern confusion** - Easy to confuse "showing the plan" (store transaction) with "applying changes" (commit transaction). The transaction stores PENDING changes that only apply later.
+3. **Split responsibility** - Dialog stores plan, widget applies changes on commit - creates cognitive distance
+4. **Async timing** - Easy to forget `await` and move on before broadcast completes
+5. **Silent failure** - Other clients just don't update, no error thrown
 
 #### Prevention Strategy
 

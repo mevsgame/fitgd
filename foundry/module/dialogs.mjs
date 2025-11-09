@@ -986,17 +986,7 @@ export class FlashbackTraitsDialog extends Application {
       return;
     }
 
-    // Get current position from playerRoundState
-    const state = game.fitgd.store.getState();
-    const playerState = state.playerRoundState.byCharacterId[this.characterId];
-    const currentPosition = playerState?.position || 'risky';
-
-    // Calculate improved position
-    let improvedPosition = currentPosition;
-    if (currentPosition === 'desperate') improvedPosition = 'risky';
-    else if (currentPosition === 'risky') improvedPosition = 'controlled';
-
-    // Dispatch trait transaction to Redux
+    // Dispatch trait transaction to Redux (pending changes)
     game.fitgd.store.dispatch({
       type: 'playerRoundState/setTraitTransaction',
       payload: {
@@ -1004,30 +994,19 @@ export class FlashbackTraitsDialog extends Application {
         transaction: {
           mode: 'existing',
           selectedTraitId: this.selectedTraitId,
-          positionImprovement: true, // Using trait improves position
+          positionImprovement: true, // Using trait will improve position
           momentumCost: 1, // Flashback costs 1M
         },
       },
     });
 
-    // CRITICAL: Actually update the position in Redux
-    if (improvedPosition !== currentPosition) {
-      game.fitgd.store.dispatch({
-        type: 'playerRoundState/setPosition',
-        payload: {
-          characterId: this.characterId,
-          position: improvedPosition,
-        },
-      });
-    }
-
-    // Broadcast to all clients
+    // Broadcast to all clients (GM needs to see the updated plan)
     await game.fitgd.saveImmediate();
 
-    // Re-render widget
+    // Re-render widget to show updated plan
     refreshSheetsByReduxId([this.characterId], false);
 
-    ui.notifications.info('Trait selected - will improve position (costs 1M)');
+    ui.notifications.info('Trait selected - will improve position on roll (costs 1M)');
   }
 
   /**
@@ -1054,17 +1033,7 @@ export class FlashbackTraitsDialog extends Application {
       return;
     }
 
-    // Get current position from playerRoundState
-    const state = game.fitgd.store.getState();
-    const playerState = state.playerRoundState.byCharacterId[this.characterId];
-    const currentPosition = playerState?.position || 'risky';
-
-    // Calculate improved position
-    let improvedPosition = currentPosition;
-    if (currentPosition === 'desperate') improvedPosition = 'risky';
-    else if (currentPosition === 'risky') improvedPosition = 'controlled';
-
-    // Dispatch trait transaction to Redux
+    // Dispatch trait transaction to Redux (pending changes)
     game.fitgd.store.dispatch({
       type: 'playerRoundState/setTraitTransaction',
       payload: {
@@ -1082,21 +1051,10 @@ export class FlashbackTraitsDialog extends Application {
       },
     });
 
-    // CRITICAL: Actually update the position in Redux
-    if (improvedPosition !== currentPosition) {
-      game.fitgd.store.dispatch({
-        type: 'playerRoundState/setPosition',
-        payload: {
-          characterId: this.characterId,
-          position: improvedPosition,
-        },
-      });
-    }
-
-    // Broadcast to all clients
+    // Broadcast to all clients (GM needs to see the updated plan)
     await game.fitgd.saveImmediate();
 
-    // Re-render widget
+    // Re-render widget to show updated plan
     refreshSheetsByReduxId([this.characterId], false);
 
     ui.notifications.info(`New trait "${newTraitName}" will be created on roll (costs 1M)`);
@@ -1131,17 +1089,7 @@ export class FlashbackTraitsDialog extends Application {
       return;
     }
 
-    // Get current position from playerRoundState
-    const state = game.fitgd.store.getState();
-    const playerState = state.playerRoundState.byCharacterId[this.characterId];
-    const currentPosition = playerState?.position || 'risky';
-
-    // Calculate improved position
-    let improvedPosition = currentPosition;
-    if (currentPosition === 'desperate') improvedPosition = 'risky';
-    else if (currentPosition === 'risky') improvedPosition = 'controlled';
-
-    // Dispatch trait transaction to Redux
+    // Dispatch trait transaction to Redux (pending changes)
     game.fitgd.store.dispatch({
       type: 'playerRoundState/setTraitTransaction',
       payload: {
@@ -1162,24 +1110,13 @@ export class FlashbackTraitsDialog extends Application {
       },
     });
 
-    // CRITICAL: Actually update the position in Redux
-    if (improvedPosition !== currentPosition) {
-      game.fitgd.store.dispatch({
-        type: 'playerRoundState/setPosition',
-        payload: {
-          characterId: this.characterId,
-          position: improvedPosition,
-        },
-      });
-    }
-
-    // Broadcast to all clients
+    // Broadcast to all clients (GM needs to see the updated plan)
     await game.fitgd.saveImmediate();
 
-    // Re-render widget
+    // Re-render widget to show updated plan
     refreshSheetsByReduxId([this.characterId], false);
 
-    ui.notifications.info(`Traits consolidated into "${newTraitName}" (costs 1M)`);
+    ui.notifications.info(`Traits will be consolidated into "${newTraitName}" on roll (costs 1M)`);
   }
 }
 
