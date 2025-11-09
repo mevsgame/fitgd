@@ -13,7 +13,7 @@ import {
   selectCanUseRally,
   selectHarmClocksWithStatus,
   selectIsDying,
-} from '../dist/fitgd-core.es.js';
+} from '../../dist/fitgd-core.es.js';
 
 /* -------------------------------------------- */
 /*  Player Action Widget Application            */
