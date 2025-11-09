@@ -27,6 +27,45 @@ export class PlayerActionWidget extends Application {
     this.character = null;
     this.crew = null;
     this.playerState = null;
+    this.storeUnsubscribe = null; // Will store the unsubscribe function
+  }
+
+  /** @override */
+  async _render(force, options) {
+    await super._render(force, options);
+
+    // Subscribe to Redux store changes for real-time updates
+    if (!this.storeUnsubscribe) {
+      let previousState = game.fitgd.store.getState();
+
+      this.storeUnsubscribe = game.fitgd.store.subscribe(() => {
+        const currentState = game.fitgd.store.getState();
+        const currentPlayerState = currentState.playerRoundState.byCharacterId[this.characterId];
+        const previousPlayerState = previousState.playerRoundState.byCharacterId[this.characterId];
+
+        // Only re-render if this character's state actually changed
+        if (currentPlayerState !== previousPlayerState) {
+          console.log(`FitGD | Widget detected state change for ${this.characterId}, refreshing...`);
+          this.render(false); // Soft refresh (no full re-render)
+        }
+
+        previousState = currentState;
+      });
+
+      console.log(`FitGD | Widget subscribed to store updates for ${this.characterId}`);
+    }
+  }
+
+  /** @override */
+  async close(options) {
+    // Unsubscribe from store updates
+    if (this.storeUnsubscribe) {
+      this.storeUnsubscribe();
+      this.storeUnsubscribe = null;
+      console.log(`FitGD | Widget unsubscribed from store updates for ${this.characterId}`);
+    }
+
+    return super.close(options);
   }
 
   /** @override */

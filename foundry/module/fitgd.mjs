@@ -387,9 +387,19 @@ Hooks.on('updateCombat', async function(combat, updateData, options, userId) {
   });
 
   if (isOwner || isGM) {
-    console.log(`FitGD | Opening Player Action Widget for character ${characterId}`);
-    const widget = new PlayerActionWidget(characterId);
-    widget.render(true);
+    // Check if widget already exists for this character
+    const existingWidget = Object.values(ui.windows).find(
+      app => app instanceof PlayerActionWidget && app.characterId === characterId
+    );
+
+    if (existingWidget) {
+      console.log(`FitGD | Refreshing existing Player Action Widget for character ${characterId}`);
+      existingWidget.render(true); // Just refresh existing widget
+    } else {
+      console.log(`FitGD | Creating new Player Action Widget for character ${characterId}`);
+      const widget = new PlayerActionWidget(characterId);
+      widget.render(true);
+    }
   } else {
     console.log(`FitGD | Widget NOT shown - user is not owner or GM`);
   }
