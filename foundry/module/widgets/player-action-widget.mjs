@@ -264,39 +264,51 @@ export class PlayerActionWidget extends Application {
   /**
    * Handle GM position change
    */
-  _onPositionChange(event) {
+  async _onPositionChange(event) {
     const position = event.currentTarget.value;
 
+    // Dispatch Redux action
     game.fitgd.store.dispatch({
-      type: 'playerRoundState/setActionPlan',
+      type: 'playerRoundState/setPosition',
       payload: {
         characterId: this.characterId,
-        action: this.playerState?.selectedAction,
         position,
-        effect: this.playerState?.effect || 'standard',
       },
     });
 
-    this.render();
+    // Broadcast to all clients
+    await game.fitgd.saveImmediate();
+
+    // Post chat message
+    ChatMessage.create({
+      content: `GM set position to <strong>${position.charAt(0).toUpperCase() + position.slice(1)}</strong> for ${this.character.name}`,
+      speaker: ChatMessage.getSpeaker(),
+    });
   }
 
   /**
    * Handle GM effect change
    */
-  _onEffectChange(event) {
+  async _onEffectChange(event) {
     const effect = event.currentTarget.value;
 
+    // Dispatch Redux action
     game.fitgd.store.dispatch({
-      type: 'playerRoundState/setActionPlan',
+      type: 'playerRoundState/setEffect',
       payload: {
         characterId: this.characterId,
-        action: this.playerState?.selectedAction,
-        position: this.playerState?.position || 'risky',
         effect,
       },
     });
 
-    this.render();
+    // Broadcast to all clients
+    await game.fitgd.saveImmediate();
+
+    // Post chat message
+    ChatMessage.create({
+      content: `GM set effect to <strong>${effect.charAt(0).toUpperCase() + effect.slice(1)}</strong> for ${this.character.name}`,
+      speaker: ChatMessage.getSpeaker(),
+    });
   }
 
   /**
