@@ -336,9 +336,18 @@ Hooks.on('combatStart', async function(combat, updateData) {
 
 /**
  * When a turn starts, show the Player Action Widget for the active combatant
+ *
+ * NOTE: Using 'updateCombat' instead of 'combatTurn' because 'combatTurn' only
+ * fires on the client that initiated the turn change (usually the GM), not on
+ * all connected clients. 'updateCombat' fires on ALL clients when combat data changes.
  */
-Hooks.on('combatTurn', async function(combat, updateData, updateOptions) {
-  console.log(`FitGD | combatTurn hook fired for user: ${game.user.name} (${game.user.id}), isGM: ${game.user.isGM}`);
+Hooks.on('updateCombat', async function(combat, updateData, options, userId) {
+  // Only trigger when the turn actually changes (not for other combat updates)
+  if (!updateData.turn && updateData.turn !== 0) {
+    return; // Not a turn change, ignore
+  }
+
+  console.log(`FitGD | updateCombat (turn change) hook fired for user: ${game.user.name} (${game.user.id}), isGM: ${game.user.isGM}`);
 
   const activeCombatant = combat.combatant;
   if (!activeCombatant || !activeCombatant.actor) {
