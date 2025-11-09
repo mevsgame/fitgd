@@ -57,6 +57,16 @@ interface SetActionPlanPayload {
   effect: Effect;
 }
 
+interface SetPositionPayload {
+  characterId: string;
+  position: Position;
+}
+
+interface SetEffectPayload {
+  characterId: string;
+  effect: Effect;
+}
+
 interface SetImprovementsPayload {
   characterId: string;
   selectedTraitId?: string;
@@ -180,6 +190,40 @@ const playerRoundStateSlice = createSlice({
     },
 
     /**
+     * Set position (GM control)
+     */
+    setPosition: (state, action: PayloadAction<SetPositionPayload>) => {
+      const { characterId, position } = action.payload;
+      const currentState = state.byCharacterId[characterId];
+
+      if (!currentState) {
+        throw new Error(`No state found for character ${characterId}`);
+      }
+
+      state.byCharacterId[characterId] = {
+        ...currentState,
+        position,
+      };
+    },
+
+    /**
+     * Set effect (GM control)
+     */
+    setEffect: (state, action: PayloadAction<SetEffectPayload>) => {
+      const { characterId, effect } = action.payload;
+      const currentState = state.byCharacterId[characterId];
+
+      if (!currentState) {
+        throw new Error(`No state found for character ${characterId}`);
+      }
+
+      state.byCharacterId[characterId] = {
+        ...currentState,
+        effect,
+      };
+    },
+
+    /**
      * Set improvements (traits, equipment, push, flashback)
      */
     setImprovements: (state, action: PayloadAction<SetImprovementsPayload>) => {
@@ -281,6 +325,8 @@ export const {
   transitionState,
   setActivePlayer,
   setActionPlan,
+  setPosition,
+  setEffect,
   setImprovements,
   setRollResult,
   setConsequence,
