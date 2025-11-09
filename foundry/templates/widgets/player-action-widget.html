@@ -15,20 +15,33 @@
 
       {{#if playerState.selectedAction}}
       <div class="plan-summary">
-        <div class="plan-line"><strong>Action:</strong> {{capitalize playerState.selectedAction}} ({{lookup character.actionDots playerState.selectedAction}}d)</div>
-        {{#if playerState.pushed}}
-        <div class="plan-line">• Push for +1 Dice (costs 1M)</div>
-        {{/if}}
-        {{#if playerState.selectedTraitId}}
-        <div class="plan-line">• Using trait ({{playerState.selectedTraitId}})</div>
-        {{/if}}
-        {{#if playerState.equippedForAction.length}}
-        <div class="plan-line">• Equipped items: {{playerState.equippedForAction.length}}</div>
-        {{/if}}
-        {{#if playerState.flashbackApplied}}
-        <div class="plan-line">• Flashback applied</div>
-        {{/if}}
-        <div class="plan-line total"><strong>Total Dice Pool: {{dicePool}}d6</strong></div>
+        <h4>Action Plan:</h4>
+        <div class="plan-box">
+          <div class="plan-line"><strong>Action:</strong> {{capitalize playerState.selectedAction}} ({{lookup character.actionDots playerState.selectedAction}}d base)</div>
+          <div class="plan-line"><strong>Position:</strong> {{uppercase (default playerState.position "RISKY")}} → {{uppercase (default playerState.position "RISKY")}}</div>
+          <div class="plan-line"><strong>Effect:</strong> {{uppercase (default playerState.effect "STANDARD")}} → {{uppercase (default playerState.effect "STANDARD")}}</div>
+
+          {{#if improvements.length}}
+          <div class="plan-line improvements">
+            <strong>Improvements:</strong>
+            <ul>
+              {{#each improvements}}
+              <li>{{this}}</li>
+              {{/each}}
+            </ul>
+          </div>
+          {{/if}}
+
+          <div class="plan-line total">
+            <strong>TOTAL DICE POOL: {{dicePool}}d6</strong>
+          </div>
+
+          {{#if momentumCost}}
+          <div class="plan-line momentum-cost">
+            <strong>Momentum Cost:</strong> -{{momentumCost}}M ({{momentum}}→{{subtract momentum momentumCost}})
+          </div>
+          {{/if}}
+        </div>
       </div>
       {{else}}
       <p class="waiting">⏳ Waiting for player to select an action...</p>

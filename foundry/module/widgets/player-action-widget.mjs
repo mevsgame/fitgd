@@ -631,7 +631,7 @@ export class PlayerActionWidget extends Application {
       game.fitgd.api.crew.addMomentum({ crewId: this.crewId, amount: momentumGain });
     }
 
-    // Transition to APPLYING_EFFECTS
+    // Transition to APPLYING_EFFECTS then TURN_COMPLETE
     game.fitgd.store.dispatch({
       type: 'playerRoundState/transitionState',
       payload: {
@@ -640,8 +640,19 @@ export class PlayerActionWidget extends Application {
       },
     });
 
-    // End turn
-    this._endTurn();
+    // Give a brief moment for UI to update, then complete turn
+    setTimeout(() => {
+      game.fitgd.store.dispatch({
+        type: 'playerRoundState/transitionState',
+        payload: {
+          characterId: this.characterId,
+          newState: 'TURN_COMPLETE',
+        },
+      });
+
+      // Close widget after completing
+      setTimeout(() => this.close(), 500);
+    }, 500);
   }
 
   /**
