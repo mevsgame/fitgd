@@ -925,19 +925,42 @@ async function receiveCommandsFromSocket(data) {
     if (data.playerRoundState) {
       console.log(`FitGD | Applying received playerRoundState:`, data.playerRoundState);
 
-      // Merge received playerRoundState into local state
       const currentState = game.fitgd.store.getState();
-      for (const [characterId, playerState] of Object.entries(data.playerRoundState.byCharacterId)) {
-        // Only update if different from current state
-        const currentPlayerState = currentState.playerRoundState.byCharacterId[characterId];
-        if (JSON.stringify(currentPlayerState) !== JSON.stringify(playerState)) {
-          game.fitgd.store.dispatch({
-            type: 'playerRoundState/initializePlayerState',
-            payload: { characterId }
-          });
 
-          // Update with received state
-          Object.assign(game.fitgd.store.getState().playerRoundState.byCharacterId[characterId], playerState);
+      // Update each character's playerRoundState by dispatching actions
+      for (const [characterId, receivedPlayerState] of Object.entries(data.playerRoundState.byCharacterId)) {
+        const currentPlayerState = currentState.playerRoundState.byCharacterId[characterId];
+
+        // Skip if identical (avoid unnecessary updates)
+        if (JSON.stringify(currentPlayerState) === JSON.stringify(receivedPlayerState)) {
+          continue;
+        }
+
+        // Dispatch individual property updates
+        if (receivedPlayerState.position && receivedPlayerState.position !== currentPlayerState?.position) {
+          game.fitgd.store.dispatch({
+            type: 'playerRoundState/setPosition',
+            payload: { characterId, position: receivedPlayerState.position }
+          });
+        }
+
+        if (receivedPlayerState.effect && receivedPlayerState.effect !== currentPlayerState?.effect) {
+          game.fitgd.store.dispatch({
+            type: 'playerRoundState/setEffect',
+            payload: { characterId, effect: receivedPlayerState.effect }
+          });
+        }
+
+        if (receivedPlayerState.selectedAction && receivedPlayerState.selectedAction !== currentPlayerState?.selectedAction) {
+          game.fitgd.store.dispatch({
+            type: 'playerRoundState/setActionPlan',
+            payload: {
+              characterId,
+              action: receivedPlayerState.selectedAction,
+              position: receivedPlayerState.position || 'risky',
+              effect: receivedPlayerState.effect || 'standard'
+            }
+          });
         }
       }
 
