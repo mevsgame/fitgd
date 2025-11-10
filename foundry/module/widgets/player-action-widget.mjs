@@ -721,6 +721,18 @@ export class PlayerActionWidget extends Application {
       },
     });
 
+    // Clear GM approval (consumed by the roll)
+    game.fitgd.store.dispatch({
+      type: 'playerRoundState/setGmApproved',
+      payload: {
+        characterId: this.characterId,
+        approved: false,
+      },
+    });
+
+    // Broadcast state changes
+    await game.fitgd.saveImmediate();
+
     // Transition based on outcome
     if (outcome === 'critical' || outcome === 'success') {
       game.fitgd.store.dispatch({
