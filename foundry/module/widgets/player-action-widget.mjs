@@ -778,9 +778,17 @@ export class PlayerActionWidget extends Application {
 
       // CRITICAL: Broadcast the state transition
       await game.fitgd.saveImmediate();
-      console.log(`FitGD | CONSEQUENCE_CHOICE broadcast complete`);
+      console.log(`FitGD | CONSEQUENCE_CHOICE broadcast complete, state should now be synced`);
 
-      this.render();
+      // Force a render to show consequence UI
+      // Note: Redux subscription also triggers a render, but we force one here to be sure
+      try {
+        console.log(`FitGD | Forcing widget render after CONSEQUENCE_CHOICE`);
+        await this.render(true);
+        console.log(`FitGD | Widget render complete`);
+      } catch (error) {
+        console.error(`FitGD | Error rendering widget after CONSEQUENCE_CHOICE:`, error);
+      }
     }
   }
 

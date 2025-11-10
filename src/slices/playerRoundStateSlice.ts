@@ -180,8 +180,15 @@ const playerRoundStateSlice = createSlice({
       if (currentState) {
         // Only reset to DECISION_PHASE if player is idle/waiting or turn just completed
         if (currentState.state === 'IDLE_WAITING' || currentState.state === 'TURN_COMPLETE') {
+          // Clear any leftover roll data when starting a new turn
           currentState.state = 'DECISION_PHASE';
           currentState.stateEnteredAt = Date.now();
+          currentState.rollResult = undefined;
+          currentState.outcome = undefined;
+          currentState.dicePool = undefined;
+          currentState.consequenceType = undefined;
+          currentState.consequenceValue = undefined;
+          currentState.momentumGain = undefined;
         }
         // Otherwise, keep current state (player is in middle of their turn)
       } else {
