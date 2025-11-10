@@ -1542,6 +1542,381 @@ await game.fitgd.saveImmediate();
 
 ---
 
+### Foundry Application Render Lifecycle & Concurrent Render Blocking (CRITICAL)
+
+**Date:** 2025-11-10
+**Issue:** Player action widget stuck at "ROLLING..." screen after failed rolls, consequence dialog never appeared
+
+This was a multi-day debugging session that revealed critical issues with both debugging methodology AND architectural design.
+
+---
+
+## ⚠️ DEBUGGING PRINCIPLES - NEVER VIOLATE THESE ⚠️
+
+### 1. NEVER Assume a Fix Worked Without User Confirmation
+
+**What happened:** Multiple times during debugging, I made changes and stated "this should fix it" or explained why the fix would work, without waiting for user confirmation.
+
+**User feedback:** "Not sure what you did but problem persists" - happened MULTIPLE times
+
+**Why this is dangerous:**
+- Creates false confidence
+- Wastes user's time testing unverified fixes
+- Leads to compounding errors built on false assumptions
+- Makes debugging harder because you're not sure which change actually worked
+
+**CORRECT approach:**
+```
+1. Make a change
+2. Commit and push
+3. Say: "I've pushed a potential fix. Please test and let me know if the issue persists."
+4. WAIT for user confirmation before proceeding
+5. If still broken, gather MORE diagnostic data before next attempt
+```
+
+**NEVER say:** "This fixes it" or "The issue should be resolved now"
+**ALWAYS say:** "Please test this and report back what you observe"
+
+---
+
+### 2. NEVER Use Hacky Workarounds When You Don't Understand the Problem
+
+**What happened:** I added `setTimeout()` to delay rendering, thinking it was a timing issue.
+
+**User response:** "So you ignored what I told you about possibly wrong approach, and apart from that you use a hacky wait because you don't understand what's going on?"
+
+**Why this was wrong:**
+- `setTimeout` is a band-aid that masks symptoms without fixing root cause
+- Shows I didn't understand the Foundry Application render lifecycle
+- User had already hinted this was the wrong approach
+- Wasted time on a non-solution
+
+**What I SHOULD have done:**
+1. **Add diagnostic logging FIRST** to understand what's actually happening
+2. Read Foundry Application class source code to understand `_state` and render lifecycle
+3. Ask user for more detailed console output
+4. Understand the problem BEFORE attempting a fix
+
+**CORRECT debugging process:**
+```
+Problem → Add Diagnostic Logging → Analyze Logs → Understand Root Cause → Implement Fix → Test
+```
+
+**WRONG debugging process:**
+```
+Problem → Guess at Solution → Try Hack → Still Broken → Try Another Hack → ...
+```
+
+---
+
+### 3. When in Doubt, Add Diagnostic Logging IMMEDIATELY
+
+**What worked:** Once I added logging to `render()`, `_render()`, and `getData()`, the problem became obvious:
+
+```javascript
+Widget.render() called with force=true, _state=1  // ← AHA! _state=1 means RENDERING
+Widget._render() called
+[NO getData() log]  // ← Blocked because already rendering
+```
+
+**Lesson:** If something isn't working and you don't know why, **STOP** trying fixes and **ADD LOGGING** first.
+
+Diagnostic logging should show:
+- Method entry/exit
+- State values at key points
+- Conditional branches taken
+- Async operation boundaries
+
+---
+
+## The Technical Problem: Foundry Application Render Lifecycle
+
+### Understanding Foundry's `_state` Property
+
+Foundry's `Application` class tracks rendering state with an internal `_state` property:
+
+```javascript
+Application.RENDER_STATES = {
+  CLOSED: 0,
+  NONE: 0,
+  RENDERING: 1,
+  RENDERED: 2,
+  ERROR: 3
+};
+```
+
+**CRITICAL RULE:** When `_state=1` (RENDERING), Foundry **blocks** concurrent render attempts. Calling `render()` while already rendering returns early without calling `getData()` or updating the template.
+
+### The Root Cause: Render Race Conditions
+
+**Pattern 1: Manual Render During Async Operation**
+
+```javascript
+// ❌ WRONG
+async _onRoll() {
+  dispatch(transitionState('ROLLING'));
+  await saveImmediate();  // Triggers subscription render
+
+  this.render();  // ← Sets _state=1 (RENDERING)
+
+  // Async dice roll happens...
+  const result = await this._rollDice();  // ← Still _state=1!
+
+  dispatch(setRollResult(result));
+  dispatch(transitionState('CONSEQUENCE_CHOICE'));
+  await saveImmediate();  // ← Subscription tries to render, but _state=1, BLOCKED!
+}
+```
+
+**Why this fails:**
+1. Manual `this.render()` sets `_state=1`
+2. Async operations continue while render is in progress
+3. Redux subscription fires for state change
+4. Subscription calls `this.render(true)`, but Foundry sees `_state=1` and returns early
+5. Template never updates with new state
+
+**✅ CORRECT: Let Redux subscription handle ALL rendering**
+
+```javascript
+async _onRoll() {
+  dispatch(transitionState('ROLLING'));
+  await saveImmediate();  // Subscription handles render
+
+  // NO manual render() call here!
+
+  const result = await this._rollDice();
+
+  dispatch(setRollResult(result));
+  dispatch(transitionState('CONSEQUENCE_CHOICE'));
+  await saveImmediate();  // Subscription handles render
+}
+```
+
+---
+
+**Pattern 2: Multiple Broadcasts in Quick Succession**
+
+```javascript
+// ❌ WRONG
+async _onRoll() {
+  // First batch of changes
+  dispatch(setRollResult(result));
+  dispatch(setGmApproved(false));
+  await saveImmediate();  // ← Broadcast #1, triggers render #1
+
+  // Second batch of changes
+  dispatch(transitionState('CONSEQUENCE_CHOICE'));
+  await saveImmediate();  // ← Broadcast #2, triggers render #2 WHILE #1 still rendering!
+}
+```
+
+**Why this fails:**
+1. First `saveImmediate()` triggers Redux subscription → `render()` starts, `_state=1`
+2. During async broadcast/render, second `saveImmediate()` completes
+3. Second subscription fires, calls `render(true)`, but `_state=1` → BLOCKED!
+
+**✅ CORRECT: Batch all dispatches before single broadcast**
+
+```javascript
+async _onRoll() {
+  // Batch ALL changes together
+  dispatch(setRollResult(result));
+  dispatch(setGmApproved(false));
+  dispatch(transitionState('CONSEQUENCE_CHOICE'));
+
+  // Single broadcast with complete state
+  await saveImmediate();  // ← Only ONE render cycle with all changes
+}
+```
+
+---
+
+## Universal Pattern for State Changes in Foundry Widgets
+
+**ALWAYS follow this pattern:**
+
+```javascript
+async handleAction() {
+  // 1. Batch all Redux dispatches together
+  dispatch(action1());
+  dispatch(action2());
+  dispatch(action3());
+
+  // 2. Single broadcast (triggers single render)
+  await game.fitgd.saveImmediate();
+
+  // 3. NO manual this.render() calls!
+  //    Redux subscription handles all rendering
+}
+```
+
+**When Redux subscription fires:**
+```javascript
+store.subscribe(() => {
+  const currentState = store.getState();
+  const previousState = previousStateSnapshot;
+
+  if (currentState.playerRoundState !== previousState.playerRoundState) {
+    this.render(true);  // ← This is the ONLY render() call needed
+  }
+
+  previousStateSnapshot = currentState;
+});
+```
+
+---
+
+## Architectural Issues and Potential Unit Tests
+
+### Issue 1: No Clear Separation Between "Dispatch" and "Broadcast"
+
+**Problem:** It's too easy to forget `saveImmediate()` after `dispatch()`. They feel like separate operations but must always happen together in Foundry code.
+
+**Potential solution:** Create a wrapper that combines them:
+
+```javascript
+// Foundry integration helper
+async function dispatchAndBroadcast(action) {
+  game.fitgd.store.dispatch(action);
+  await game.fitgd.saveImmediate();
+}
+
+// Usage
+await dispatchAndBroadcast(setRollResult(result));
+await dispatchAndBroadcast(transitionState('CONSEQUENCE_CHOICE'));
+```
+
+**Unit test approach:**
+```javascript
+describe('dispatchAndBroadcast', () => {
+  it('should dispatch action and trigger broadcast', async () => {
+    const mockDispatch = jest.fn();
+    const mockBroadcast = jest.fn();
+
+    await dispatchAndBroadcast(mockAction);
+
+    expect(mockDispatch).toHaveBeenCalledWith(mockAction);
+    expect(mockBroadcast).toHaveBeenCalled();
+  });
+});
+```
+
+---
+
+### Issue 2: Render Race Conditions Not Caught by Tests
+
+**Problem:** The `_state=1` blocking behavior is a Foundry Application class implementation detail. Our core Redux logic works fine, but the Foundry integration breaks.
+
+**Potential solution:** Mock Foundry's Application class and test render blocking:
+
+```javascript
+describe('Widget render lifecycle', () => {
+  it('should not trigger concurrent renders', async () => {
+    const widget = new PlayerActionWidget(characterId);
+
+    // Simulate: render starts (_state=1)
+    widget._state = 1;
+
+    // Redux subscription fires
+    const subscription = widget._getSubscription();
+    subscription();  // Should NOT call render() if _state=1
+
+    expect(widget.render).not.toHaveBeenCalled();
+  });
+
+  it('should batch state changes before rendering', async () => {
+    const widget = new PlayerActionWidget(characterId);
+    const renderSpy = jest.spyOn(widget, 'render');
+
+    // Multiple dispatches
+    dispatch(action1());
+    dispatch(action2());
+    dispatch(action3());
+    await saveImmediate();
+
+    // Should only trigger ONE render
+    expect(renderSpy).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+---
+
+### Issue 3: State Transition Validation Not Tested
+
+**Problem:** We have `isValidTransition()` in types, but no integration tests ensuring Foundry code follows the state machine.
+
+**Potential solution:** State machine integration tests:
+
+```javascript
+describe('Player round state machine', () => {
+  it('should follow valid ROLLING → CONSEQUENCE_CHOICE transition', () => {
+    const state = createInitialState('ROLLING');
+
+    const nextState = reducer(state, transitionState('CONSEQUENCE_CHOICE'));
+
+    expect(nextState.state).toBe('CONSEQUENCE_CHOICE');
+  });
+
+  it('should reject invalid ROLLING → DECISION_PHASE transition', () => {
+    const state = createInitialState('ROLLING');
+
+    expect(() => {
+      reducer(state, transitionState('DECISION_PHASE'));
+    }).toThrow('Invalid state transition');
+  });
+});
+```
+
+---
+
+## Checklist for Future Widget Development
+
+When creating or debugging Foundry widgets that use Redux:
+
+- [ ] **Subscribe to Redux store in `_render()`, not constructor**
+- [ ] **Let Redux subscription handle ALL render() calls** - never call `this.render()` manually in event handlers
+- [ ] **Batch all `dispatch()` calls before single `saveImmediate()`** - never interleave them
+- [ ] **Add diagnostic logging to `render()`, `_render()`, and `getData()`** during development
+- [ ] **Test with GM + Player clients** - don't trust local-only testing
+- [ ] **Never use setTimeout as a fix** - it's always a symptom of not understanding the problem
+- [ ] **Never assume a fix worked** - always wait for user confirmation
+- [ ] **Add logging BEFORE trying fixes** when the problem isn't clear
+
+---
+
+## Summary: What Went Wrong and How to Prevent It
+
+### What Went Wrong (In Order)
+1. ✗ Assumed missing broadcasts were the issue → added broadcasts → still broken
+2. ✗ Fixed `setActivePlayer` state machine logic → still broken
+3. ✗ **Used setTimeout hack** → user called me out, still broken
+4. ✗ Changed `render(false)` to `render(true)` → still broken
+5. ✓ **Added diagnostic logging** → saw `_state=1` blocking
+6. ✗ Removed manual `render()` calls → still broken (different reason)
+7. ✓ **Batched dispatches before broadcast** → FINALLY FIXED
+
+### Key Lessons
+1. **Diagnostic logging should be FIRST step**, not last resort
+2. **Never assume fixes worked** - always confirm with user
+3. **Never use hacks** (setTimeout, etc.) when you don't understand the problem
+4. **Understand the platform** (Foundry Application lifecycle) before implementing features
+5. **Batch Redux dispatches** before broadcasts to avoid render race conditions
+6. **Let subscriptions handle rendering** - manual render() calls cause problems
+
+### Prevention
+- Read Foundry Application source code before building complex widgets
+- Add comprehensive diagnostic logging during development, not just when debugging
+- Create helper functions that enforce correct patterns (e.g., `dispatchAndBroadcast`)
+- Write integration tests that mock Foundry's render lifecycle
+- Always test with multiple clients (GM + Player) before declaring victory
+
+---
+
+**Key Principle:** When debugging complex integration issues, invest time in UNDERSTANDING the platform's internals (like Foundry's render lifecycle) rather than guessing at solutions. Diagnostic logging reveals truth; guesses just waste time.
+
+---
+
 ## Next Steps
 
 1. **Answer Phase 1 questions** above
