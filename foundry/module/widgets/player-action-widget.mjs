@@ -780,15 +780,13 @@ export class PlayerActionWidget extends Application {
       await game.fitgd.saveImmediate();
       console.log(`FitGD | CONSEQUENCE_CHOICE broadcast complete, state should now be synced`);
 
-      // Force a render to show consequence UI
-      // Note: Redux subscription also triggers a render, but we force one here to be sure
-      try {
-        console.log(`FitGD | Forcing widget render after CONSEQUENCE_CHOICE`);
-        await this.render(true);
-        console.log(`FitGD | Widget render complete`);
-      } catch (error) {
-        console.error(`FitGD | Error rendering widget after CONSEQUENCE_CHOICE:`, error);
-      }
+      // Wait a tick for Redux subscription render to complete, then force a full re-render
+      // The subscription calls render(false), which might not fully re-render
+      // We need render(true) to ensure the template updates with the consequence UI
+      setTimeout(() => {
+        console.log(`FitGD | Forcing widget render (delayed) after CONSEQUENCE_CHOICE`);
+        this.render(true);
+      }, 50);  // Small delay to let subscription render complete first
     }
   }
 
