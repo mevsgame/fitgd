@@ -718,7 +718,8 @@ export class PlayerActionWidget extends Application {
     await game.fitgd.saveImmediate();
     console.log(`FitGD | Transitioned to ROLLING and broadcast`);
 
-    this.render();
+    // NOTE: Don't call this.render() here - Redux subscription will handle it
+    // Calling render() here causes _state=1 (RENDERING), blocking subsequent renders
 
     // Calculate dice pool (state declared at top of function)
     const dicePool = selectDicePool(state, this.characterId);
@@ -856,7 +857,7 @@ export class PlayerActionWidget extends Application {
     // CRITICAL: Broadcast the state transition
     await game.fitgd.saveImmediate();
 
-    this.render();
+    // NOTE: Redux subscription will handle rendering automatically
   }
 
   /**
@@ -894,7 +895,8 @@ export class PlayerActionWidget extends Application {
       },
     });
 
-    this.render();
+    // NOTE: Don't call this.render() here - Redux subscription will handle it
+    // Calling render() blocks subsequent renders during async harm.take() call
 
     // Apply harm - use harm API
     if (segments > 0) {
@@ -989,7 +991,7 @@ export class PlayerActionWidget extends Application {
     // CRITICAL: Broadcast the state transitions
     await game.fitgd.saveImmediate();
 
-    this.render();
+    // NOTE: Redux subscription will handle rendering automatically
   }
 
   /**
