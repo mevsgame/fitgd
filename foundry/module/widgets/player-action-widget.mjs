@@ -640,6 +640,9 @@ export class PlayerActionWidget extends Application {
             });
           }
         }
+
+        // CRITICAL: Broadcast trait changes and position improvement
+        await game.fitgd.saveImmediate();
       } catch (error) {
         console.error('FitGD | Error applying trait transaction:', error);
         ui.notifications.error(`Failed to apply trait changes: ${error.message}`);
@@ -658,8 +661,11 @@ export class PlayerActionWidget extends Application {
 
     this.render();
 
-    // Calculate dice pool using selector
-    const dicePool = selectDicePool(state, this.characterId);
+    // IMPORTANT: Re-fetch state AFTER position improvement to get correct dice pool
+    const updatedState = game.fitgd.store.getState();
+
+    // Calculate dice pool using UPDATED state
+    const dicePool = selectDicePool(updatedState, this.characterId);
 
     // Roll dice using Foundry dice roller
     const rollResult = await this._rollDice(dicePool);
