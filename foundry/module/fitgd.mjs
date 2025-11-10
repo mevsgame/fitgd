@@ -1429,7 +1429,29 @@ function saveCommandHistory() {
 /*  Character Sheet Class                       */
 /* -------------------------------------------- */
 
+/**
+ * FitGD Character Sheet
+ *
+ * Foundry VTT Actor Sheet for character entities. Displays and manages:
+ * - Character traits (with lean-in/rally mechanics)
+ * - Action dots (12 actions, 0-4 dots each)
+ * - Equipment inventory
+ * - Harm clocks (max 3 per character)
+ * - Rally availability
+ *
+ * All state is stored in Redux, fetched via actor's Redux ID flag.
+ * Sheet provides UI for triggering Redux actions (add trait, disable trait, take harm).
+ *
+ * Edit mode allows GM to modify action dots directly.
+ *
+ * @extends ActorSheet
+ */
 class FitGDCharacterSheet extends ActorSheet {
+  /**
+   * Create a new Character Sheet
+   *
+   * @param {...any} args - Arguments passed to ActorSheet constructor
+   */
   constructor(...args) {
     super(...args);
     this.editMode = false; // Track edit mode for action dots
@@ -1968,6 +1990,21 @@ class FitGDCharacterSheet extends ActorSheet {
 /*  Crew Sheet Class                            */
 /* -------------------------------------------- */
 
+/**
+ * FitGD Crew Sheet
+ *
+ * Foundry VTT Actor Sheet for crew entities. Displays and manages:
+ * - Crew members (characters in the crew)
+ * - Momentum pool (0-10, starts at 5)
+ * - Consumable clocks (grenades, stims, etc.)
+ * - Addiction clock (fills when using too many stims)
+ * - Progress clocks (long-term projects, threats, goals)
+ *
+ * All state is stored in Redux, fetched via actor's Redux ID flag.
+ * Sheet provides UI for triggering crew-level actions (spend Momentum, use consumables).
+ *
+ * @extends ActorSheet
+ */
 class FitGDCrewSheet extends ActorSheet {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
@@ -2360,6 +2397,19 @@ class FitGDCrewSheet extends ActorSheet {
 /*  Item Sheet Classes                          */
 /* -------------------------------------------- */
 
+/**
+ * FitGD Trait Item Sheet
+ *
+ * Foundry VTT Item Sheet for trait items. Displays trait details:
+ * - Trait name
+ * - Category (role, background, scar, flashback, grouped)
+ * - Description
+ * - Disabled status (leaned into for Momentum)
+ *
+ * Traits are stored in Redux but can be viewed as Foundry Items.
+ *
+ * @extends ItemSheet
+ */
 class FitGDTraitSheet extends ItemSheet {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
@@ -2371,6 +2421,19 @@ class FitGDTraitSheet extends ItemSheet {
   }
 }
 
+/**
+ * FitGD Equipment Item Sheet
+ *
+ * Foundry VTT Item Sheet for equipment items. Displays equipment details:
+ * - Equipment name
+ * - Tier (accessible, inaccessible, epic)
+ * - Category (weapon, armor, tool, etc.)
+ * - Description
+ *
+ * Equipment is stored in Redux but can be viewed as Foundry Items.
+ *
+ * @extends ItemSheet
+ */
 class FitGDEquipmentSheet extends ItemSheet {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
