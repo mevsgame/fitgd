@@ -23,6 +23,7 @@ import {
 } from './dialogs.mjs';
 import { HistoryManagementConfig } from './history-management.mjs';
 import { PlayerActionWidget } from './widgets/player-action-widget.mjs';
+import { createFoundryReduxBridge } from './foundry-redux-bridge.mjs';
 
 /* -------------------------------------------- */
 /*  Helper Functions                            */
@@ -183,6 +184,20 @@ Hooks.once('init', async function() {
     }
   };
 
+  // Initialize Foundry-Redux Bridge API
+  console.log('FitGD | Creating Foundry-Redux Bridge...');
+  try {
+    game.fitgd.bridge = createFoundryReduxBridge(
+      game.fitgd.store,
+      game.fitgd.saveImmediate
+    );
+    console.log('FitGD | Foundry-Redux Bridge created successfully');
+    console.log('FitGD | Bridge API available at game.fitgd.bridge');
+  } catch (error) {
+    console.error('FitGD | Failed to create Foundry-Redux Bridge:', error);
+    return;
+  }
+
   // Register settings
   registerSystemSettings();
 
@@ -323,17 +338,28 @@ Hooks.on('combatStart', async function(combat, updateData) {
   }
 
   // Initialize player states for all combatants
+  const characterIds = [];
   for (const combatant of combat.combatants) {
     const actor = combatant.actor;
     if (!actor) continue;
 
     const characterId = actor.getFlag('forged-in-the-grimdark', 'reduxId');
     if (characterId) {
-      game.fitgd.store.dispatch({
-        type: 'playerRoundState/initializePlayerState',
-        payload: { characterId },
-      });
+      characterIds.push(characterId);
     }
+  }
+
+  // Use Bridge API to batch all initializations and broadcast once
+  if (characterIds.length > 0) {
+    const actions = characterIds.map(characterId => ({
+      type: 'playerRoundState/initializePlayerState',
+      payload: { characterId },
+    }));
+
+    await game.fitgd.bridge.executeBatch(actions, {
+      affectedReduxIds: characterIds,
+      silent: true // Silent: no sheets to refresh for player round state
+    });
   }
 });
 
@@ -369,10 +395,14 @@ Hooks.on('updateCombat', async function(combat, updateData, options, userId) {
   console.log(`FitGD | Setting active player: ${characterId}`);
 
   // Update Redux state to mark this player as active
-  game.fitgd.store.dispatch({
-    type: 'playerRoundState/setActivePlayer',
-    payload: { characterId },
-  });
+  // Use Bridge API to ensure state propagates to all clients
+  await game.fitgd.bridge.execute(
+    {
+      type: 'playerRoundState/setActivePlayer',
+      payload: { characterId },
+    },
+    { affectedReduxIds: [characterId], silent: true } // Silent: we'll show widget manually below
+  );
 
   // Show the Player Action Widget for this character
   // Only show for the owning player or GM
