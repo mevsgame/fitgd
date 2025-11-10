@@ -1,5 +1,26 @@
 # Forged in the Grimdark - Redux Implementation Plan
 
+## 🚨 IMPORTANT: For Claude Code Sessions
+
+**If you are a new Claude Code session starting work on this project:**
+
+→ **READ [SESSION_START.md](./SESSION_START.md) FIRST** ←
+
+This file contains:
+- Required reading list (conditional based on task)
+- Critical rules that must NEVER be violated
+- Common patterns and quick diagnostics
+- Session checklist
+
+**Key sections to read in THIS document:**
+- "Core Architecture Principles" (below)
+- "Critical Rules (Updated)" (near end)
+- "Implementation Learnings & Debugging Notes" (historical bugs to avoid)
+- "Universal Broadcasting Pattern (CRITICAL)" (Foundry-specific)
+- "SOLUTION: Foundry-Redux Bridge API" (Foundry-specific)
+
+---
+
 ## Project Overview
 
 A **TypeScript + Redux Toolkit** event-sourced state management system for character and crew sheets. Designed to be **Foundry VTT agnostic** but compatible, with full command history for time-travel, undo, and data reconstruction.

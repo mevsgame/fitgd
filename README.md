@@ -73,6 +73,11 @@ game.action.push({ crewId, type: "extra-die" });
 - Complete mission flow examples
 - Foundry VTT integration patterns
 
+## For Claude Code Sessions
+
+**If you are a Claude Code session working on this project:**
+→ Read [SESSION_START.md](./SESSION_START.md) first for required context and critical rules.
+
 ## Architecture
 
 ### Event Sourcing

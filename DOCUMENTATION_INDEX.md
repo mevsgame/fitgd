@@ -8,6 +8,7 @@ Quick reference for all project documentation.
 
 | Document | Purpose |
 |----------|---------|
+| **[SESSION_START.md](./SESSION_START.md)** | ⭐ **START HERE** - Required reading for Claude sessions |
 | [README.md](./README.md) | Project overview, installation, quick start |
 | [DEVELOPMENT.md](./DEVELOPMENT.md) | Development setup, workflow, debugging |
 
@@ -58,8 +59,11 @@ Quick reference for all project documentation.
 
 ### "I want to..."
 
+**...start a new Claude Code session**
+→ **START HERE:** [SESSION_START.md](./SESSION_START.md)
+
 **...understand the Bridge API pattern**
-→ Start here: [foundry/module/BRIDGE_API_QUICK_GUIDE.md](./foundry/module/BRIDGE_API_QUICK_GUIDE.md)
+→ [foundry/module/BRIDGE_API_QUICK_GUIDE.md](./foundry/module/BRIDGE_API_QUICK_GUIDE.md)
 
 **...set up my dev environment**
 → [DEVELOPMENT.md](./DEVELOPMENT.md)
@@ -122,6 +126,7 @@ Quick reference for all project documentation.
 
 ```
 fitgd/
+├── SESSION_START.md                   # ⭐ Required reading for Claude sessions
 ├── README.md                          # Project overview
 ├── CLAUDE.md                          # Architecture & implementation history
 ├── ARCHITECTURAL_ANALYSIS.md          # Architecture audit
