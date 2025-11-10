@@ -1057,6 +1057,65 @@ async function receiveCommandsFromSocket(data) {
             }
           });
         }
+
+        // CRITICAL: Handle state transitions
+        if (receivedPlayerState.state && receivedPlayerState.state !== currentPlayerState?.state) {
+          game.fitgd.store.dispatch({
+            type: 'playerRoundState/transitionState',
+            payload: {
+              characterId,
+              newState: receivedPlayerState.state
+            }
+          });
+        }
+
+        // CRITICAL: Handle roll results (dicePool, rollResult, outcome)
+        if (receivedPlayerState.rollResult || receivedPlayerState.outcome || receivedPlayerState.dicePool !== undefined) {
+          if (JSON.stringify(receivedPlayerState.rollResult) !== JSON.stringify(currentPlayerState?.rollResult) ||
+              receivedPlayerState.outcome !== currentPlayerState?.outcome ||
+              receivedPlayerState.dicePool !== currentPlayerState?.dicePool) {
+            game.fitgd.store.dispatch({
+              type: 'playerRoundState/setRollResult',
+              payload: {
+                characterId,
+                dicePool: receivedPlayerState.dicePool || 0,
+                rollResult: receivedPlayerState.rollResult || [],
+                outcome: receivedPlayerState.outcome
+              }
+            });
+          }
+        }
+
+        // CRITICAL: Handle consequence transactions (NEW in Phase 3)
+        if (JSON.stringify(receivedPlayerState.consequenceTransaction) !== JSON.stringify(currentPlayerState?.consequenceTransaction)) {
+          if (receivedPlayerState.consequenceTransaction) {
+            // Set or update consequence transaction
+            game.fitgd.store.dispatch({
+              type: 'playerRoundState/setConsequenceTransaction',
+              payload: {
+                characterId,
+                transaction: receivedPlayerState.consequenceTransaction
+              }
+            });
+          } else if (currentPlayerState?.consequenceTransaction) {
+            // Clear consequence transaction
+            game.fitgd.store.dispatch({
+              type: 'playerRoundState/clearConsequenceTransaction',
+              payload: { characterId }
+            });
+          }
+        }
+
+        // CRITICAL: Handle stims usage tracking (NEW in Phase 5)
+        if (receivedPlayerState.stimsUsedThisAction !== currentPlayerState?.stimsUsedThisAction) {
+          game.fitgd.store.dispatch({
+            type: 'playerRoundState/setStimsUsed',
+            payload: {
+              characterId,
+              used: receivedPlayerState.stimsUsedThisAction || false
+            }
+          });
+        }
       }
 
       // Update active player if changed

@@ -235,8 +235,8 @@ export const STATE_TRANSITIONS: Record<PlayerRoundStateType, PlayerRoundStateTyp
   RALLY_ROLLING: ['DECISION_PHASE'],
   ASSIST_ROLLING: ['IDLE_WAITING'],
   PROTECT_ACCEPTING: ['IDLE_WAITING'],
-  STIMS_ROLLING: ['ROLLING', 'STIMS_LOCKED'],
-  STIMS_LOCKED: ['ROLLING'],
+  STIMS_ROLLING: ['DECISION_PHASE', 'STIMS_LOCKED'],  // Return to planning after stims
+  STIMS_LOCKED: ['CONSEQUENCE_CHOICE', 'GM_RESOLVING_CONSEQUENCE'],  // Return to consequence state
 };
 
 /**
