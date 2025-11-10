@@ -376,4 +376,118 @@ describe('CharacterAPI', () => {
       expect(availableTraits[0].disabled).toBe(false);
     });
   });
+
+  describe('useRally()', () => {
+    let crewId: string;
+    let characterId: string;
+    let traitId: string;
+
+    beforeEach(() => {
+      // Create crew and character
+      crewId = api.crew.create('Test Crew');
+      characterId = api.character.create({
+        name: 'Test Character',
+        traits: [
+          { name: 'Role', category: 'role', disabled: false },
+          { name: 'Background', category: 'background', disabled: false },
+        ],
+        actionDots: {
+          shoot: 2,
+          command: 2,
+          skirmish: 1,
+          skulk: 1,
+          wreck: 1,
+          finesse: 1,
+          survey: 1,
+          study: 1,
+          tech: 1,
+          attune: 0,
+          consort: 1,
+          sway: 0,
+        },
+      });
+      api.crew.addCharacter({ crewId, characterId });
+
+      // Disable a trait so we can re-enable it
+      const character = api.character.getCharacter(characterId);
+      traitId = character.traits[0].id;
+      api.character.leanIntoTrait({ characterId, traitId, crewId });
+    });
+
+    it('should allow Rally when Momentum is 0-3', () => {
+      // Set Momentum to 3
+      api.crew.setMomentum({ crewId, amount: 3 });
+
+      const result = api.character.useRally({
+        characterId,
+        crewId,
+        traitId,
+        momentumToSpend: 2,
+      });
+
+      expect(result.rallyUsed).toBe(true);
+      expect(result.traitReEnabled).toBe(true);
+      expect(result.momentumSpent).toBe(2);
+      expect(result.newMomentum).toBe(1);
+
+      const character = api.character.getCharacter(characterId);
+      expect(character.rallyAvailable).toBe(false);
+      expect(character.traits.find((t) => t.id === traitId).disabled).toBe(false);
+    });
+
+    it('should reject Rally when Momentum is above 3', () => {
+      // Set Momentum to 4 (above the threshold)
+      api.crew.setMomentum({ crewId, amount: 4 });
+
+      expect(() => {
+        api.character.useRally({
+          characterId,
+          crewId,
+          traitId,
+          momentumToSpend: 1,
+        });
+      }).toThrow('Rally only available at 0-3 Momentum');
+
+      const character = api.character.getCharacter(characterId);
+      expect(character.rallyAvailable).toBe(true); // Should remain available
+    });
+
+    it('should reject Rally when already used', () => {
+      // Set Momentum to 2
+      api.crew.setMomentum({ crewId, amount: 2 });
+
+      // Use Rally once
+      api.character.useRally({
+        characterId,
+        crewId,
+        traitId,
+        momentumToSpend: 1,
+      });
+
+      // Try to use Rally again
+      expect(() => {
+        api.character.useRally({
+          characterId,
+          crewId,
+          momentumToSpend: 1,
+        });
+      }).toThrow('Rally already used this reset');
+    });
+
+    it('should allow Rally without re-enabling a trait', () => {
+      // Set Momentum to 2
+      api.crew.setMomentum({ crewId, amount: 2 });
+
+      const result = api.character.useRally({
+        characterId,
+        crewId,
+        momentumToSpend: 2,
+      });
+
+      expect(result.rallyUsed).toBe(true);
+      expect(result.traitReEnabled).toBe(false);
+      expect(result.momentumSpent).toBe(2);
+      expect(result.newMomentum).toBe(0);
+    });
+  });
 });

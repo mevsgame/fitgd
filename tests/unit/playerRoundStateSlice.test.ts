@@ -114,18 +114,18 @@ describe('playerRoundStateSlice', () => {
       // Initialize and set to DECISION_PHASE
       store.dispatch(setActivePlayer({ characterId }));
 
-      // Transition to ROLL_CONFIRM
+      // Transition to ROLLING (ROLL_CONFIRM state was removed)
       store.dispatch(
         transitionState({
           characterId,
-          newState: 'ROLL_CONFIRM',
+          newState: 'ROLLING',
         })
       );
 
       const state = store.getState().playerRoundState;
       const playerState = state.byCharacterId[characterId];
 
-      expect(playerState.state).toBe('ROLL_CONFIRM');
+      expect(playerState.state).toBe('ROLLING');
       expect(playerState.previousState).toBeDefined();
       expect(playerState.previousState?.state).toBe('DECISION_PHASE');
     });
@@ -162,12 +162,12 @@ describe('playerRoundStateSlice', () => {
       store.dispatch(
         transitionState({
           characterId,
-          newState: 'ROLL_CONFIRM',
+          newState: 'ROLLING',
         })
       );
 
       const playerState = store.getState().playerRoundState.byCharacterId[characterId];
-      expect(playerState.state).toBe('ROLL_CONFIRM');
+      expect(playerState.state).toBe('ROLLING');
       expect(playerState.previousState).toBeDefined();
       expect(playerState.previousState?.state).toBe('DECISION_PHASE');
     });
@@ -308,10 +308,10 @@ describe('playerRoundStateSlice', () => {
       store.dispatch(
         transitionState({
           characterId,
-          newState: 'ROLL_CONFIRM',
+          newState: 'ROLLING',
         })
       );
-      expect(store.getState().playerRoundState.byCharacterId[characterId].state).toBe('ROLL_CONFIRM');
+      expect(store.getState().playerRoundState.byCharacterId[characterId].state).toBe('ROLLING');
 
       store.dispatch(undoState({ characterId }));
 
@@ -396,18 +396,19 @@ describe('playerRoundStateSlice', () => {
 
   describe('state transition validation', () => {
     it('should validate all legal transitions', () => {
-      // Test a few key transitions
+      // Test a few key transitions (ROLL_CONFIRM state removed, DECISION_PHASE goes directly to ROLLING)
       expect(isValidTransition('IDLE_WAITING', 'DECISION_PHASE')).toBe(true);
-      expect(isValidTransition('DECISION_PHASE', 'ROLL_CONFIRM')).toBe(true);
-      expect(isValidTransition('ROLL_CONFIRM', 'ROLLING')).toBe(true);
+      expect(isValidTransition('DECISION_PHASE', 'ROLLING')).toBe(true);
       expect(isValidTransition('ROLLING', 'SUCCESS_COMPLETE')).toBe(true);
       expect(isValidTransition('ROLLING', 'CONSEQUENCE_CHOICE')).toBe(true);
+      expect(isValidTransition('DECISION_PHASE', 'RALLY_ROLLING')).toBe(true);
     });
 
     it('should reject illegal transitions', () => {
       expect(isValidTransition('IDLE_WAITING', 'ROLLING')).toBe(false);
       expect(isValidTransition('DECISION_PHASE', 'SUCCESS_COMPLETE')).toBe(false);
-      expect(isValidTransition('ROLL_CONFIRM', 'CONSEQUENCE_CHOICE')).toBe(false);
+      expect(isValidTransition('ROLLING', 'TURN_COMPLETE')).toBe(false);
+      expect(isValidTransition('SUCCESS_COMPLETE', 'CONSEQUENCE_CHOICE')).toBe(false);
     });
   });
 
@@ -430,16 +431,7 @@ describe('playerRoundStateSlice', () => {
       );
       expect(store.getState().playerRoundState.byCharacterId[characterId].state).toBe('DECISION_PHASE');
 
-      // 3. Transition to ROLL_CONFIRM
-      store.dispatch(
-        transitionState({
-          characterId,
-          newState: 'ROLL_CONFIRM',
-        })
-      );
-      expect(store.getState().playerRoundState.byCharacterId[characterId].state).toBe('ROLL_CONFIRM');
-
-      // 4. Commit roll (ROLL_CONFIRM -> ROLLING)
+      // 3. Commit roll (DECISION_PHASE -> ROLLING directly, ROLL_CONFIRM removed)
       store.dispatch(
         transitionState({
           characterId,
@@ -448,7 +440,7 @@ describe('playerRoundStateSlice', () => {
       );
       expect(store.getState().playerRoundState.byCharacterId[characterId].state).toBe('ROLLING');
 
-      // 5. Set roll result
+      // 4. Set roll result
       store.dispatch(
         setRollResult({
           characterId,
@@ -458,7 +450,7 @@ describe('playerRoundStateSlice', () => {
         })
       );
 
-      // 6. Transition to SUCCESS_COMPLETE
+      // 5. Transition to SUCCESS_COMPLETE
       store.dispatch(
         transitionState({
           characterId,
@@ -467,7 +459,7 @@ describe('playerRoundStateSlice', () => {
       );
       expect(store.getState().playerRoundState.byCharacterId[characterId].state).toBe('SUCCESS_COMPLETE');
 
-      // 7. Complete turn (SUCCESS_COMPLETE -> TURN_COMPLETE)
+      // 6. Complete turn (SUCCESS_COMPLETE -> TURN_COMPLETE)
       store.dispatch(
         transitionState({
           characterId,
@@ -488,12 +480,6 @@ describe('playerRoundStateSlice', () => {
           action: 'skulk',
           position: 'desperate',
           effect: 'standard',
-        })
-      );
-      store.dispatch(
-        transitionState({
-          characterId,
-          newState: 'ROLL_CONFIRM',
         })
       );
       store.dispatch(
