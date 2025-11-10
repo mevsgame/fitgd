@@ -188,6 +188,8 @@ export class PlayerActionWidget extends Application {
       // State flags (ROLL_CONFIRM state removed)
       isDecisionPhase: this.playerState?.state === 'DECISION_PHASE',
       isRolling: this.playerState?.state === 'ROLLING',
+      isStimsRolling: this.playerState?.state === 'STIMS_ROLLING',
+      isStimsLocked: this.playerState?.state === 'STIMS_LOCKED',
       isSuccess: this.playerState?.state === 'SUCCESS_COMPLETE',
       isConsequenceChoice: this.playerState?.state === 'CONSEQUENCE_CHOICE',
       isGMResolvingConsequence: this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE',
@@ -947,12 +949,11 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Handle Use Stims button
+   * Handle Use Stims button (from CONSEQUENCE_CHOICE state)
    */
-  _onUseStims(event) {
+  async _onUseStims(event) {
     event.preventDefault();
-    // TODO: Implement stims flow
-    ui.notifications.info('Stims - to be implemented');
+    await this._useStims();
   }
 
   /**
@@ -1337,8 +1338,223 @@ export class PlayerActionWidget extends Application {
    */
   async _onUseStimsGMPhase(event) {
     event.preventDefault();
-    // TODO: Implement stims flow (Phase 5)
-    ui.notifications.info('Stims - to be implemented in Phase 5');
+    await this._useStims();
+  }
+
+  /**
+   * Shared stims logic (can be called from CONSEQUENCE_CHOICE or GM_RESOLVING_CONSEQUENCE)
+   * Validates addiction status, advances addiction clock, and sets up reroll
+   */
+  async _useStims() {
+    if (!this.crewId) {
+      ui.notifications.error('Character must be in a crew to use stims');
+      return;
+    }
+
+    // Check if already used stims this action
+    if (this.playerState?.stimsUsedThisAction) {
+      ui.notifications.warn('Stims already used this action - cannot use again!');
+      return;
+    }
+
+    const state = game.fitgd.store.getState();
+
+    // Find addiction clock for crew
+    const addictionClock = Object.values(state.clocks.byId).find(
+      clock => clock.entityId === this.crewId && clock.clockType === 'addiction'
+    );
+
+    // Check if stims are locked (addiction clock filled)
+    if (addictionClock && addictionClock.segments >= addictionClock.maxSegments) {
+      ui.notifications.error('Stims are LOCKED due to addiction! Cannot use stims.');
+
+      // Transition to STIMS_LOCKED state briefly, then back
+      await game.fitgd.bridge.execute(
+        {
+          type: 'playerRoundState/transitionState',
+          payload: {
+            characterId: this.characterId,
+            newState: 'STIMS_LOCKED',
+          },
+        },
+        { affectedReduxIds: [this.characterId], silent: true }
+      );
+
+      // Auto-return to previous state after notification
+      setTimeout(async () => {
+        const currentState = this.playerState?.state;
+        if (currentState === 'STIMS_LOCKED') {
+          await game.fitgd.bridge.execute(
+            {
+              type: 'playerRoundState/transitionState',
+              payload: {
+                characterId: this.characterId,
+                newState: 'ROLLING',
+              },
+            },
+            { affectedReduxIds: [this.characterId], silent: true }
+          );
+        }
+      }, 2000);
+
+      return;
+    }
+
+    // Create addiction clock if it doesn't exist
+    let addictionClockId = addictionClock?.id;
+    if (!addictionClock) {
+      addictionClockId = foundry.utils.randomID();
+      await game.fitgd.bridge.execute(
+        {
+          type: 'clocks/createClock',
+          payload: {
+            id: addictionClockId,
+            entityId: this.crewId,
+            clockType: 'addiction',
+            subtype: 'Addiction',
+            maxSegments: 8,
+            segments: 0,
+          },
+        },
+        { affectedReduxIds: [this.crewId], silent: true }
+      );
+
+      ui.notifications.info('Addiction clock created');
+    }
+
+    // Advance addiction clock by 1
+    await game.fitgd.bridge.execute(
+      {
+        type: 'clocks/addSegments',
+        payload: {
+          clockId: addictionClockId,
+          amount: 1,
+        },
+      },
+      { affectedReduxIds: [this.crewId], silent: true }
+    );
+
+    // Get updated clock state
+    const updatedState = game.fitgd.store.getState();
+    const updatedClock = updatedState.clocks.byId[addictionClockId];
+    const newSegments = updatedClock.segments;
+
+    ui.notifications.warn(`Addiction clock: ${newSegments}/${updatedClock.maxSegments}`);
+
+    // Check if addiction clock just filled
+    if (newSegments >= updatedClock.maxSegments) {
+      // Add "Addict" trait to character
+      const addictTrait = {
+        id: foundry.utils.randomID(),
+        name: 'Addict',
+        description: 'Addicted to combat stims. Stims are now locked for the entire crew.',
+        category: 'scar',
+        disabled: false,
+        acquiredAt: Date.now(),
+      };
+
+      await game.fitgd.bridge.execute(
+        {
+          type: 'characters/addTrait',
+          payload: {
+            characterId: this.characterId,
+            trait: addictTrait,
+          },
+        },
+        { affectedReduxIds: [this.characterId], force: true }
+      );
+
+      ui.notifications.error(`${this.character.name} is now an ADDICT! Stims are LOCKED for the crew.`);
+
+      // Post to chat
+      ChatMessage.create({
+        content: `<div class="fitgd-addiction-warning">
+          <h3>⚠️ ADDICTION FILLS!</h3>
+          <p><strong>${this.character.name}</strong> has become addicted to combat stims!</p>
+          <p>Trait Added: <strong>Addict</strong></p>
+          <p><em>Stims are now locked for the entire crew.</em></p>
+        </div>`,
+        speaker: ChatMessage.getSpeaker(),
+      });
+    }
+
+    // Mark stims used this action
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/setStimsUsed',
+        payload: {
+          characterId: this.characterId,
+          used: true,
+        },
+      },
+      { affectedReduxIds: [this.characterId], silent: true }
+    );
+
+    // Clear consequence transaction (if any)
+    if (this.playerState?.consequenceTransaction) {
+      await game.fitgd.bridge.execute(
+        {
+          type: 'playerRoundState/clearConsequenceTransaction',
+          payload: { characterId: this.characterId },
+        },
+        { affectedReduxIds: [this.characterId], silent: true }
+      );
+    }
+
+    // Transition to STIMS_ROLLING state
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/transitionState',
+        payload: {
+          characterId: this.characterId,
+          newState: 'STIMS_ROLLING',
+        },
+      },
+      { affectedReduxIds: [this.characterId], silent: true }
+    );
+
+    // Clear roll result and return to DECISION_PHASE for reroll
+    // Player will need to roll again with GM approval
+    await game.fitgd.bridge.executeBatch([
+      {
+        type: 'playerRoundState/setRollResult',
+        payload: {
+          characterId: this.characterId,
+          dicePool: 0,
+          rollResult: [],
+          outcome: undefined,
+        },
+      },
+      {
+        type: 'playerRoundState/setGmApproved',
+        payload: {
+          characterId: this.characterId,
+          approved: false, // GM must approve again
+        },
+      },
+      {
+        type: 'playerRoundState/transitionState',
+        payload: {
+          characterId: this.characterId,
+          newState: 'DECISION_PHASE',
+        },
+      }
+    ], {
+      affectedReduxIds: [this.characterId],
+      silent: true,
+    });
+
+    ui.notifications.info('Stims used! Returning to decision phase for reroll.');
+
+    // Post to chat
+    ChatMessage.create({
+      content: `<div class="fitgd-stims-use">
+        <h3>💉 STIMS USED!</h3>
+        <p><strong>${this.character.name}</strong> used combat stims!</p>
+        <p><em>Addiction clock advanced. Returning to decision phase for reroll.</em></p>
+      </div>`,
+      speaker: ChatMessage.getSpeaker(),
+    });
   }
 
   /**

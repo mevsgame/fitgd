@@ -160,6 +160,29 @@
   </div>
   {{/if}}
 
+  <!-- ==================== STIMS ROLLING ==================== -->
+  {{#if isStimsRolling}}
+  <div class="widget-content stims-rolling">
+    <h3>💉 STIMS ACTIVATED!</h3>
+    <div class="stims-animation">
+      <p>Advancing addiction clock...</p>
+      <p>Returning to decision phase for reroll.</p>
+    </div>
+  </div>
+  {{/if}}
+
+  <!-- ==================== STIMS LOCKED ==================== -->
+  {{#if isStimsLocked}}
+  <div class="widget-content stims-locked">
+    <h2 class="stims-error">🚫 STIMS LOCKED!</h2>
+    <div class="stims-locked-message">
+      <p>Addiction clock is filled!</p>
+      <p>Stims are no longer available for the entire crew.</p>
+      <p class="fade-text">Returning to consequence...</p>
+    </div>
+  </div>
+  {{/if}}
+
   <!-- ==================== SUCCESS ==================== -->
   {{#if isSuccess}}
   <div class="widget-content success">
@@ -196,7 +219,9 @@
     <p class="consequence-message">You face consequences...</p>
 
     <div class="action-buttons">
-      <button type="button" data-action="use-stims">Use Stims & Reroll</button>
+      <button type="button" data-action="use-stims" {{#if playerState.stimsUsedThisAction}}disabled{{/if}}>
+        {{#if playerState.stimsUsedThisAction}}Stims Already Used{{else}}Use Stims & Reroll{{/if}}
+      </button>
       <button type="button" data-action="accept-consequences" class="primary">Accept Consequences</button>
     </div>
   </div>
@@ -371,8 +396,8 @@
 
       <!-- Player can always use stims from this state -->
       <div class="player-action-buttons">
-        <button type="button" data-action="use-stims-gm-phase" class="stims-btn">
-          💉 Use Stims & Reroll
+        <button type="button" data-action="use-stims-gm-phase" class="stims-btn" {{#if playerState.stimsUsedThisAction}}disabled{{/if}}>
+          {{#if playerState.stimsUsedThisAction}}💉 Stims Already Used{{else}}💉 Use Stims & Reroll{{/if}}
         </button>
       </div>
     </div>
