@@ -749,10 +749,7 @@ export class PlayerActionWidget extends Application {
       },
     });
 
-    // Broadcast state changes
-    await game.fitgd.saveImmediate();
-
-    // Transition based on outcome
+    // Transition based on outcome (batch all dispatches before broadcasting)
     if (outcome === 'critical' || outcome === 'success') {
       console.log(`FitGD | Success/Critical - transitioning to SUCCESS_COMPLETE`);
       game.fitgd.store.dispatch({
@@ -763,7 +760,7 @@ export class PlayerActionWidget extends Application {
         },
       });
 
-      // CRITICAL: Broadcast the state transition
+      // CRITICAL: Single broadcast for all state changes (prevents render race condition)
       await game.fitgd.saveImmediate();
       console.log(`FitGD | SUCCESS_COMPLETE broadcast complete`);
 
@@ -785,7 +782,7 @@ export class PlayerActionWidget extends Application {
         },
       });
 
-      // CRITICAL: Broadcast the state transition
+      // CRITICAL: Single broadcast for all state changes (prevents render race condition)
       await game.fitgd.saveImmediate();
       console.log(`FitGD | CONSEQUENCE_CHOICE broadcast complete, state should now be synced`);
     }
