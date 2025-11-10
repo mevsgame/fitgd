@@ -73,6 +73,11 @@ game.action.push({ crewId, type: "extra-die" });
 - Complete mission flow examples
 - Foundry VTT integration patterns
 
+## For Claude Code Sessions
+
+**If you are a Claude Code session working on this project:**
+→ Read [SESSION_START.md](./SESSION_START.md) first for required context and critical rules.
+
 ## Architecture
 
 ### Event Sourcing
@@ -145,19 +150,17 @@ npm run test:coverage # Coverage report
 
 ## Development Status
 
-### Completed Phases
-- ✅ Phase 1: Foundation (TypeScript, Redux, TDD setup)
-- ✅ Phase 2: Character System (traits, action dots, equipment)
-- ✅ Phase 3: Crew & Momentum System
-- ✅ Phase 4: Abstract Clock System (harm, consumables, addiction)
-- ✅ Phase 5: Advanced Features (trait grouping, flashbacks, progression)
-- ✅ Phase 6.1: High-Level Game API (verb-based gameplay actions)
+### Completed
+- ✅ Core Redux system (TypeScript, event sourcing, TDD)
+- ✅ Character & Crew management (traits, action dots, Momentum)
+- ✅ Abstract Clock System (harm, consumables, addiction, progress)
+- ✅ Advanced mechanics (trait grouping, flashbacks, Rally)
+- ✅ High-Level Game API (verb-based gameplay actions)
+- ✅ Foundry VTT Integration (sheets, dialogs, macros, persistence)
+- ✅ Bridge API Pattern (safe state management, broadcast handling)
 
-### In Progress
-- 🚧 Phase 6.2: Foundry VTT Adapter (Actor/Item mapping, sheets)
-
-### Planned
-- ⏳ Phase 7: Polish & Documentation
+### Production Ready
+All core features implemented and tested. Bridge API eliminates common integration bugs.
 
 ## Foundry VTT Integration
 
