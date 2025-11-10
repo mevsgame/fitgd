@@ -1917,10 +1917,159 @@ When creating or debugging Foundry widgets that use Redux:
 
 ---
 
+## SOLUTION: Foundry-Redux Bridge API (2025-11-10)
+
+**Status:** ✅ **IMPLEMENTED** - Ready for integration
+
+### The Root Problem
+
+All the documented issues share a common root cause: **Foundry code directly accesses Redux primitives** without any abstraction layer.
+
+Every event handler, dialog, and widget has to remember 3+ steps:
+```javascript
+// ❌ The pattern that causes ALL the recurring bugs:
+game.fitgd.store.dispatch({ type: 'action', payload: {...} });
+await game.fitgd.saveImmediate();  // ← Easy to forget → GM doesn't see changes
+refreshSheetsByReduxId([id], false);  // ← Easy to forget → UI doesn't update
+```
+
+**Failure modes:**
+1. Forget `saveImmediate()` → State doesn't propagate to other clients
+2. Forget `refreshSheetsByReduxId()` → UI doesn't update
+3. Multiple `saveImmediate()` calls → Render race conditions
+4. Use Foundry Actor ID instead of Redux ID → Silent failures
+5. Interleave dispatches and broadcasts → Render blocking
+
+### The Solution: Abstraction Layer
+
+Created **Foundry-Redux Bridge API** that encapsulates the entire pattern:
+
+**Location:** `foundry/module/foundry-redux-bridge.mjs`
+
+```javascript
+// ✅ CORRECT: Single call, impossible to forget steps
+await game.fitgd.bridge.execute(
+  { type: 'action', payload: {...} }
+);
+// Automatically: dispatches → broadcasts → refreshes affected sheets
+```
+
+### Key Features
+
+1. **Automatic broadcast** - Can't forget, it's part of the call
+2. **Automatic sheet refresh** - Detects affected entities and refreshes
+3. **Batch support** - Prevents render race conditions:
+   ```javascript
+   await game.fitgd.bridge.executeBatch([
+     { type: 'action1', payload: {...} },
+     { type: 'action2', payload: {...} },
+     { type: 'action3', payload: {...} }
+   ]);
+   // Single broadcast, single refresh - no race conditions!
+   ```
+4. **ID mapping** - Handles Redux ↔ Foundry Actor ID conversion automatically
+5. **Query methods** - Safe access to Redux state:
+   ```javascript
+   const character = game.fitgd.bridge.getCharacter(id);  // Works with either ID type
+   const clocks = game.fitgd.bridge.getClocks(entityId, 'harm');
+   ```
+
+### Integration
+
+**Step 1:** Add to `fitgd.mjs` initialization:
+```javascript
+import { createFoundryReduxBridge } from './foundry-redux-bridge.mjs';
+
+// In Hooks.once('init'), after creating store:
+game.fitgd.bridge = createFoundryReduxBridge(
+  game.fitgd.store,
+  game.fitgd.saveImmediate
+);
+```
+
+**Step 2:** Use Bridge instead of direct dispatch:
+
+**Before:**
+```javascript
+game.fitgd.store.dispatch({ type: 'clock/addSegments', payload: { clockId, amount: 3 } });
+await game.fitgd.saveImmediate();
+this.render(false);
+refreshSheetsByReduxId([characterId], false);
+```
+
+**After:**
+```javascript
+await game.fitgd.bridge.execute({
+  type: 'clock/addSegments',
+  payload: { clockId, amount: 3 }
+});
+// That's it. Everything else is automatic.
+```
+
+### Benefits
+
+| Before (Direct Redux Access) | After (Bridge API) |
+|------------------------------|-------------------|
+| 3-5 lines of code | 1-3 lines of code |
+| Easy to forget steps | Impossible to forget |
+| Render race conditions | Batching prevents races |
+| ID confusion | Automatic ID mapping |
+| Hard to test | Easy to mock |
+| Error-prone | Safe by default |
+
+### Documentation
+
+Full documentation at: `foundry/module/BRIDGE_API_USAGE.md`
+
+Includes:
+- Complete API reference
+- Migration guide
+- Before/after examples
+- Common patterns
+- Testing strategies
+
+### Migration Strategy
+
+**No big-bang refactor needed.** Use the Bridge API for:
+
+1. **All new code** - Start immediately
+2. **Bug fixes** - Refactor while fixing
+3. **Gradual refactoring** - One handler at a time
+
+### Grep Commands to Find Code to Migrate
+
+```bash
+# Find all direct dispatch() calls
+grep -rn "store.dispatch(" foundry/module/
+
+# Find all saveImmediate() calls
+grep -rn "saveImmediate()" foundry/module/
+
+# Find all refreshSheetsByReduxId() calls
+grep -rn "refreshSheetsByReduxId(" foundry/module/
+```
+
+Any place these patterns appear together should be converted to Bridge API.
+
+### Success Criteria
+
+Once fully adopted, these bugs should be **impossible**:
+- ✅ State not propagating to GM (missing broadcast)
+- ✅ UI not updating (missing refresh)
+- ✅ Widget stuck rendering (render race conditions)
+- ✅ Silent failures from ID confusion (automatic mapping)
+
+### Key Principle
+
+**Make the correct pattern the easy pattern.** The Bridge API makes it easier to do the right thing than to make mistakes.
+
+---
+
 ## Next Steps
 
-1. **Answer Phase 1 questions** above
-2. **Session 1: Begin Phase 1** - Initialize project with Vite + TypeScript + Redux Toolkit
-3. **Establish TDD workflow** - Write first failing test together
+1. **Integrate Bridge API** - Add initialization to `fitgd.mjs`
+2. **Start using immediately** - All new code uses Bridge
+3. **Gradual migration** - Convert existing code during bug fixes
+4. **Eventually deprecate** - Make direct `store.dispatch()` a code review violation
 
 Ready to proceed when you are! 🎲
