@@ -172,11 +172,18 @@ const playerRoundStateSlice = createSlice({
       // Set new active player
       state.activeCharacterId = characterId;
 
-      // Transition new active player to DECISION_PHASE
+      // Only transition to DECISION_PHASE if:
+      // 1. State doesn't exist (initialization), OR
+      // 2. State is IDLE_WAITING or TURN_COMPLETE (ready for new turn)
+      // DO NOT override active states like ROLLING, CONSEQUENCE_CHOICE, etc.
       const currentState = state.byCharacterId[characterId];
       if (currentState) {
-        currentState.state = 'DECISION_PHASE';
-        currentState.stateEnteredAt = Date.now();
+        // Only reset to DECISION_PHASE if player is idle/waiting or turn just completed
+        if (currentState.state === 'IDLE_WAITING' || currentState.state === 'TURN_COMPLETE') {
+          currentState.state = 'DECISION_PHASE';
+          currentState.stateEnteredAt = Date.now();
+        }
+        // Otherwise, keep current state (player is in middle of their turn)
       } else {
         // Initialize if not exists
         state.byCharacterId[characterId] = {

@@ -197,10 +197,6 @@ export const selectAvailableActions = createSelector(
         }
         break;
 
-      case 'ROLL_CONFIRM':
-        actions.push('commit_roll', 'apply_flashback');
-        break;
-
       case 'CONSEQUENCE_CHOICE':
         actions.push('accept_consequence', 'use_stims');
         break;
