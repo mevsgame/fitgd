@@ -28,7 +28,7 @@ import {
   selectIsDying,
 } from '../../dist/fitgd-core.es.js';
 import { FlashbackTraitsDialog, refreshSheetsByReduxId } from '../dialogs.mjs';
-import { ClockSelectionDialog, CharacterSelectionDialog, promptForText } from './dialogs/index.mjs';
+import { ClockSelectionDialog, CharacterSelectionDialog, promptForText } from '../dialogs/index.mjs';
 
 /* -------------------------------------------- */
 /*  Player Action Widget Application            */
