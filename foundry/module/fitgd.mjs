@@ -867,7 +867,6 @@ function registerHandlebarsHelpers() {
           data-clock-value="${value}"
           data-clock-max="${size}"
           data-clock-color="${color}"
-          ${editable ? 'style="cursor: pointer;"' : ''}
         />
       </div>
     `);
