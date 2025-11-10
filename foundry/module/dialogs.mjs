@@ -29,12 +29,13 @@ export function refreshSheetsByReduxId(reduxIds, force = true) {
   const affectedReduxIds = new Set(reduxIds.filter(id => id)); // Remove nulls/undefined
   if (affectedReduxIds.size === 0) return;
 
-  console.log(`FitGD | Refreshing sheets for Redux IDs:`, Array.from(affectedReduxIds));
+  console.log(`FitGD | Refreshing sheets/widgets for Redux IDs:`, Array.from(affectedReduxIds));
 
   let refreshedCount = 0;
   for (const app of Object.values(ui.windows)) {
     if (!app.rendered) continue;
 
+    // Check sheets (character/crew)
     if (app.constructor.name === 'FitGDCharacterSheet' || app.constructor.name === 'FitGDCrewSheet') {
       try {
         const reduxId = app.actor?.getFlag('forged-in-the-grimdark', 'reduxId');
@@ -47,9 +48,24 @@ export function refreshSheetsByReduxId(reduxIds, force = true) {
         console.warn(`FitGD | Could not refresh sheet:`, error);
       }
     }
+
+    // CRITICAL: Also check widgets (PlayerActionWidget)
+    // This ensures GM sees player's trait transactions and plan updates
+    if (app.constructor.name === 'PlayerActionWidget') {
+      try {
+        const characterId = app.characterId;
+        if (characterId && affectedReduxIds.has(characterId)) {
+          console.log(`FitGD | Re-rendering PlayerActionWidget for character ${characterId}`);
+          app.render(force);
+          refreshedCount++;
+        }
+      } catch (error) {
+        console.warn(`FitGD | Could not refresh widget:`, error);
+      }
+    }
   }
 
-  console.log(`FitGD | Refreshed ${refreshedCount} sheet(s)`);
+  console.log(`FitGD | Refreshed ${refreshedCount} sheet(s)/widget(s)`);
 }
 
 /* -------------------------------------------- */
