@@ -223,15 +223,22 @@ This downloads 7 color themes:
 - **White** - Personal Goals
 - **Black** - Faction Clocks
 
-## Known Limitations
+## Architecture & Integration
 
-This is an early integration with the following limitations:
+### Bridge API Pattern
+All Foundry code uses the **Bridge API** (`game.fitgd.bridge`) for state management, which automatically handles:
+- Redux dispatch
+- State broadcast to all clients
+- Sheet refresh for affected entities
+- ID mapping (Redux ↔ Foundry Actor IDs)
 
-1. **No Dice Roller** - Foundry's dice roller is not yet integrated
-2. **No Chat Messages** - Actions don't post to chat yet
-3. **No Compendiums** - No pre-made traits/equipment packs
-4. **No Macros** - No macro support yet
-5. **Templates Only** - Templates need further styling/polish
+See **[module/BRIDGE_API_QUICK_GUIDE.md](./module/BRIDGE_API_QUICK_GUIDE.md)** for usage examples.
+
+### Known Limitations
+
+1. **No Compendiums** - No pre-made traits/equipment packs yet
+2. **Basic Chat Integration** - Actions log to console but not to chat cards
+3. **Styling Polish** - Templates functional but UI could be improved
 
 ## Troubleshooting
 
