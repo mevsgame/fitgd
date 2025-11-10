@@ -11,7 +11,34 @@
  * @typedef {import('../dist/store').RootState} RootState
  */
 
+/**
+ * @typedef {Object} HistoryStats
+ * @property {number} totalCommands - Total number of commands in history
+ * @property {number} characterCommands - Number of character-related commands
+ * @property {number} crewCommands - Number of crew-related commands
+ * @property {number} clockCommands - Number of clock-related commands
+ * @property {number} estimatedSizeKB - Estimated storage size in kilobytes
+ * @property {number} timeSpanHours - Time span covered by history in hours
+ * @property {boolean} isEmpty - Whether history is empty
+ * @property {string|null} oldestDate - Formatted date of oldest command
+ * @property {string|null} newestDate - Formatted date of newest command
+ */
+
+/**
+ * History Management Configuration Dialog
+ *
+ * Provides UI for viewing command history statistics and pruning old history
+ * to reduce storage requirements. Only accessible to GMs.
+ *
+ * @extends FormApplication
+ */
 export class HistoryManagementConfig extends FormApplication {
+  /**
+   * Default options for the history management dialog
+   *
+   * @returns {Object} Configuration options for the dialog
+   * @override
+   */
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       title: game.i18n.localize('FITGD.Settings.HistoryManagement.Title'),
@@ -24,6 +51,15 @@ export class HistoryManagementConfig extends FormApplication {
     });
   }
 
+  /**
+   * Get template data for rendering the history management dialog
+   *
+   * Fetches current history statistics from the Foundry adapter and formats
+   * them for display, including formatted timestamps and size estimates.
+   *
+   * @returns {{stats: HistoryStats|null, error: string|null}} Template data containing history stats or error
+   * @override
+   */
   getData() {
     // Get history stats from the Foundry adapter
     const adapter = game.fitgd?.foundry;
@@ -65,6 +101,17 @@ export class HistoryManagementConfig extends FormApplication {
     };
   }
 
+  /**
+   * Activate event listeners for the history management dialog
+   *
+   * Sets up handlers for:
+   * - Prune button: Removes all command history after confirmation
+   * - Refresh button: Re-renders the dialog with updated stats
+   *
+   * @param {JQuery} html - jQuery object containing the rendered dialog HTML
+   * @returns {void}
+   * @override
+   */
   activateListeners(html) {
     super.activateListeners(html);
 
@@ -125,6 +172,17 @@ export class HistoryManagementConfig extends FormApplication {
     });
   }
 
+  /**
+   * Form submission handler (not used for this dialog)
+   *
+   * All actions in this dialog are button-based (prune/refresh), so this method
+   * is intentionally empty. Required by FormApplication but not needed for our use case.
+   *
+   * @param {Event} event - The form submission event
+   * @param {Object} formData - The parsed form data
+   * @returns {Promise<void>}
+   * @override
+   */
   async _updateObject(event, formData) {
     // No form submission handling needed - all actions are button-based
   }
