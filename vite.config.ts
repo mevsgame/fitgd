@@ -1,10 +1,22 @@
 import { defineConfig } from 'vite';
 import path from 'path';
+import dts from 'vite-plugin-dts';
 
 export default defineConfig({
   define: {
     'process.env.NODE_ENV': JSON.stringify('production'),
   },
+  plugins: [
+    dts({
+      // Generate TypeScript declaration files
+      insertTypesEntry: true,
+      rollupTypes: false, // Keep individual .d.ts files
+      outDir: 'foundry/dist',
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/*.test.ts', 'src/**/*.spec.ts'],
+      copyDtsFiles: true,
+    }),
+  ],
   build: {
     outDir: 'foundry/dist', // Output to foundry/dist for symlink
     lib: {
@@ -18,9 +30,15 @@ export default defineConfig({
       output: {
         // Ensure imports/exports work in ES modules
         inlineDynamicImports: true,
+        // Keep function/variable names for readability
+        compact: false,
+        // Preserve original names in minified output
+        preserveModules: false,
       },
     },
-    minify: 'esbuild', // Use esbuild (included with Vite)
+    // Disable minification to keep code readable
+    // Trade-off: larger bundle (~300kb) but human-readable
+    minify: false,
     sourcemap: true,
   },
   resolve: {

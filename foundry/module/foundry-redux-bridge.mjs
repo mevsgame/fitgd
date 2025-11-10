@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * Foundry-Redux Bridge API
  *
@@ -12,6 +14,12 @@
  * WHY THIS EXISTS:
  * The pattern "dispatch → broadcast → refresh" must happen together or state
  * won't propagate to other clients. By using this API, you can't forget.
+ *
+ * @typedef {import('../dist/store').RootState} RootState
+ * @typedef {import('../dist/types').Character} Character
+ * @typedef {import('../dist/types').Crew} Crew
+ * @typedef {import('../dist/types').Clock} Clock
+ * @typedef {import('../dist/types').PlayerRoundState} PlayerRoundState
  */
 
 /**
@@ -99,7 +107,7 @@ export class FoundryReduxBridge {
    * Query a character by ID (auto-detects Redux vs Foundry ID).
    *
    * @param {string} id - Either Redux UUID or Foundry Actor ID
-   * @returns {Object|null} Character state from Redux
+   * @returns {Character|null} Character state from Redux
    */
   getCharacter(id) {
     const reduxId = this._ensureReduxId(id, 'character');
@@ -113,7 +121,7 @@ export class FoundryReduxBridge {
    * Query a crew by ID (auto-detects Redux vs Foundry ID).
    *
    * @param {string} id - Either Redux UUID or Foundry Actor ID
-   * @returns {Object|null} Crew state from Redux
+   * @returns {Crew|null} Crew state from Redux
    */
   getCrew(id) {
     const reduxId = this._ensureReduxId(id, 'crew');
@@ -127,8 +135,8 @@ export class FoundryReduxBridge {
    * Query clocks for an entity.
    *
    * @param {string} entityId - Redux ID of character/crew
-   * @param {string} clockType - Optional: filter by 'harm', 'consumable', 'addiction'
-   * @returns {Object[]} Array of clocks
+   * @param {string|null} clockType - Optional: filter by 'harm', 'consumable', 'addiction'
+   * @returns {Clock[]} Array of clocks
    */
   getClocks(entityId, clockType = null) {
     const state = this.getState();
@@ -147,7 +155,7 @@ export class FoundryReduxBridge {
    * Get player round state for a character.
    *
    * @param {string} characterId - Redux ID of character
-   * @returns {Object|null} Player round state
+   * @returns {PlayerRoundState|null} Player round state
    */
   getPlayerRoundState(characterId) {
     const state = this.getState();
