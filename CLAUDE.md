@@ -1294,6 +1294,26 @@ if (isEntityNotFoundError) {
 **Date:** 2025-11-09
 **Issue:** Redux state changes not propagating to other clients (especially GM), position improvements not being applied
 
+---
+
+## ⚠️ THE GOLDEN RULE OF BROADCASTING ⚠️
+
+**Every `store.dispatch()` in Foundry code MUST be immediately followed by `await game.fitgd.saveImmediate()`**
+
+```javascript
+// ✅ CORRECT - Always this pattern
+game.fitgd.store.dispatch({ type: 'action', payload: { /* ... */ } });
+await game.fitgd.saveImmediate();  // <-- NEVER FORGET THIS LINE
+
+// ❌ WRONG - Missing broadcast
+game.fitgd.store.dispatch({ type: 'action', payload: { /* ... */ } });
+this.render();  // <-- GM won't see the change!
+```
+
+**No exceptions. Ever. If you dispatch, you broadcast.**
+
+---
+
 #### The Problem
 This is a **recurring issue** that has appeared multiple times:
 1. Player makes a change (toggle push, select trait, etc.)

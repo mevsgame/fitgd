@@ -16,8 +16,7 @@ export type { Position, Effect };
  */
 export type PlayerRoundStateType =
   | 'IDLE_WAITING'              // Not your turn, watching others
-  | 'DECISION_PHASE'             // Your turn - preparing action
-  | 'ROLL_CONFIRM'               // Confirming action before roll
+  | 'DECISION_PHASE'             // Your turn - preparing action (simplified: removed ROLL_CONFIRM)
   | 'ROLLING'                    // Dice rolling
   | 'SUCCESS_COMPLETE'           // Success, no consequences
   | 'CONSEQUENCE_CHOICE'         // Choose: accept or use stims
@@ -159,18 +158,18 @@ export interface PlayerRoundState {
 /**
  * Valid state transitions
  * Maps from current state to allowed next states
+ * (Simplified: ROLL_CONFIRM state removed, DECISION_PHASE goes directly to ROLLING)
  */
 export const STATE_TRANSITIONS: Record<PlayerRoundStateType, PlayerRoundStateType[]> = {
   IDLE_WAITING: ['DECISION_PHASE', 'ASSIST_ROLLING', 'PROTECT_ACCEPTING'],
-  DECISION_PHASE: ['ROLL_CONFIRM', 'RALLY_ROLLING', 'IDLE_WAITING'],
-  ROLL_CONFIRM: ['ROLLING', 'DECISION_PHASE'],
+  DECISION_PHASE: ['ROLLING', 'RALLY_ROLLING', 'IDLE_WAITING'],
   ROLLING: ['SUCCESS_COMPLETE', 'CONSEQUENCE_CHOICE'],
   SUCCESS_COMPLETE: ['TURN_COMPLETE'],
   CONSEQUENCE_CHOICE: ['CONSEQUENCE_RESOLUTION', 'STIMS_ROLLING'],
   CONSEQUENCE_RESOLUTION: ['APPLYING_EFFECTS'],
   APPLYING_EFFECTS: ['TURN_COMPLETE'],
   TURN_COMPLETE: ['IDLE_WAITING'],
-  RALLY_ROLLING: ['DECISION_PHASE', 'ROLL_CONFIRM'],
+  RALLY_ROLLING: ['DECISION_PHASE'],
   ASSIST_ROLLING: ['IDLE_WAITING'],
   PROTECT_ACCEPTING: ['IDLE_WAITING'],
   STIMS_ROLLING: ['ROLLING', 'STIMS_LOCKED'],

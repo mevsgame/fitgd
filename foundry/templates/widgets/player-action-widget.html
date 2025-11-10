@@ -185,28 +185,6 @@
   </div>
   {{/if}}
 
-  <!-- ==================== ROLL CONFIRM ==================== -->
-  {{#if isRollConfirm}}
-  <div class="widget-content roll-confirm">
-    <h3>🎯 CONFIRM ACTION</h3>
-    <p>Ready to roll?</p>
-
-    <div class="confirm-details">
-      <div>Action: {{capitalize playerState.selectedAction}} ({{playerState.dicePool}}d6)</div>
-      <div>Position: <span class="position-{{playerState.position}}">{{uppercase playerState.position}}</span></div>
-      <div>Effect: <span class="effect-level">{{uppercase playerState.effect}}</span></div>
-      {{#if playerState.pushed}}
-      <div>Momentum Cost: -1M (Current: {{momentum}}→{{subtract momentum 1}} after roll)</div>
-      {{/if}}
-    </div>
-
-    <div class="action-buttons">
-      <button type="button" data-action="back" class="secondary">← Back</button>
-      <button type="button" data-action="commit-roll" class="primary">🎲 COMMIT & ROLL</button>
-    </div>
-  </div>
-  {{/if}}
-
   <!-- ==================== ROLLING ==================== -->
   {{#if isRolling}}
   <div class="widget-content rolling">

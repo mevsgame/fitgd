@@ -125,9 +125,8 @@ export class PlayerActionWidget extends Application {
       crewId: this.crewId,
       playerState: this.playerState,
 
-      // State flags
+      // State flags (ROLL_CONFIRM state removed)
       isDecisionPhase: this.playerState?.state === 'DECISION_PHASE',
-      isRollConfirm: this.playerState?.state === 'ROLL_CONFIRM',
       isRolling: this.playerState?.state === 'ROLLING',
       isSuccess: this.playerState?.state === 'SUCCESS_COMPLETE',
       isConsequenceChoice: this.playerState?.state === 'CONSEQUENCE_CHOICE',
@@ -185,9 +184,8 @@ export class PlayerActionWidget extends Application {
     html.find('[data-action="push-die"]').click(this._onTogglePushDie.bind(this));
     html.find('[data-action="push-effect"]').click(this._onTogglePushEffect.bind(this));
 
-    // Roll button
+    // Roll button (simplified: no more commit-roll button)
     html.find('[data-action="roll"]').click(this._onRoll.bind(this));
-    html.find('[data-action="commit-roll"]').click(this._onCommitRoll.bind(this));
 
     // Consequence buttons
     html.find('[data-action="use-stims"]').click(this._onUseStims.bind(this));
@@ -197,9 +195,8 @@ export class PlayerActionWidget extends Application {
     html.find('[data-action="take-harm"]').click(this._onTakeHarm.bind(this));
     html.find('[data-action="advance-clock"]').click(this._onAdvanceClock.bind(this));
 
-    // Cancel/Back buttons
+    // Cancel button (back button removed - no more ROLL_CONFIRM state)
     html.find('[data-action="cancel"]').click(this._onCancel.bind(this));
-    html.find('[data-action="back"]').click(this._onBack.bind(this));
   }
 
   /* -------------------------------------------- */
@@ -561,9 +558,10 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Handle Roll Action button (DECISION -> ROLL_CONFIRM)
+   * Handle Roll Action button (DECISION -> ROLLING)
+   * Simplified: removed ROLL_CONFIRM intermediate state
    */
-  _onRoll(event) {
+  async _onRoll(event) {
     event.preventDefault();
 
     // Validate action is selected
@@ -571,24 +569,6 @@ export class PlayerActionWidget extends Application {
       ui.notifications.warn('Please select an action first');
       return;
     }
-
-    // Transition to ROLL_CONFIRM
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/transitionState',
-      payload: {
-        characterId: this.characterId,
-        newState: 'ROLL_CONFIRM',
-      },
-    });
-
-    this.render();
-  }
-
-  /**
-   * Handle Commit & Roll button (ROLL_CONFIRM -> ROLLING)
-   */
-  async _onCommitRoll(event) {
-    event.preventDefault();
 
     // Get current state BEFORE any mutations
     const state = game.fitgd.store.getState();
@@ -892,24 +872,6 @@ export class PlayerActionWidget extends Application {
     });
 
     // Set back to DECISION
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/transitionState',
-      payload: {
-        characterId: this.characterId,
-        newState: 'DECISION_PHASE',
-      },
-    });
-
-    this.render();
-  }
-
-  /**
-   * Handle Back button
-   */
-  _onBack(event) {
-    event.preventDefault();
-
-    // Go back to DECISION
     game.fitgd.store.dispatch({
       type: 'playerRoundState/transitionState',
       payload: {
