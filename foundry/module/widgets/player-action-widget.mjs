@@ -47,7 +47,7 @@ export class PlayerActionWidget extends Application {
         // Only re-render if this character's state actually changed
         if (currentPlayerState !== previousPlayerState) {
           console.log(`FitGD | Widget detected state change for ${this.characterId}, refreshing...`);
-          this.render(false); // Soft refresh (no full re-render)
+          this.render(true); // Force full re-render to update template
         }
 
         previousState = currentState;
@@ -779,14 +779,6 @@ export class PlayerActionWidget extends Application {
       // CRITICAL: Broadcast the state transition
       await game.fitgd.saveImmediate();
       console.log(`FitGD | CONSEQUENCE_CHOICE broadcast complete, state should now be synced`);
-
-      // Wait a tick for Redux subscription render to complete, then force a full re-render
-      // The subscription calls render(false), which might not fully re-render
-      // We need render(true) to ensure the template updates with the consequence UI
-      setTimeout(() => {
-        console.log(`FitGD | Forcing widget render (delayed) after CONSEQUENCE_CHOICE`);
-        this.render(true);
-      }, 50);  // Small delay to let subscription render complete first
     }
   }
 
