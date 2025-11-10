@@ -317,6 +317,42 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
+   * Compute EFFECTIVE position for roll calculation (ephemeral)
+   * This does NOT change the stored position, only used for dice/consequence calculations
+   */
+  _getEffectivePosition() {
+    const basePosition = this.playerState?.position || 'risky';
+
+    // Check if trait transaction improves position
+    if (this.playerState?.traitTransaction?.positionImprovement) {
+      if (basePosition === 'desperate') return 'risky';
+      if (basePosition === 'risky') return 'controlled';
+      // Already controlled
+      return basePosition;
+    }
+
+    return basePosition;
+  }
+
+  /**
+   * Compute EFFECTIVE effect for consequence calculation (ephemeral)
+   * This does NOT change the stored effect, only used for consequence calculations
+   */
+  _getEffectiveEffect() {
+    const baseEffect = this.playerState?.effect || 'standard';
+
+    // Check if Push (Effect) is active
+    if (this.playerState?.pushed && this.playerState?.pushType === 'improved-effect') {
+      if (baseEffect === 'limited') return 'standard';
+      if (baseEffect === 'standard') return 'great';
+      // Already great
+      return baseEffect;
+    }
+
+    return baseEffect;
+  }
+
+  /**
    * Compute improvements preview text
    */
   _computeImprovements() {
@@ -643,28 +679,11 @@ export class PlayerActionWidget extends Application {
         // Apply trait changes (create/consolidate traits)
         await this._applyTraitTransaction(playerState.traitTransaction);
 
-        // Apply position improvement if transaction includes it
-        if (playerState.traitTransaction.positionImprovement) {
-          const currentPosition = playerState.position || 'risky';
-          let improvedPosition = currentPosition;
+        // NOTE: Position improvement is NOT applied to playerState
+        // It's ephemeral and only affects this roll's consequence calculation
+        // The GM's original position setting remains unchanged
 
-          // Improve position by one step
-          if (currentPosition === 'desperate') improvedPosition = 'risky';
-          else if (currentPosition === 'risky') improvedPosition = 'controlled';
-
-          // Dispatch position change if it actually improved
-          if (improvedPosition !== currentPosition) {
-            game.fitgd.store.dispatch({
-              type: 'playerRoundState/setPosition',
-              payload: {
-                characterId: this.characterId,
-                position: improvedPosition,
-              },
-            });
-          }
-        }
-
-        // CRITICAL: Broadcast trait changes and position improvement
+        // CRITICAL: Broadcast trait changes
         await game.fitgd.saveImmediate();
       } catch (error) {
         console.error('FitGD | Error applying trait transaction:', error);
@@ -684,11 +703,9 @@ export class PlayerActionWidget extends Application {
 
     this.render();
 
-    // IMPORTANT: Re-fetch state AFTER position improvement to get correct dice pool
-    const updatedState = game.fitgd.store.getState();
-
-    // Calculate dice pool using UPDATED state
-    const dicePool = selectDicePool(updatedState, this.characterId);
+    // Calculate dice pool
+    const state = game.fitgd.store.getState();
+    const dicePool = selectDicePool(state, this.characterId);
 
     // Roll dice using Foundry dice roller
     const rollResult = await this._rollDice(dicePool);
@@ -808,9 +825,12 @@ export class PlayerActionWidget extends Application {
   async _onTakeHarm(event) {
     event.preventDefault();
 
-    // Calculate harm segments and momentum gain using selectors
-    const position = this.playerState.position || 'risky';
-    const effect = this.playerState.effect || 'standard';
+    // CRITICAL: Use EFFECTIVE position/effect (with improvements applied)
+    // These are ephemeral - the base position/effect in playerState remain unchanged
+    const position = this._getEffectivePosition();
+    const effect = this._getEffectiveEffect();
+
+    // Calculate harm segments and momentum gain using effective values
     const segments = selectConsequenceSeverity(position, effect);
     const momentumGain = selectMomentumGain(position);
 
