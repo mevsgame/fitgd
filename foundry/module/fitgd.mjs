@@ -867,6 +867,12 @@ function registerHandlebarsHelpers() {
     if (!Array.isArray(arr)) return '';
     return arr.join(separator || ', ');
   });
+
+  // Max value in array
+  Handlebars.registerHelper('max', function(arr) {
+    if (!Array.isArray(arr) || arr.length === 0) return 0;
+    return Math.max(...arr);
+  });
 }
 
 /* -------------------------------------------- */

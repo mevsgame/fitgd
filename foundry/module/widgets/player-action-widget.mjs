@@ -46,14 +46,11 @@ export class PlayerActionWidget extends Application {
 
         // Only re-render if this character's state actually changed
         if (currentPlayerState !== previousPlayerState) {
-          console.log(`FitGD | Widget detected state change for ${this.characterId}, refreshing...`);
-          this.render(false); // Soft refresh (no full re-render)
+          this.render(true); // Force full re-render to update template
         }
 
         previousState = currentState;
       });
-
-      console.log(`FitGD | Widget subscribed to store updates for ${this.characterId}`);
     }
   }
 
@@ -63,7 +60,6 @@ export class PlayerActionWidget extends Application {
     if (this.storeUnsubscribe) {
       this.storeUnsubscribe();
       this.storeUnsubscribe = null;
-      console.log(`FitGD | Widget unsubscribed from store updates for ${this.characterId}`);
     }
 
     return super.close(options);
@@ -107,9 +103,7 @@ export class PlayerActionWidget extends Application {
     if (crewId) {
       this.crew = game.fitgd.api.crew.getCrew(crewId);
       this.crewId = crewId; // Store crewId separately for easy access
-      console.log(`FitGD | Widget found crew ${crewId} for character ${this.characterId}`);
     } else {
-      console.warn(`FitGD | No crew found for character ${this.characterId}`);
       this.crew = null;
       this.crewId = null;
     }
@@ -701,7 +695,11 @@ export class PlayerActionWidget extends Application {
       },
     });
 
-    this.render();
+    // CRITICAL: Broadcast the state transition
+    await game.fitgd.saveImmediate();
+
+    // NOTE: Don't call this.render() here - Redux subscription will handle it
+    // Calling render() here causes _state=1 (RENDERING), blocking subsequent renders
 
     // Calculate dice pool (state declared at top of function)
     const dicePool = selectDicePool(state, this.characterId);
@@ -730,10 +728,7 @@ export class PlayerActionWidget extends Application {
       },
     });
 
-    // Broadcast state changes
-    await game.fitgd.saveImmediate();
-
-    // Transition based on outcome
+    // Transition based on outcome (batch all dispatches before broadcasting)
     if (outcome === 'critical' || outcome === 'success') {
       game.fitgd.store.dispatch({
         type: 'playerRoundState/transitionState',
@@ -742,6 +737,9 @@ export class PlayerActionWidget extends Application {
           newState: 'SUCCESS_COMPLETE',
         },
       });
+
+      // CRITICAL: Single broadcast for all state changes (prevents render race condition)
+      await game.fitgd.saveImmediate();
 
       // Post to chat
       this._postSuccessToChat(outcome, rollResult);
@@ -760,7 +758,8 @@ export class PlayerActionWidget extends Application {
         },
       });
 
-      this.render();
+      // CRITICAL: Single broadcast for all state changes (prevents render race condition)
+      await game.fitgd.saveImmediate();
     }
   }
 
@@ -815,7 +814,7 @@ export class PlayerActionWidget extends Application {
   /**
    * Handle Accept Consequences button
    */
-  _onAcceptConsequences(event) {
+  async _onAcceptConsequences(event) {
     event.preventDefault();
 
     // Transition to CONSEQUENCE_RESOLUTION
@@ -827,7 +826,10 @@ export class PlayerActionWidget extends Application {
       },
     });
 
-    this.render();
+    // CRITICAL: Broadcast the state transition
+    await game.fitgd.saveImmediate();
+
+    // NOTE: Redux subscription will handle rendering automatically
   }
 
   /**
@@ -865,7 +867,8 @@ export class PlayerActionWidget extends Application {
       },
     });
 
-    this.render();
+    // NOTE: Don't call this.render() here - Redux subscription will handle it
+    // Calling render() blocks subsequent renders during async harm.take() call
 
     // Apply harm - use harm API
     if (segments > 0) {
@@ -896,6 +899,9 @@ export class PlayerActionWidget extends Application {
         newState: 'APPLYING_EFFECTS',
       },
     });
+
+    // CRITICAL: Broadcast the state transition
+    await game.fitgd.saveImmediate();
 
     // Give a brief moment for UI to update, then complete turn
     setTimeout(async () => {
@@ -936,7 +942,7 @@ export class PlayerActionWidget extends Application {
   /**
    * Handle Cancel button
    */
-  _onCancel(event) {
+  async _onCancel(event) {
     event.preventDefault();
 
     // Reset to clean DECISION state
@@ -954,7 +960,10 @@ export class PlayerActionWidget extends Application {
       },
     });
 
-    this.render();
+    // CRITICAL: Broadcast the state transitions
+    await game.fitgd.saveImmediate();
+
+    // NOTE: Redux subscription will handle rendering automatically
   }
 
   /**

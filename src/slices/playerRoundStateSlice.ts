@@ -160,23 +160,38 @@ const playerRoundStateSlice = createSlice({
     setActivePlayer: (state, action: PayloadAction<SetActivePlayerPayload>) => {
       const { characterId } = action.payload;
 
-      // Transition previous active player to IDLE
+      // Transition previous active player to IDLE and reset their state
       if (state.activeCharacterId && state.activeCharacterId !== characterId) {
-        const prevState = state.byCharacterId[state.activeCharacterId];
-        if (prevState) {
-          prevState.state = 'IDLE_WAITING';
-          prevState.stateEnteredAt = Date.now();
-        }
+        const prevCharId = state.activeCharacterId;
+        // Reset previous player completely - they're done with their turn
+        state.byCharacterId[prevCharId] = {
+          ...createInitialPlayerRoundState(prevCharId),
+          state: 'IDLE_WAITING',
+        };
       }
 
       // Set new active player
       state.activeCharacterId = characterId;
 
-      // Transition new active player to DECISION_PHASE
+      // Only transition to DECISION_PHASE if:
+      // 1. State doesn't exist (initialization), OR
+      // 2. State is IDLE_WAITING or TURN_COMPLETE (ready for new turn)
+      // DO NOT override active states like ROLLING, CONSEQUENCE_CHOICE, etc.
       const currentState = state.byCharacterId[characterId];
       if (currentState) {
-        currentState.state = 'DECISION_PHASE';
-        currentState.stateEnteredAt = Date.now();
+        // Only reset to DECISION_PHASE if player is idle/waiting or turn just completed
+        if (currentState.state === 'IDLE_WAITING' || currentState.state === 'TURN_COMPLETE') {
+          // Clear any leftover roll data when starting a new turn
+          currentState.state = 'DECISION_PHASE';
+          currentState.stateEnteredAt = Date.now();
+          currentState.rollResult = undefined;
+          currentState.outcome = undefined;
+          currentState.dicePool = undefined;
+          currentState.consequenceType = undefined;
+          currentState.consequenceValue = undefined;
+          currentState.momentumGain = undefined;
+        }
+        // Otherwise, keep current state (player is in middle of their turn)
       } else {
         // Initialize if not exists
         state.byCharacterId[characterId] = {
