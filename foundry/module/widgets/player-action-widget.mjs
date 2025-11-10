@@ -177,6 +177,8 @@ export class PlayerActionWidget extends Application {
     // Get player round state
     this.playerState = state.playerRoundState.byCharacterId[this.characterId];
 
+    console.log('FitGD | Widget getData() - Current state:', this.playerState?.state, 'isGM:', game.user.isGM);
+
     // Build data for template
     return {
       ...data,
@@ -962,6 +964,8 @@ export class PlayerActionWidget extends Application {
   async _onAcceptConsequences(event) {
     event.preventDefault();
 
+    console.log('FitGD | Player accepted consequences, transitioning to GM_RESOLVING_CONSEQUENCE');
+
     // Transition to GM_RESOLVING_CONSEQUENCE state
     await game.fitgd.bridge.execute(
       {
@@ -971,8 +975,10 @@ export class PlayerActionWidget extends Application {
           newState: 'GM_RESOLVING_CONSEQUENCE',
         },
       },
-      { affectedReduxIds: [this.characterId], silent: true } // Silent: subscription handles render
+      { affectedReduxIds: [this.characterId], force: true } // Force re-render
     );
+
+    console.log('FitGD | Transitioned to GM_RESOLVING_CONSEQUENCE');
   }
 
   /* -------------------------------------------- */
@@ -1557,118 +1563,7 @@ export class PlayerActionWidget extends Application {
     });
   }
 
-  /**
-   * Handle Take Harm button
-   */
-  async _onTakeHarm(event) {
-    event.preventDefault();
-
-    // CRITICAL: Use EFFECTIVE position/effect (with improvements applied)
-    // These are ephemeral - the base position/effect in playerState remain unchanged
-    const position = this._getEffectivePosition();
-    const effect = this._getEffectiveEffect();
-
-    // Calculate harm segments and momentum gain using effective values
-    const segments = selectConsequenceSeverity(position, effect);
-    const momentumGain = selectMomentumGain(position);
-
-    // Batch initial state transitions (CONSEQUENCE_RESOLUTION + consequence data)
-    await game.fitgd.bridge.executeBatch([
-      {
-        type: 'playerRoundState/transitionState',
-        payload: {
-          characterId: this.characterId,
-          newState: 'CONSEQUENCE_RESOLUTION',
-        },
-      },
-      {
-        type: 'playerRoundState/setConsequence',
-        payload: {
-          characterId: this.characterId,
-          consequenceType: 'harm',
-          consequenceValue: segments,
-          momentumGain,
-        },
-      }
-    ], {
-      affectedReduxIds: [this.characterId],
-      silent: true, // Silent: subscription handles render
-    });
-
-    // Apply harm - use harm API (dispatches internally, needs broadcast)
-    // TODO: This still uses Game API which dispatches internally - needs refactoring
-    if (segments > 0) {
-      try {
-        await game.fitgd.api.harm.take({
-          characterId: this.characterId,
-          harmType: 'Physical Harm', // Default to physical
-          position,
-          effect,
-        });
-        ui.notifications.info(`Taking ${segments} harm. +${momentumGain} Momentum`);
-      } catch (error) {
-        console.error('FitGD | Error applying harm:', error);
-        ui.notifications.error(`Failed to apply harm: ${error.message}`);
-      }
-    }
-
-    // Add Momentum (dispatches internally, needs broadcast)
-    // TODO: This still uses Game API which dispatches internally - needs refactoring
-    if (this.crewId) {
-      game.fitgd.api.crew.addMomentum({ crewId: this.crewId, amount: momentumGain });
-    }
-
-    // Broadcast harm and momentum changes
-    await game.fitgd.saveImmediate(); // TODO: Should be part of Bridge API call
-
-    // Transition to APPLYING_EFFECTS
-    await game.fitgd.bridge.execute(
-      {
-        type: 'playerRoundState/transitionState',
-        payload: {
-          characterId: this.characterId,
-          newState: 'APPLYING_EFFECTS',
-        },
-      },
-      { affectedReduxIds: [this.characterId], silent: true }
-    );
-
-    // Give a brief moment for UI to update, then complete turn
-    setTimeout(async () => {
-      // Batch final state transitions (TURN_COMPLETE + reset)
-      await game.fitgd.bridge.executeBatch([
-        {
-          type: 'playerRoundState/transitionState',
-          payload: {
-            characterId: this.characterId,
-            newState: 'TURN_COMPLETE',
-          },
-        },
-        {
-          type: 'playerRoundState/resetPlayerState',
-          payload: {
-            characterId: this.characterId,
-          },
-        }
-      ], {
-        affectedReduxIds: [this.characterId],
-        silent: true,
-      });
-
-      // Close widget after completing
-      setTimeout(() => this.close(), 500);
-    }, 500);
-  }
-
-  /**
-   * Handle Advance Clock button
-   */
-  _onAdvanceClock(event) {
-    event.preventDefault();
-    // TODO: Implement clock advancement
-    ui.notifications.info('Clock advancement - to be implemented');
-    this._endTurn();
-  }
+  /* Legacy handlers removed - consequence resolution now handled through GM_RESOLVING_CONSEQUENCE flow */
 
   /**
    * Handle Cancel button
