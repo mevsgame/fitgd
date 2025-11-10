@@ -32,7 +32,14 @@ export class PlayerActionWidget extends Application {
   }
 
   /** @override */
+  render(force = false, options = {}) {
+    console.log(`FitGD | Widget.render() called with force=${force}, _state=${this._state}`);
+    return super.render(force, options);
+  }
+
+  /** @override */
   async _render(force, options) {
+    console.log(`FitGD | Widget._render() called with force=${force}`);
     await super._render(force, options);
 
     // Subscribe to Redux store changes for real-time updates
@@ -90,6 +97,7 @@ export class PlayerActionWidget extends Application {
 
   /** @override */
   async getData(options = {}) {
+    console.log(`FitGD | Widget.getData() called for ${this.characterId}`);
     const data = await super.getData(options);
 
     // Get character from Redux store
