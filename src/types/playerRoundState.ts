@@ -208,20 +208,20 @@ export interface PlayerRoundState {
  * Valid state transitions
  * Maps from current state to allowed next states
  *
- * New consequence flow:
- * ROLLING → CONSEQUENCE_CHOICE → GM_RESOLVING_CONSEQUENCE → APPLYING_EFFECTS → TURN_COMPLETE
- * Player can interrupt with stims: GM_RESOLVING_CONSEQUENCE → STIMS_ROLLING
+ * New consequence flow (no extra player button):
+ * ROLLING → GM_RESOLVING_CONSEQUENCE → APPLYING_EFFECTS → TURN_COMPLETE
+ * Player can interrupt with stims: GM_RESOLVING_CONSEQUENCE → STIMS_ROLLING → ROLLING (reroll same plan)
  */
 export const STATE_TRANSITIONS: Record<PlayerRoundStateType, PlayerRoundStateType[]> = {
   IDLE_WAITING: ['DECISION_PHASE', 'ASSIST_ROLLING', 'PROTECT_ACCEPTING'],
   DECISION_PHASE: ['ROLLING', 'RALLY_ROLLING', 'IDLE_WAITING'],
-  ROLLING: ['SUCCESS_COMPLETE', 'CONSEQUENCE_CHOICE'],
+  ROLLING: ['SUCCESS_COMPLETE', 'GM_RESOLVING_CONSEQUENCE', 'CONSEQUENCE_CHOICE'],  // Direct to GM (CONSEQUENCE_CHOICE deprecated)
   SUCCESS_COMPLETE: ['TURN_COMPLETE'],  // Manual close only (GM clicks "End Turn")
 
   CONSEQUENCE_CHOICE: [
-    'GM_RESOLVING_CONSEQUENCE',  // Player accepts consequences
+    'GM_RESOLVING_CONSEQUENCE',  // DEPRECATED: Old flow, kept for backwards compat
     'CONSEQUENCE_RESOLUTION',     // DEPRECATED: Backwards compatibility
-    'STIMS_ROLLING'               // Player uses stims instead
+    'STIMS_ROLLING'               // DEPRECATED: Old flow
   ],
 
   GM_RESOLVING_CONSEQUENCE: [
@@ -235,8 +235,8 @@ export const STATE_TRANSITIONS: Record<PlayerRoundStateType, PlayerRoundStateTyp
   RALLY_ROLLING: ['DECISION_PHASE'],
   ASSIST_ROLLING: ['IDLE_WAITING'],
   PROTECT_ACCEPTING: ['IDLE_WAITING'],
-  STIMS_ROLLING: ['DECISION_PHASE', 'STIMS_LOCKED'],  // Return to planning after stims
-  STIMS_LOCKED: ['CONSEQUENCE_CHOICE', 'GM_RESOLVING_CONSEQUENCE'],  // Return to consequence state
+  STIMS_ROLLING: ['ROLLING', 'STIMS_LOCKED'],  // Re-roll with same plan (not DECISION_PHASE!)
+  STIMS_LOCKED: ['GM_RESOLVING_CONSEQUENCE'],  // Return to consequence state
 };
 
 /**

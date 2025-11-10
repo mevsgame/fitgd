@@ -884,12 +884,12 @@ export class PlayerActionWidget extends Application {
         },
       });
     } else {
-      // Partial or failure - need consequences
+      // Partial or failure - go directly to GM_RESOLVING_CONSEQUENCE (skip CONSEQUENCE_CHOICE)
       rollOutcomeActions.push({
         type: 'playerRoundState/transitionState',
         payload: {
           characterId: this.characterId,
-          newState: 'CONSEQUENCE_CHOICE',
+          newState: 'GM_RESOLVING_CONSEQUENCE',
         },
       });
     }
@@ -1507,7 +1507,7 @@ export class PlayerActionWidget extends Application {
       );
     }
 
-    // Transition to STIMS_ROLLING state
+    // Transition to STIMS_ROLLING state (brief visual state)
     await game.fitgd.bridge.execute(
       {
         type: 'playerRoundState/transitionState',
@@ -1519,48 +1519,92 @@ export class PlayerActionWidget extends Application {
       { affectedReduxIds: [this.characterId], silent: true }
     );
 
-    // Clear roll result and return to DECISION_PHASE for reroll
-    // Player will need to roll again with GM approval
-    await game.fitgd.bridge.executeBatch([
-      {
-        type: 'playerRoundState/setRollResult',
-        payload: {
-          characterId: this.characterId,
-          dicePool: 0,
-          rollResult: [],
-          outcome: undefined,
-        },
-      },
-      {
-        type: 'playerRoundState/setGmApproved',
-        payload: {
-          characterId: this.characterId,
-          approved: false, // GM must approve again
-        },
-      },
-      {
-        type: 'playerRoundState/transitionState',
-        payload: {
-          characterId: this.characterId,
-          newState: 'DECISION_PHASE',
-        },
-      }
-    ], {
-      affectedReduxIds: [this.characterId],
-      silent: true,
-    });
-
-    ui.notifications.info('Stims used! Returning to decision phase for reroll.');
+    ui.notifications.info('Stims used! Re-rolling with same plan...');
 
     // Post to chat
     ChatMessage.create({
       content: `<div class="fitgd-stims-use">
         <h3>💉 STIMS USED!</h3>
         <p><strong>${this.character.name}</strong> used combat stims!</p>
-        <p><em>Addiction clock advanced. Returning to decision phase for reroll.</em></p>
+        <p><em>Addiction clock advanced. Re-rolling...</em></p>
       </div>`,
       speaker: ChatMessage.getSpeaker(),
     });
+
+    // Brief delay to show STIMS_ROLLING state, then re-roll
+    setTimeout(async () => {
+      // Transition to ROLLING
+      await game.fitgd.bridge.execute(
+        {
+          type: 'playerRoundState/transitionState',
+          payload: {
+            characterId: this.characterId,
+            newState: 'ROLLING',
+          },
+        },
+        { affectedReduxIds: [this.characterId], silent: true }
+      );
+
+      // Get current state to preserve dice pool and plan
+      const currentState = game.fitgd.store.getState();
+      const playerState = currentState.playerRoundState.byCharacterId[this.characterId];
+      const dicePool = selectDicePool(currentState, this.characterId);
+
+      console.log('FitGD | Stims reroll - dice pool:', dicePool, 'action:', playerState.selectedAction);
+
+      // Roll dice using Foundry dice roller (same as original roll)
+      const rollResult = await this._rollDice(dicePool);
+      const outcome = this._calculateOutcome(rollResult);
+
+      // Batch roll outcome state changes
+      const rollOutcomeActions = [
+        {
+          type: 'playerRoundState/setRollResult',
+          payload: {
+            characterId: this.characterId,
+            dicePool,
+            rollResult,
+            outcome,
+          },
+        },
+      ];
+
+      // Add state transition based on outcome
+      if (outcome === 'critical' || outcome === 'success') {
+        rollOutcomeActions.push({
+          type: 'playerRoundState/transitionState',
+          payload: {
+            characterId: this.characterId,
+            newState: 'SUCCESS_COMPLETE',
+          },
+        });
+      } else {
+        // Partial or failure - go back to GM_RESOLVING_CONSEQUENCE
+        rollOutcomeActions.push({
+          type: 'playerRoundState/transitionState',
+          payload: {
+            characterId: this.characterId,
+            newState: 'GM_RESOLVING_CONSEQUENCE',
+          },
+        });
+      }
+
+      // Execute all roll outcome actions as a batch
+      await game.fitgd.bridge.executeBatch(rollOutcomeActions, {
+        affectedReduxIds: [this.characterId],
+        force: false,
+      });
+
+      // Post success to chat if applicable
+      if (outcome === 'critical' || outcome === 'success') {
+        this._postSuccessToChat(outcome, rollResult);
+
+        // Auto-close after delay
+        setTimeout(() => {
+          this._endTurn();
+        }, 2000);
+      }
+    }, 500);
   }
 
   /* Legacy handlers removed - consequence resolution now handled through GM_RESOLVING_CONSEQUENCE flow */
