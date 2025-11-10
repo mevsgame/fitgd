@@ -163,9 +163,18 @@
   <!-- ==================== SUCCESS ==================== -->
   {{#if isSuccess}}
   <div class="widget-content success">
-    <h3>✅ SUCCESS!</h3>
-    <p>Roll: {{join playerState.rollResult ", "}}</p>
-    <p>You succeed without complications!</p>
+    <div class="roll-outcome">
+      {{#if (eq playerState.outcome "critical")}}
+      <h2 class="outcome-critical">✨ CRITICAL SUCCESS! ✨</h2>
+      {{else}}
+      <h2 class="outcome-success">✅ FULL SUCCESS</h2>
+      {{/if}}
+      <div class="dice-display">
+        <div class="dice-result">Highest: {{max playerState.rollResult}}</div>
+        <div class="dice-rolled">Rolled: {{join playerState.rollResult ", "}}</div>
+      </div>
+    </div>
+    <p class="success-message">You succeed without complications!</p>
     <p class="fade-text">Ending turn...</p>
   </div>
   {{/if}}
@@ -173,9 +182,18 @@
   <!-- ==================== CONSEQUENCE CHOICE ==================== -->
   {{#if isConsequenceChoice}}
   <div class="widget-content consequence-choice">
-    <h3>⚠️ {{#if (eq playerState.outcome "partial")}}PARTIAL SUCCESS{{else}}FAILURE{{/if}}</h3>
-    <p>Roll: {{join playerState.rollResult ", "}} = {{uppercase playerState.outcome}}</p>
-    <p>You face consequences...</p>
+    <div class="roll-outcome">
+      {{#if (eq playerState.outcome "partial")}}
+      <h2 class="outcome-partial">⚠️ PARTIAL SUCCESS</h2>
+      {{else}}
+      <h2 class="outcome-failure">❌ FAILURE</h2>
+      {{/if}}
+      <div class="dice-display">
+        <div class="dice-result">Highest: {{max playerState.rollResult}}</div>
+        <div class="dice-rolled">Rolled: {{join playerState.rollResult ", "}}</div>
+      </div>
+    </div>
+    <p class="consequence-message">You face consequences...</p>
 
     <div class="action-buttons">
       <button type="button" data-action="use-stims">Use Stims & Reroll</button>
@@ -611,5 +629,73 @@
 @keyframes fadeInOut {
   0%, 100% { opacity: 0.3; }
   50% { opacity: 1; }
+}
+
+/* Roll Outcome Display */
+.roll-outcome {
+  margin: 15px 0;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.roll-outcome h2 {
+  margin: 0 0 10px 0;
+  font-size: 1.8em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+.outcome-critical {
+  color: #ffd700;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.outcome-success {
+  color: #4caf50;
+}
+
+.outcome-partial {
+  color: #ff9800;
+}
+
+.outcome-failure {
+  color: #f44336;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7), 0 0 10px rgba(255, 215, 0, 0.5);
+  }
+  50% {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 215, 0, 0.8);
+  }
+}
+
+.dice-display {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dice-result {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #ffd700;
+  margin-bottom: 5px;
+}
+
+.dice-rolled {
+  color: #aaa;
+  font-style: italic;
+}
+
+.success-message,
+.consequence-message {
+  text-align: center;
+  font-size: 1.1em;
+  margin-top: 15px;
 }
 </style>
