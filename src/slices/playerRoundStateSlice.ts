@@ -160,13 +160,14 @@ const playerRoundStateSlice = createSlice({
     setActivePlayer: (state, action: PayloadAction<SetActivePlayerPayload>) => {
       const { characterId } = action.payload;
 
-      // Transition previous active player to IDLE
+      // Transition previous active player to IDLE and reset their state
       if (state.activeCharacterId && state.activeCharacterId !== characterId) {
-        const prevState = state.byCharacterId[state.activeCharacterId];
-        if (prevState) {
-          prevState.state = 'IDLE_WAITING';
-          prevState.stateEnteredAt = Date.now();
-        }
+        const prevCharId = state.activeCharacterId;
+        // Reset previous player completely - they're done with their turn
+        state.byCharacterId[prevCharId] = {
+          ...createInitialPlayerRoundState(prevCharId),
+          state: 'IDLE_WAITING',
+        };
       }
 
       // Set new active player
