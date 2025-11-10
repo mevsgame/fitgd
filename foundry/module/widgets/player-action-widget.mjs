@@ -28,6 +28,7 @@ import {
   selectIsDying,
 } from '../../dist/fitgd-core.es.js';
 import { FlashbackTraitsDialog, refreshSheetsByReduxId } from '../dialogs.mjs';
+import { ClockSelectionDialog, CharacterSelectionDialog, promptForText } from './dialogs/index.mjs';
 
 /* -------------------------------------------- */
 /*  Player Action Widget Application            */
@@ -189,7 +190,7 @@ export class PlayerActionWidget extends Application {
       isRolling: this.playerState?.state === 'ROLLING',
       isSuccess: this.playerState?.state === 'SUCCESS_COMPLETE',
       isConsequenceChoice: this.playerState?.state === 'CONSEQUENCE_CHOICE',
-      isConsequenceResolution: this.playerState?.state === 'CONSEQUENCE_RESOLUTION',
+      isGMResolvingConsequence: this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE',
 
       // Available actions
       actions: Object.keys(this.character.actionDots),
@@ -222,6 +223,9 @@ export class PlayerActionWidget extends Application {
 
       // GM controls
       isGM: game.user.isGM,
+
+      // Consequence transaction data (for GM_RESOLVING_CONSEQUENCE state)
+      ...(this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE' ? this._getConsequenceData(state) : {}),
     };
   }
 
@@ -253,9 +257,16 @@ export class PlayerActionWidget extends Application {
     html.find('[data-action="use-stims"]').click(this._onUseStims.bind(this));
     html.find('[data-action="accept-consequences"]').click(this._onAcceptConsequences.bind(this));
 
-    // Consequence type buttons
-    html.find('[data-action="take-harm"]').click(this._onTakeHarm.bind(this));
-    html.find('[data-action="advance-clock"]').click(this._onAdvanceClock.bind(this));
+    // GM consequence configuration buttons
+    html.find('[data-action="select-consequence-type"]').click(this._onSelectConsequenceType.bind(this));
+    html.find('[data-action="select-harm-target"]').click(this._onSelectHarmTarget.bind(this));
+    html.find('[data-action="select-harm-clock"]').click(this._onSelectHarmClock.bind(this));
+    html.find('[data-action="select-crew-clock"]').click(this._onSelectCrewClock.bind(this));
+    html.find('[name="crew-clock-segments"]').change(this._onCrewClockSegmentsChange.bind(this));
+    html.find('[data-action="approve-consequence"]').click(this._onApproveConsequence.bind(this));
+
+    // Player stims button (from GM phase)
+    html.find('[data-action="use-stims-gm-phase"]').click(this._onUseStimsGMPhase.bind(this));
 
     // Cancel button (back button removed - no more ROLL_CONFIRM state)
     html.find('[data-action="cancel"]').click(this._onCancel.bind(this));
@@ -472,6 +483,78 @@ export class PlayerActionWidget extends Application {
     }
 
     return improvements;
+  }
+
+  /**
+   * Get consequence transaction data for template
+   * Resolves IDs to objects and computes derived values
+   *
+   * @param {RootState} state - Redux state
+   * @returns {Object} Consequence data for template
+   * @private
+   */
+  _getConsequenceData(state) {
+    const transaction = this.playerState?.consequenceTransaction;
+
+    if (!transaction) {
+      return {
+        consequenceTransaction: null,
+        harmTargetCharacter: null,
+        selectedHarmClock: null,
+        selectedCrewClock: null,
+        calculatedHarmSegments: null,
+        calculatedMomentumGain: null,
+        effectivePosition: this._getEffectivePosition(),
+        effectiveEffect: this._getEffectiveEffect(),
+        consequenceConfigured: false,
+      };
+    }
+
+    // Resolve harm target character
+    let harmTargetCharacter = null;
+    if (transaction.harmTargetCharacterId) {
+      harmTargetCharacter = state.characters.byId[transaction.harmTargetCharacterId];
+    }
+
+    // Resolve selected harm clock
+    let selectedHarmClock = null;
+    if (transaction.harmClockId) {
+      selectedHarmClock = state.clocks.byId[transaction.harmClockId];
+    }
+
+    // Resolve selected crew clock
+    let selectedCrewClock = null;
+    if (transaction.crewClockId) {
+      selectedCrewClock = state.clocks.byId[transaction.crewClockId];
+    }
+
+    // Calculate harm segments and momentum gain using effective position/effect
+    const effectivePosition = this._getEffectivePosition();
+    const effectiveEffect = this._getEffectiveEffect();
+    const calculatedHarmSegments = selectConsequenceSeverity(effectivePosition, effectiveEffect);
+    const calculatedMomentumGain = selectMomentumGain(effectivePosition);
+
+    // Determine if consequence is fully configured
+    let consequenceConfigured = false;
+    if (transaction.consequenceType === 'harm') {
+      // Harm is configured if: target selected AND clock selected
+      consequenceConfigured = Boolean(transaction.harmTargetCharacterId && transaction.harmClockId);
+    } else if (transaction.consequenceType === 'crew-clock') {
+      // Crew clock is configured if: clock selected AND segments > 0
+      consequenceConfigured = Boolean(transaction.crewClockId && transaction.crewClockSegments > 0);
+    }
+
+    return {
+      consequenceTransaction: transaction,
+      harmTargetCharacter,
+      selectedHarmClock,
+      selectedCrewClock,
+      calculatedHarmSegments,
+      calculatedMomentumGain,
+      effectivePosition,
+      effectiveEffect,
+      consequenceConfigured,
+    };
   }
 
   /* -------------------------------------------- */
@@ -873,22 +956,389 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Handle Accept Consequences button
+   * Handle Accept Consequences button (CONSEQUENCE_CHOICE -> GM_RESOLVING_CONSEQUENCE)
    */
   async _onAcceptConsequences(event) {
     event.preventDefault();
 
-    // Use Bridge API to transition state
+    // Transition to GM_RESOLVING_CONSEQUENCE state
     await game.fitgd.bridge.execute(
       {
         type: 'playerRoundState/transitionState',
         payload: {
           characterId: this.characterId,
-          newState: 'CONSEQUENCE_RESOLUTION',
+          newState: 'GM_RESOLVING_CONSEQUENCE',
         },
       },
       { affectedReduxIds: [this.characterId], silent: true } // Silent: subscription handles render
     );
+  }
+
+  /* -------------------------------------------- */
+  /*  GM Consequence Configuration Handlers       */
+  /* -------------------------------------------- */
+
+  /**
+   * Handle consequence type selection (harm vs crew-clock)
+   */
+  async _onSelectConsequenceType(event) {
+    event.preventDefault();
+    const consequenceType = event.currentTarget.dataset.type;
+
+    // Set consequence type (creates or updates transaction)
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/setConsequenceTransaction',
+        payload: {
+          characterId: this.characterId,
+          transaction: {
+            consequenceType,
+          },
+        },
+      },
+      { affectedReduxIds: [this.characterId], silent: true }
+    );
+  }
+
+  /**
+   * Handle harm target selection button
+   */
+  async _onSelectHarmTarget(event) {
+    event.preventDefault();
+
+    if (!this.crewId) {
+      ui.notifications.warn('Character must be in a crew');
+      return;
+    }
+
+    // Open CharacterSelectionDialog
+    const dialog = new CharacterSelectionDialog(
+      this.crewId,
+      this.characterId,
+      async (selectedCharacterId) => {
+        // Update transaction with selected target
+        await game.fitgd.bridge.execute(
+          {
+            type: 'playerRoundState/updateConsequenceTransaction',
+            payload: {
+              characterId: this.characterId,
+              updates: {
+                harmTargetCharacterId: selectedCharacterId,
+                // Clear clock selection when target changes
+                harmClockId: undefined,
+              },
+            },
+          },
+          { affectedReduxIds: [this.characterId], silent: true }
+        );
+      }
+    );
+
+    dialog.render(true);
+  }
+
+  /**
+   * Handle harm clock selection button
+   */
+  async _onSelectHarmClock(event) {
+    event.preventDefault();
+
+    const transaction = this.playerState?.consequenceTransaction;
+    if (!transaction?.harmTargetCharacterId) {
+      ui.notifications.warn('Select target character first');
+      return;
+    }
+
+    // Open ClockSelectionDialog for harm clocks
+    const dialog = new ClockSelectionDialog(
+      transaction.harmTargetCharacterId,
+      'harm',
+      async (clockId) => {
+        if (clockId === '_new') {
+          // Create new harm clock
+          const clockType = await promptForText(
+            'New Harm Clock',
+            'Enter harm type (e.g., Physical, Morale):',
+            'Physical Harm'
+          );
+
+          if (!clockType) return; // User canceled
+
+          // Create clock via Bridge API
+          const newClockId = foundry.utils.randomID();
+          await game.fitgd.bridge.execute(
+            {
+              type: 'clocks/createClock',
+              payload: {
+                id: newClockId,
+                entityId: transaction.harmTargetCharacterId,
+                clockType: 'harm',
+                subtype: clockType,
+                maxSegments: 6,
+                segments: 0,
+              },
+            },
+            { affectedReduxIds: [transaction.harmTargetCharacterId], silent: true }
+          );
+
+          // Update transaction with new clock
+          await game.fitgd.bridge.execute(
+            {
+              type: 'playerRoundState/updateConsequenceTransaction',
+              payload: {
+                characterId: this.characterId,
+                updates: {
+                  harmClockId: newClockId,
+                  newHarmClockType: clockType,
+                },
+              },
+            },
+            { affectedReduxIds: [this.characterId], silent: true }
+          );
+        } else {
+          // Existing clock selected
+          await game.fitgd.bridge.execute(
+            {
+              type: 'playerRoundState/updateConsequenceTransaction',
+              payload: {
+                characterId: this.characterId,
+                updates: {
+                  harmClockId: clockId,
+                },
+              },
+            },
+            { affectedReduxIds: [this.characterId], silent: true }
+          );
+        }
+      }
+    );
+
+    dialog.render(true);
+  }
+
+  /**
+   * Handle crew clock selection button
+   */
+  async _onSelectCrewClock(event) {
+    event.preventDefault();
+
+    if (!this.crewId) {
+      ui.notifications.warn('Character must be in a crew');
+      return;
+    }
+
+    // Open ClockSelectionDialog for crew clocks (non-harm)
+    const dialog = new ClockSelectionDialog(
+      this.crewId,
+      'crew',
+      async (clockId) => {
+        if (clockId === '_new') {
+          // Create new crew clock
+          const clockName = await promptForText(
+            'New Crew Clock',
+            'Enter clock name (e.g., Threat Level, Investigation):',
+            'Threat Clock'
+          );
+
+          if (!clockName) return; // User canceled
+
+          // Create clock via Bridge API
+          const newClockId = foundry.utils.randomID();
+          await game.fitgd.bridge.execute(
+            {
+              type: 'clocks/createClock',
+              payload: {
+                id: newClockId,
+                entityId: this.crewId,
+                clockType: 'progress', // Generic crew clock
+                subtype: clockName,
+                maxSegments: 8, // Default to 8-segment clock
+                segments: 0,
+              },
+            },
+            { affectedReduxIds: [this.crewId], silent: true }
+          );
+
+          // Update transaction with new clock
+          await game.fitgd.bridge.execute(
+            {
+              type: 'playerRoundState/updateConsequenceTransaction',
+              payload: {
+                characterId: this.characterId,
+                updates: {
+                  crewClockId: newClockId,
+                  crewClockSegments: 1, // Default to 1 segment
+                },
+              },
+            },
+            { affectedReduxIds: [this.characterId], silent: true }
+          );
+        } else {
+          // Existing clock selected
+          await game.fitgd.bridge.execute(
+            {
+              type: 'playerRoundState/updateConsequenceTransaction',
+              payload: {
+                characterId: this.characterId,
+                updates: {
+                  crewClockId: clockId,
+                  crewClockSegments: 1, // Default to 1 segment
+                },
+              },
+            },
+            { affectedReduxIds: [this.characterId], silent: true }
+          );
+        }
+      }
+    );
+
+    dialog.render(true);
+  }
+
+  /**
+   * Handle crew clock segments input change
+   */
+  async _onCrewClockSegmentsChange(event) {
+    event.preventDefault();
+    const segments = parseInt(event.currentTarget.value, 10) || 1;
+
+    // Update transaction with new segment count
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/updateConsequenceTransaction',
+        payload: {
+          characterId: this.characterId,
+          updates: {
+            crewClockSegments: segments,
+          },
+        },
+      },
+      { affectedReduxIds: [this.characterId], silent: true }
+    );
+  }
+
+  /**
+   * Handle GM approve consequence button
+   */
+  async _onApproveConsequence(event) {
+    event.preventDefault();
+
+    const transaction = this.playerState?.consequenceTransaction;
+    if (!transaction) {
+      ui.notifications.error('No consequence configured');
+      return;
+    }
+
+    // Validate transaction is complete
+    if (transaction.consequenceType === 'harm') {
+      if (!transaction.harmTargetCharacterId || !transaction.harmClockId) {
+        ui.notifications.warn('Please select target character and harm clock');
+        return;
+      }
+    } else if (transaction.consequenceType === 'crew-clock') {
+      if (!transaction.crewClockId || !transaction.crewClockSegments) {
+        ui.notifications.warn('Please select clock and segments');
+        return;
+      }
+    }
+
+    // Transition to APPLYING_EFFECTS to apply the consequence
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/transitionState',
+        payload: {
+          characterId: this.characterId,
+          newState: 'APPLYING_EFFECTS',
+        },
+      },
+      { affectedReduxIds: [this.characterId], silent: true }
+    );
+
+    // Apply the consequence (harm or clock)
+    await this._applyConsequenceTransaction(transaction);
+
+    // Add momentum gain
+    const effectivePosition = this._getEffectivePosition();
+    const momentumGain = selectMomentumGain(effectivePosition);
+    if (this.crewId && momentumGain > 0) {
+      game.fitgd.api.crew.addMomentum({ crewId: this.crewId, amount: momentumGain });
+      await game.fitgd.saveImmediate(); // TODO: Refactor to Bridge API
+    }
+
+    // Clear transaction and transition to TURN_COMPLETE
+    await game.fitgd.bridge.executeBatch([
+      {
+        type: 'playerRoundState/clearConsequenceTransaction',
+        payload: { characterId: this.characterId },
+      },
+      {
+        type: 'playerRoundState/transitionState',
+        payload: {
+          characterId: this.characterId,
+          newState: 'TURN_COMPLETE',
+        },
+      },
+      {
+        type: 'playerRoundState/resetPlayerState',
+        payload: { characterId: this.characterId },
+      }
+    ], {
+      affectedReduxIds: [this.characterId],
+      silent: true,
+    });
+
+    // Close widget after brief delay
+    setTimeout(() => this.close(), 500);
+  }
+
+  /**
+   * Apply consequence transaction (harm or crew clock)
+   * @param {ConsequenceTransaction} transaction
+   */
+  async _applyConsequenceTransaction(transaction) {
+    if (transaction.consequenceType === 'harm') {
+      // Apply harm to selected clock
+      const effectivePosition = this._getEffectivePosition();
+      const effectiveEffect = this._getEffectiveEffect();
+      const segments = selectConsequenceSeverity(effectivePosition, effectiveEffect);
+
+      await game.fitgd.bridge.execute(
+        {
+          type: 'clocks/addSegments',
+          payload: {
+            clockId: transaction.harmClockId,
+            amount: segments,
+          },
+        },
+        { affectedReduxIds: [transaction.harmTargetCharacterId], silent: true }
+      );
+
+      ui.notifications.info(`Applied ${segments} harm to ${transaction.harmClockId}`);
+
+    } else if (transaction.consequenceType === 'crew-clock') {
+      // Advance crew clock
+      await game.fitgd.bridge.execute(
+        {
+          type: 'clocks/addSegments',
+          payload: {
+            clockId: transaction.crewClockId,
+            amount: transaction.crewClockSegments,
+          },
+        },
+        { affectedReduxIds: [this.crewId], silent: true }
+      );
+
+      ui.notifications.info(`Advanced crew clock by ${transaction.crewClockSegments} segments`);
+    }
+  }
+
+  /**
+   * Handle player using stims from GM phase
+   */
+  async _onUseStimsGMPhase(event) {
+    event.preventDefault();
+    // TODO: Implement stims flow (Phase 5)
+    ui.notifications.info('Stims - to be implemented in Phase 5');
   }
 
   /**
