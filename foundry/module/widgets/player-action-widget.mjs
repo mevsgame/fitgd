@@ -158,6 +158,9 @@ export class PlayerActionWidget extends Application {
       // Improved position (if trait improves it)
       improvedPosition: this._computeImprovedPosition(),
 
+      // Improved effect (if Push Effect is active)
+      improvedEffect: this._computeImprovedEffect(),
+
       // GM controls
       isGM: game.user.isGM,
     };
@@ -292,6 +295,25 @@ export class PlayerActionWidget extends Application {
 
     // Already controlled, no improvement
     return currentPosition;
+  }
+
+  /**
+   * Compute improved effect (if Push Effect is active)
+   */
+  _computeImprovedEffect() {
+    const baseEffect = this.playerState?.effect || 'standard';
+
+    // Check if Push (Effect) is active
+    if (this.playerState?.pushed && this.playerState?.pushType === 'improved-effect') {
+      // Improve effect by one level
+      if (baseEffect === 'limited') return 'standard';
+      if (baseEffect === 'standard') return 'great';
+      // Already great, can't improve further
+      return baseEffect;
+    }
+
+    // No improvement, return base effect
+    return baseEffect;
   }
 
   /**
@@ -531,7 +553,8 @@ export class PlayerActionWidget extends Application {
     // Broadcast to all clients (GM needs to see this change)
     await game.fitgd.saveImmediate();
 
-    this.render();
+    // Refresh all widgets for this character
+    refreshSheetsByReduxId([this.characterId], false);
   }
 
   /**
@@ -542,6 +565,8 @@ export class PlayerActionWidget extends Application {
 
     const currentlyPushedEffect = this.playerState?.pushed && this.playerState?.pushType === 'improved-effect';
 
+    // Just toggle the push flag - don't change effect directly
+    // The improved effect will be computed for display and applied during roll
     game.fitgd.store.dispatch({
       type: 'playerRoundState/setImprovements',
       payload: {
@@ -554,7 +579,8 @@ export class PlayerActionWidget extends Application {
     // Broadcast to all clients (GM needs to see this change)
     await game.fitgd.saveImmediate();
 
-    this.render();
+    // Refresh all widgets for this character
+    refreshSheetsByReduxId([this.characterId], false);
   }
 
   /**

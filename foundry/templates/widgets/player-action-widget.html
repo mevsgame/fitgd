@@ -104,7 +104,7 @@
       <div class="plan-box">
         <div class="plan-line">Action: {{capitalize playerState.selectedAction}} ({{lookup character.actionDots playerState.selectedAction}}d)</div>
         <div class="plan-line">Position: {{uppercase (default playerState.position "risky")}} → <span class="{{#if playerState.traitTransaction}}improved{{/if}}">{{uppercase improvedPosition}}</span></div>
-        <div class="plan-line">Effect: {{uppercase (default playerState.effect "standard")}} → <span class="improved">{{uppercase (default playerState.effect "standard")}}</span></div>
+        <div class="plan-line">Effect: {{uppercase (default playerState.effect "standard")}} → <span class="{{#if (and playerState.pushed (eq playerState.pushType 'improved-effect'))}}improved{{/if}}">{{uppercase improvedEffect}}</span></div>
 
         {{#if improvements.length}}
         <div class="plan-line improvements">
@@ -278,11 +278,27 @@
 
 .action-select {
   width: 100%;
-  padding: 8px;
+  padding: 10px 8px;
   background: #2a2a2a;
   border: 1px solid #555;
   color: #e0e0e0;
   border-radius: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  height: auto;
+  min-height: 38px;
+}
+
+.action-select option {
+  padding: 8px;
+  line-height: 1.5;
+  background: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.action-select option:hover {
+  background: #3a3a3a;
+  color: #fff;
 }
 
 .position-effect-display {
