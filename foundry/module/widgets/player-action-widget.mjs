@@ -701,6 +701,9 @@ export class PlayerActionWidget extends Application {
       },
     });
 
+    // CRITICAL: Broadcast the state transition
+    await game.fitgd.saveImmediate();
+
     this.render();
 
     // Calculate dice pool (state declared at top of function)
@@ -743,6 +746,9 @@ export class PlayerActionWidget extends Application {
         },
       });
 
+      // CRITICAL: Broadcast the state transition
+      await game.fitgd.saveImmediate();
+
       // Post to chat
       this._postSuccessToChat(outcome, rollResult);
 
@@ -759,6 +765,9 @@ export class PlayerActionWidget extends Application {
           newState: 'CONSEQUENCE_CHOICE',
         },
       });
+
+      // CRITICAL: Broadcast the state transition
+      await game.fitgd.saveImmediate();
 
       this.render();
     }
@@ -815,7 +824,7 @@ export class PlayerActionWidget extends Application {
   /**
    * Handle Accept Consequences button
    */
-  _onAcceptConsequences(event) {
+  async _onAcceptConsequences(event) {
     event.preventDefault();
 
     // Transition to CONSEQUENCE_RESOLUTION
@@ -826,6 +835,9 @@ export class PlayerActionWidget extends Application {
         newState: 'CONSEQUENCE_RESOLUTION',
       },
     });
+
+    // CRITICAL: Broadcast the state transition
+    await game.fitgd.saveImmediate();
 
     this.render();
   }
@@ -897,6 +909,9 @@ export class PlayerActionWidget extends Application {
       },
     });
 
+    // CRITICAL: Broadcast the state transition
+    await game.fitgd.saveImmediate();
+
     // Give a brief moment for UI to update, then complete turn
     setTimeout(async () => {
       game.fitgd.store.dispatch({
@@ -936,7 +951,7 @@ export class PlayerActionWidget extends Application {
   /**
    * Handle Cancel button
    */
-  _onCancel(event) {
+  async _onCancel(event) {
     event.preventDefault();
 
     // Reset to clean DECISION state
@@ -953,6 +968,9 @@ export class PlayerActionWidget extends Application {
         newState: 'DECISION_PHASE',
       },
     });
+
+    // CRITICAL: Broadcast the state transitions
+    await game.fitgd.saveImmediate();
 
     this.render();
   }
