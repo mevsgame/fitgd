@@ -415,19 +415,19 @@ export class PlayerActionWidget extends Application {
   async _onActionChange(event) {
     const action = event.currentTarget.value;
 
-    // Dispatch Redux action
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/setActionPlan',
-      payload: {
-        characterId: this.characterId,
-        action,
-        position: this.playerState?.position || 'risky',
-        effect: this.playerState?.effect || 'standard',
+    // Use Bridge API to dispatch and broadcast
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/setActionPlan',
+        payload: {
+          characterId: this.characterId,
+          action,
+          position: this.playerState?.position || 'risky',
+          effect: this.playerState?.effect || 'standard',
+        },
       },
-    });
-
-    // Broadcast to all clients
-    await game.fitgd.saveImmediate();
+      { affectedReduxIds: [this.characterId], silent: true } // Silent: subscription handles render
+    );
 
     // Post chat message
     const actionName = action.charAt(0).toUpperCase() + action.slice(1);
@@ -443,17 +443,17 @@ export class PlayerActionWidget extends Application {
   async _onPositionChange(event) {
     const position = event.currentTarget.value;
 
-    // Dispatch Redux action
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/setPosition',
-      payload: {
-        characterId: this.characterId,
-        position,
+    // Use Bridge API to dispatch and broadcast
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/setPosition',
+        payload: {
+          characterId: this.characterId,
+          position,
+        },
       },
-    });
-
-    // Broadcast to all clients
-    await game.fitgd.saveImmediate();
+      { affectedReduxIds: [this.characterId], silent: true } // Silent: subscription handles render
+    );
 
     // Post chat message
     ChatMessage.create({
@@ -468,17 +468,17 @@ export class PlayerActionWidget extends Application {
   async _onEffectChange(event) {
     const effect = event.currentTarget.value;
 
-    // Dispatch Redux action
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/setEffect',
-      payload: {
-        characterId: this.characterId,
-        effect,
+    // Use Bridge API to dispatch and broadcast
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/setEffect',
+        payload: {
+          characterId: this.characterId,
+          effect,
+        },
       },
-    });
-
-    // Broadcast to all clients
-    await game.fitgd.saveImmediate();
+      { affectedReduxIds: [this.characterId], silent: true } // Silent: subscription handles render
+    );
 
     // Post chat message
     ChatMessage.create({
@@ -497,17 +497,17 @@ export class PlayerActionWidget extends Application {
     const currentlyApproved = this.playerState?.gmApproved || false;
     const newApprovalState = !currentlyApproved;
 
-    // Dispatch Redux action
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/setGmApproved',
-      payload: {
-        characterId: this.characterId,
-        approved: newApprovalState,
+    // Use Bridge API to dispatch and broadcast
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/setGmApproved',
+        payload: {
+          characterId: this.characterId,
+          approved: newApprovalState,
+        },
       },
-    });
-
-    // Broadcast to all clients
-    await game.fitgd.saveImmediate();
+      { affectedReduxIds: [this.characterId], silent: true } // Silent: subscription handles render
+    );
 
     // Post chat message
     if (newApprovalState) {
@@ -588,20 +588,18 @@ export class PlayerActionWidget extends Application {
 
     const currentlyPushedDie = this.playerState?.pushed && this.playerState?.pushType === 'extra-die';
 
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/setImprovements',
-      payload: {
-        characterId: this.characterId,
-        pushed: !currentlyPushedDie,
-        pushType: !currentlyPushedDie ? 'extra-die' : undefined,
+    // Use Bridge API to dispatch, broadcast, and refresh
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/setImprovements',
+        payload: {
+          characterId: this.characterId,
+          pushed: !currentlyPushedDie,
+          pushType: !currentlyPushedDie ? 'extra-die' : undefined,
+        },
       },
-    });
-
-    // Broadcast to all clients (GM needs to see this change)
-    await game.fitgd.saveImmediate();
-
-    // Refresh all widgets for this character
-    refreshSheetsByReduxId([this.characterId], false);
+      { affectedReduxIds: [this.characterId], force: false }
+    );
   }
 
   /**
@@ -612,22 +610,18 @@ export class PlayerActionWidget extends Application {
 
     const currentlyPushedEffect = this.playerState?.pushed && this.playerState?.pushType === 'improved-effect';
 
-    // Just toggle the push flag - don't change effect directly
-    // The improved effect will be computed for display and applied during roll
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/setImprovements',
-      payload: {
-        characterId: this.characterId,
-        pushed: !currentlyPushedEffect,
-        pushType: !currentlyPushedEffect ? 'improved-effect' : undefined,
+    // Use Bridge API to dispatch, broadcast, and refresh
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/setImprovements',
+        payload: {
+          characterId: this.characterId,
+          pushed: !currentlyPushedEffect,
+          pushType: !currentlyPushedEffect ? 'improved-effect' : undefined,
+        },
       },
-    });
-
-    // Broadcast to all clients (GM needs to see this change)
-    await game.fitgd.saveImmediate();
-
-    // Refresh all widgets for this character
-    refreshSheetsByReduxId([this.characterId], false);
+      { affectedReduxIds: [this.characterId], force: false }
+    );
   }
 
   /**
@@ -686,20 +680,20 @@ export class PlayerActionWidget extends Application {
       }
     }
 
-    // Transition to ROLLING
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/transitionState',
-      payload: {
-        characterId: this.characterId,
-        newState: 'ROLLING',
+    // Transition to ROLLING using Bridge API
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/transitionState',
+        payload: {
+          characterId: this.characterId,
+          newState: 'ROLLING',
+        },
       },
-    });
+      { affectedReduxIds: [this.characterId], silent: true } // Silent: subscription handles render
+    );
 
-    // CRITICAL: Broadcast the state transition
-    await game.fitgd.saveImmediate();
-
-    // NOTE: Don't call this.render() here - Redux subscription will handle it
-    // Calling render() here causes _state=1 (RENDERING), blocking subsequent renders
+    // NOTE: Bridge API handles broadcast automatically
+    // Redux subscription will handle rendering (no manual this.render() call)
 
     // Calculate dice pool (state declared at top of function)
     const dicePool = selectDicePool(state, this.characterId);
@@ -708,58 +702,61 @@ export class PlayerActionWidget extends Application {
     const rollResult = await this._rollDice(dicePool);
     const outcome = this._calculateOutcome(rollResult);
 
-    // Store roll result
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/setRollResult',
-      payload: {
-        characterId: this.characterId,
-        dicePool,
-        rollResult,
-        outcome,
+    // CRITICAL: Batch all roll outcome state changes together
+    // This prevents render race conditions by ensuring single broadcast
+    const rollOutcomeActions = [
+      {
+        type: 'playerRoundState/setRollResult',
+        payload: {
+          characterId: this.characterId,
+          dicePool,
+          rollResult,
+          outcome,
+        },
       },
-    });
-
-    // Clear GM approval (consumed by the roll)
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/setGmApproved',
-      payload: {
-        characterId: this.characterId,
-        approved: false,
+      {
+        type: 'playerRoundState/setGmApproved',
+        payload: {
+          characterId: this.characterId,
+          approved: false, // Clear GM approval (consumed by roll)
+        },
       },
-    });
+    ];
 
-    // Transition based on outcome (batch all dispatches before broadcasting)
+    // Add state transition based on outcome
     if (outcome === 'critical' || outcome === 'success') {
-      game.fitgd.store.dispatch({
+      rollOutcomeActions.push({
         type: 'playerRoundState/transitionState',
         payload: {
           characterId: this.characterId,
           newState: 'SUCCESS_COMPLETE',
         },
       });
-
-      // CRITICAL: Single broadcast for all state changes (prevents render race condition)
-      await game.fitgd.saveImmediate();
-
-      // Post to chat
-      this._postSuccessToChat(outcome, rollResult);
-
-      // Auto-close after delay
-      setTimeout(() => {
-        this._endTurn();
-      }, 2000);
     } else {
       // Partial or failure - need consequences
-      game.fitgd.store.dispatch({
+      rollOutcomeActions.push({
         type: 'playerRoundState/transitionState',
         payload: {
           characterId: this.characterId,
           newState: 'CONSEQUENCE_CHOICE',
         },
       });
+    }
 
-      // CRITICAL: Single broadcast for all state changes (prevents render race condition)
-      await game.fitgd.saveImmediate();
+    // Execute all roll outcome actions as a batch (single broadcast)
+    await game.fitgd.bridge.executeBatch(rollOutcomeActions, {
+      affectedReduxIds: [this.characterId],
+      force: false,
+    });
+
+    // Post success to chat if applicable
+    if (outcome === 'critical' || outcome === 'success') {
+      this._postSuccessToChat(outcome, rollResult);
+
+      // Auto-close after delay
+      setTimeout(() => {
+        this._endTurn();
+      }, 2000);
     }
   }
 

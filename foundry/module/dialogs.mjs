@@ -798,18 +798,19 @@ export class AddTraitDialog extends Dialog {
         acquiredAt: Date.now()
       };
 
-      game.fitgd.store.dispatch({
-        type: 'characters/addTrait',
-        payload: {
-          characterId,
-          trait
-        }
-      });
+      // Use Bridge API to dispatch, broadcast, and refresh automatically
+      await game.fitgd.bridge.execute(
+        {
+          type: 'characters/addTrait',
+          payload: {
+            characterId,
+            trait
+          }
+        },
+        { affectedReduxIds: [characterId], force: true }
+      );
 
       ui.notifications.info(`Trait "${traitName}" added`);
-
-      // Re-render sheet (force = true to ensure new trait appears)
-      refreshSheetsByReduxId([characterId], true);
 
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
@@ -1002,25 +1003,22 @@ export class FlashbackTraitsDialog extends Application {
       return;
     }
 
-    // Dispatch trait transaction to Redux (pending changes)
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/setTraitTransaction',
-      payload: {
-        characterId: this.characterId,
-        transaction: {
-          mode: 'existing',
-          selectedTraitId: this.selectedTraitId,
-          positionImprovement: true, // Using trait will improve position
-          momentumCost: 1, // Flashback costs 1M
+    // Use Bridge API to dispatch trait transaction and broadcast to all clients
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/setTraitTransaction',
+        payload: {
+          characterId: this.characterId,
+          transaction: {
+            mode: 'existing',
+            selectedTraitId: this.selectedTraitId,
+            positionImprovement: true, // Using trait will improve position
+            momentumCost: 1, // Flashback costs 1M
+          },
         },
       },
-    });
-
-    // Broadcast to all clients (GM needs to see the updated plan)
-    await game.fitgd.saveImmediate();
-
-    // Re-render widget to show updated plan
-    refreshSheetsByReduxId([this.characterId], false);
+      { affectedReduxIds: [this.characterId], force: false }
+    );
 
     ui.notifications.info('Trait selected - will improve position on roll (costs 1M)');
   }
@@ -1049,29 +1047,26 @@ export class FlashbackTraitsDialog extends Application {
       return;
     }
 
-    // Dispatch trait transaction to Redux (pending changes)
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/setTraitTransaction',
-      payload: {
-        characterId: this.characterId,
-        transaction: {
-          mode: 'new',
-          newTrait: {
-            name: newTraitName,
-            description: newTraitDescription || undefined,
-            category: 'flashback',
+    // Use Bridge API to dispatch trait transaction and broadcast to all clients
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/setTraitTransaction',
+        payload: {
+          characterId: this.characterId,
+          transaction: {
+            mode: 'new',
+            newTrait: {
+              name: newTraitName,
+              description: newTraitDescription || undefined,
+              category: 'flashback',
+            },
+            positionImprovement: true,
+            momentumCost: 1,
           },
-          positionImprovement: true,
-          momentumCost: 1,
         },
       },
-    });
-
-    // Broadcast to all clients (GM needs to see the updated plan)
-    await game.fitgd.saveImmediate();
-
-    // Re-render widget to show updated plan
-    refreshSheetsByReduxId([this.characterId], false);
+      { affectedReduxIds: [this.characterId], force: false }
+    );
 
     ui.notifications.info(`New trait "${newTraitName}" will be created on roll (costs 1M)`);
   }
@@ -1105,32 +1100,29 @@ export class FlashbackTraitsDialog extends Application {
       return;
     }
 
-    // Dispatch trait transaction to Redux (pending changes)
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/setTraitTransaction',
-      payload: {
-        characterId: this.characterId,
-        transaction: {
-          mode: 'consolidate',
-          consolidation: {
-            traitIdsToRemove: this.selectedTraitIds,
-            newTrait: {
-              name: newTraitName,
-              description: newTraitDescription || undefined,
-              category: 'grouped',
+    // Use Bridge API to dispatch trait transaction and broadcast to all clients
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/setTraitTransaction',
+        payload: {
+          characterId: this.characterId,
+          transaction: {
+            mode: 'consolidate',
+            consolidation: {
+              traitIdsToRemove: this.selectedTraitIds,
+              newTrait: {
+                name: newTraitName,
+                description: newTraitDescription || undefined,
+                category: 'grouped',
+              },
             },
+            positionImprovement: true,
+            momentumCost: 1,
           },
-          positionImprovement: true,
-          momentumCost: 1,
         },
       },
-    });
-
-    // Broadcast to all clients (GM needs to see the updated plan)
-    await game.fitgd.saveImmediate();
-
-    // Re-render widget to show updated plan
-    refreshSheetsByReduxId([this.characterId], false);
+      { affectedReduxIds: [this.characterId], force: false }
+    );
 
     ui.notifications.info(`Traits will be consolidated into "${newTraitName}" on roll (costs 1M)`);
   }

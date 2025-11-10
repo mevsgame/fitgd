@@ -444,10 +444,13 @@ Hooks.on('updateCombat', async function(combat, updateData, options, userId) {
 Hooks.on('combatEnd', async function(combat) {
   console.log('FitGD | Combat ended, clearing player states');
 
-  // Clear all player round states
-  game.fitgd.store.dispatch({
-    type: 'playerRoundState/clearAllStates',
-  });
+  // Clear all player round states using Bridge API
+  await game.fitgd.bridge.execute(
+    {
+      type: 'playerRoundState/clearAllStates',
+    },
+    { silent: true } // Silent: no sheets to refresh, just clear state
+  );
 
   // Close any open Player Action Widgets
   for (const app of Object.values(ui.windows)) {
