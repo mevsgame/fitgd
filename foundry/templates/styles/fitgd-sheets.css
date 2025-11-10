@@ -1524,26 +1524,15 @@
 .roll-outcome h2 {
   margin: 0 0 10px 0;
   font-size: 1.8em;
+  font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 1px;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
 }
 
-.outcome-critical {
-  color: #ffd700;
+/* Widget-specific outcome animations (scoped to roll-outcome context) */
+.roll-outcome .outcome-critical {
   animation: pulse 1.5s ease-in-out infinite;
-}
-
-.outcome-success {
-  color: #4caf50;
-}
-
-.outcome-partial {
-  color: #ff9800;
-}
-
-.outcome-failure {
-  color: #f44336;
 }
 
 @keyframes pulse {
@@ -1561,7 +1550,8 @@
   border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.dice-result {
+/* Widget-specific dice result (scoped) */
+.player-action-widget-container .dice-result {
   font-size: 1.2em;
   font-weight: bold;
   color: #ffd700;
