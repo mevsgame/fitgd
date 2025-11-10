@@ -219,6 +219,10 @@ export class FoundryReduxBridge {
    * @private
    */
   _isReduxId(id) {
+    // Guard against null/undefined
+    if (!id || typeof id !== 'string') {
+      return false;
+    }
     // Redux IDs are UUIDs, Foundry Actor IDs contain dots
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
   }
@@ -241,18 +245,26 @@ export class FoundryReduxBridge {
     const payload = action.payload || {};
 
     // Common patterns for entity IDs in payloads
-    if (payload.characterId) ids.add(payload.characterId);
-    if (payload.crewId) ids.add(payload.crewId);
-    if (payload.entityId) ids.add(payload.entityId);
+    // Guard against null/undefined values
+    if (payload.characterId && typeof payload.characterId === 'string') {
+      ids.add(payload.characterId);
+    }
+    if (payload.crewId && typeof payload.crewId === 'string') {
+      ids.add(payload.crewId);
+    }
+    if (payload.entityId && typeof payload.entityId === 'string') {
+      ids.add(payload.entityId);
+    }
 
     // For clock operations, also refresh the entity that owns the clock
     if (payload.clockId) {
       const state = this.getState();
       const clock = state.clocks.byId[payload.clockId];
-      if (clock) ids.add(clock.entityId);
+      if (clock && clock.entityId) ids.add(clock.entityId);
     }
 
-    return Array.from(ids);
+    // Filter out any null/undefined that may have snuck in
+    return Array.from(ids).filter(id => id && typeof id === 'string');
   }
 
   /**

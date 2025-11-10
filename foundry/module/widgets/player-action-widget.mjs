@@ -1051,71 +1051,99 @@ export class PlayerActionWidget extends Application {
     event.preventDefault();
 
     const transaction = this.playerState?.consequenceTransaction;
-    if (!transaction?.harmTargetCharacterId) {
+    const targetCharacterId = transaction?.harmTargetCharacterId;
+
+    if (!targetCharacterId) {
       ui.notifications.warn('Select target character first');
       return;
     }
 
+    console.log('FitGD | Opening harm clock selection for target:', targetCharacterId);
+
     // Open ClockSelectionDialog for harm clocks
     const dialog = new ClockSelectionDialog(
-      transaction.harmTargetCharacterId,
+      targetCharacterId,
       'harm',
       async (clockId) => {
-        if (clockId === '_new') {
-          // Create new harm clock
-          const clockType = await promptForText(
-            'New Harm Clock',
-            'Enter harm type (e.g., Physical, Morale):',
-            'Physical Harm'
-          );
+        try {
+          console.log('FitGD | Harm clock selected:', clockId);
 
-          if (!clockType) return; // User canceled
+          if (clockId === '_new') {
+            // Create new harm clock
+            const clockType = await promptForText(
+              'New Harm Clock',
+              'Enter harm type (e.g., Physical, Morale):',
+              'Physical Harm'
+            );
 
-          // Create clock via Bridge API
-          const newClockId = foundry.utils.randomID();
-          await game.fitgd.bridge.execute(
-            {
-              type: 'clocks/createClock',
-              payload: {
-                id: newClockId,
-                entityId: transaction.harmTargetCharacterId,
-                clockType: 'harm',
-                subtype: clockType,
-                maxSegments: 6,
-                segments: 0,
-              },
-            },
-            { affectedReduxIds: [transaction.harmTargetCharacterId], silent: true }
-          );
+            if (!clockType) {
+              console.log('FitGD | Clock creation canceled');
+              return; // User canceled
+            }
 
-          // Update transaction with new clock
-          await game.fitgd.bridge.execute(
-            {
-              type: 'playerRoundState/updateConsequenceTransaction',
-              payload: {
-                characterId: this.characterId,
-                updates: {
-                  harmClockId: newClockId,
-                  newHarmClockType: clockType,
+            console.log('FitGD | Creating new harm clock:', clockType, 'for character:', targetCharacterId);
+
+            // Create clock via Bridge API
+            const newClockId = foundry.utils.randomID();
+
+            // Validate IDs before passing to Bridge API
+            if (!targetCharacterId) {
+              console.error('FitGD | Cannot create clock: targetCharacterId is null/undefined');
+              ui.notifications.error('Internal error: target character ID is missing');
+              return;
+            }
+
+            await game.fitgd.bridge.execute(
+              {
+                type: 'clocks/createClock',
+                payload: {
+                  id: newClockId,
+                  entityId: targetCharacterId,
+                  clockType: 'harm',
+                  subtype: clockType,
+                  maxSegments: 6,
+                  segments: 0,
                 },
               },
-            },
-            { affectedReduxIds: [this.characterId], silent: true }
-          );
-        } else {
-          // Existing clock selected
-          await game.fitgd.bridge.execute(
-            {
-              type: 'playerRoundState/updateConsequenceTransaction',
-              payload: {
-                characterId: this.characterId,
-                updates: {
-                  harmClockId: clockId,
+              { affectedReduxIds: [targetCharacterId], silent: true }
+            );
+
+            console.log('FitGD | Clock created, updating transaction');
+
+            // Update transaction with new clock
+            await game.fitgd.bridge.execute(
+              {
+                type: 'playerRoundState/updateConsequenceTransaction',
+                payload: {
+                  characterId: this.characterId,
+                  updates: {
+                    harmClockId: newClockId,
+                    newHarmClockType: clockType,
+                  },
                 },
               },
-            },
-            { affectedReduxIds: [this.characterId], silent: true }
-          );
+              { affectedReduxIds: [this.characterId], silent: true }
+            );
+
+            console.log('FitGD | Transaction updated with new clock');
+          } else {
+            // Existing clock selected
+            await game.fitgd.bridge.execute(
+              {
+                type: 'playerRoundState/updateConsequenceTransaction',
+                payload: {
+                  characterId: this.characterId,
+                  updates: {
+                    harmClockId: clockId,
+                  },
+                },
+              },
+              { affectedReduxIds: [this.characterId], silent: true }
+            );
+          }
+        } catch (error) {
+          console.error('FitGD | Error in harm clock selection:', error);
+          ui.notifications.error(`Error creating clock: ${error.message}`);
         }
       }
     );
@@ -1129,72 +1157,100 @@ export class PlayerActionWidget extends Application {
   async _onSelectCrewClock(event) {
     event.preventDefault();
 
-    if (!this.crewId) {
+    const crewId = this.crewId;
+
+    if (!crewId) {
       ui.notifications.warn('Character must be in a crew');
       return;
     }
 
+    console.log('FitGD | Opening crew clock selection for crew:', crewId);
+
     // Open ClockSelectionDialog for crew clocks (non-harm)
     const dialog = new ClockSelectionDialog(
-      this.crewId,
+      crewId,
       'crew',
       async (clockId) => {
-        if (clockId === '_new') {
-          // Create new crew clock
-          const clockName = await promptForText(
-            'New Crew Clock',
-            'Enter clock name (e.g., Threat Level, Investigation):',
-            'Threat Clock'
-          );
+        try {
+          console.log('FitGD | Crew clock selected:', clockId);
 
-          if (!clockName) return; // User canceled
+          if (clockId === '_new') {
+            // Create new crew clock
+            const clockName = await promptForText(
+              'New Crew Clock',
+              'Enter clock name (e.g., Threat Level, Investigation):',
+              'Threat Clock'
+            );
 
-          // Create clock via Bridge API
-          const newClockId = foundry.utils.randomID();
-          await game.fitgd.bridge.execute(
-            {
-              type: 'clocks/createClock',
-              payload: {
-                id: newClockId,
-                entityId: this.crewId,
-                clockType: 'progress', // Generic crew clock
-                subtype: clockName,
-                maxSegments: 8, // Default to 8-segment clock
-                segments: 0,
-              },
-            },
-            { affectedReduxIds: [this.crewId], silent: true }
-          );
+            if (!clockName) {
+              console.log('FitGD | Clock creation canceled');
+              return; // User canceled
+            }
 
-          // Update transaction with new clock
-          await game.fitgd.bridge.execute(
-            {
-              type: 'playerRoundState/updateConsequenceTransaction',
-              payload: {
-                characterId: this.characterId,
-                updates: {
-                  crewClockId: newClockId,
-                  crewClockSegments: 1, // Default to 1 segment
+            console.log('FitGD | Creating new crew clock:', clockName, 'for crew:', crewId);
+
+            // Create clock via Bridge API
+            const newClockId = foundry.utils.randomID();
+
+            // Validate IDs before passing to Bridge API
+            if (!crewId) {
+              console.error('FitGD | Cannot create clock: crewId is null/undefined');
+              ui.notifications.error('Internal error: crew ID is missing');
+              return;
+            }
+
+            await game.fitgd.bridge.execute(
+              {
+                type: 'clocks/createClock',
+                payload: {
+                  id: newClockId,
+                  entityId: crewId,
+                  clockType: 'progress', // Generic crew clock
+                  subtype: clockName,
+                  maxSegments: 8, // Default to 8-segment clock
+                  segments: 0,
                 },
               },
-            },
-            { affectedReduxIds: [this.characterId], silent: true }
-          );
-        } else {
-          // Existing clock selected
-          await game.fitgd.bridge.execute(
-            {
-              type: 'playerRoundState/updateConsequenceTransaction',
-              payload: {
-                characterId: this.characterId,
-                updates: {
-                  crewClockId: clockId,
-                  crewClockSegments: 1, // Default to 1 segment
+              { affectedReduxIds: [crewId], silent: true }
+            );
+
+            console.log('FitGD | Clock created, updating transaction');
+
+            // Update transaction with new clock
+            await game.fitgd.bridge.execute(
+              {
+                type: 'playerRoundState/updateConsequenceTransaction',
+                payload: {
+                  characterId: this.characterId,
+                  updates: {
+                    crewClockId: newClockId,
+                    crewClockSegments: 1, // Default to 1 segment
+                  },
                 },
               },
-            },
-            { affectedReduxIds: [this.characterId], silent: true }
-          );
+              { affectedReduxIds: [this.characterId], silent: true }
+            );
+
+            console.log('FitGD | Transaction updated with new clock');
+          } else {
+            // Existing clock selected
+            await game.fitgd.bridge.execute(
+              {
+                type: 'playerRoundState/updateConsequenceTransaction',
+                payload: {
+                  characterId: this.characterId,
+                  updates: {
+                    crewClockId: clockId,
+                    crewClockSegments: 1, // Default to 1 segment
+                  },
+                },
+              },
+              { affectedReduxIds: [this.characterId], silent: true }
+            );
+          }
+        } catch (error) {
+          console.error('FitGD | Error in crew clock selection:', error);
+          ui.notifications.error(`Error creating clock: ${error.message}`);
         }
       }
     );
