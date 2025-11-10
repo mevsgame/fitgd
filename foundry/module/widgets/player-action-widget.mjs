@@ -205,6 +205,8 @@ export class PlayerActionWidget extends Application {
    * @param {TraitTransaction} transaction - The transaction to apply
    */
   async _applyTraitTransaction(transaction) {
+    const actions = [];
+
     if (transaction.mode === 'existing') {
       // No character changes needed for using existing trait
       console.log(`FitGD | Using existing trait: ${transaction.selectedTraitId}`);
@@ -220,7 +222,7 @@ export class PlayerActionWidget extends Application {
         acquiredAt: Date.now(),
       };
 
-      game.fitgd.store.dispatch({
+      actions.push({
         type: 'characters/addTrait',
         payload: {
           characterId: this.characterId,
@@ -228,15 +230,15 @@ export class PlayerActionWidget extends Application {
         },
       });
 
-      console.log(`FitGD | Created new trait: ${newTrait.name}`);
+      console.log(`FitGD | Will create new trait: ${newTrait.name}`);
 
     } else if (transaction.mode === 'consolidate') {
       // Remove 3 traits and create consolidated trait
       const consolidation = transaction.consolidation;
 
-      // Remove the 3 traits
+      // Queue removal of the 3 traits
       for (const traitId of consolidation.traitIdsToRemove) {
-        game.fitgd.store.dispatch({
+        actions.push({
           type: 'characters/removeTrait',
           payload: {
             characterId: this.characterId,
@@ -245,7 +247,7 @@ export class PlayerActionWidget extends Application {
         });
       }
 
-      // Create consolidated trait
+      // Queue creation of consolidated trait
       const consolidatedTrait = {
         id: foundry.utils.randomID(),
         name: consolidation.newTrait.name,
@@ -255,7 +257,7 @@ export class PlayerActionWidget extends Application {
         acquiredAt: Date.now(),
       };
 
-      game.fitgd.store.dispatch({
+      actions.push({
         type: 'characters/addTrait',
         payload: {
           characterId: this.characterId,
@@ -263,14 +265,16 @@ export class PlayerActionWidget extends Application {
         },
       });
 
-      console.log(`FitGD | Consolidated traits into: ${consolidatedTrait.name}`);
+      console.log(`FitGD | Will consolidate traits into: ${consolidatedTrait.name}`);
     }
 
-    // Save immediately (critical state change)
-    await game.fitgd.saveImmediate();
-
-    // Re-render character sheet
-    refreshSheetsByReduxId([this.characterId], true);
+    // Execute all trait changes as a batch (single broadcast, prevents render race)
+    if (actions.length > 0) {
+      await game.fitgd.bridge.executeBatch(actions, {
+        affectedReduxIds: [this.characterId],
+        force: true, // Force full re-render to show new traits
+      });
+    }
   }
 
   /**
@@ -545,16 +549,13 @@ export class PlayerActionWidget extends Application {
 
     // If trait transaction already exists, cancel it (toggle off)
     if (this.playerState?.traitTransaction) {
-      game.fitgd.store.dispatch({
-        type: 'playerRoundState/clearTraitTransaction',
-        payload: { characterId: this.characterId }
-      });
-
-      // Broadcast to all clients
-      await game.fitgd.saveImmediate();
-
-      // Refresh all widgets for this character
-      refreshSheetsByReduxId([this.characterId], false);
+      await game.fitgd.bridge.execute(
+        {
+          type: 'playerRoundState/clearTraitTransaction',
+          payload: { characterId: this.characterId }
+        },
+        { affectedReduxIds: [this.characterId], force: false }
+      );
 
       ui.notifications.info('Trait flashback canceled');
       return;
@@ -665,14 +666,12 @@ export class PlayerActionWidget extends Application {
     if (playerState?.traitTransaction) {
       try {
         // Apply trait changes (create/consolidate traits)
+        // _applyTraitTransaction uses Bridge API and broadcasts internally
         await this._applyTraitTransaction(playerState.traitTransaction);
 
         // NOTE: Position improvement is NOT applied to playerState
         // It's ephemeral and only affects this roll's consequence calculation
         // The GM's original position setting remains unchanged
-
-        // CRITICAL: Broadcast trait changes
-        await game.fitgd.saveImmediate();
       } catch (error) {
         console.error('FitGD | Error applying trait transaction:', error);
         ui.notifications.error(`Failed to apply trait changes: ${error.message}`);
@@ -814,19 +813,17 @@ export class PlayerActionWidget extends Application {
   async _onAcceptConsequences(event) {
     event.preventDefault();
 
-    // Transition to CONSEQUENCE_RESOLUTION
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/transitionState',
-      payload: {
-        characterId: this.characterId,
-        newState: 'CONSEQUENCE_RESOLUTION',
+    // Use Bridge API to transition state
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/transitionState',
+        payload: {
+          characterId: this.characterId,
+          newState: 'CONSEQUENCE_RESOLUTION',
+        },
       },
-    });
-
-    // CRITICAL: Broadcast the state transition
-    await game.fitgd.saveImmediate();
-
-    // NOTE: Redux subscription will handle rendering automatically
+      { affectedReduxIds: [this.characterId], silent: true } // Silent: subscription handles render
+    );
   }
 
   /**
@@ -844,30 +841,31 @@ export class PlayerActionWidget extends Application {
     const segments = selectConsequenceSeverity(position, effect);
     const momentumGain = selectMomentumGain(position);
 
-    // Transition to CONSEQUENCE_RESOLUTION
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/transitionState',
-      payload: {
-        characterId: this.characterId,
-        newState: 'CONSEQUENCE_RESOLUTION',
+    // Batch initial state transitions (CONSEQUENCE_RESOLUTION + consequence data)
+    await game.fitgd.bridge.executeBatch([
+      {
+        type: 'playerRoundState/transitionState',
+        payload: {
+          characterId: this.characterId,
+          newState: 'CONSEQUENCE_RESOLUTION',
+        },
       },
+      {
+        type: 'playerRoundState/setConsequence',
+        payload: {
+          characterId: this.characterId,
+          consequenceType: 'harm',
+          consequenceValue: segments,
+          momentumGain,
+        },
+      }
+    ], {
+      affectedReduxIds: [this.characterId],
+      silent: true, // Silent: subscription handles render
     });
 
-    // Store consequence data
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/setConsequence',
-      payload: {
-        characterId: this.characterId,
-        consequenceType: 'harm',
-        consequenceValue: segments,
-        momentumGain,
-      },
-    });
-
-    // NOTE: Don't call this.render() here - Redux subscription will handle it
-    // Calling render() blocks subsequent renders during async harm.take() call
-
-    // Apply harm - use harm API
+    // Apply harm - use harm API (dispatches internally, needs broadcast)
+    // TODO: This still uses Game API which dispatches internally - needs refactoring
     if (segments > 0) {
       try {
         await game.fitgd.api.harm.take({
@@ -883,43 +881,48 @@ export class PlayerActionWidget extends Application {
       }
     }
 
-    // Add Momentum
+    // Add Momentum (dispatches internally, needs broadcast)
+    // TODO: This still uses Game API which dispatches internally - needs refactoring
     if (this.crewId) {
       game.fitgd.api.crew.addMomentum({ crewId: this.crewId, amount: momentumGain });
     }
 
-    // Transition to APPLYING_EFFECTS then TURN_COMPLETE
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/transitionState',
-      payload: {
-        characterId: this.characterId,
-        newState: 'APPLYING_EFFECTS',
-      },
-    });
+    // Broadcast harm and momentum changes
+    await game.fitgd.saveImmediate(); // TODO: Should be part of Bridge API call
 
-    // CRITICAL: Broadcast the state transition
-    await game.fitgd.saveImmediate();
-
-    // Give a brief moment for UI to update, then complete turn
-    setTimeout(async () => {
-      game.fitgd.store.dispatch({
+    // Transition to APPLYING_EFFECTS
+    await game.fitgd.bridge.execute(
+      {
         type: 'playerRoundState/transitionState',
         payload: {
           characterId: this.characterId,
-          newState: 'TURN_COMPLETE',
+          newState: 'APPLYING_EFFECTS',
         },
-      });
+      },
+      { affectedReduxIds: [this.characterId], silent: true }
+    );
 
-      // Reset player state (clear all improvements, GM approval, etc.)
-      game.fitgd.store.dispatch({
-        type: 'playerRoundState/resetPlayerState',
-        payload: {
-          characterId: this.characterId,
+    // Give a brief moment for UI to update, then complete turn
+    setTimeout(async () => {
+      // Batch final state transitions (TURN_COMPLETE + reset)
+      await game.fitgd.bridge.executeBatch([
+        {
+          type: 'playerRoundState/transitionState',
+          payload: {
+            characterId: this.characterId,
+            newState: 'TURN_COMPLETE',
+          },
         },
+        {
+          type: 'playerRoundState/resetPlayerState',
+          payload: {
+            characterId: this.characterId,
+          },
+        }
+      ], {
+        affectedReduxIds: [this.characterId],
+        silent: true,
       });
-
-      // Broadcast state changes
-      await game.fitgd.saveImmediate();
 
       // Close widget after completing
       setTimeout(() => this.close(), 500);
@@ -942,25 +945,23 @@ export class PlayerActionWidget extends Application {
   async _onCancel(event) {
     event.preventDefault();
 
-    // Reset to clean DECISION state
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/resetPlayerState',
-      payload: { characterId: this.characterId },
-    });
-
-    // Set back to DECISION
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/transitionState',
-      payload: {
-        characterId: this.characterId,
-        newState: 'DECISION_PHASE',
+    // Batch reset and transition to DECISION state
+    await game.fitgd.bridge.executeBatch([
+      {
+        type: 'playerRoundState/resetPlayerState',
+        payload: { characterId: this.characterId },
       },
+      {
+        type: 'playerRoundState/transitionState',
+        payload: {
+          characterId: this.characterId,
+          newState: 'DECISION_PHASE',
+        },
+      }
+    ], {
+      affectedReduxIds: [this.characterId],
+      silent: true, // Silent: subscription handles render
     });
-
-    // CRITICAL: Broadcast the state transitions
-    await game.fitgd.saveImmediate();
-
-    // NOTE: Redux subscription will handle rendering automatically
   }
 
   /**
@@ -987,25 +988,25 @@ export class PlayerActionWidget extends Application {
    * End turn and close widget
    */
   async _endTurn() {
-    // Transition to TURN_COMPLETE
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/transitionState',
-      payload: {
-        characterId: this.characterId,
-        newState: 'TURN_COMPLETE',
+    // Batch transition to TURN_COMPLETE and reset player state
+    await game.fitgd.bridge.executeBatch([
+      {
+        type: 'playerRoundState/transitionState',
+        payload: {
+          characterId: this.characterId,
+          newState: 'TURN_COMPLETE',
+        },
       },
+      {
+        type: 'playerRoundState/resetPlayerState',
+        payload: {
+          characterId: this.characterId,
+        },
+      }
+    ], {
+      affectedReduxIds: [this.characterId],
+      silent: true, // Silent: subscription handles render
     });
-
-    // Reset player state (clear all improvements, GM approval, etc.)
-    game.fitgd.store.dispatch({
-      type: 'playerRoundState/resetPlayerState',
-      payload: {
-        characterId: this.characterId,
-      },
-    });
-
-    // Broadcast state changes
-    await game.fitgd.saveImmediate();
 
     // Close widget
     this.close();
