@@ -3,6 +3,14 @@
  *
  * Allows GMs to view command history statistics and prune history to reduce storage.
  */
+
+// @ts-check
+
+/**
+ * @typedef {import('../dist/types').Command} Command
+ * @typedef {import('../dist/store').RootState} RootState
+ */
+
 export class HistoryManagementConfig extends FormApplication {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {

@@ -5,6 +5,19 @@
  * Drives the action resolution flow through the state machine.
  */
 
+// @ts-check
+
+/**
+ * @typedef {import('../../dist/types').Character} Character
+ * @typedef {import('../../dist/types').Crew} Crew
+ * @typedef {import('../../dist/types').Clock} Clock
+ * @typedef {import('../../dist/types').Trait} Trait
+ * @typedef {import('../../dist/store').RootState} RootState
+ * @typedef {import('../../dist/types/playerRoundState').PlayerRoundState} PlayerRoundState
+ * @typedef {import('../../dist/types/playerRoundState').Position} Position
+ * @typedef {import('../../dist/types/playerRoundState').Effect} Effect
+ */
+
 import {
   selectDicePool,
   selectConsequenceSeverity,

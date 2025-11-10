@@ -11,6 +11,21 @@
  * - Add/Manage Clocks
  */
 
+// @ts-check
+
+/**
+ * @typedef {import('../dist/types').Character} Character
+ * @typedef {import('../dist/types').Crew} Crew
+ * @typedef {import('../dist/types').Clock} Clock
+ * @typedef {import('../dist/types').Trait} Trait
+ * @typedef {import('../dist/types').Equipment} Equipment
+ * @typedef {import('../dist/types').ActionDots} ActionDots
+ * @typedef {import('../dist/store').RootState} RootState
+ * @typedef {import('../dist/types/playerRoundState').PlayerRoundState} PlayerRoundState
+ * @typedef {import('../dist/types/playerRoundState').Position} Position
+ * @typedef {import('../dist/types/playerRoundState').Effect} Effect
+ */
+
 /* -------------------------------------------- */
 /*  Helper Functions                            */
 /* -------------------------------------------- */

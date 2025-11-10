@@ -422,5 +422,7 @@ export const {
   clearAllStates,
 } = playerRoundStateSlice.actions;
 
+export { playerRoundStateSlice };
+
 // Export reducer
 export default playerRoundStateSlice.reducer;

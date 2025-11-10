@@ -786,4 +786,5 @@ export const {
   hydrateCharacters,
 } = characterSlice.actions;
 
+export { characterSlice };
 export default characterSlice.reducer;
