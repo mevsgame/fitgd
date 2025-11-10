@@ -703,8 +703,7 @@ export class PlayerActionWidget extends Application {
 
     this.render();
 
-    // Calculate dice pool
-    const state = game.fitgd.store.getState();
+    // Calculate dice pool (state declared at top of function)
     const dicePool = selectDicePool(state, this.characterId);
 
     // Roll dice using Foundry dice roller
