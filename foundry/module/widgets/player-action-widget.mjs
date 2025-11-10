@@ -32,14 +32,7 @@ export class PlayerActionWidget extends Application {
   }
 
   /** @override */
-  render(force = false, options = {}) {
-    console.log(`FitGD | Widget.render() called with force=${force}, _state=${this._state}`);
-    return super.render(force, options);
-  }
-
-  /** @override */
   async _render(force, options) {
-    console.log(`FitGD | Widget._render() called with force=${force}`);
     await super._render(force, options);
 
     // Subscribe to Redux store changes for real-time updates
@@ -53,14 +46,11 @@ export class PlayerActionWidget extends Application {
 
         // Only re-render if this character's state actually changed
         if (currentPlayerState !== previousPlayerState) {
-          console.log(`FitGD | Widget detected state change for ${this.characterId}, refreshing...`);
           this.render(true); // Force full re-render to update template
         }
 
         previousState = currentState;
       });
-
-      console.log(`FitGD | Widget subscribed to store updates for ${this.characterId}`);
     }
   }
 
@@ -70,7 +60,6 @@ export class PlayerActionWidget extends Application {
     if (this.storeUnsubscribe) {
       this.storeUnsubscribe();
       this.storeUnsubscribe = null;
-      console.log(`FitGD | Widget unsubscribed from store updates for ${this.characterId}`);
     }
 
     return super.close(options);
@@ -97,7 +86,6 @@ export class PlayerActionWidget extends Application {
 
   /** @override */
   async getData(options = {}) {
-    console.log(`FitGD | Widget.getData() called for ${this.characterId}`);
     const data = await super.getData(options);
 
     // Get character from Redux store
@@ -115,18 +103,13 @@ export class PlayerActionWidget extends Application {
     if (crewId) {
       this.crew = game.fitgd.api.crew.getCrew(crewId);
       this.crewId = crewId; // Store crewId separately for easy access
-      console.log(`FitGD | Widget found crew ${crewId} for character ${this.characterId}`);
     } else {
-      console.warn(`FitGD | No crew found for character ${this.characterId}`);
       this.crew = null;
       this.crewId = null;
     }
 
     // Get player round state
     this.playerState = state.playerRoundState.byCharacterId[this.characterId];
-
-    // DEBUG: Log current state
-    console.log(`FitGD | Widget getData() for ${this.characterId}, state: ${this.playerState?.state}, outcome: ${this.playerState?.outcome}, rollResult: ${this.playerState?.rollResult}`);
 
     // Build data for template
     return {
@@ -654,8 +637,6 @@ export class PlayerActionWidget extends Application {
   async _onRoll(event) {
     event.preventDefault();
 
-    console.log(`FitGD | _onRoll called for ${this.characterId}, current state: ${this.playerState?.state}`);
-
     // Validate action is selected
     if (!this.playerState?.selectedAction) {
       ui.notifications.warn('Please select an action first');
@@ -716,7 +697,6 @@ export class PlayerActionWidget extends Application {
 
     // CRITICAL: Broadcast the state transition
     await game.fitgd.saveImmediate();
-    console.log(`FitGD | Transitioned to ROLLING and broadcast`);
 
     // NOTE: Don't call this.render() here - Redux subscription will handle it
     // Calling render() here causes _state=1 (RENDERING), blocking subsequent renders
@@ -727,7 +707,6 @@ export class PlayerActionWidget extends Application {
     // Roll dice using Foundry dice roller
     const rollResult = await this._rollDice(dicePool);
     const outcome = this._calculateOutcome(rollResult);
-    console.log(`FitGD | Roll complete: outcome=${outcome}, rollResult=${rollResult}`);
 
     // Store roll result
     game.fitgd.store.dispatch({
@@ -751,7 +730,6 @@ export class PlayerActionWidget extends Application {
 
     // Transition based on outcome (batch all dispatches before broadcasting)
     if (outcome === 'critical' || outcome === 'success') {
-      console.log(`FitGD | Success/Critical - transitioning to SUCCESS_COMPLETE`);
       game.fitgd.store.dispatch({
         type: 'playerRoundState/transitionState',
         payload: {
@@ -762,7 +740,6 @@ export class PlayerActionWidget extends Application {
 
       // CRITICAL: Single broadcast for all state changes (prevents render race condition)
       await game.fitgd.saveImmediate();
-      console.log(`FitGD | SUCCESS_COMPLETE broadcast complete`);
 
       // Post to chat
       this._postSuccessToChat(outcome, rollResult);
@@ -773,7 +750,6 @@ export class PlayerActionWidget extends Application {
       }, 2000);
     } else {
       // Partial or failure - need consequences
-      console.log(`FitGD | Partial/Failure - transitioning to CONSEQUENCE_CHOICE`);
       game.fitgd.store.dispatch({
         type: 'playerRoundState/transitionState',
         payload: {
@@ -784,7 +760,6 @@ export class PlayerActionWidget extends Application {
 
       // CRITICAL: Single broadcast for all state changes (prevents render race condition)
       await game.fitgd.saveImmediate();
-      console.log(`FitGD | CONSEQUENCE_CHOICE broadcast complete, state should now be synced`);
     }
   }
 
