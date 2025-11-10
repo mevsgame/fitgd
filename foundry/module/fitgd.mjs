@@ -985,10 +985,17 @@ async function receiveCommandsFromSocket(data) {
       for (const [characterId, receivedPlayerState] of Object.entries(data.playerRoundState.byCharacterId)) {
         const currentPlayerState = currentState.playerRoundState.byCharacterId[characterId];
 
+        console.log(`FitGD | Socket handler - character ${characterId.substring(0, 8)}:`);
+        console.log(`  Current state: ${currentPlayerState?.state}`);
+        console.log(`  Received state: ${receivedPlayerState.state}`);
+
         // Skip if identical (avoid unnecessary updates)
         if (JSON.stringify(currentPlayerState) === JSON.stringify(receivedPlayerState)) {
+          console.log(`  Skipping - states are identical`);
           continue;
         }
+
+        console.log(`  States differ - applying updates`);
 
         // Track that this character's state changed
         changedCharacterIds.push(characterId);
@@ -1060,6 +1067,7 @@ async function receiveCommandsFromSocket(data) {
 
         // CRITICAL: Handle state transitions
         if (receivedPlayerState.state && receivedPlayerState.state !== currentPlayerState?.state) {
+          console.log(`  Dispatching state transition: ${currentPlayerState?.state} → ${receivedPlayerState.state}`);
           game.fitgd.store.dispatch({
             type: 'playerRoundState/transitionState',
             payload: {
@@ -1067,6 +1075,8 @@ async function receiveCommandsFromSocket(data) {
               newState: receivedPlayerState.state
             }
           });
+        } else {
+          console.log(`  State transition skipped - receivedPlayerState.state: ${receivedPlayerState.state}, currentPlayerState.state: ${currentPlayerState?.state}`);
         }
 
         // CRITICAL: Handle roll results (dicePool, rollResult, outcome)
