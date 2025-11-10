@@ -11,6 +11,21 @@
  * - Add/Manage Clocks
  */
 
+// @ts-check
+
+/**
+ * @typedef {import('../dist/types').Character} Character
+ * @typedef {import('../dist/types').Crew} Crew
+ * @typedef {import('../dist/types').Clock} Clock
+ * @typedef {import('../dist/types').Trait} Trait
+ * @typedef {import('../dist/types').Equipment} Equipment
+ * @typedef {import('../dist/types').ActionDots} ActionDots
+ * @typedef {import('../dist/store').RootState} RootState
+ * @typedef {import('../dist/types/playerRoundState').PlayerRoundState} PlayerRoundState
+ * @typedef {import('../dist/types/playerRoundState').Position} Position
+ * @typedef {import('../dist/types/playerRoundState').Effect} Effect
+ */
+
 /* -------------------------------------------- */
 /*  Helper Functions                            */
 /* -------------------------------------------- */
@@ -72,7 +87,30 @@ export function refreshSheetsByReduxId(reduxIds, force = true) {
 /*  Action Roll Dialog                          */
 /* -------------------------------------------- */
 
+/**
+ * Action Roll Dialog
+ *
+ * Displays a dialog for performing action rolls with the following options:
+ * - Action selection (based on character's action dots)
+ * - Position (Controlled/Risky/Desperate)
+ * - Effect (Limited/Standard/Great)
+ * - Push Yourself (+1d for 1 Momentum)
+ * - Devil's Bargain (+1d with GM complication)
+ * - Bonus dice from assists/advantages
+ *
+ * Automatically calculates dice pool, handles 0-dot actions (roll 2d6 keep lowest),
+ * evaluates roll outcome, posts to chat, and handles consequences.
+ *
+ * @extends Dialog
+ */
 export class ActionRollDialog extends Dialog {
+  /**
+   * Create a new Action Roll Dialog
+   *
+   * @param {string} characterId - Redux ID of the character making the roll
+   * @param {string} crewId - Redux ID of the character's crew
+   * @param {Object} options - Additional options passed to Dialog constructor
+   */
   constructor(characterId, crewId, options = {}) {
     const character = game.fitgd.api.character.getCharacter(characterId);
     const crew = game.fitgd.api.crew.getCrew(crewId);
@@ -164,6 +202,17 @@ export class ActionRollDialog extends Dialog {
     }, options);
   }
 
+  /**
+   * Handle dialog render event
+   *
+   * Sets up reactive UI that updates the dice pool display whenever
+   * action, push, devil's bargain, or bonus dice changes.
+   *
+   * @param {JQuery} html - jQuery object containing the dialog HTML
+   * @param {string} characterId - Redux ID of the character
+   * @returns {void}
+   * @private
+   */
   _onRender(html, characterId) {
     const character = game.fitgd.api.character.getCharacter(characterId);
     const actionSelect = html.find('[name="action"]');
@@ -197,6 +246,20 @@ export class ActionRollDialog extends Dialog {
     updatePool();
   }
 
+  /**
+   * Handle roll button click
+   *
+   * Validates Momentum availability if pushing, calculates final dice pool,
+   * rolls the dice (handling 0-dot action special case), evaluates outcome
+   * (critical/success/partial/failure), posts result to chat, and handles
+   * consequences.
+   *
+   * @param {JQuery} html - jQuery object containing the dialog HTML
+   * @param {string} characterId - Redux ID of the character
+   * @param {string} crewId - Redux ID of the crew
+   * @returns {Promise<void>}
+   * @private
+   */
   async _onRoll(html, characterId, crewId) {
     const character = game.fitgd.api.character.getCharacter(characterId);
     const crew = game.fitgd.api.crew.getCrew(crewId);
@@ -290,6 +353,22 @@ export class ActionRollDialog extends Dialog {
     refreshSheetsByReduxId([characterId, crewId], false);
   }
 
+  /**
+   * Handle roll consequences based on outcome
+   *
+   * - Critical/Success: No consequences
+   * - Partial Success: Player chooses consequence (reduced effect, complication, harm, or lose Momentum)
+   * - Failure: Automatically takes harm based on position (Controlled: 1, Risky: 2, Desperate: 3)
+   * - Devil's Bargain: GM adds complication
+   *
+   * @param {string} outcome - Roll outcome ('critical', 'success', 'partial', 'failure')
+   * @param {Position} position - Position of the roll ('controlled', 'risky', 'desperate')
+   * @param {string} characterId - Redux ID of the character
+   * @param {string} crewId - Redux ID of the crew
+   * @param {boolean} devilsBargain - Whether a devil's bargain was accepted
+   * @returns {Promise<void>}
+   * @private
+   */
   async _handleConsequences(outcome, position, characterId, crewId, devilsBargain) {
     if (outcome === 'critical' || outcome === 'success') {
       // Full success - no consequences
@@ -347,7 +426,31 @@ export class ActionRollDialog extends Dialog {
 /*  Take Harm Dialog                            */
 /* -------------------------------------------- */
 
+/**
+ * Take Harm Dialog
+ *
+ * Dialog for applying harm to a character. Harm severity is based on position and effect:
+ * - Controlled: 0/1/2 segments (Limited/Standard/Great)
+ * - Risky: 2/3/4 segments (Limited/Standard/Great)
+ * - Desperate: 4/5/6 segments (Limited/Standard/Great)
+ *
+ * Creates a new harm clock (max 3 per character). If character already has 3 harm clocks,
+ * the new clock replaces the one with the fewest segments.
+ *
+ * When a harm clock fills (6/6), the character is dying and must be stabilized.
+ *
+ * @extends Dialog
+ */
 export class TakeHarmDialog extends Dialog {
+  /**
+   * Create a new Take Harm Dialog
+   *
+   * @param {string} characterId - Redux ID of the character taking harm
+   * @param {string} crewId - Redux ID of the character's crew
+   * @param {Object} options - Additional options
+   * @param {Position} options.defaultPosition - Pre-select position (default: 'risky')
+   * @param {number} options.defaultSegments - Pre-calculate segments to display
+   */
   constructor(characterId, crewId, options = {}) {
     const content = `
       <form>
@@ -455,7 +558,28 @@ export class TakeHarmDialog extends Dialog {
 /*  Rally Dialog                                */
 /* -------------------------------------------- */
 
+/**
+ * Rally Dialog
+ *
+ * Allows a character to Rally, spending up to 3 Momentum to re-enable disabled traits
+ * and clear harm clocks. Rally is only available when crew Momentum is 0-3, and can
+ * only be used once per character per Momentum Reset.
+ *
+ * Features:
+ * - Spend 1-3 Momentum (must be affordable by current crew Momentum)
+ * - Re-enable disabled traits (1 trait per Momentum spent)
+ * - Clear harm clock segments (2 segments per Momentum spent)
+ *
+ * @extends Dialog
+ */
 export class RallyDialog extends Dialog {
+  /**
+   * Create a new Rally Dialog
+   *
+   * @param {string} characterId - Redux ID of the character rallying
+   * @param {string} crewId - Redux ID of the character's crew
+   * @param {Object} options - Additional options passed to Dialog constructor
+   */
   constructor(characterId, crewId, options = {}) {
     const character = game.fitgd.api.character.getCharacter(characterId);
     const crew = game.fitgd.api.crew.getCrew(crewId);
@@ -557,7 +681,25 @@ export class RallyDialog extends Dialog {
 /*  Push Yourself Dialog                        */
 /* -------------------------------------------- */
 
+/**
+ * Push Yourself Dialog
+ *
+ * Allows a character to spend 1 Momentum to push themselves, choosing one benefit:
+ * - Add +1d to your roll
+ * - Improve Effect (+1 level: Limited → Standard → Great)
+ * - Improve Position (+1 level: Desperate → Risky → Controlled)
+ *
+ * Requires crew to have at least 1 Momentum available.
+ *
+ * @extends Dialog
+ */
 export class PushDialog extends Dialog {
+  /**
+   * Create a new Push Yourself Dialog
+   *
+   * @param {string} crewId - Redux ID of the crew
+   * @param {Object} options - Additional options passed to Dialog constructor
+   */
   constructor(crewId, options = {}) {
     const crew = game.fitgd.api.crew.getCrew(crewId);
     const momentum = crew?.currentMomentum || 0;
@@ -640,7 +782,26 @@ export class PushDialog extends Dialog {
 /*  Flashback Dialog                            */
 /* -------------------------------------------- */
 
+/**
+ * Flashback Dialog
+ *
+ * Allows a character to declare a flashback, spending 1 Momentum to:
+ * 1. Create a new flashback trait (representing prior preparation)
+ * 2. Gain advantage on the current roll
+ *
+ * The new trait is added with category 'flashback' and can be used in future situations.
+ * Advantage typically means +1d or improved position/effect (GM discretion).
+ *
+ * @extends Dialog
+ */
 export class FlashbackDialog extends Dialog {
+  /**
+   * Create a new Flashback Dialog
+   *
+   * @param {string} characterId - Redux ID of the character using flashback
+   * @param {string} crewId - Redux ID of the character's crew
+   * @param {Object} options - Additional options passed to Dialog constructor
+   */
   constructor(characterId, crewId, options = {}) {
     const crew = game.fitgd.api.crew.getCrew(crewId);
     const momentum = crew?.currentMomentum || 0;
@@ -730,7 +891,26 @@ export class FlashbackDialog extends Dialog {
 /*  Add Trait Dialog                            */
 /* -------------------------------------------- */
 
+/**
+ * Add Trait Dialog
+ *
+ * Simple dialog for manually adding a trait to a character. Traits can be:
+ * - Role: Character's primary role or archetype
+ * - Background: Past experiences or training
+ * - Scar: Lasting consequence from serious harm or trauma
+ * - Flashback: Trait gained through flashback mechanic
+ *
+ * Traits can be disabled (leaned into for Momentum) and re-enabled (Rally).
+ *
+ * @extends Dialog
+ */
 export class AddTraitDialog extends Dialog {
+  /**
+   * Create a new Add Trait Dialog
+   *
+   * @param {string} characterId - Redux ID of the character
+   * @param {Object} options - Additional options passed to Dialog constructor
+   */
   constructor(characterId, options = {}) {
     const content = `
       <form>
@@ -824,7 +1004,38 @@ export class AddTraitDialog extends Dialog {
 /*  Flashback Traits Dialog                     */
 /* -------------------------------------------- */
 
+/**
+ * Flashback Traits Dialog
+ *
+ * Advanced flashback system that allows players to use traits strategically before a roll.
+ * Provides three modes:
+ *
+ * 1. **Use Existing Trait** - Spend 1 Momentum to:
+ *    - Improve position by 1 level (Desperate → Risky → Controlled)
+ *    - No new trait created, just using existing trait's narrative justification
+ *
+ * 2. **Create New Trait** - Spend 1 Momentum to:
+ *    - Create a completely new flashback trait
+ *    - Improve position by 1 level
+ *
+ * 3. **Consolidate Traits** - Spend 1 Momentum to:
+ *    - Group 3 existing traits into 1 new broader trait
+ *    - Improve position by 1 level
+ *    - Helps manage trait count and creates more powerful traits
+ *
+ * All modes store a transaction that's applied when the roll is committed.
+ * This shows GM the player's plan before the roll happens.
+ *
+ * @extends Application
+ */
 export class FlashbackTraitsDialog extends Application {
+  /**
+   * Create a new Flashback Traits Dialog
+   *
+   * @param {string} characterId - Redux ID of the character
+   * @param {string} crewId - Redux ID of the character's crew
+   * @param {Object} options - Additional options passed to Application constructor
+   */
   constructor(characterId, crewId, options = {}) {
     super(options);
 
@@ -1133,7 +1344,31 @@ export class FlashbackTraitsDialog extends Application {
 /*  Add Progress Clock Dialog                   */
 /* -------------------------------------------- */
 
+/**
+ * Add Progress Clock Dialog
+ *
+ * Creates a new progress clock (project clock) for tracking long-term goals,
+ * threats, obstacles, faction relations, etc. Unlike harm/consumable/addiction
+ * clocks which are tied to the core mechanics, progress clocks are freeform
+ * narrative tools.
+ *
+ * Clock sizes:
+ * - 4 segments: Quick tasks
+ * - 6 segments: Standard projects
+ * - 8 segments: Complex undertakings
+ * - 12 segments: Epic long-term goals
+ *
+ * Categories help organize clocks by type (project, threat, goal, obstacle, faction).
+ *
+ * @extends Dialog
+ */
 export class AddClockDialog extends Dialog {
+  /**
+   * Create a new Add Clock Dialog
+   *
+   * @param {string} crewId - Redux ID of the crew
+   * @param {Object} options - Additional options passed to Dialog constructor
+   */
   constructor(crewId, options = {}) {
     const content = `
       <form>

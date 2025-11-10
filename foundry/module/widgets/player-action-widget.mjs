@@ -5,6 +5,19 @@
  * Drives the action resolution flow through the state machine.
  */
 
+// @ts-check
+
+/**
+ * @typedef {import('../../dist/types').Character} Character
+ * @typedef {import('../../dist/types').Crew} Crew
+ * @typedef {import('../../dist/types').Clock} Clock
+ * @typedef {import('../../dist/types').Trait} Trait
+ * @typedef {import('../../dist/store').RootState} RootState
+ * @typedef {import('../../dist/types/playerRoundState').PlayerRoundState} PlayerRoundState
+ * @typedef {import('../../dist/types/playerRoundState').Position} Position
+ * @typedef {import('../../dist/types/playerRoundState').Effect} Effect
+ */
+
 import {
   selectDicePool,
   selectConsequenceSeverity,
@@ -20,7 +33,48 @@ import { FlashbackTraitsDialog, refreshSheetsByReduxId } from '../dialogs.mjs';
 /*  Player Action Widget Application            */
 /* -------------------------------------------- */
 
+/**
+ * Player Action Widget
+ *
+ * A persistent UI widget that appears during combat encounters to guide a player
+ * through their action resolution. Implements a state machine with the following phases:
+ *
+ * **DECISION_PHASE**: Player chooses action, position, effect, and any improvements
+ * - Select action (based on character's action dots)
+ * - Set position (Controlled/Risky/Desperate)
+ * - Set effect (Limited/Standard/Great)
+ * - Optional: Push yourself (extra die, improve position/effect)
+ * - Optional: Use traits via flashback
+ * - Optional: Equip consumables/items
+ *
+ * **ROLLING**: Dice are being rolled (async operation)
+ * - Calculates dice pool from action dots + bonuses
+ * - Handles 0-dot actions (roll 2d6 keep lowest)
+ * - Evaluates outcome (critical/success/partial/failure)
+ *
+ * **AWAITING_APPROVAL**: GM must approve the roll before proceeding
+ * - Shows roll result and improvements to GM
+ * - GM can approve or modify outcome
+ *
+ * **CONSEQUENCE_CHOICE**: Player must handle consequences
+ * - Success: No consequences, turn ends
+ * - Failure: Take harm based on position
+ * - Severe failure: Additional complications
+ *
+ * **COMPLETE**: Turn finished, widget closes
+ *
+ * The widget subscribes to Redux store changes for real-time updates across all clients
+ * (GM sees player's decisions immediately, player sees GM's approval).
+ *
+ * @extends Application
+ */
 export class PlayerActionWidget extends Application {
+  /**
+   * Create a new Player Action Widget
+   *
+   * @param {string} characterId - Redux ID of the character taking their turn
+   * @param {Object} options - Additional options passed to Application constructor
+   */
   constructor(characterId, options = {}) {
     super(options);
 
@@ -84,6 +138,17 @@ export class PlayerActionWidget extends Application {
     return `player-action-widget-${this.characterId}`;
   }
 
+  /**
+   * Get template data for rendering the widget
+   *
+   * Fetches character, crew, and player round state from Redux store,
+   * calculates derived values (dice pool, improvements, state flags),
+   * and prepares all data needed by the Handlebars template.
+   *
+   * @param {Object} options - Render options
+   * @returns {Promise<Object>} Template data with character, crew, playerState, and UI flags
+   * @override
+   */
   /** @override */
   async getData(options = {}) {
     const data = await super.getData(options);

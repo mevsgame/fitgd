@@ -558,4 +558,5 @@ export const {
   hydrateClocks,
 } = clockSlice.actions;
 
+export { clockSlice };
 export default clockSlice.reducer;

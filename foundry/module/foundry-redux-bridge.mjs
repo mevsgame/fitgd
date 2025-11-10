@@ -31,15 +31,25 @@
  * 3. Refresh affected sheets
  */
 export class FoundryReduxBridge {
+  /**
+   * Create a new Foundry-Redux Bridge instance
+   *
+   * @param {Object} store - Redux store instance (game.fitgd.store)
+   * @param {Function} saveFunction - Broadcast function (game.fitgd.saveImmediate)
+   */
   constructor(store, saveFunction) {
     this.store = store;
     this.saveImmediate = saveFunction;
   }
 
   /**
-   * Get current state (read-only).
+   * Get current Redux state (read-only access)
    *
-   * Use this sparingly - prefer using the specific query methods below.
+   * Use this sparingly - prefer using the specific query methods below
+   * (getCharacter, getCrew, getClocks, getPlayerRoundState) as they provide
+   * better type safety and ID conversion.
+   *
+   * @returns {RootState} Current Redux state
    */
   getState() {
     return this.store.getState();
@@ -165,8 +175,15 @@ export class FoundryReduxBridge {
   // ==================== INTERNAL HELPERS ====================
 
   /**
-   * Convert Foundry Actor ID to Redux ID if needed.
+   * Convert Foundry Actor ID to Redux ID if needed
    *
+   * Handles the common pattern of accepting either a Redux UUID or a Foundry Actor ID
+   * and always returning the Redux UUID. This solves the ID confusion bug where code
+   * tries to use Foundry Actor IDs with Redux state lookups.
+   *
+   * @param {string} id - Either Redux UUID or Foundry Actor ID
+   * @param {string} entityType - Entity type ('character' or 'crew') for error messages
+   * @returns {string|null} Redux UUID if found, null if actor doesn't exist or has no Redux ID
    * @private
    */
   _ensureReduxId(id, entityType) {
@@ -192,8 +209,13 @@ export class FoundryReduxBridge {
   }
 
   /**
-   * Check if ID is a Redux UUID vs Foundry Actor ID.
+   * Check if ID is a Redux UUID vs Foundry Actor ID
    *
+   * Redux IDs are standard UUIDs (e.g., "e5bc6b24-350f-4b15-8acf-b0f6d5f26bfd")
+   * Foundry Actor IDs contain dots (e.g., "Actor.abc123def456")
+   *
+   * @param {string} id - ID to check
+   * @returns {boolean} True if ID is a Redux UUID, false if it's a Foundry Actor ID
    * @private
    */
   _isReduxId(id) {
@@ -202,8 +224,16 @@ export class FoundryReduxBridge {
   }
 
   /**
-   * Extract affected Redux IDs from action payload.
+   * Extract affected Redux IDs from action payload
    *
+   * Automatically detects which characters/crews are affected by a Redux action
+   * by inspecting common payload patterns (characterId, crewId, entityId, clockId).
+   *
+   * For clock operations, resolves the clock's entityId so the owning character/crew
+   * sheet gets refreshed automatically.
+   *
+   * @param {Object} action - Redux action to inspect
+   * @returns {string[]} Array of Redux UUIDs that should have their sheets refreshed
    * @private
    */
   _extractAffectedIds(action) {
@@ -226,8 +256,13 @@ export class FoundryReduxBridge {
   }
 
   /**
-   * Extract affected Redux IDs from batch of actions.
+   * Extract affected Redux IDs from batch of actions
    *
+   * Combines ID extraction across multiple actions to determine the complete
+   * set of entities that need sheet refresh after a batch operation.
+   *
+   * @param {Object[]} actions - Array of Redux actions to inspect
+   * @returns {string[]} Array of unique Redux UUIDs that should have their sheets refreshed
    * @private
    */
   _extractAffectedIdsFromBatch(actions) {
@@ -242,8 +277,15 @@ export class FoundryReduxBridge {
   }
 
   /**
-   * Refresh all open sheets for the given Redux IDs.
+   * Refresh all open sheets for the given Redux IDs
    *
+   * Iterates through all open Foundry windows and refreshes any character/crew
+   * sheets that match the provided Redux IDs. This is the safe alternative to
+   * trying to use `game.actors.get(reduxId)` which fails silently.
+   *
+   * @param {string[]} reduxIds - Array of Redux UUIDs to refresh
+   * @param {boolean} force - Whether to force full re-render (default: false)
+   * @returns {void}
    * @private
    */
   _refreshSheets(reduxIds, force = false) {

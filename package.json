@@ -14,6 +14,7 @@
     "build:watch": "vite build --watch",
     "dev": "vite build --watch",
     "type-check": "tsc --noEmit",
+    "type-check:foundry": "tsc --noEmit --project foundry/jsconfig.json",
     "docs": "typedoc",
     "docs:watch": "typedoc --watch",
     "benchmark": "tsx benchmark/selectors.bench.ts"

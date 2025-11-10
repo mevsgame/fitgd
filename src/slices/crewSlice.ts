@@ -325,4 +325,5 @@ export const {
   hydrateCrews,
 } = crewSlice.actions;
 
+export { crewSlice };
 export default crewSlice.reducer;
