@@ -242,20 +242,21 @@ export class ActionRollDialog extends Dialog {
     const sixes = dice.filter(d => d === 6).length;
 
     let outcome;
-    let outcomeLabel;
+    let outcomeText;
     if (sixes >= 2) {
       outcome = 'critical';
-      outcomeLabel = '<strong style="color: gold;">Critical Success!</strong>';
+      outcomeText = 'Critical Success!';
     } else if (highest >= 6) {
       outcome = 'success';
-      outcomeLabel = '<strong style="color: green;">Full Success</strong>';
+      outcomeText = 'Full Success';
     } else if (highest >= 4) {
       outcome = 'partial';
-      outcomeLabel = '<strong style="color: orange;">Partial Success</strong>';
+      outcomeText = 'Partial Success';
     } else {
       outcome = 'failure';
-      outcomeLabel = '<strong style="color: red;">Failure</strong>';
+      outcomeText = 'Failure';
     }
+    const outcomeLabel = `<strong class="outcome-${outcome}">${outcomeText}</strong>`;
 
     // Create chat message
     const messageContent = `
@@ -373,7 +374,7 @@ export class TakeHarmDialog extends Dialog {
             <option value="great">Great</option>
           </select>
         </div>
-        <p class="help-text" style="font-size: 0.9em; color: #666; margin-top: 8px;">
+        <p class="help-text">
           <strong>Harm Segments:</strong><br/>
           Controlled: 0/1/2 (Limited/Standard/Great)<br/>
           Risky: 2/3/4 (Limited/Standard/Great)<br/>
