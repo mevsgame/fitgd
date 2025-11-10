@@ -505,11 +505,28 @@ export class PlayerActionWidget extends Application {
   /**
    * Handle Use Trait button (merged flashback + traits)
    */
-  _onUseTrait(event) {
+  async _onUseTrait(event) {
     event.preventDefault();
 
     if (!this.crewId) {
       ui.notifications.warn('Character must be in a crew to use trait');
+      return;
+    }
+
+    // If trait transaction already exists, cancel it (toggle off)
+    if (this.playerState?.traitTransaction) {
+      game.fitgd.store.dispatch({
+        type: 'playerRoundState/clearTraitTransaction',
+        payload: { characterId: this.characterId }
+      });
+
+      // Broadcast to all clients
+      await game.fitgd.saveImmediate();
+
+      // Refresh all widgets for this character
+      refreshSheetsByReduxId([this.characterId], false);
+
+      ui.notifications.info('Trait flashback canceled');
       return;
     }
 

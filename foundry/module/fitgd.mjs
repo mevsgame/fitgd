@@ -991,6 +991,19 @@ async function receiveCommandsFromSocket(data) {
             });
           }
         }
+
+        // CRITICAL: Handle push improvements (pushed + pushType)
+        if (receivedPlayerState.pushed !== currentPlayerState?.pushed ||
+            receivedPlayerState.pushType !== currentPlayerState?.pushType) {
+          game.fitgd.store.dispatch({
+            type: 'playerRoundState/setImprovements',
+            payload: {
+              characterId,
+              pushed: receivedPlayerState.pushed || false,
+              pushType: receivedPlayerState.pushType || undefined
+            }
+          });
+        }
       }
 
       // Update active player if changed

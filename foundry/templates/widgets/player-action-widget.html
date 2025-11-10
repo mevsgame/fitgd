@@ -57,7 +57,7 @@
           <button type="button" data-action="rally" {{#unless canRally}}disabled{{/unless}}>
             Rally
           </button>
-          <button type="button" data-action="use-trait" {{#if (and (eq playerState.position "controlled") (lt momentum 1))}}disabled{{/if}}>
+          <button type="button" data-action="use-trait" class="{{#if playerState.traitTransaction}}active{{/if}}" {{#if (and (eq playerState.position "controlled") (lt momentum 1))}}disabled{{/if}}>
             Use Trait
           </button>
           <button type="button" data-action="equipment">
