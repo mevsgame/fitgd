@@ -14,6 +14,7 @@ import {
   RollOutcome,
   ConsequenceType,
   TraitTransaction,
+  ConsequenceTransaction,
   createInitialPlayerRoundState,
   isValidTransition,
 } from '../types/playerRoundState';
@@ -106,6 +107,29 @@ interface SetTraitTransactionPayload {
 }
 
 interface ClearTraitTransactionPayload {
+  characterId: string;
+}
+
+interface SetConsequenceTransactionPayload {
+  characterId: string;
+  transaction: ConsequenceTransaction;
+}
+
+interface UpdateConsequenceTransactionPayload {
+  characterId: string;
+  updates: Partial<ConsequenceTransaction>;
+}
+
+interface ClearConsequenceTransactionPayload {
+  characterId: string;
+}
+
+interface SetStimsUsedPayload {
+  characterId: string;
+  used: boolean;
+}
+
+interface ClearStimsUsedPayload {
   characterId: string;
 }
 
@@ -372,6 +396,98 @@ const playerRoundStateSlice = createSlice({
     },
 
     /**
+     * Set consequence transaction (GM's consequence selections)
+     */
+    setConsequenceTransaction: (state, action: PayloadAction<SetConsequenceTransactionPayload>) => {
+      const { characterId, transaction } = action.payload;
+      const currentState = state.byCharacterId[characterId];
+
+      if (!currentState) {
+        throw new Error(`No state found for character ${characterId}`);
+      }
+
+      state.byCharacterId[characterId] = {
+        ...currentState,
+        consequenceTransaction: transaction,
+      };
+    },
+
+    /**
+     * Update consequence transaction (partial update for live editing)
+     */
+    updateConsequenceTransaction: (state, action: PayloadAction<UpdateConsequenceTransactionPayload>) => {
+      const { characterId, updates } = action.payload;
+      const currentState = state.byCharacterId[characterId];
+
+      if (!currentState) {
+        throw new Error(`No state found for character ${characterId}`);
+      }
+
+      if (!currentState.consequenceTransaction) {
+        throw new Error(`No consequence transaction to update for character ${characterId}`);
+      }
+
+      state.byCharacterId[characterId] = {
+        ...currentState,
+        consequenceTransaction: {
+          ...currentState.consequenceTransaction,
+          ...updates,
+        },
+      };
+    },
+
+    /**
+     * Clear consequence transaction
+     */
+    clearConsequenceTransaction: (state, action: PayloadAction<ClearConsequenceTransactionPayload>) => {
+      const { characterId } = action.payload;
+      const currentState = state.byCharacterId[characterId];
+
+      if (!currentState) {
+        throw new Error(`No state found for character ${characterId}`);
+      }
+
+      state.byCharacterId[characterId] = {
+        ...currentState,
+        consequenceTransaction: undefined,
+      };
+    },
+
+    /**
+     * Set stims used flag (prevent multiple use per action)
+     */
+    setStimsUsed: (state, action: PayloadAction<SetStimsUsedPayload>) => {
+      const { characterId, used } = action.payload;
+      const currentState = state.byCharacterId[characterId];
+
+      if (!currentState) {
+        throw new Error(`No state found for character ${characterId}`);
+      }
+
+      state.byCharacterId[characterId] = {
+        ...currentState,
+        stimsUsedThisAction: used,
+      };
+    },
+
+    /**
+     * Clear stims used flag (on turn end)
+     */
+    clearStimsUsed: (state, action: PayloadAction<ClearStimsUsedPayload>) => {
+      const { characterId } = action.payload;
+      const currentState = state.byCharacterId[characterId];
+
+      if (!currentState) {
+        throw new Error(`No state found for character ${characterId}`);
+      }
+
+      state.byCharacterId[characterId] = {
+        ...currentState,
+        stimsUsedThisAction: undefined,
+      };
+    },
+
+    /**
      * Reset player state (clear all data, return to IDLE)
      */
     resetPlayerState: (state, action: PayloadAction<ResetPlayerStatePayload>) => {
@@ -415,6 +531,11 @@ export const {
   setImprovements,
   setTraitTransaction,
   clearTraitTransaction,
+  setConsequenceTransaction,
+  updateConsequenceTransaction,
+  clearConsequenceTransaction,
+  setStimsUsed,
+  clearStimsUsed,
   setRollResult,
   setConsequence,
   resetPlayerState,

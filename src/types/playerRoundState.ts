@@ -18,9 +18,10 @@ export type PlayerRoundStateType =
   | 'IDLE_WAITING'              // Not your turn, watching others
   | 'DECISION_PHASE'             // Your turn - preparing action (simplified: removed ROLL_CONFIRM)
   | 'ROLLING'                    // Dice rolling
-  | 'SUCCESS_COMPLETE'           // Success, no consequences
-  | 'CONSEQUENCE_CHOICE'         // Choose: accept or use stims
-  | 'CONSEQUENCE_RESOLUTION'     // Applying consequences
+  | 'SUCCESS_COMPLETE'           // Success, no consequences (manual close by GM)
+  | 'CONSEQUENCE_CHOICE'         // Player acknowledges consequences
+  | 'GM_RESOLVING_CONSEQUENCE'   // GM configures consequence, player sees preview
+  | 'CONSEQUENCE_RESOLUTION'     // DEPRECATED: Use GM_RESOLVING_CONSEQUENCE instead
   | 'APPLYING_EFFECTS'           // Writing to Redux state
   | 'TURN_COMPLETE'              // Done, advancing turn
   | 'RALLY_ROLLING'              // Rolling Rally action
@@ -35,9 +36,9 @@ export type PlayerRoundStateType =
 export type RollOutcome = 'critical' | 'success' | 'partial' | 'failure';
 
 /**
- * Consequence types
+ * Consequence types (simplified for new GM-driven resolution)
  */
-export type ConsequenceType = 'harm' | 'clock' | 'position' | 'effect';
+export type ConsequenceType = 'harm' | 'crew-clock';
 
 /**
  * Trait transaction modes
@@ -78,6 +79,44 @@ export interface TraitTransaction {
 
   /** Momentum cost (always 1 for position improvement) */
   momentumCost: number;
+}
+
+/**
+ * Consequence transaction (GM's consequence selections during resolution)
+ */
+export interface ConsequenceTransaction {
+  /** Which consequence type? (harm or crew-clock) */
+  consequenceType: ConsequenceType;
+
+  // ===== HARM OPTIONS =====
+
+  /** Target character ID (default: acting character) */
+  harmTargetCharacterId?: string;
+
+  /** Selected existing harm clock ID (undefined = creating new) */
+  harmClockId?: string;
+
+  /** New harm clock type (if creating new) */
+  newHarmClockType?: string;
+
+  /** Clock ID to replace (if 4th harm clock) */
+  replaceClockId?: string;
+
+  // ===== CREW CLOCK OPTIONS =====
+
+  /** Selected crew clock ID */
+  crewClockId?: string;
+
+  /** Segments to add */
+  crewClockSegments?: number;
+
+  // ===== CALCULATED VALUES (read-only) =====
+
+  /** Auto-calculated harm segments from Position × Effect table */
+  calculatedHarmSegments?: number;
+
+  /** Auto-calculated momentum gain from Position */
+  calculatedMomentumGain?: number;
 }
 
 /**
@@ -124,6 +163,16 @@ export interface PlayerRoundState {
   /** GM has approved the roll (enables player's Commit Roll button) */
   gmApproved?: boolean;
 
+  // ===== CONSEQUENCE TRANSACTION =====
+
+  /** Consequence transaction (GM's selections during consequence resolution) */
+  consequenceTransaction?: ConsequenceTransaction;
+
+  // ===== STIMS TRACKING =====
+
+  /** Stims used this action (prevent multiple use) */
+  stimsUsedThisAction?: boolean;
+
   // ===== ROLL DATA =====
 
   /** Total dice pool (action dots + modifiers) */
@@ -158,15 +207,29 @@ export interface PlayerRoundState {
 /**
  * Valid state transitions
  * Maps from current state to allowed next states
- * (Simplified: ROLL_CONFIRM state removed, DECISION_PHASE goes directly to ROLLING)
+ *
+ * New consequence flow:
+ * ROLLING → CONSEQUENCE_CHOICE → GM_RESOLVING_CONSEQUENCE → APPLYING_EFFECTS → TURN_COMPLETE
+ * Player can interrupt with stims: GM_RESOLVING_CONSEQUENCE → STIMS_ROLLING
  */
 export const STATE_TRANSITIONS: Record<PlayerRoundStateType, PlayerRoundStateType[]> = {
   IDLE_WAITING: ['DECISION_PHASE', 'ASSIST_ROLLING', 'PROTECT_ACCEPTING'],
   DECISION_PHASE: ['ROLLING', 'RALLY_ROLLING', 'IDLE_WAITING'],
   ROLLING: ['SUCCESS_COMPLETE', 'CONSEQUENCE_CHOICE'],
-  SUCCESS_COMPLETE: ['TURN_COMPLETE'],
-  CONSEQUENCE_CHOICE: ['CONSEQUENCE_RESOLUTION', 'STIMS_ROLLING'],
-  CONSEQUENCE_RESOLUTION: ['APPLYING_EFFECTS'],
+  SUCCESS_COMPLETE: ['TURN_COMPLETE'],  // Manual close only (GM clicks "End Turn")
+
+  CONSEQUENCE_CHOICE: [
+    'GM_RESOLVING_CONSEQUENCE',  // Player accepts consequences
+    'CONSEQUENCE_RESOLUTION',     // DEPRECATED: Backwards compatibility
+    'STIMS_ROLLING'               // Player uses stims instead
+  ],
+
+  GM_RESOLVING_CONSEQUENCE: [
+    'APPLYING_EFFECTS',           // GM applies consequence
+    'STIMS_ROLLING'               // Player interrupts with stims
+  ],
+
+  CONSEQUENCE_RESOLUTION: ['APPLYING_EFFECTS'],  // DEPRECATED
   APPLYING_EFFECTS: ['TURN_COMPLETE'],
   TURN_COMPLETE: ['IDLE_WAITING'],
   RALLY_ROLLING: ['DECISION_PHASE'],
