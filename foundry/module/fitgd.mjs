@@ -922,6 +922,7 @@ async function receiveCommandsFromSocket(data) {
     const appliedCount = applyCommandsIncremental(data.commands);
 
     // Also apply playerRoundState if present (ephemeral UI state)
+    const changedCharacterIds = [];
     if (data.playerRoundState) {
       console.log(`FitGD | Applying received playerRoundState:`, data.playerRoundState);
 
@@ -935,6 +936,9 @@ async function receiveCommandsFromSocket(data) {
         if (JSON.stringify(currentPlayerState) === JSON.stringify(receivedPlayerState)) {
           continue;
         }
+
+        // Track that this character's state changed
+        changedCharacterIds.push(characterId);
 
         // Dispatch individual property updates
         if (receivedPlayerState.position && receivedPlayerState.position !== currentPlayerState?.position) {
@@ -969,6 +973,37 @@ async function receiveCommandsFromSocket(data) {
             payload: { characterId, approved: receivedPlayerState.gmApproved || false }
           });
         }
+
+        // CRITICAL: Handle trait transactions (the missing piece!)
+        if (JSON.stringify(receivedPlayerState.traitTransaction) !== JSON.stringify(currentPlayerState?.traitTransaction)) {
+          if (receivedPlayerState.traitTransaction) {
+            game.fitgd.store.dispatch({
+              type: 'playerRoundState/setTraitTransaction',
+              payload: {
+                characterId,
+                transaction: receivedPlayerState.traitTransaction
+              }
+            });
+          } else {
+            game.fitgd.store.dispatch({
+              type: 'playerRoundState/clearTraitTransaction',
+              payload: { characterId }
+            });
+          }
+        }
+
+        // CRITICAL: Handle push improvements (pushed + pushType)
+        if (receivedPlayerState.pushed !== currentPlayerState?.pushed ||
+            receivedPlayerState.pushType !== currentPlayerState?.pushType) {
+          game.fitgd.store.dispatch({
+            type: 'playerRoundState/setImprovements',
+            payload: {
+              characterId,
+              pushed: receivedPlayerState.pushed || false,
+              pushType: receivedPlayerState.pushType || undefined
+            }
+          });
+        }
       }
 
       // Update active player if changed
@@ -992,6 +1027,14 @@ async function receiveCommandsFromSocket(data) {
 
       // Refresh affected sheets (pass the captured entityIds for deleted clocks)
       refreshAffectedSheets(data.commands, clockEntityIds);
+
+      // CRITICAL: Also refresh widgets for playerRoundState changes
+      // This ensures GM sees player's trait transactions and plan updates
+      if (changedCharacterIds.length > 0) {
+        console.log(`FitGD | Refreshing widgets for ${changedCharacterIds.length} changed characters:`, changedCharacterIds);
+        const { refreshSheetsByReduxId } = await import('./dialogs.mjs');
+        refreshSheetsByReduxId(changedCharacterIds, false);
+      }
 
       console.log(`FitGD | Sync complete - applied ${appliedCount} new commands + playerRoundState`);
 

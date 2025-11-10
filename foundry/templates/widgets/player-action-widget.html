@@ -8,69 +8,9 @@
   {{#if isDecisionPhase}}
   <div class="widget-content decision-phase">
 
-    {{#if isGM}}
-    <!-- ==================== GM VIEW ==================== -->
-    <div class="gm-view">
-      <h3>📋 Player's Proposed Plan</h3>
-
-      {{#if playerState.selectedAction}}
-      <div class="plan-summary">
-        <h4>Action Plan:</h4>
-        <div class="plan-box">
-          <div class="plan-line"><strong>Action:</strong> {{capitalize playerState.selectedAction}} ({{lookup character.actionDots playerState.selectedAction}}d base)</div>
-          <div class="plan-line"><strong>Position:</strong> {{uppercase (default playerState.position "RISKY")}} → {{uppercase (default playerState.position "RISKY")}}</div>
-          <div class="plan-line"><strong>Effect:</strong> {{uppercase (default playerState.effect "STANDARD")}} → {{uppercase (default playerState.effect "STANDARD")}}</div>
-
-          {{#if improvements.length}}
-          <div class="plan-line improvements">
-            <strong>Improvements:</strong>
-            <ul>
-              {{#each improvements}}
-              <li>{{this}}</li>
-              {{/each}}
-            </ul>
-          </div>
-          {{/if}}
-
-          <div class="plan-line total">
-            <strong>TOTAL DICE POOL: {{dicePool}}d6</strong>
-          </div>
-
-          {{#if momentumCost}}
-          <div class="plan-line momentum-cost">
-            <strong>Momentum Cost:</strong> -{{momentumCost}}M ({{momentum}}→{{subtract momentum momentumCost}})
-          </div>
-          {{/if}}
-        </div>
-      </div>
-      {{else}}
-      <p class="waiting">⏳ Waiting for player to select an action...</p>
-      {{/if}}
-
-      <div class="gm-controls">
-        <h4>⚙️ GM Controls:</h4>
-        <div class="form-group">
-          <label>Set Position:</label>
-          <select name="position" class="position-select">
-            <option value="controlled" {{#if (eq playerState.position "controlled")}}selected{{/if}}>Controlled</option>
-            <option value="risky" {{#if (eq (default playerState.position "risky") "risky")}}selected{{/if}}>Risky</option>
-            <option value="desperate" {{#if (eq playerState.position "desperate")}}selected{{/if}}>Desperate</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Set Effect:</label>
-          <select name="effect" class="effect-select">
-            <option value="limited" {{#if (eq playerState.effect "limited")}}selected{{/if}}>Limited</option>
-            <option value="standard" {{#if (eq (default playerState.effect "standard") "standard")}}selected{{/if}}>Standard</option>
-            <option value="great" {{#if (eq playerState.effect "great")}}selected{{/if}}>Great</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    {{else}}
-    <!-- ==================== PLAYER VIEW ==================== -->
-    <div class="player-view">
+    {{#unless isGM}}
+    <!-- ==================== PLAYER CONTROLS ==================== -->
+    <div class="player-controls">
       <!-- Action Selection -->
       <div class="form-group">
         <label>Action:</label>
@@ -95,54 +35,76 @@
         <p class="gm-set-note">(Set by GM)</p>
       </div>
 
-    <!-- Harm Clocks Display -->
-    {{#if harmClocks.length}}
-    <div class="harm-clocks-display">
-      <h4>💔 HARM CLOCKS:</h4>
-      <div class="clocks-list">
-        {{#each harmClocks}}
-        <div class="clock-item">
-          <span class="clock-name">{{this.subtype}}:</span>
-          <span class="clock-segments">{{this.segments}}/{{this.maxSegments}}</span>
+      <!-- Harm Clocks Display -->
+      {{#if harmClocks.length}}
+      <div class="harm-clocks-display">
+        <h4>💔 HARM CLOCKS:</h4>
+        <div class="clocks-list">
+          {{#each harmClocks}}
+          <div class="clock-item">
+            <span class="clock-name">{{this.subtype}}:</span>
+            <span class="clock-segments">{{this.segments}}/{{this.maxSegments}}</span>
+          </div>
+          {{/each}}
         </div>
-        {{/each}}
+      </div>
+      {{/if}}
+
+      <!-- Action Modifiers Buttons -->
+      <div class="prepare-actions">
+        <h4>ACTION MODIFIERS:</h4>
+        <div class="button-row">
+          <button type="button" data-action="rally" {{#unless canRally}}disabled{{/unless}}>
+            Rally
+          </button>
+          <button type="button" data-action="use-trait" class="{{#if playerState.traitTransaction}}active{{/if}}" {{#if (and (eq playerState.position "controlled") (lt momentum 1))}}disabled{{/if}}>
+            Use Trait
+          </button>
+          <button type="button" data-action="equipment">
+            Equipment
+          </button>
+          <button type="button" data-action="push-die" class="{{#if (and playerState.pushed (eq playerState.pushType 'extra-die'))}}active{{/if}}" {{#if (lt momentum 1)}}disabled{{/if}}>
+            Push (+1d)
+          </button>
+          <button type="button" data-action="push-effect" class="{{#if (and playerState.pushed (eq playerState.pushType 'improved-effect'))}}active{{/if}}" {{#if (lt momentum 1)}}disabled{{/if}}>
+            Push (Effect)
+          </button>
+        </div>
+      </div>
+    </div>
+    {{/unless}}
+
+    {{#if isGM}}
+    <!-- ==================== GM CONTROLS ==================== -->
+    <div class="gm-controls">
+      <h4>⚙️ GM Controls:</h4>
+      <div class="form-group">
+        <label>Set Position:</label>
+        <select name="position" class="position-select">
+          <option value="controlled" {{#if (eq playerState.position "controlled")}}selected{{/if}}>Controlled</option>
+          <option value="risky" {{#if (eq (default playerState.position "risky") "risky")}}selected{{/if}}>Risky</option>
+          <option value="desperate" {{#if (eq playerState.position "desperate")}}selected{{/if}}>Desperate</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Set Effect:</label>
+        <select name="effect" class="effect-select">
+          <option value="limited" {{#if (eq playerState.effect "limited")}}selected{{/if}}>Limited</option>
+          <option value="standard" {{#if (eq (default playerState.effect "standard") "standard")}}selected{{/if}}>Standard</option>
+          <option value="great" {{#if (eq playerState.effect "great")}}selected{{/if}}>Great</option>
+        </select>
       </div>
     </div>
     {{/if}}
 
-    <!-- Action Modifiers Buttons -->
-    <div class="prepare-actions">
-      <h4>ACTION MODIFIERS:</h4>
-      <div class="button-row">
-        <button type="button" data-action="rally" {{#unless canRally}}disabled{{/unless}}>
-          Rally
-        </button>
-        <button type="button" data-action="flashback" {{#if (lt momentum 1)}}disabled{{/if}}>
-          Flashback
-        </button>
-        <button type="button" data-action="equipment">
-          Equipment
-        </button>
-        <button type="button" data-action="traits">
-          Traits
-        </button>
-        <button type="button" data-action="push-die" class="{{#if (and playerState.pushed (eq playerState.pushType 'extra-die'))}}active{{/if}}" {{#if (lt momentum 1)}}disabled{{/if}}>
-          Push (+1d)
-        </button>
-        <button type="button" data-action="push-effect" class="{{#if (and playerState.pushed (eq playerState.pushType 'improved-effect'))}}active{{/if}}" {{#if (lt momentum 1)}}disabled{{/if}}>
-          Push (Effect)
-        </button>
-      </div>
-    </div>
-
-    <!-- Current Plan Preview -->
+    <!-- ==================== CURRENT PLAN (SHARED BY GM AND PLAYER) ==================== -->
     {{#if playerState.selectedAction}}
     <div class="action-plan-preview">
       <h4>📋 Current Plan:</h4>
       <div class="plan-box">
         <div class="plan-line">Action: {{capitalize playerState.selectedAction}} ({{lookup character.actionDots playerState.selectedAction}}d)</div>
-        <div class="plan-line">Position: {{uppercase playerState.position}} → <span class="improved">{{uppercase playerState.position}}</span></div>
-        <div class="plan-line">Effect: {{uppercase playerState.effect}} → <span class="improved">{{uppercase playerState.effect}}</span></div>
+        <div class="plan-line">Position: {{uppercase (default playerState.position "risky")}} → <span class="{{#if playerState.traitTransaction}}improved{{/if}}">{{uppercase improvedPosition}}</span></div>
+        <div class="plan-line">Effect: {{uppercase (default playerState.effect "standard")}} → <span class="{{#if (and playerState.pushed (eq playerState.pushType 'improved-effect'))}}improved{{/if}}">{{uppercase improvedEffect}}</span></div>
 
         {{#if improvements.length}}
         <div class="plan-line improvements">
@@ -156,18 +118,17 @@
         {{/if}}
 
         <div class="plan-line total">
-          <strong>TOTAL: {{playerState.dicePool}}d6</strong>
+          <strong>TOTAL: {{dicePool}}d6</strong>
         </div>
-        {{#if playerState.pushed}}
+        {{#if momentumCost}}
         <div class="plan-line momentum-cost">
-          Momentum Cost: -1M ({{momentum}}→{{subtract momentum 1}})
+          Momentum Cost: -{{momentumCost}}M ({{momentum}}→{{subtract momentum momentumCost}})
         </div>
         {{/if}}
       </div>
     </div>
-    {{/if}}
-
-    </div>
+    {{else}}
+    <p class="waiting">⏳ Waiting for player to select an action...</p>
     {{/if}}
 
     <!-- Action Buttons (different for GM vs Player) -->
@@ -178,34 +139,12 @@
         {{#if playerState.gmApproved}}✅ Roll Approved{{else}}✓ Accept Roll{{/if}}
       </button>
       {{else}}
-      <!-- Player sees "Commit Roll" button (disabled until GM approves) -->
+      <!-- Player sees "Roll" button (disabled until GM approves) -->
       <button type="button" data-action="cancel" class="secondary">Cancel</button>
       <button type="button" data-action="roll" class="primary {{#if playerState.gmApproved}}approved{{/if}}" {{#unless (and playerState.selectedAction playerState.gmApproved)}}disabled{{/unless}}>
         {{#if playerState.gmApproved}}🎲 ROLL ACTION{{else}}⏳ Waiting for GM Approval{{/if}}
       </button>
       {{/if}}
-    </div>
-  </div>
-  {{/if}}
-
-  <!-- ==================== ROLL CONFIRM ==================== -->
-  {{#if isRollConfirm}}
-  <div class="widget-content roll-confirm">
-    <h3>🎯 CONFIRM ACTION</h3>
-    <p>Ready to roll?</p>
-
-    <div class="confirm-details">
-      <div>Action: {{capitalize playerState.selectedAction}} ({{playerState.dicePool}}d6)</div>
-      <div>Position: <span class="position-{{playerState.position}}">{{uppercase playerState.position}}</span></div>
-      <div>Effect: <span class="effect-level">{{uppercase playerState.effect}}</span></div>
-      {{#if playerState.pushed}}
-      <div>Momentum Cost: -1M (Current: {{momentum}}→{{subtract momentum 1}} after roll)</div>
-      {{/if}}
-    </div>
-
-    <div class="action-buttons">
-      <button type="button" data-action="back" class="secondary">← Back</button>
-      <button type="button" data-action="commit-roll" class="primary">🎲 COMMIT & ROLL</button>
     </div>
   </div>
   {{/if}}
@@ -339,11 +278,27 @@
 
 .action-select {
   width: 100%;
-  padding: 8px;
+  padding: 10px 8px;
   background: #2a2a2a;
   border: 1px solid #555;
   color: #e0e0e0;
   border-radius: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  height: auto;
+  min-height: 38px;
+}
+
+.action-select option {
+  padding: 8px;
+  line-height: 1.5;
+  background: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.action-select option:hover {
+  background: #3a3a3a;
+  color: #fff;
 }
 
 .position-effect-display {
@@ -395,11 +350,27 @@
 
 .gm-controls select {
   width: 100%;
-  padding: 8px;
+  padding: 10px 8px;
   background: #2a2a2a;
   border: 1px solid #9c27b0;
   color: #e0e0e0;
   border-radius: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  height: auto;
+  min-height: 38px;
+}
+
+.gm-controls select option {
+  padding: 8px;
+  line-height: 1.5;
+  background: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.gm-controls select option:hover {
+  background: #3a3a3a;
+  color: #fff;
 }
 
 .harm-clocks-display {
@@ -509,6 +480,18 @@
 
 .plan-line.momentum-cost {
   color: #ff6347;
+}
+
+.plan-line .improved {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.waiting {
+  text-align: center;
+  color: #999;
+  font-style: italic;
+  padding: 20px;
 }
 
 .action-buttons {

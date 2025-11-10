@@ -16,8 +16,7 @@ export type { Position, Effect };
  */
 export type PlayerRoundStateType =
   | 'IDLE_WAITING'              // Not your turn, watching others
-  | 'DECISION_PHASE'             // Your turn - preparing action
-  | 'ROLL_CONFIRM'               // Confirming action before roll
+  | 'DECISION_PHASE'             // Your turn - preparing action (simplified: removed ROLL_CONFIRM)
   | 'ROLLING'                    // Dice rolling
   | 'SUCCESS_COMPLETE'           // Success, no consequences
   | 'CONSEQUENCE_CHOICE'         // Choose: accept or use stims
@@ -39,6 +38,47 @@ export type RollOutcome = 'critical' | 'success' | 'partial' | 'failure';
  * Consequence types
  */
 export type ConsequenceType = 'harm' | 'clock' | 'position' | 'effect';
+
+/**
+ * Trait transaction modes
+ */
+export type TraitTransactionMode = 'existing' | 'new' | 'consolidate';
+
+/**
+ * Trait transaction (pending changes that happen on roll commit)
+ */
+export interface TraitTransaction {
+  /** Mode: use existing, create new, or consolidate 3 into 1 */
+  mode: TraitTransactionMode;
+
+  /** Selected trait ID (for 'existing' mode) */
+  selectedTraitId?: string;
+
+  /** New trait to create (for 'new' mode) */
+  newTrait?: {
+    name: string;
+    description?: string;
+    category: 'flashback';
+  };
+
+  /** Consolidation data (for 'consolidate' mode) */
+  consolidation?: {
+    /** IDs of 3 traits being consolidated */
+    traitIdsToRemove: string[];
+    /** New consolidated trait to create */
+    newTrait: {
+      name: string;
+      description?: string;
+      category: 'grouped';
+    };
+  };
+
+  /** Whether this transaction improves position */
+  positionImprovement: boolean;
+
+  /** Momentum cost (always 1 for position improvement) */
+  momentumCost: number;
+}
 
 /**
  * State data for a player's current round
@@ -75,6 +115,9 @@ export interface PlayerRoundState {
 
   /** Flashback applied flag */
   flashbackApplied?: boolean;
+
+  /** Trait transaction (pending changes to apply on roll commit) */
+  traitTransaction?: TraitTransaction;
 
   // ===== GM APPROVAL =====
 
@@ -115,18 +158,18 @@ export interface PlayerRoundState {
 /**
  * Valid state transitions
  * Maps from current state to allowed next states
+ * (Simplified: ROLL_CONFIRM state removed, DECISION_PHASE goes directly to ROLLING)
  */
 export const STATE_TRANSITIONS: Record<PlayerRoundStateType, PlayerRoundStateType[]> = {
   IDLE_WAITING: ['DECISION_PHASE', 'ASSIST_ROLLING', 'PROTECT_ACCEPTING'],
-  DECISION_PHASE: ['ROLL_CONFIRM', 'RALLY_ROLLING', 'IDLE_WAITING'],
-  ROLL_CONFIRM: ['ROLLING', 'DECISION_PHASE'],
+  DECISION_PHASE: ['ROLLING', 'RALLY_ROLLING', 'IDLE_WAITING'],
   ROLLING: ['SUCCESS_COMPLETE', 'CONSEQUENCE_CHOICE'],
   SUCCESS_COMPLETE: ['TURN_COMPLETE'],
   CONSEQUENCE_CHOICE: ['CONSEQUENCE_RESOLUTION', 'STIMS_ROLLING'],
   CONSEQUENCE_RESOLUTION: ['APPLYING_EFFECTS'],
   APPLYING_EFFECTS: ['TURN_COMPLETE'],
   TURN_COMPLETE: ['IDLE_WAITING'],
-  RALLY_ROLLING: ['DECISION_PHASE', 'ROLL_CONFIRM'],
+  RALLY_ROLLING: ['DECISION_PHASE'],
   ASSIST_ROLLING: ['IDLE_WAITING'],
   PROTECT_ACCEPTING: ['IDLE_WAITING'],
   STIMS_ROLLING: ['ROLLING', 'STIMS_LOCKED'],
