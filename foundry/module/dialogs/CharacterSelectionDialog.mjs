@@ -74,5 +74,3 @@ export class CharacterSelectionDialog extends BaseSelectionDialog {
         <span class="char-label ${labelClass}">${label}</span>
       </div>
     `;
-  }
-}

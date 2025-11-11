@@ -10,22 +10,17 @@
 export { BaseSelectionDialog } from './base/BaseSelectionDialog.mjs';
 export { promptForText, confirmAction } from './base/dialogHelpers.mjs';
 
-// Specific dialog implementations
+// Selection dialogs
 export { ClockSelectionDialog } from './ClockSelectionDialog.mjs';
 export { CharacterSelectionDialog } from './CharacterSelectionDialog.mjs';
 export { ClockCreationDialog } from './ClockCreationDialog.mjs';
 
-// Note: Existing dialogs from dialogs.mjs are NOT re-exported here
-// to avoid naming conflicts. They should be imported directly from dialogs.mjs:
-// - ActionRollDialog
-// - TakeHarmDialog
-// - RallyDialog
-// - PushDialog
-// - FlashbackDialog
-// - AddTraitDialog
-// - FlashbackTraitsDialog
-// - AddClockDialog
-//
-// Usage:
-//   import { ClockSelectionDialog, promptForText } from './dialogs/index.mjs';
-//   import { AddTraitDialog } from './dialogs.mjs'; // Existing dialogs
+// Main game dialogs (newly refactored from dialogs.mjs)
+export { ActionRollDialog } from './ActionRollDialog.mjs';
+export { TakeHarmDialog } from './TakeHarmDialog.mjs';
+export { RallyDialog } from './RallyDialog.mjs';
+export { PushDialog } from './PushDialog.mjs';
+export { FlashbackDialog } from './FlashbackDialog.mjs';
+export { AddTraitDialog } from './AddTraitDialog.mjs';
+export { FlashbackTraitsDialog } from './FlashbackTraitsDialog.mjs';
+export { AddClockDialog } from './AddClockDialog.mjs';
