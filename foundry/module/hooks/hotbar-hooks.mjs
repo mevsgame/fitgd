@@ -143,3 +143,4 @@ try {
   game.user.assignHotbarMacro(macro, slot);
 
 }
+)}

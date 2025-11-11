@@ -4,6 +4,8 @@
  * Handles combat tracker events for player round state management
  */
 
+import { PlayerActionWidget } from "module/widgets/player-action-widget.mjs";
+
 // @ts-check
 
 /**
@@ -152,5 +154,5 @@ Hooks.on('combatEnd', async function(combat) {
       app.close();
     }
   }
-
-}
+ 
+})}

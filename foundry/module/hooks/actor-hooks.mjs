@@ -88,4 +88,7 @@ Hooks.on('createActor', async function(actor, options, userId) {
       console.error('FitGD | Failed to create crew in Redux:', error);
       ui.notifications.error(`Failed to create crew: ${error.message}`);
     }
-});
+  }})
+}
+
+
