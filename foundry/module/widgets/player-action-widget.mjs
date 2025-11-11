@@ -532,10 +532,11 @@ export class PlayerActionWidget extends Application {
       selectedCrewClock = state.clocks.byId[transaction.crewClockId];
     }
 
-    // Calculate harm segments and momentum gain using effective position/effect
+    // Calculate harm segments and momentum gain using effective position
+    // Note: Effect does NOT apply to consequences - only to success clocks
     const effectivePosition = this._getEffectivePosition();
     const effectiveEffect = this._getEffectiveEffect();
-    const calculatedHarmSegments = selectConsequenceSeverity(effectivePosition, effectiveEffect);
+    const calculatedHarmSegments = selectConsequenceSeverity(effectivePosition);
     const calculatedMomentumGain = selectMomentumGain(effectivePosition);
 
     // Determine if consequence is fully configured
@@ -1369,9 +1370,9 @@ export class PlayerActionWidget extends Application {
   async _applyConsequenceTransaction(transaction) {
     if (transaction.consequenceType === 'harm') {
       // Apply harm to selected clock
+      // Note: Effect does NOT apply to consequences - only position matters
       const effectivePosition = this._getEffectivePosition();
-      const effectiveEffect = this._getEffectiveEffect();
-      const segments = selectConsequenceSeverity(effectivePosition, effectiveEffect);
+      const segments = selectConsequenceSeverity(effectivePosition);
 
       await game.fitgd.bridge.execute(
         {
@@ -1387,19 +1388,22 @@ export class PlayerActionWidget extends Application {
       ui.notifications.info(`Applied ${segments} harm to ${transaction.harmClockId}`);
 
     } else if (transaction.consequenceType === 'crew-clock') {
-      // Advance crew clock
+      // Advance crew clock using standardized position-based values
+      const effectivePosition = this._getEffectivePosition();
+      const segments = selectConsequenceSeverity(effectivePosition);
+
       await game.fitgd.bridge.execute(
         {
           type: 'clocks/addSegments',
           payload: {
             clockId: transaction.crewClockId,
-            amount: transaction.crewClockSegments,
+            amount: segments,
           },
         },
         { affectedReduxIds: [this.crewId], silent: true }
       );
 
-      ui.notifications.info(`Advanced crew clock by ${transaction.crewClockSegments} segments`);
+      ui.notifications.info(`Advanced crew clock by ${segments} segments (${effectivePosition})`);
     }
   }
 

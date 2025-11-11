@@ -84,38 +84,30 @@ export const selectDicePool = createSelector(
 
 /**
  * Consequence Severity Table
- * Returns harm segments based on position and effect
+ * Returns clock segments based on POSITION ONLY (not effect)
  *
- * Based on Blades in the Dark / Forged in the Dark:
- * - Position (controlled/risky/desperate) determines base harm
- * - Effect (limited/standard/great) modifies severity
+ * IMPORTANT: Effect modifiers only apply to SUCCESS clocks (progress on success).
+ * For consequences (harm/crew clocks), only position matters:
+ * - Controlled: 1 segment
+ * - Risky: 3 segments
+ * - Desperate: 5 segments
+ *
+ * This is a house rule deviation from Blades in the Dark.
  */
-export const CONSEQUENCE_TABLE: Record<Position, Record<Effect, number>> = {
-  controlled: {
-    limited: 0,   // No harm
-    standard: 1,  // 1 segment
-    great: 2,     // 2 segments
-  },
-  risky: {
-    limited: 1,   // 1 segment
-    standard: 2,  // 2 segments
-    great: 3,     // 3 segments
-  },
-  desperate: {
-    limited: 2,   // 2 segments
-    standard: 4,  // 4 segments (dying on single clock)
-    great: 6,     // 6 segments (instant dying)
-  },
+export const CONSEQUENCE_TABLE: Record<Position, number> = {
+  controlled: 1,
+  risky: 3,
+  desperate: 5,
 };
 
 /**
- * Get harm segments for a position/effect combination
+ * Get consequence severity (clock segments) based on position only
+ * Effect does NOT apply to consequences - only to success clocks
  */
 export const selectConsequenceSeverity = (
-  position: Position,
-  effect: Effect
+  position: Position
 ): number => {
-  return CONSEQUENCE_TABLE[position]?.[effect] ?? 0;
+  return CONSEQUENCE_TABLE[position] ?? 0;
 };
 
 /**

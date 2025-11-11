@@ -288,7 +288,8 @@
             <strong>Clock:</strong> {{selectedCrewClock.subtype}} ({{selectedCrewClock.segments}}/{{selectedCrewClock.maxSegments}})
           </div>
           <div class="plan-line highlight">
-            <strong>Advance:</strong> +{{default consequenceTransaction.crewClockSegments 1}} segments
+            <strong>Advance:</strong> +{{calculatedHarmSegments}} segments
+            <span class="calculation">({{uppercase effectivePosition}})</span>
           </div>
           {{/if}}
         {{/if}}
@@ -368,14 +369,9 @@
         </div>
 
         {{#if selectedCrewClock}}
-        <div class="form-group">
-          <label>Segments to Add:</label>
-          <input type="number"
-                 name="crew-clock-segments"
-                 min="1"
-                 max="{{subtract selectedCrewClock.maxSegments selectedCrewClock.segments}}"
-                 value="{{default consequenceTransaction.crewClockSegments 1}}"
-                 class="segments-input">
+        <div class="info-note">
+          Segments to add: <strong>{{calculatedHarmSegments}}</strong>
+          <span class="calculation">({{uppercase effectivePosition}})</span>
         </div>
         {{/if}}
 
