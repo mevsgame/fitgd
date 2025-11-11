@@ -13,6 +13,8 @@ import {
   AddClockDialog
 } from '../dialogs.mjs';
 
+import { ClockCreationDialog } from '../dialogs/index.mjs';
+
 /**
  * FitGD Character Sheet
  *
@@ -130,6 +132,9 @@ class FitGDCharacterSheet extends ActorSheet {
 
     // Toggle Edit Mode for action dots
     html.find('.toggle-edit-btn').click(this._onToggleEdit.bind(this));
+
+    // Harm
+    html.find('.add-harm-btn').click(this._onAddHarm.bind(this));
 
     // Clock controls (GM-only editing)
     html.find('.clock-container img.clock').click(this._onClickClockSVG.bind(this));
@@ -381,6 +386,54 @@ class FitGDCharacterSheet extends ActorSheet {
     }
 
     new ActionRollDialog(characterId, crewId).render(true);
+  }
+
+  /**
+   * Handle Add Harm button
+   * Opens ClockCreationDialog to create a new harm clock
+   */
+  async _onAddHarm(event) {
+    event.preventDefault();
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    // Open ClockCreationDialog for harm clocks (same pattern as player-action-widget)
+    const dialog = new ClockCreationDialog(
+      characterId,
+      'harm',
+      async (clockData) => {
+        try {
+          // Create clock via Bridge API
+          const newClockId = foundry.utils.randomID();
+
+          await game.fitgd.bridge.execute(
+            {
+              type: 'clocks/createClock',
+              payload: {
+                id: newClockId,
+                entityId: characterId,
+                clockType: 'harm',
+                subtype: clockData.name,
+                maxSegments: clockData.segments,
+                segments: 0,
+                metadata: clockData.description ? { description: clockData.description } : undefined,
+              },
+            },
+            { affectedReduxIds: [characterId], force: true }
+          );
+
+          ui.notifications.info(`Harm clock "${clockData.name}" created`);
+        } catch (error) {
+          console.error('FitGD | Error creating harm clock:', error);
+          ui.notifications.error(`Error creating harm clock: ${error.message}`);
+        }
+      },
+      {
+        classes: ['dialog', 'fitgd-dialog']
+      }
+    );
+
+    dialog.render(true);
   }
 
   /**
