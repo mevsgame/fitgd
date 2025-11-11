@@ -381,24 +381,23 @@
 
       </div>
       {{/if}}
-
-      <!-- GM Action Buttons -->
-      <div class="gm-action-buttons">
-        <button type="button"
-                data-action="approve-consequence"
-                class="primary"
-                {{#unless consequenceConfigured}}disabled{{/unless}}>
-          ✓ Approve Consequence
-        </button>
-      </div>
     </div>
     {{else}}
     <!-- ==================== PLAYER ACTIONS ==================== -->
     <div class="player-consequence-actions">
-      <!-- Player can always use stims from this state -->
+      <h4>⚡ Your Options:</h4>
       <div class="player-action-buttons">
+        <!-- Player can use stims to reroll -->
         <button type="button" data-action="use-stims-gm-phase" class="stims-btn" {{#if playerState.stimsUsedThisAction}}disabled{{/if}}>
           {{#if playerState.stimsUsedThisAction}}💉 Stims Already Used{{else}}💉 Use Stims & Reroll{{/if}}
+        </button>
+
+        <!-- Player approves GM's configured consequence -->
+        <button type="button"
+                data-action="approve-consequence"
+                class="primary"
+                {{#unless consequenceConfigured}}disabled{{/unless}}>
+          {{#if consequenceConfigured}}✓ Accept Consequence{{else}}⏳ Waiting for GM...{{/if}}
         </button>
       </div>
     </div>
