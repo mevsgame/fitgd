@@ -22,6 +22,8 @@
 .fitgd form {
   height: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* -------------------------------------------- */
@@ -37,6 +39,7 @@
   padding: 10px;
   background: linear-gradient(to right, #2a2a2a, #1a1a1a);
   border-bottom: 2px solid #8b0000;
+  flex: 0 0 auto; /* Don't grow, don't shrink */
 }
 
 .fitgd .sheet-header .profile-img {
@@ -125,11 +128,14 @@
   display: flex;
   gap: 5px;
   justify-content: center;
+  max-width: 315px; /* Match width of momentum track (10 boxes * 30px + 9 gaps * 3px = 327px) */
 }
 
 .fitgd .momentum-controls button {
   flex: 1;
-  padding: 5px 10px;
+  padding: 4px 8px;
+  font-size: 12px;
+  min-width: 0; /* Allow buttons to shrink */
 }
 
 /* -------------------------------------------- */
@@ -141,6 +147,7 @@
   gap: 0;
   border-bottom: 2px solid #8b0000;
   background: #2a2a2a;
+  flex: 0 0 auto; /* Don't grow, don't shrink */
 }
 
 .fitgd .sheet-tabs .item {
@@ -206,6 +213,42 @@
   margin: 0 0 5px 0;
   color: #fff;
   font-size: 14px;
+}
+
+/* -------------------------------------------- */
+/*  Foundry Dialog Dark Theme Override          */
+/* -------------------------------------------- */
+
+/* Apply dark theme to dialogs opened from FitGD sheets */
+.dialog.fitgd-dialog .window-content,
+.dialog .window-content.fitgd-dialog-content {
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+
+.dialog.fitgd-dialog .dialog-content,
+.dialog .dialog-content.fitgd-content {
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+
+.dialog.fitgd-dialog form,
+.dialog .fitgd-dialog-content form {
+  background: #1a1a1a;
+}
+
+.dialog.fitgd-dialog .form-group label,
+.dialog .fitgd-dialog-content .form-group label {
+  color: #e0e0e0;
+}
+
+.dialog.fitgd-dialog select,
+.dialog .fitgd-dialog-content select,
+.dialog.fitgd-dialog input,
+.dialog .fitgd-dialog-content input {
+  background: #2a2a2a;
+  border: 1px solid #555;
+  color: #e0e0e0;
 }
 
 /* -------------------------------------------- */
@@ -491,17 +534,58 @@
   margin-bottom: 25px;
 }
 
-.fitgd .clocks-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 15px;
+/* Free-flow grid layout for clocks - wraps left to right */
+.fitgd .clocks-flow-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
 }
 
+/* Clock item with two-column layout: info on left, SVG on right */
 .fitgd .clock-item {
-  padding: 12px;
+  display: flex;
+  gap: 10px;
+  padding: 10px;
   background: #2a2a2a;
   border: 1px solid #444;
   border-radius: 4px;
+  flex: 0 0 auto; /* Don't grow or shrink */
+  width: fit-content;
+  max-width: 280px; /* Prevent oversized clocks */
+}
+
+/* Clock info column (left side) */
+.fitgd .clock-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 120px;
+}
+
+/* Inline header with name and delete button */
+.fitgd .clock-header-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+/* Clock display column (right side) - fixed size */
+.fitgd .clock-display {
+  flex: 0 0 auto;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure SVG doesn't grow beyond its defined size */
+.fitgd .clock-display svg {
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .fitgd .harm-clock {
@@ -550,17 +634,12 @@
   margin: 15px 0;
 }
 
-/* Clock Header with editable name and delete button */
-.fitgd .clock-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
+/* Clock name styling */
 .fitgd .clock-name {
   margin: 0;
   flex: 1;
+  font-size: 14px;
+  line-height: 1.2;
 }
 
 .fitgd .clock-name.editable {
@@ -584,32 +663,35 @@
   border: none;
   color: #ff6347;
   cursor: pointer;
-  padding: 4px 8px;
-  font-size: 14px;
+  padding: 2px 4px;
+  font-size: 12px;
   opacity: 0.6;
   transition: opacity 0.2s;
+  flex-shrink: 0;
 }
 
 .fitgd .delete-clock-btn:hover {
   opacity: 1;
+  background: rgba(255, 99, 71, 0.1);
 }
 
 /* Clock Controls */
 .fitgd .clock-controls {
-  margin-top: 8px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .fitgd .clock-value-input {
-  width: 60px;
+  width: 50px;
   text-align: center;
   font-weight: bold;
   color: #ff6347;
-  font-size: 14px;
+  font-size: 12px;
   background: rgba(255, 99, 71, 0.1);
   border: 1px solid rgba(255, 99, 71, 0.3);
-  border-radius: 4px;
-  padding: 4px 8px;
+  border-radius: 3px;
+  padding: 3px 6px;
 }
 
 .fitgd .clock-value-input:focus {
@@ -620,7 +702,7 @@
 .fitgd .clock-value {
   font-weight: bold;
   color: #ff6347;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 /* Legacy dot-based clock segments (for backwards compatibility) */
@@ -658,46 +740,46 @@
 }
 
 .fitgd .clock-rarity {
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
   color: #999;
   background: #1a1a1a;
   padding: 2px 6px;
   border-radius: 3px;
-  margin-left: 8px;
 }
 
 .fitgd .clock-category {
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
   color: #999;
   background: #1a1a1a;
   padding: 2px 6px;
   border-radius: 3px;
-  margin-left: 8px;
 }
 
 .fitgd .clock-description {
-  font-size: 12px;
+  font-size: 11px;
   color: #aaa;
-  margin-top: 8px;
+  margin-top: 4px;
   font-style: italic;
+  line-height: 1.3;
 }
 
 .fitgd .clock-status {
-  font-size: 12px;
+  font-size: 11px;
   color: #999;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .fitgd .warning {
   color: #ffd700;
   background: rgba(255, 215, 0, 0.1);
-  padding: 8px;
-  border-radius: 4px;
-  border-left: 3px solid #ffd700;
-  margin-top: 10px;
-  font-size: 13px;
+  padding: 6px;
+  border-radius: 3px;
+  border-left: 2px solid #ffd700;
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.3;
 }
 
 .fitgd .no-clocks,
@@ -733,6 +815,34 @@
   background: #2a2a2a;
   border: 1px solid #444;
   border-radius: 4px;
+}
+
+.fitgd .member-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.fitgd .member-item .member-info {
+  flex: 1;
+}
+
+.fitgd .remove-character-btn {
+  background: transparent;
+  border: none;
+  color: #ff6347;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 14px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.fitgd .remove-character-btn:hover {
+  opacity: 1;
+  background: rgba(255, 99, 71, 0.1);
 }
 
 .fitgd .equipment-tier {

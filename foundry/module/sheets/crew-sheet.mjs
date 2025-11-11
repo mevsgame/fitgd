@@ -101,9 +101,6 @@ class FitGDCrewSheet extends ActorSheet {
     html.find('.momentum-add-btn').click(this._onAddMomentum.bind(this));
     html.find('.momentum-spend-btn').click(this._onSpendMomentum.bind(this));
 
-    // Actions
-    html.find('.push-btn').click(this._onPush.bind(this));
-
     // Clocks
     html.find('.add-clock-btn').click(this._onAddClock.bind(this));
     html.find('.clock-segment').click(this._onClickClockSegment.bind(this));
@@ -114,11 +111,9 @@ class FitGDCrewSheet extends ActorSheet {
     html.find('.clock-name').blur(this._onRenameClockBlur.bind(this));
     html.find('.delete-clock-btn').click(this._onDeleteClock.bind(this));
 
-    // Reset
-    html.find('.reset-btn').click(this._onPerformReset.bind(this));
-
     // Crew members
     html.find('.add-character-btn').click(this._onAddCharacter.bind(this));
+    html.find('.remove-character-btn').click(this._onRemoveCharacter.bind(this));
   }
 
   /**
@@ -168,14 +163,6 @@ class FitGDCrewSheet extends ActorSheet {
       ui.notifications.error(`Error: ${error.message}`);
       console.error('FitGD | Spend Momentum error:', error);
     }
-  }
-
-  async _onPush(event) {
-    event.preventDefault();
-    const crewId = this._getReduxId();
-    if (!crewId) return;
-
-    new PushDialog(crewId).render(true);
   }
 
   async _onAddClock(event) {
@@ -345,8 +332,23 @@ class FitGDCrewSheet extends ActorSheet {
       return;
     }
 
+    // Get current crew members to filter them out
+    const crew = game.fitgd.api.crew.getCrew(crewId);
+    const currentMemberIds = new Set(crew.characters);
+
+    // Filter out characters already in the crew
+    const availableCharacters = characters.filter(char => {
+      const reduxId = char.getFlag('forged-in-the-grimdark', 'reduxId');
+      return reduxId && !currentMemberIds.has(reduxId);
+    });
+
+    if (availableCharacters.length === 0) {
+      ui.notifications.warn('No available characters. All characters are already in the crew.');
+      return;
+    }
+
     // Create simple selection dialog
-    const options = characters.map(char => `<option value="${char.id}">${char.name}</option>`).join('');
+    const options = availableCharacters.map(char => `<option value="${char.id}">${char.name}</option>`).join('');
 
     const dialog = new Dialog({
       title: 'Add Character to Crew',
@@ -388,31 +390,51 @@ class FitGDCrewSheet extends ActorSheet {
         }
       },
       default: 'add'
+    }, {
+      classes: ['dialog', 'fitgd-dialog']
     });
 
     dialog.render(true);
   }
 
-  async _onPerformReset(event) {
+  async _onRemoveCharacter(event) {
     event.preventDefault();
     const crewId = this._getReduxId();
     if (!crewId) return;
 
-    try {
-      const result = game.fitgd.api.crew.performReset(crewId);
+    const characterId = event.currentTarget.dataset.characterId;
+    if (!characterId) return;
 
-      ui.notifications.info(`Reset complete! Momentum: ${result.newMomentum}, Addiction: -${result.addictionReduced}`);
+    // Get character name for confirmation
+    const character = game.fitgd.api.character.getCharacter(characterId);
+    const characterName = character?.name || 'Unknown Character';
+
+    const confirmed = await Dialog.confirm({
+      title: 'Remove Character',
+      content: `<p>Are you sure you want to remove <strong>${characterName}</strong> from the crew?</p>`,
+      yes: () => true,
+      no: () => false,
+      options: {
+        classes: ['dialog', 'fitgd-dialog']
+      }
+    });
+
+    if (!confirmed) return;
+
+    try {
+      game.fitgd.api.crew.removeCharacter({ crewId, characterId });
+      ui.notifications.info(`Removed ${characterName} from crew`);
 
       // Save immediately (critical state change)
       await game.fitgd.saveImmediate();
 
-      // Re-render sheet
       this.render(false);
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
-      console.error('FitGD | Reset error:', error);
+      console.error('FitGD | Remove character error:', error);
     }
   }
+
 }
 
 export { FitGDCrewSheet };

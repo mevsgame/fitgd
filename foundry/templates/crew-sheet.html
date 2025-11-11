@@ -33,7 +33,6 @@
   <nav class="sheet-tabs tabs" data-group="primary">
     <a class="item" data-tab="members">Members</a>
     <a class="item" data-tab="clocks">Clocks</a>
-    <a class="item" data-tab="actions">Actions</a>
   </nav>
 
   {{!-- Sheet Body --}}
@@ -50,12 +49,19 @@
       <div class="members-list">
         {{#each system.characters as |character|}}
         <div class="member-item">
-          {{#if character.foundryActorId}}
-          <a class="content-link" draggable="true" data-uuid="Actor.{{character.foundryActorId}}" data-id="{{character.foundryActorId}}" data-type="Actor">
-            <i class="fas fa-user"></i> {{character.name}}
-          </a>
-          {{else}}
-          <span><i class="fas fa-user"></i> {{character.name}}</span>
+          <div class="member-info">
+            {{#if character.foundryActorId}}
+            <a class="content-link" draggable="true" data-uuid="Actor.{{character.foundryActorId}}" data-id="{{character.foundryActorId}}" data-type="Actor">
+              <i class="fas fa-user"></i> {{character.name}}
+            </a>
+            {{else}}
+            <span><i class="fas fa-user"></i> {{character.name}}</span>
+            {{/if}}
+          </div>
+          {{#if @root.editable}}
+          <button class="remove-character-btn" type="button" data-character-id="{{character.id}}" title="Remove from crew">
+            <i class="fas fa-times"></i>
+          </button>
           {{/if}}
         </div>
         {{/each}}
@@ -80,24 +86,27 @@
       <div class="clock-section">
         <h3>Addiction Clock</h3>
         <div class="clock-item addiction-clock" data-clock-id="{{system.addictionClock.id}}">
-          <div class="clock-display large">
-            {{clockSVG system.addictionClock width="150px" height="150px" class="addiction-clock-svg"}}
-          </div>
-          <div class="clock-controls">
-            {{#if @root.editable}}
-            <input type="number" class="clock-value-input"
-                   data-clock-id="{{system.addictionClock.id}}"
-                   value="{{system.addictionClock.segments}}"
-                   min="0"
-                   max="{{system.addictionClock.maxSegments}}"
-                   title="Click to edit value directly"/>
-            {{else}}
-            <span class="clock-value">{{system.addictionClock.segments}}/{{system.addictionClock.maxSegments}}</span>
+          <div class="clock-info">
+            <h4 class="clock-name">Addiction</h4>
+            <div class="clock-controls">
+              {{#if @root.editable}}
+              <input type="number" class="clock-value-input"
+                     data-clock-id="{{system.addictionClock.id}}"
+                     value="{{system.addictionClock.segments}}"
+                     min="0"
+                     max="{{system.addictionClock.maxSegments}}"
+                     title="Click to edit value directly"/>
+              {{else}}
+              <span class="clock-value">{{system.addictionClock.segments}}/{{system.addictionClock.maxSegments}}</span>
+              {{/if}}
+            </div>
+            {{#if (gte system.addictionClock.segments system.addictionClock.maxSegments)}}
+            <p class="warning"><i class="fas fa-exclamation-triangle"></i> Stims locked!</p>
             {{/if}}
           </div>
-          {{#if (gte system.addictionClock.segments system.addictionClock.maxSegments)}}
-          <p class="warning"><i class="fas fa-exclamation-triangle"></i> Stims are locked due to addiction!</p>
-          {{/if}}
+          <div class="clock-display">
+            {{clockSVG system.addictionClock width="120px" height="120px" class="addiction-clock-svg"}}
+          </div>
         </div>
       </div>
       {{/if}}
@@ -106,38 +115,40 @@
       {{#if system.consumableClocks}}
       <div class="clock-section">
         <h3>Consumables</h3>
-        <div class="clocks-grid">
+        <div class="clocks-flow-grid">
           {{#each system.consumableClocks as |clock|}}
           <div class="clock-item consumable-clock {{#if clock.metadata.frozen}}frozen{{/if}}" data-clock-id="{{clock.id}}">
-            <div class="clock-header">
-              <h4 class="clock-name {{#if @root.editable}}editable{{/if}}"
-                  data-clock-id="{{clock.id}}"
-                  contenteditable="{{@root.editable}}">{{clock.subtype}}</h4>
+            <div class="clock-info">
+              <div class="clock-header-inline">
+                <h4 class="clock-name {{#if @root.editable}}editable{{/if}}"
+                    data-clock-id="{{clock.id}}"
+                    contenteditable="{{@root.editable}}">{{clock.subtype}}</h4>
+                {{#if @root.editable}}
+                <button class="delete-clock-btn" type="button" data-clock-id="{{clock.id}}" title="Delete Clock">
+                  <i class="fas fa-trash"></i>
+                </button>
+                {{/if}}
+              </div>
               <span class="clock-rarity">{{clock.metadata.rarity}}</span>
-              {{#if @root.editable}}
-              <button class="delete-clock-btn" type="button" data-clock-id="{{clock.id}}" title="Delete Clock">
-                <i class="fas fa-trash"></i>
-              </button>
+              <div class="clock-controls">
+                {{#if @root.editable}}
+                <input type="number" class="clock-value-input"
+                       data-clock-id="{{clock.id}}"
+                       value="{{clock.segments}}"
+                       min="0"
+                       max="{{clock.maxSegments}}"
+                       title="Click to edit value directly"/>
+                {{else}}
+                <span class="clock-value">{{clock.segments}}/{{clock.maxSegments}}</span>
+                {{/if}}
+              </div>
+              {{#if clock.metadata.frozen}}
+              <p class="clock-status"><i class="fas fa-snowflake"></i> Depleted</p>
               {{/if}}
             </div>
             <div class="clock-display">
               {{clockSVG clock width="100px" height="100px" class="consumable-clock-svg"}}
             </div>
-            <div class="clock-controls">
-              {{#if @root.editable}}
-              <input type="number" class="clock-value-input"
-                     data-clock-id="{{clock.id}}"
-                     value="{{clock.segments}}"
-                     min="0"
-                     max="{{clock.maxSegments}}"
-                     title="Click to edit value directly"/>
-              {{else}}
-              <span class="clock-value">{{clock.segments}}/{{clock.maxSegments}}</span>
-              {{/if}}
-            </div>
-            {{#if clock.metadata.frozen}}
-            <p class="clock-status"><i class="fas fa-snowflake"></i> Depleted</p>
-            {{/if}}
           </div>
           {{/each}}
         </div>
@@ -148,64 +159,45 @@
       {{#if system.progressClocks}}
       <div class="clock-section">
         <h3>Progress & Threat Clocks</h3>
-        <div class="clocks-grid">
+        <div class="clocks-flow-grid">
           {{#each system.progressClocks as |clock|}}
           <div class="clock-item progress-clock" data-clock-id="{{clock.id}}">
-            <div class="clock-header">
-              <h4 class="clock-name {{#if @root.editable}}editable{{/if}}"
-                  data-clock-id="{{clock.id}}"
-                  contenteditable="{{@root.editable}}">{{clock.name}}</h4>
+            <div class="clock-info">
+              <div class="clock-header-inline">
+                <h4 class="clock-name {{#if @root.editable}}editable{{/if}}"
+                    data-clock-id="{{clock.id}}"
+                    contenteditable="{{@root.editable}}">{{clock.name}}</h4>
+                {{#if @root.editable}}
+                <button class="delete-clock-btn" type="button" data-clock-id="{{clock.id}}" title="Delete Clock">
+                  <i class="fas fa-trash"></i>
+                </button>
+                {{/if}}
+              </div>
               <span class="clock-category">{{clock.category}}</span>
-              {{#if @root.editable}}
-              <button class="delete-clock-btn" type="button" data-clock-id="{{clock.id}}" title="Delete Clock">
-                <i class="fas fa-trash"></i>
-              </button>
+              <div class="clock-controls">
+                {{#if @root.editable}}
+                <input type="number" class="clock-value-input"
+                       data-clock-id="{{clock.id}}"
+                       value="{{clock.segments}}"
+                       min="0"
+                       max="{{clock.maxSegments}}"
+                       title="Click to edit value directly"/>
+                {{else}}
+                <span class="clock-value">{{clock.segments}}/{{clock.maxSegments}}</span>
+                {{/if}}
+              </div>
+              {{#if clock.description}}
+              <p class="clock-description">{{clock.description}}</p>
               {{/if}}
             </div>
             <div class="clock-display">
               {{clockSVG clock width="100px" height="100px" class="progress-clock-svg"}}
             </div>
-            <div class="clock-controls">
-              {{#if @root.editable}}
-              <input type="number" class="clock-value-input"
-                     data-clock-id="{{clock.id}}"
-                     value="{{clock.segments}}"
-                     min="0"
-                     max="{{clock.maxSegments}}"
-                     title="Click to edit value directly"/>
-              {{else}}
-              <span class="clock-value">{{clock.segments}}/{{clock.maxSegments}}</span>
-              {{/if}}
-            </div>
-            {{#if clock.description}}
-            <p class="clock-description">{{clock.description}}</p>
-            {{/if}}
           </div>
           {{/each}}
         </div>
       </div>
       {{/if}}
-    </div>
-
-    {{!-- Actions Tab --}}
-    <div class="tab actions" data-group="primary" data-tab="actions">
-      <h2>Crew Actions</h2>
-
-      <div class="action-section">
-        <h3>Push Yourself</h3>
-        <p class="help-text">Spend 1 Momentum to gain an advantage on a roll.</p>
-        <button class="push-btn" type="button">
-          <i class="fas fa-bolt"></i> Push Yourself
-        </button>
-      </div>
-
-      <div class="action-section">
-        <h3>Reset</h3>
-        <p class="help-text">Reset Momentum to 5, reduce Addiction by 2, restore Rally for all characters.</p>
-        <button class="reset-btn" type="button">
-          <i class="fas fa-redo"></i> Perform Reset
-        </button>
-      </div>
     </div>
 
   </section>
