@@ -163,3 +163,4 @@ export class ClockCreationDialog extends Dialog {
     }
 
     return true; // Allow dialog to close
+  }}
