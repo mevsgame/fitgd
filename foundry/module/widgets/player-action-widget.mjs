@@ -1428,15 +1428,22 @@ export class PlayerActionWidget extends Application {
     }
 
     const state = game.fitgd.store.getState();
+    const crew = state.crews.byId[this.crewId];
 
-    // Find addiction clock for crew
-    const addictionClock = Object.values(state.clocks.byId).find(
-      clock => clock.entityId === this.crewId && clock.clockType === 'addiction'
-    );
+    // Check if ANY character in crew has filled addiction clock (team-wide lock)
+    let teamAddictionLocked = false;
+    for (const characterId of crew.characters) {
+      const characterAddictionClock = Object.values(state.clocks.byId).find(
+        clock => clock.entityId === characterId && clock.clockType === 'addiction'
+      );
+      if (characterAddictionClock && characterAddictionClock.segments >= characterAddictionClock.maxSegments) {
+        teamAddictionLocked = true;
+        break;
+      }
+    }
 
-    // Check if stims are locked (addiction clock filled)
-    if (addictionClock && addictionClock.segments >= addictionClock.maxSegments) {
-      ui.notifications.error('Stims are LOCKED due to addiction! Cannot use stims.');
+    if (teamAddictionLocked) {
+      ui.notifications.error('Stims are LOCKED due to crew addiction! Cannot use stims.');
 
       // Transition to STIMS_LOCKED state briefly, then back
       await game.fitgd.bridge.execute(
@@ -1470,6 +1477,11 @@ export class PlayerActionWidget extends Application {
       return;
     }
 
+    // Find this character's addiction clock
+    const addictionClock = Object.values(state.clocks.byId).find(
+      clock => clock.entityId === this.characterId && clock.clockType === 'addiction'
+    );
+
     // Create addiction clock if it doesn't exist
     let addictionClockId = addictionClock?.id;
     if (!addictionClock) {
@@ -1479,29 +1491,39 @@ export class PlayerActionWidget extends Application {
           type: 'clocks/createClock',
           payload: {
             id: addictionClockId,
-            entityId: this.crewId,
+            entityId: this.characterId, // Per-character, not per-crew
             clockType: 'addiction',
             subtype: 'Addiction',
             maxSegments: 8,
             segments: 0,
           },
         },
-        { affectedReduxIds: [this.crewId], silent: true }
+        { affectedReduxIds: [this.characterId], silent: true }
       );
 
       ui.notifications.info('Addiction clock created');
     }
 
-    // Advance addiction clock by 1
+    // Roll d6 to determine addiction advance
+    const addictionRoll = await new Roll('1d6').evaluate();
+    const addictionAmount = addictionRoll.total;
+
+    // Post addiction roll to chat
+    await addictionRoll.toMessage({
+      speaker: ChatMessage.getSpeaker(),
+      flavor: `${this.character.name} - Addiction Roll (Stims)`,
+    });
+
+    // Advance addiction clock by roll result
     await game.fitgd.bridge.execute(
       {
         type: 'clocks/addSegments',
         payload: {
           clockId: addictionClockId,
-          amount: 1,
+          amount: addictionAmount,
         },
       },
-      { affectedReduxIds: [this.crewId], silent: true }
+      { affectedReduxIds: [this.characterId], silent: true }
     );
 
     // Get updated clock state
@@ -1509,7 +1531,7 @@ export class PlayerActionWidget extends Application {
     const updatedClock = updatedState.clocks.byId[addictionClockId];
     const newSegments = updatedClock.segments;
 
-    ui.notifications.warn(`Addiction clock: ${newSegments}/${updatedClock.maxSegments}`);
+    ui.notifications.warn(`Addiction clock: ${newSegments}/${updatedClock.maxSegments} (+${addictionAmount})`);
 
     // Check if addiction clock just filled
     if (newSegments >= updatedClock.maxSegments) {

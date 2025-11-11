@@ -192,6 +192,35 @@
         <p class="no-clocks">No harm taken yet.</p>
         {{/unless}}
       </div>
+
+      {{!-- Addiction Clock Section --}}
+      {{#if system.addictionClock}}
+      <div class="addiction-clock-section">
+        <h3>💉 Addiction Clock</h3>
+        <div class="clock-item addiction-clock" data-clock-id="{{system.addictionClock.id}}">
+          <div class="clock-display">
+            {{clockSVG system.addictionClock width="120px" height="120px" class="addiction-clock-svg"}}
+          </div>
+          <div class="clock-controls">
+            {{#if @root.editable}}
+            <input type="number" class="clock-value-input"
+                   data-clock-id="{{system.addictionClock.id}}"
+                   value="{{system.addictionClock.segments}}"
+                   min="0"
+                   max="{{system.addictionClock.maxSegments}}"
+                   title="Click to edit value directly"/>
+            {{else}}
+            <span class="clock-value">{{system.addictionClock.segments}}/{{system.addictionClock.maxSegments}}</span>
+            {{/if}}
+          </div>
+          {{#if (gte system.addictionClock.segments system.addictionClock.maxSegments)}}
+          <div class="addiction-warning">
+            <i class="fas fa-exclamation-triangle"></i> ADDICTED! Stims locked for entire crew.
+          </div>
+          {{/if}}
+        </div>
+      </div>
+      {{/if}}
     </div>
 
     {{!-- Equipment Tab --}}
