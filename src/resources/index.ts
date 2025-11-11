@@ -6,6 +6,7 @@ import {
   createClock,
   addSegments,
   clearSegments,
+  deleteClock,
 } from '../slices/clockSlice';
 import {
   selectConsumableClockBySubtype,
@@ -367,23 +368,48 @@ export function performMomentumReset(
       );
     });
 
-    // Recover all 6/6 harm clocks to 5/6
+    // Recover harm clocks based on new reset rules
     const currentState = store.getState();
     const harmClockIds = currentState.clocks.byTypeAndEntity[`harm:${characterId}`] || [];
     let harmClocksRecovered = 0;
 
     harmClockIds.forEach((clockId: string) => {
       const clock = currentState.clocks.byId[clockId];
-      if (clock && clock.segments >= clock.maxSegments) {
-        // Clock is at 6/6, reduce by 1 to make it 5/6
-        store.dispatch(
-          clearSegments({
-            clockId,
-            amount: 1,
-            userId,
-          })
-        );
-        harmClocksRecovered++;
+      if (clock && clock.segments > 0) {
+        if (clock.segments >= clock.maxSegments) {
+          // Full clock (6/6): reduce by 1 to make it 5/6
+          store.dispatch(
+            clearSegments({
+              clockId,
+              amount: 1,
+              userId,
+            })
+          );
+          harmClocksRecovered++;
+        } else {
+          // Partial clock: reduce by 2 (minimum 0)
+          const amountToReduce = Math.min(clock.segments, 2);
+          store.dispatch(
+            clearSegments({
+              clockId,
+              amount: amountToReduce,
+              userId,
+            })
+          );
+          harmClocksRecovered++;
+
+          // If clock reaches 0 after reduction, delete it
+          const updatedState = store.getState();
+          const updatedClock = updatedState.clocks.byId[clockId];
+          if (updatedClock && updatedClock.segments === 0) {
+            store.dispatch(
+              deleteClock({
+                clockId,
+                userId,
+              })
+            );
+          }
+        }
       }
     });
 
