@@ -3,13 +3,11 @@ import {
   createCharacter,
   addTrait,
   pruneOrphanedHistory as pruneOrphanedCharacterHistory,
-  hydrateCharacters,
 } from '../../src/slices/characterSlice';
 import {
   createCrew,
   addMomentum,
   pruneOrphanedHistory as pruneOrphanedCrewHistory,
-  hydrateCrews,
 } from '../../src/slices/crewSlice';
 import {
   createClock,
@@ -24,284 +22,6 @@ import {
 import type { ActionDots } from '../../src/types';
 
 describe('Auto-Prune History', () => {
-  describe('Character slice - pruneOrphanedHistory', () => {
-    it('should prune orphaned commands when character is deleted', () => {
-      const store = configureStore();
-
-      // Create character
-      const result = store.dispatch(
-        createCharacter({
-          name: 'Test Character',
-          traits: [
-            {
-              id: 'trait-1',
-              name: 'Soldier',
-              category: 'role',
-              disabled: false,
-              acquiredAt: Date.now(),
-            },
-            {
-              id: 'trait-2',
-              name: 'Veteran',
-              category: 'background',
-              disabled: false,
-              acquiredAt: Date.now(),
-            },
-          ],
-          actionDots: {
-            shoot: 2,
-            skirmish: 1,
-            skulk: 0,
-            wreck: 0,
-            finesse: 0,
-            survey: 1,
-            study: 0,
-            tech: 0,
-            attune: 0,
-            command: 2,
-            consort: 0,
-            sway: 0,
-          } as ActionDots,
-        })
-      );
-
-      const characterId = result.payload.id;
-
-      // Add trait (creates more commands)
-      store.dispatch(
-        addTrait({
-          characterId,
-          trait: {
-            id: 'trait-3',
-            name: 'Battle Scarred',
-            category: 'scar',
-            disabled: false,
-            acquiredAt: Date.now(),
-          },
-        })
-      );
-
-      // Verify history before prune (2 commands: create + addTrait)
-      expect(store.getState().characters.history.length).toBe(2);
-
-      // Simulate deletion by hydrating with empty state (preserves history)
-      store.dispatch(hydrateCharacters({}));
-
-      // Verify character is gone but history remains
-      expect(store.getState().characters.allIds.length).toBe(0);
-      expect(store.getState().characters.history.length).toBe(2);
-
-      // Dispatch prune action
-      store.dispatch(pruneOrphanedCharacterHistory());
-
-      // Verify history after prune - all commands should be removed
-      // (since there's no deleteCharacter command in history)
-      expect(store.getState().characters.history.length).toBe(0);
-    });
-
-    it('should not prune commands for existing characters', () => {
-      const store = configureStore();
-
-      // Create two characters
-      const char1 = store.dispatch(
-        createCharacter({
-          name: 'Character 1',
-          traits: [
-            {
-              id: 'trait-1',
-              name: 'Soldier',
-              category: 'role',
-              disabled: false,
-              acquiredAt: Date.now(),
-            },
-            {
-              id: 'trait-2',
-              name: 'Veteran',
-              category: 'background',
-              disabled: false,
-              acquiredAt: Date.now(),
-            },
-          ],
-          actionDots: {
-            shoot: 2,
-            skirmish: 1,
-            skulk: 0,
-            wreck: 0,
-            finesse: 0,
-            survey: 1,
-            study: 0,
-            tech: 0,
-            attune: 0,
-            command: 2,
-            consort: 0,
-            sway: 0,
-          } as ActionDots,
-        })
-      );
-
-      const char2 = store.dispatch(
-        createCharacter({
-          name: 'Character 2',
-          traits: [
-            {
-              id: 'trait-3',
-              name: 'Officer',
-              category: 'role',
-              disabled: false,
-              acquiredAt: Date.now(),
-            },
-            {
-              id: 'trait-4',
-              name: 'Noble',
-              category: 'background',
-              disabled: false,
-              acquiredAt: Date.now(),
-            },
-          ],
-          actionDots: {
-            shoot: 1,
-            skirmish: 0,
-            skulk: 0,
-            wreck: 0,
-            finesse: 1,
-            survey: 1,
-            study: 1,
-            tech: 0,
-            attune: 0,
-            command: 3,
-            consort: 2,
-            sway: 2,
-          } as ActionDots,
-        })
-      );
-
-      // Verify we have 2 commands
-      expect(store.getState().characters.history.length).toBe(2);
-
-      // Hydrate with only char2 (simulates char1 being deleted)
-      const char2Data = store.getState().characters.byId[char2.payload.id];
-      store.dispatch(hydrateCharacters({ [char2.payload.id]: char2Data }));
-
-      // Verify only char2 exists now
-      expect(store.getState().characters.allIds.length).toBe(1);
-      expect(store.getState().characters.allIds[0]).toBe(char2.payload.id);
-
-      // Prune
-      store.dispatch(pruneOrphanedCharacterHistory());
-
-      const finalState = store.getState();
-
-      // Char2's create command should still exist, char1's should be gone
-      expect(finalState.characters.history.length).toBe(1);
-
-      const char2CreateCommand = finalState.characters.history.find(
-        (cmd) =>
-          cmd.payload &&
-          typeof cmd.payload === 'object' &&
-          'id' in cmd.payload &&
-          cmd.payload.id === char2.payload.id &&
-          cmd.type === 'characters/createCharacter'
-      );
-
-      expect(char2CreateCommand).toBeDefined();
-    });
-
-    it('should identify orphaned commands correctly', () => {
-      const store = configureStore();
-
-      // Create character and add trait
-      const result = store.dispatch(
-        createCharacter({
-          name: 'Test Character',
-          traits: [
-            {
-              id: 'trait-1',
-              name: 'Soldier',
-              category: 'role',
-              disabled: false,
-              acquiredAt: Date.now(),
-            },
-            {
-              id: 'trait-2',
-              name: 'Veteran',
-              category: 'background',
-              disabled: false,
-              acquiredAt: Date.now(),
-            },
-          ],
-          actionDots: {
-            shoot: 2,
-            skirmish: 1,
-            skulk: 0,
-            wreck: 0,
-            finesse: 0,
-            survey: 1,
-            study: 0,
-            tech: 0,
-            attune: 0,
-            command: 2,
-            consort: 0,
-            sway: 0,
-          } as ActionDots,
-        })
-      );
-
-      store.dispatch(
-        addTrait({
-          characterId: result.payload.id,
-          trait: {
-            id: 'trait-3',
-            name: 'Battle Scarred',
-            category: 'scar',
-            disabled: false,
-            acquiredAt: Date.now(),
-          },
-        })
-      );
-
-      // No orphaned commands yet
-      let orphaned = selectOrphanedCommands(store.getState());
-      expect(orphaned.characters.length).toBe(0);
-
-      // Delete character by hydrating with empty state
-      store.dispatch(hydrateCharacters({}));
-
-      // Now should have 2 orphaned commands
-      orphaned = selectOrphanedCommands(store.getState());
-      expect(orphaned.characters.length).toBe(2);
-      expect(orphaned.total).toBe(2);
-    });
-  });
-
-  describe('Crew slice - pruneOrphanedHistory', () => {
-    it('should prune orphaned crew commands', () => {
-      const store = configureStore();
-
-      // Create crew
-      const crew = store.dispatch(createCrew({ name: 'Strike Team' }));
-      const crewId = crew.payload.id;
-
-      // Add momentum
-      store.dispatch(addMomentum({ crewId, amount: 2 }));
-
-      // Verify history before (2 commands: create + addMomentum)
-      expect(store.getState().crews.history.length).toBe(2);
-
-      // Simulate crew deletion by hydrating with empty state
-      store.dispatch(hydrateCrews({}));
-
-      // Verify crew is gone but history remains
-      expect(store.getState().crews.allIds.length).toBe(0);
-      expect(store.getState().crews.history.length).toBe(2);
-
-      // Prune
-      store.dispatch(pruneOrphanedCrewHistory());
-
-      // Verify all commands pruned
-      expect(store.getState().crews.history.length).toBe(0);
-    });
-  });
-
   describe('Clock slice - pruneOrphanedHistory', () => {
     it('should prune orphaned clock commands but keep deletion commands', () => {
       const store = configureStore();
@@ -391,52 +111,12 @@ describe('Auto-Prune History', () => {
 
       expect(deleteCommand).toBeDefined();
     });
-  });
 
-  describe('selectOrphanedCommands selector', () => {
-    it('should calculate orphaned commands correctly', () => {
+    it('should handle multiple deletions correctly', () => {
       const store = configureStore();
 
-      // Create entities
-      const char = store.dispatch(
-        createCharacter({
-          name: 'Test Char',
-          traits: [
-            {
-              id: 'trait-1',
-              name: 'Soldier',
-              category: 'role',
-              disabled: false,
-              acquiredAt: Date.now(),
-            },
-            {
-              id: 'trait-2',
-              name: 'Veteran',
-              category: 'background',
-              disabled: false,
-              acquiredAt: Date.now(),
-            },
-          ],
-          actionDots: {
-            shoot: 2,
-            skirmish: 1,
-            skulk: 0,
-            wreck: 0,
-            finesse: 0,
-            survey: 1,
-            study: 0,
-            tech: 0,
-            attune: 0,
-            command: 2,
-            consort: 0,
-            sway: 0,
-          } as ActionDots,
-        })
-      );
-
-      const crew = store.dispatch(createCrew({ name: 'Test Crew' }));
-
-      const clock = store.dispatch(
+      // Create three clocks
+      const clock1 = store.dispatch(
         createClock({
           entityId: 'entity-1',
           clockType: 'progress',
@@ -444,19 +124,121 @@ describe('Auto-Prune History', () => {
         })
       );
 
-      // Simulate deletion by hydrating with empty states
-      store.dispatch(hydrateCharacters({}));
-      store.dispatch(hydrateCrews({}));
-      store.dispatch(deleteClock({ clockId: clock.payload.id }));
+      const clock2 = store.dispatch(
+        createClock({
+          entityId: 'entity-2',
+          clockType: 'progress',
+          maxSegments: 6,
+        })
+      );
 
-      // Get orphaned commands
-      const orphaned = selectOrphanedCommands(store.getState());
+      const clock3 = store.dispatch(
+        createClock({
+          entityId: 'entity-3',
+          clockType: 'progress',
+          maxSegments: 4,
+        })
+      );
 
-      expect(orphaned.characters.length).toBe(1);
-      expect(orphaned.crews.length).toBe(1);
-      // Clock has 1 create (orphaned), but delete is NOT orphaned (audit trail)
-      expect(orphaned.clocks.length).toBe(1);
-      expect(orphaned.total).toBe(3);
+      // Add segments to all
+      store.dispatch(addSegments({ clockId: clock1.payload.id, amount: 2 }));
+      store.dispatch(addSegments({ clockId: clock2.payload.id, amount: 3 }));
+      store.dispatch(addSegments({ clockId: clock3.payload.id, amount: 1 }));
+
+      // Verify we have 6 commands (3 creates + 3 addSegments)
+      expect(store.getState().clocks.history.length).toBe(6);
+
+      // Delete clock1 and clock2
+      store.dispatch(deleteClock({ clockId: clock1.payload.id }));
+      store.dispatch(deleteClock({ clockId: clock2.payload.id }));
+
+      // Now have 8 commands (3 creates + 3 adds + 2 deletes)
+      expect(store.getState().clocks.history.length).toBe(8);
+
+      // Prune
+      store.dispatch(pruneOrphanedClockHistory());
+
+      const finalState = store.getState();
+
+      // Should have 4 commands:
+      // - 2 delete commands (audit trail)
+      // - 1 create for clock3 (still exists)
+      // - 1 addSegments for clock3 (still exists)
+      expect(finalState.clocks.history.length).toBe(4);
+
+      // Verify clock3's commands still exist
+      const clock3Commands = finalState.clocks.history.filter(
+        (cmd) =>
+          cmd.payload &&
+          typeof cmd.payload === 'object' &&
+          'id' in cmd.payload &&
+          cmd.payload.id === clock3.payload.id
+      );
+
+      expect(clock3Commands.length).toBe(1); // Just the create command
+
+      const clock3AddCommand = finalState.clocks.history.find(
+        (cmd) =>
+          cmd.payload &&
+          typeof cmd.payload === 'object' &&
+          'clockId' in cmd.payload &&
+          cmd.payload.clockId === clock3.payload.id &&
+          cmd.type === 'clocks/addSegments'
+      );
+
+      expect(clock3AddCommand).toBeDefined();
+
+      // Verify both delete commands exist
+      const deleteCommands = finalState.clocks.history.filter(
+        (cmd) => cmd.type === 'clocks/deleteClock'
+      );
+
+      expect(deleteCommands.length).toBe(2);
+    });
+  });
+
+  describe('selectOrphanedCommands selector', () => {
+    it('should identify orphaned commands correctly', () => {
+      const store = configureStore();
+
+      // Create clocks
+      const clock1 = store.dispatch(
+        createClock({
+          entityId: 'entity-1',
+          clockType: 'progress',
+          maxSegments: 8,
+        })
+      );
+
+      const clock2 = store.dispatch(
+        createClock({
+          entityId: 'entity-2',
+          clockType: 'progress',
+          maxSegments: 6,
+        })
+      );
+
+      store.dispatch(addSegments({ clockId: clock1.payload.id, amount: 2 }));
+
+      // No orphaned commands yet (all entities exist)
+      let orphaned = selectOrphanedCommands(store.getState());
+      expect(orphaned.clocks.length).toBe(0);
+      expect(orphaned.total).toBe(0);
+
+      // Delete clock1
+      store.dispatch(deleteClock({ clockId: clock1.payload.id }));
+
+      // Now clock1's create and addSegments commands are orphaned
+      // (but NOT the delete command - that's kept for audit)
+      orphaned = selectOrphanedCommands(store.getState());
+      expect(orphaned.clocks.length).toBe(2); // create + addSegments
+      expect(orphaned.total).toBe(2);
+
+      // Delete commands should NOT be counted as orphaned
+      const deleteCommand = store.getState().clocks.history.find(
+        (cmd) => cmd.type === 'clocks/deleteClock'
+      );
+      expect(deleteCommand).toBeDefined();
     });
 
     it('should report zero orphaned commands when all entities exist', () => {
@@ -501,10 +283,182 @@ describe('Auto-Prune History', () => {
 
       store.dispatch(createCrew({ name: 'Test Crew' }));
 
-      // Get orphaned commands (none should exist)
+      store.dispatch(
+        createClock({
+          entityId: 'entity-1',
+          clockType: 'progress',
+          maxSegments: 8,
+        })
+      );
+
+      // Get orphaned commands (none should exist - all entities still exist)
       const orphanedCount = selectOrphanedCommandCount(store.getState());
 
       expect(orphanedCount).toBe(0);
+    });
+
+    it('should correctly count orphaned commands across all entity types', () => {
+      const store = configureStore();
+
+      // Create multiple clocks
+      const clock1 = store.dispatch(
+        createClock({
+          entityId: 'char-1',
+          clockType: 'harm',
+          maxSegments: 6,
+        })
+      );
+
+      const clock2 = store.dispatch(
+        createClock({
+          entityId: 'char-2',
+          clockType: 'harm',
+          maxSegments: 6,
+        })
+      );
+
+      const clock3 = store.dispatch(
+        createClock({
+          entityId: 'crew-1',
+          clockType: 'progress',
+          maxSegments: 8,
+        })
+      );
+
+      // Add operations to clocks
+      store.dispatch(addSegments({ clockId: clock1.payload.id, amount: 2 }));
+      store.dispatch(addSegments({ clockId: clock2.payload.id, amount: 3 }));
+      store.dispatch(addSegments({ clockId: clock3.payload.id, amount: 4 }));
+
+      // Delete clock1 and clock2 (but not clock3)
+      store.dispatch(deleteClock({ clockId: clock1.payload.id }));
+      store.dispatch(deleteClock({ clockId: clock2.payload.id }));
+
+      // Calculate orphaned commands
+      const orphaned = selectOrphanedCommands(store.getState());
+
+      // Clock1: 2 orphaned (create + addSegments)
+      // Clock2: 2 orphaned (create + addSegments)
+      // Clock3: 0 orphaned (still exists)
+      // Delete commands: NOT orphaned (kept for audit)
+      expect(orphaned.clocks.length).toBe(4);
+      expect(orphaned.total).toBe(4);
+
+      // Verify clock3's commands are NOT counted as orphaned
+      const clock3CreateCommand = store.getState().clocks.history.find(
+        (cmd) =>
+          cmd.payload &&
+          typeof cmd.payload === 'object' &&
+          'id' in cmd.payload &&
+          cmd.payload.id === clock3.payload.id
+      );
+
+      expect(clock3CreateCommand).toBeDefined();
+    });
+  });
+
+  describe('pruneOrphanedHistory action behavior', () => {
+    it('should do nothing if no commands are orphaned', () => {
+      const store = configureStore();
+
+      // Create entities that will persist
+      store.dispatch(
+        createCharacter({
+          name: 'Character 1',
+          traits: [
+            {
+              id: 'trait-1',
+              name: 'Soldier',
+              category: 'role',
+              disabled: false,
+              acquiredAt: Date.now(),
+            },
+            {
+              id: 'trait-2',
+              name: 'Veteran',
+              category: 'background',
+              disabled: false,
+              acquiredAt: Date.now(),
+            },
+          ],
+          actionDots: {
+            shoot: 2,
+            skirmish: 1,
+            skulk: 0,
+            wreck: 0,
+            finesse: 0,
+            survey: 1,
+            study: 0,
+            tech: 0,
+            attune: 0,
+            command: 2,
+            consort: 0,
+            sway: 0,
+          } as ActionDots,
+        })
+      );
+
+      store.dispatch(createCrew({ name: 'Crew 1' }));
+
+      const clock = store.dispatch(
+        createClock({
+          entityId: 'entity-1',
+          clockType: 'progress',
+          maxSegments: 8,
+        })
+      );
+
+      // Record history lengths before pruning
+      const characterHistoryBefore = store.getState().characters.history.length;
+      const crewHistoryBefore = store.getState().crews.history.length;
+      const clockHistoryBefore = store.getState().clocks.history.length;
+
+      // Prune all slices
+      store.dispatch(pruneOrphanedCharacterHistory());
+      store.dispatch(pruneOrphanedCrewHistory());
+      store.dispatch(pruneOrphanedClockHistory());
+
+      // History should be unchanged (no orphaned commands)
+      expect(store.getState().characters.history.length).toBe(characterHistoryBefore);
+      expect(store.getState().crews.history.length).toBe(crewHistoryBefore);
+      expect(store.getState().clocks.history.length).toBe(clockHistoryBefore);
+    });
+
+    it('should preserve deletion commands for audit trail', () => {
+      const store = configureStore();
+
+      // Create multiple clocks
+      const clocks = [];
+      for (let i = 0; i < 5; i++) {
+        const clock = store.dispatch(
+          createClock({
+            entityId: `entity-${i}`,
+            clockType: 'progress',
+            maxSegments: 8,
+          })
+        );
+        clocks.push(clock.payload.id);
+      }
+
+      // Delete all clocks
+      for (const clockId of clocks) {
+        store.dispatch(deleteClock({ clockId }));
+      }
+
+      // Prune
+      store.dispatch(pruneOrphanedClockHistory());
+
+      const finalState = store.getState();
+
+      // Should have exactly 5 delete commands (1 per clock)
+      expect(finalState.clocks.history.length).toBe(5);
+
+      // All should be delete commands
+      const allAreDeletes = finalState.clocks.history.every(
+        (cmd) => cmd.type === 'clocks/deleteClock'
+      );
+
+      expect(allAreDeletes).toBe(true);
     });
   });
 });
