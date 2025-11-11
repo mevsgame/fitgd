@@ -6,6 +6,7 @@ import {
   disableTrait,
   enableTrait,
   removeTrait as removeTraitAction,
+  updateTraitName as updateTraitNameAction,
   groupTraits,
   setActionDots as setActionDotsAction,
   advanceActionDots,
@@ -252,6 +253,23 @@ export function createCharacterAPI(store: Store) {
     }): void {
       const { characterId, traitId } = params;
       store.dispatch(removeTraitAction({ characterId, traitId }));
+    },
+
+    /**
+     * Update a trait's name
+     */
+    updateTraitName(params: {
+      characterId: string;
+      traitId: string;
+      name: string;
+    }): void {
+      const { characterId, traitId, name } = params;
+
+      if (!name || name.trim().length === 0) {
+        throw new Error('Trait name cannot be empty');
+      }
+
+      store.dispatch(updateTraitNameAction({ characterId, traitId, name }));
     },
 
     /**

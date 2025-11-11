@@ -113,7 +113,10 @@
         {{#each system.traits as |trait|}}
         <div class="trait-item {{#if trait.disabled}}disabled{{/if}}">
           <div class="trait-header">
-            <h4 class="trait-name" data-trait-id="{{trait.id}}">{{trait.name}}</h4>
+            <h4 class="trait-name {{#if @root.editable}}editable{{/if}}"
+                data-trait-id="{{trait.id}}"
+                contenteditable="{{@root.editable}}"
+                spellcheck="false">{{trait.name}}</h4>
             <div class="trait-header-right">
               <span class="trait-category">{{trait.category}}</span>
               {{#if @root.editable}}

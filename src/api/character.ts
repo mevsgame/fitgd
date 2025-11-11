@@ -13,6 +13,7 @@ export interface CharacterAPI {
   // Traits
   addTrait(characterId: string, trait: Trait): void;
   removeTrait(characterId: string, traitId: string): void;
+  updateTraitName(characterId: string, traitId: string, name: string): void;
   disableTrait(characterId: string, traitId: string): void;
   enableTrait(characterId: string, traitId: string): void;
   groupTraits(characterId: string, traitIds: [string, string, string], newTrait: Trait): void;
