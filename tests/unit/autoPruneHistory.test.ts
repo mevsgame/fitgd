@@ -7,7 +7,7 @@ import {
 import {
   createCrew,
   addMomentum,
-  pruneOrphanedHistory as pruneOrphanedCrewHistory,
+  pruneOrphanedCrewHistory,
 } from '../../src/slices/crewSlice';
 import {
   createClock,
