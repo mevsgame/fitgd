@@ -119,7 +119,7 @@ Roll a number of d6s equal to your Action rating (if zero, roll 2d6 and take the
 
 - **Position** determines the severity of consequences: **Controlled, Risky, or Desperate**. Risky is the default. Controlled is earned through advantages (good gear, traits, tactical superiority). Desperate is typically a consequence of failure - when things go badly, your Position worsens. Position is determined through conversation between the GM and player, based on your approach and the situation. You can improve it by changing tactics or gaining advantages in the fiction.
 
-- **Effect** determines the impact of success: **Limited, Standard, or Great**. Standard is the default. Effect is determined through conversation between the GM and player, based on factors like the quality and tier of your gear, the scale of your action, relevant traits, and your approach. You can improve Effect by gaining advantages or by Pushing Yourself.
+- **Effect** determines the impact of success: **Limited, Standard, or Great**. Standard is the default. Effect is determined through conversation between the GM and player, based on factors like the quality and tier of your gear, the scale of your action, relevant traits, and your approach. You can improve Effect by gaining advantages or by Pushing Yourself. **Effect only applies when you succeed** - it determines how much progress you make on success clocks (obstacles, objectives, etc.). It does not modify harm or other consequences from failure or partial success.
 
 #### **Teamwork**
 
@@ -135,15 +135,19 @@ Roll a number of d6s equal to your Action rating (if zero, roll 2d6 and take the
 
 #### **Consequence Clocks**
 
-Harm is tracked on 6-segment **clocks**. Clocks track a specific type of harm (e.g., Physical Harm, Shaken Morale, Psychic Corruption). Segments are filled based on the action's **Position and Effect.**
+Harm is tracked on 6-segment **clocks**. Clocks track a specific type of harm (e.g., Physical Harm, Shaken Morale, Psychic Corruption). Segments are filled based on the action's **Position only** (Effect does not apply to consequences).
 
 Characters can have up to three active harm clocks. If you would take a fourth type of harm, it replaces the clock with the fewest segments--the segments remain, but the harm type changes to reflect the new threat.
 
-| Position   | Limited Effect | Standard Effect | Great Effect       |
-| ---------- | -------------- | --------------- | ------------------ |
-| Controlled | 0 segments     | 1 segment       | 2 segments         |
-| Risky      | 2 segments     | 3 segments      | 4 segments         |
-| Desperate  | 4 segments     | 5 segments      | 6 segments (Dying) |
+**Harm Severity (by Position):**
+
+| Position   | Segments |
+| ---------- | -------- |
+| Controlled | 1        |
+| Risky      | 3        |
+| Desperate  | 5        |
+
+**Note:** Effect modifiers (Limited/Standard/Great) apply only to **success clocks** (progress you make when succeeding), not to harm or other consequence clocks.
 
 #### **Dying & Defeat**
 
@@ -165,6 +169,16 @@ Characters can have up to three active harm clocks. If you would take a fourth t
 - **Downtime:** After a Momentum Reset, you can take a recovery action using any relevant Action based on your approach (meditation, medical treatment, talking it out, etc.). Describe how you're recovering and the GM will determine which Action to roll. This is always a Controlled position roll. Success clears segments based on Effect (1/2/4).
 
 - When a clock is reduced to 0/6 segments (fully cleared), you have a choice: either erase the clock entirely, or convert it into a permanent **Trait** that reflects how the injury shaped you.
+
+#### **Success Clocks (Progress Tracking)**
+
+When you succeed at an action that makes progress toward a goal (picking a lock, hacking a system, convincing a group, building a device), you advance a **success clock**. Unlike harm/consequence clocks, success clocks are affected by both Position and Effect:
+
+**Progress on Success (Position + Effect):**
+- **Base Progress:** Controlled=1, Risky=3, Desperate=5 segments
+- **Effect Modifier:** Limited=-1, Standard=+0, Great=+1
+
+Example: A Risky action with Great Effect would advance 4 segments (3 base + 1 for great effect).
 
 ---
 
