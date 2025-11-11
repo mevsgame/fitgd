@@ -302,6 +302,7 @@ export interface MomentumResetResult {
     characterId: string;
     rallyReset: boolean;
     traitsReEnabled: number; // Count of traits re-enabled
+    harmClocksRecovered: number; // Count of 6/6 harm clocks reduced to 5/6
   }[];
 }
 
@@ -313,6 +314,7 @@ export interface MomentumResetResult {
  * 2. Addiction clock reduced by 2 segments
  * 3. Rally availability reset for all characters
  * 4. All disabled traits re-enabled for all characters
+ * 5. All 6/6 harm clocks recovered to 5/6
  *
  * @param store - Redux store
  * @param params - Reset parameters
@@ -337,7 +339,7 @@ export function performMomentumReset(
   // 2. Reduce addiction clock by 2
   const addictionSegments = reduceAddiction(store, crewId, userId);
 
-  // 3 & 4. Reset rally and re-enable traits for all characters in crew
+  // 3, 4, & 5. Reset rally, re-enable traits, and recover harm clocks for all characters in crew
   const characterResults = crew.characters.map((characterId: string) => {
     const character = state.characters.byId[characterId];
 
@@ -346,6 +348,7 @@ export function performMomentumReset(
         characterId,
         rallyReset: false,
         traitsReEnabled: 0,
+        harmClocksRecovered: 0,
       };
     }
 
@@ -364,10 +367,31 @@ export function performMomentumReset(
       );
     });
 
+    // Recover all 6/6 harm clocks to 5/6
+    const currentState = store.getState();
+    const harmClockIds = currentState.clocks.byTypeAndEntity[`harm:${characterId}`] || [];
+    let harmClocksRecovered = 0;
+
+    harmClockIds.forEach((clockId: string) => {
+      const clock = currentState.clocks.byId[clockId];
+      if (clock && clock.segments >= clock.maxSegments) {
+        // Clock is at 6/6, reduce by 1 to make it 5/6
+        store.dispatch(
+          clearSegments({
+            clockId,
+            amount: 1,
+            userId,
+          })
+        );
+        harmClocksRecovered++;
+      }
+    });
+
     return {
       characterId,
       rallyReset: true,
       traitsReEnabled: disabledTraits.length,
+      harmClocksRecovered,
     };
   });
 
