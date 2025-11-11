@@ -60,6 +60,12 @@ A Reset marks the end of a dramatic "act," setting the team's Momentum to **5**.
 - **Moderate (1-2 per session):** After mission objectives complete--longer pressure arcs
 - **Rare (1 per multiple sessions):** Only at major story beats--extended tension
 
+**Automatic Clock Recovery:**
+All active clocks (Harm, Addiction, and Consumable) automatically recover during a Momentum Reset:
+- **Full clocks** (6/6, 8/8, etc.) reduce by 1 segment
+- **Partial clocks** reduce by 2 segments (minimum 0)
+- **Empty clocks** (0 segments) are removed entirely
+
 ---
 
 ## LOW MOMENTUM RECOVERY (0-3 MOMENTUM ONLY)
@@ -84,7 +90,10 @@ A last-resort measure for desperate situations. Once per action, you may use Sti
 
 - **Addiction:** When your clock fills, you gain the "Addict" Trait, and Stims become **Inaccessible for the entire team**.
 
-- **Recovery:** The Addiction Clock reduces by 2 segments after a Momentum Reset.
+- **Recovery:** After a Momentum Reset:
+  - If your Addiction Clock is full (8/8), it reduces to 7/8.
+  - If your Addiction Clock is not full, it reduces by 2 segments (minimum 0).
+  - If your Addiction Clock reaches 0, it is removed entirely.
 
 ---
 
@@ -164,11 +173,12 @@ Characters can have up to three active harm clocks. If you would take a fourth t
 
 #### **Recovery**
 
-- **Between Missions:** After a Momentum Reset, any 6/6 clocks reduce to 5/6.
+- **Automatic (Momentum Reset):** After a Momentum Reset, all harm clocks automatically recover:
+  - If a harm clock is full (6/6), it reduces to 5/6.
+  - If a harm clock is not full, it reduces by 2 segments (minimum 0).
+  - If a harm clock reaches 0, it is removed entirely.
 
-- **Downtime:** After a Momentum Reset, you can take a recovery action using any relevant Action based on your approach (meditation, medical treatment, talking it out, etc.). Describe how you're recovering and the GM will determine which Action to roll. This is always a Controlled position roll. Success clears segments based on Effect (1/2/4).
-
-- When a clock is reduced to 0/6 segments (fully cleared), you have a choice: either erase the clock entirely, or convert it into a permanent **Trait** that reflects how the injury shaped you.
+- **Downtime (After Reset):** You can also take a recovery action using any relevant Action based on your approach (meditation, medical treatment, talking it out, etc.). Describe how you're recovering and the GM will determine which Action to roll. This is always a Controlled position roll. Success clears segments based on Effect (1/2/4). If a clock is reduced to 0 through downtime recovery, it is removed entirely.
 
 #### **Success Clocks (Progress Tracking)**
 
