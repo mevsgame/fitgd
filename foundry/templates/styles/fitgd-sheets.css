@@ -571,10 +571,24 @@
   background: #2a2a2a;
   border: 1px solid #444;
   border-radius: 4px;
-  flex: 0 0 auto; /* Don't grow or shrink */
-  width: auto;
-  min-width: 230px;
+  flex: 0 0 calc(33% - 8px); /* 3 clocks per row with gap */
+  min-width: 220px;
   max-width: 280px;
+  box-sizing: border-box;
+}
+
+/* For smaller screens, 2 clocks per row */
+@media (max-width: 900px) {
+  .fitgd .clock-item {
+    flex: 0 0 calc(50% - 6px);
+  }
+}
+
+/* For very small screens, 1 clock per row */
+@media (max-width: 600px) {
+  .fitgd .clock-item {
+    flex: 0 0 100%;
+  }
 }
 
 /* Clock info column (left side) */
