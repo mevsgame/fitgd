@@ -32,7 +32,6 @@
         <div class="effect">
           Effect: <span class="effect-level">{{uppercase (default playerState.effect "STANDARD")}}</span>
         </div>
-        <p class="gm-set-note">(Set by GM)</p>
       </div>
 
       <!-- Harm Clocks Display -->
@@ -50,13 +49,34 @@
       </div>
       {{/if}}
 
+      <!-- Momentum Replenishment -->
+      <div class="momentum-replenishment">
+        <h4>GET MOMENTUM:</h4>
+        <div class="replenishment-row">
+          <!-- Momentum Track (Compact) -->
+          <div class="momentum-track-compact">
+            {{#times 10}}
+              <span class="momentum-box-compact {{#if (lt this ../momentum)}}filled{{/if}}">
+                {{#if (eq this ../momentum)}}▶{{/if}}
+              </span>
+            {{/times}}
+          </div>
+          <!-- Replenishment Buttons -->
+          <div class="replenishment-buttons">
+            <button type="button" data-action="rally" {{#unless canRally}}disabled{{/unless}}>
+              Rally
+            </button>
+            <button type="button" data-action="lean-into-trait" {{#unless character.traits.length}}disabled{{/unless}}>
+              Lean Into Trait
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Action Modifiers Buttons -->
       <div class="prepare-actions">
-        <h4>ACTION MODIFIERS:</h4>
+        <h4>SPEND MOMENTUM:</h4>
         <div class="button-row">
-          <button type="button" data-action="rally" {{#unless canRally}}disabled{{/unless}}>
-            Rally
-          </button>
           <button type="button" data-action="use-trait" class="{{#if playerState.traitTransaction}}active{{/if}}" {{#if (and (eq playerState.position "controlled") (lt momentum 1))}}disabled{{/if}}>
             Use Trait
           </button>

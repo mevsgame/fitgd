@@ -28,7 +28,7 @@ import {
   selectIsDying,
 } from '../../dist/fitgd-core.es.js';
 import { FlashbackTraitsDialog, refreshSheetsByReduxId } from '../dialogs.mjs';
-import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog } from '../dialogs/index.mjs';
+import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog, RallyDialog } from '../dialogs/index.mjs';
 
 /* -------------------------------------------- */
 /*  Player Action Widget Application            */
@@ -96,11 +96,26 @@ export class PlayerActionWidget extends Application {
 
       this.storeUnsubscribe = game.fitgd.store.subscribe(() => {
         const currentState = game.fitgd.store.getState();
-        const currentPlayerState = currentState.playerRoundState.byCharacterId[this.characterId];
-        const previousPlayerState = previousState.playerRoundState.byCharacterId[this.characterId];
 
-        // Only re-render if this character's state actually changed
-        if (currentPlayerState !== previousPlayerState) {
+        // Get current crew ID (character might have changed crews)
+        const currentCrewId = Object.values(currentState.crews.byId)
+          .find(crew => crew.characters.includes(this.characterId))?.id;
+
+        // Check if any relevant state changed
+        const playerStateChanged = currentState.playerRoundState.byCharacterId[this.characterId]
+          !== previousState.playerRoundState.byCharacterId[this.characterId];
+
+        const characterChanged = currentState.characters.byId[this.characterId]
+          !== previousState.characters.byId[this.characterId];
+
+        const crewChanged = currentCrewId && (
+          currentState.crews.byId[currentCrewId] !== previousState.crews.byId[currentCrewId]
+        );
+
+        const clocksChanged = currentState.clocks !== previousState.clocks;
+
+        // Re-render if any relevant state changed
+        if (playerStateChanged || characterChanged || crewChanged || clocksChanged) {
           this.render(true); // Force full re-render to update template
         }
 
@@ -252,6 +267,7 @@ export class PlayerActionWidget extends Application {
 
     // Prepare action buttons
     html.find('[data-action="rally"]').click(this._onRally.bind(this));
+    html.find('[data-action="lean-into-trait"]').click(this._onLeanIntoTrait.bind(this));
     html.find('[data-action="use-trait"]').click(this._onUseTrait.bind(this));
     html.find('[data-action="equipment"]').click(this._onEquipment.bind(this));
     html.find('[data-action="push-die"]').click(this._onTogglePushDie.bind(this));
@@ -711,10 +727,48 @@ export class PlayerActionWidget extends Application {
   /**
    * Handle Rally button
    */
-  _onRally(event) {
+  async _onRally(event) {
     event.preventDefault();
-    // TODO: Open Rally dialog
-    ui.notifications.info('Rally dialog - to be implemented');
+
+    if (!this.crewId) {
+      ui.notifications.warn('Character must be in a crew to rally');
+      return;
+    }
+
+    // Check if crew has other members
+    const state = game.fitgd.store.getState();
+    const teammates = this.crew.characters.filter(id => id !== this.characterId);
+    if (teammates.length === 0) {
+      ui.notifications.warn('No other teammates in crew to rally');
+      return;
+    }
+
+    // Open rally dialog
+    const dialog = new RallyDialog(this.characterId, this.crewId);
+    dialog.render(true);
+  }
+
+  /**
+   * Handle Lean Into Trait button
+   */
+  async _onLeanIntoTrait(event) {
+    event.preventDefault();
+
+    if (!this.crewId) {
+      ui.notifications.warn('Character must be in a crew to lean into trait');
+      return;
+    }
+
+    // Check if character has any available (non-disabled) traits
+    const availableTraits = this.character.traits.filter(t => !t.disabled);
+    if (availableTraits.length === 0) {
+      ui.notifications.warn('No available traits - all traits are currently disabled');
+      return;
+    }
+
+    // Open lean into trait dialog
+    const dialog = new LeanIntoTraitDialog(this.characterId, this.crewId);
+    dialog.render(true);
   }
 
   /**

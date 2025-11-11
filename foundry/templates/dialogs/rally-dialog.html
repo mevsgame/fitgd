@@ -1,0 +1,92 @@
+<div class="rally-dialog">
+  <!-- Header -->
+  <div class="dialog-header">
+    <h2>Rally Teammate</h2>
+    <p class="momentum-display">Current Momentum: <strong>{{momentum}}/10</strong></p>
+    <p class="info-notice">
+      💬 Reference a teammate's trait to inspire the group. <strong>Always Controlled position.</strong>
+    </p>
+  </div>
+
+  <!-- Selection Phase -->
+  <div class="selection-phase">
+    <!-- Action Selection -->
+    <div class="form-group">
+      <label>Social Action:</label>
+      <select name="action" class="action-select">
+        <option value="">-- Select Action --</option>
+        <option value="command" {{#if (eq selectedAction "command")}}selected{{/if}}>
+          Command ({{character.actionDots.command}}d)
+        </option>
+        <option value="consort" {{#if (eq selectedAction "consort")}}selected{{/if}}>
+          Consort ({{character.actionDots.consort}}d)
+        </option>
+        <option value="sway" {{#if (eq selectedAction "sway")}}selected{{/if}}>
+          Sway ({{character.actionDots.sway}}d)
+        </option>
+      </select>
+    </div>
+
+    <!-- Target Selection -->
+    <div class="form-group">
+      <label>Target Teammate:</label>
+      <select name="target" class="target-select" {{#unless selectedAction}}disabled{{/unless}}>
+        <option value="">-- Select Teammate --</option>
+        {{#each teammates}}
+        <option value="{{this.id}}" {{#if (eq ../selectedTargetId this.id)}}selected{{/if}}>
+          {{this.name}}
+        </option>
+        {{/each}}
+      </select>
+      {{#unless teammates.length}}
+      <p class="no-teammates">No other teammates in crew.</p>
+      {{/unless}}
+    </div>
+
+    <!-- Trait Selection -->
+    {{#if selectedTargetId}}
+    <div class="trait-selection">
+      <h3>Select {{targetCharacter.name}}'s Trait:</h3>
+      <p class="help-text">Reference a trait that inspires the team.</p>
+
+      <div class="traits-grid">
+        {{#each targetTraits}}
+        <div class="trait-item {{#if (eq ../selectedTraitId this.id)}}selected{{/if}} {{#if this.disabled}}disabled-trait{{/if}}" data-trait-id="{{this.id}}">
+          <div class="trait-name">{{this.name}}</div>
+          <div class="trait-category">{{this.category}}</div>
+          {{#if this.disabled}}
+          <div class="trait-status">🔒 Disabled (will be re-enabled)</div>
+          {{/if}}
+          {{#if this.description}}
+          <div class="trait-description">{{this.description}}</div>
+          {{/if}}
+        </div>
+        {{/each}}
+
+        {{#unless targetTraits.length}}
+        <p class="no-traits">No traits available for this character.</p>
+        {{/unless}}
+      </div>
+    </div>
+    {{/if}}
+
+    <!-- Roll Info -->
+    {{#if canRoll}}
+    <div class="roll-info">
+      <p><strong>Ready to roll:</strong> {{actionDots}}d6 (Controlled position)</p>
+      <p class="momentum-preview">
+        Possible Momentum Gain:
+        <span class="momentum-outcomes">1-3→+1M | 4-5→+2M | 6→+3M | Crit→+4M</span>
+      </p>
+    </div>
+    {{/if}}
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="dialog-buttons">
+    <button type="button" data-action="cancel" class="secondary">Cancel</button>
+    <button type="button" data-action="roll" class="primary" {{#unless canRoll}}disabled{{/unless}}>
+      🎲 Roll & Apply ({{#if actionDots}}{{actionDots}}{{else}}2{{/if}}d6)
+    </button>
+  </div>
+</div>
