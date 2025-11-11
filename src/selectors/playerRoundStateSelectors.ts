@@ -7,7 +7,7 @@
 
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
-import type { PlayerRoundState, Position, Effect } from '../types/playerRoundState';
+import type { PlayerRoundState, Position } from '../types/playerRoundState';
 
 /**
  * Select player state by character ID
