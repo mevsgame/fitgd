@@ -67,7 +67,7 @@
             <button type="button" data-action="rally" {{#unless canRally}}disabled{{/unless}}>
               Rally
             </button>
-            <button type="button" data-action="lean-into-trait" {{#if (lt (countArray character.traits) 1)}}disabled{{/if}}>
+            <button type="button" data-action="lean-into-trait" {{#unless character.traits.length}}disabled{{/unless}}>
               Lean Into Trait
             </button>
           </div>
