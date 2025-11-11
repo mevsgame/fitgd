@@ -11,6 +11,11 @@ import playerRoundStateReducer, {
   resetPlayerState,
   undoState,
   clearAllStates,
+  setConsequenceTransaction,
+  updateConsequenceTransaction,
+  clearConsequenceTransaction,
+  setStimsUsed,
+  clearStimsUsed,
 } from '../../src/slices/playerRoundStateSlice';
 import { isValidTransition } from '../../src/types/playerRoundState';
 import type { PlayerRoundState, PlayerRoundStateType } from '../../src/types/playerRoundState';
@@ -531,6 +536,233 @@ describe('playerRoundStateSlice', () => {
       expect(playerState.consequenceType).toBe('harm');
       expect(playerState.consequenceValue).toBe(4);
       expect(playerState.momentumGain).toBe(4);
+    });
+  });
+
+  describe('GM_RESOLVING_CONSEQUENCE state transitions', () => {
+    it('should allow CONSEQUENCE_CHOICE -> GM_RESOLVING_CONSEQUENCE', () => {
+      const characterId = 'char-123';
+
+      // Initialize and set to CONSEQUENCE_CHOICE
+      store.dispatch(initializePlayerState({ characterId }));
+      store.dispatch(transitionState({ characterId, newState: 'DECISION_PHASE' }));
+      store.dispatch(transitionState({ characterId, newState: 'ROLLING' }));
+      store.dispatch(transitionState({ characterId, newState: 'CONSEQUENCE_CHOICE' }));
+
+      // Transition to GM_RESOLVING_CONSEQUENCE
+      store.dispatch(transitionState({ characterId, newState: 'GM_RESOLVING_CONSEQUENCE' }));
+
+      const state = store.getState().playerRoundState.byCharacterId[characterId];
+      expect(state.state).toBe('GM_RESOLVING_CONSEQUENCE');
+    });
+
+    it('should allow GM_RESOLVING_CONSEQUENCE -> APPLYING_EFFECTS', () => {
+      const characterId = 'char-123';
+
+      store.dispatch(initializePlayerState({ characterId }));
+      store.dispatch(transitionState({ characterId, newState: 'DECISION_PHASE' }));
+      store.dispatch(transitionState({ characterId, newState: 'ROLLING' }));
+      store.dispatch(transitionState({ characterId, newState: 'CONSEQUENCE_CHOICE' }));
+      store.dispatch(transitionState({ characterId, newState: 'GM_RESOLVING_CONSEQUENCE' }));
+
+      // Transition to APPLYING_EFFECTS
+      store.dispatch(transitionState({ characterId, newState: 'APPLYING_EFFECTS' }));
+
+      const state = store.getState().playerRoundState.byCharacterId[characterId];
+      expect(state.state).toBe('APPLYING_EFFECTS');
+    });
+
+    it('should allow GM_RESOLVING_CONSEQUENCE -> STIMS_ROLLING (player interrupts)', () => {
+      const characterId = 'char-123';
+
+      store.dispatch(initializePlayerState({ characterId }));
+      store.dispatch(transitionState({ characterId, newState: 'DECISION_PHASE' }));
+      store.dispatch(transitionState({ characterId, newState: 'ROLLING' }));
+      store.dispatch(transitionState({ characterId, newState: 'CONSEQUENCE_CHOICE' }));
+      store.dispatch(transitionState({ characterId, newState: 'GM_RESOLVING_CONSEQUENCE' }));
+
+      // Player interrupts with stims
+      store.dispatch(transitionState({ characterId, newState: 'STIMS_ROLLING' }));
+
+      const state = store.getState().playerRoundState.byCharacterId[characterId];
+      expect(state.state).toBe('STIMS_ROLLING');
+    });
+
+    it('should allow CONSEQUENCE_CHOICE -> STIMS_ROLLING', () => {
+      const characterId = 'char-123';
+
+      store.dispatch(initializePlayerState({ characterId }));
+      store.dispatch(transitionState({ characterId, newState: 'DECISION_PHASE' }));
+      store.dispatch(transitionState({ characterId, newState: 'ROLLING' }));
+      store.dispatch(transitionState({ characterId, newState: 'CONSEQUENCE_CHOICE' }));
+
+      // Player uses stims before GM resolves
+      store.dispatch(transitionState({ characterId, newState: 'STIMS_ROLLING' }));
+
+      const state = store.getState().playerRoundState.byCharacterId[characterId];
+      expect(state.state).toBe('STIMS_ROLLING');
+    });
+
+    it('should not allow SUCCESS_COMPLETE to auto-transition', () => {
+      // SUCCESS_COMPLETE should only transition to TURN_COMPLETE manually
+      expect(isValidTransition('SUCCESS_COMPLETE', 'TURN_COMPLETE')).toBe(true);
+      expect(isValidTransition('SUCCESS_COMPLETE', 'IDLE_WAITING')).toBe(false);
+      expect(isValidTransition('SUCCESS_COMPLETE', 'DECISION_PHASE')).toBe(false);
+    });
+  });
+
+  describe('consequence transaction actions', () => {
+    it('should set consequence transaction', () => {
+      const characterId = 'char-123';
+
+      store.dispatch(initializePlayerState({ characterId }));
+
+      const transaction = {
+        consequenceType: 'harm' as const,
+        harmTargetCharacterId: 'char-456',
+        newHarmClockType: 'Physical Harm',
+        calculatedHarmSegments: 3,
+        calculatedMomentumGain: 2,
+      };
+
+      store.dispatch(setConsequenceTransaction({ characterId, transaction }));
+
+      const state = store.getState().playerRoundState.byCharacterId[characterId];
+      expect(state.consequenceTransaction).toEqual(transaction);
+    });
+
+    it('should update consequence transaction partially', () => {
+      const characterId = 'char-123';
+
+      store.dispatch(initializePlayerState({ characterId }));
+
+      // Set initial transaction
+      const transaction = {
+        consequenceType: 'harm' as const,
+        calculatedHarmSegments: 3,
+        calculatedMomentumGain: 2,
+      };
+      store.dispatch(setConsequenceTransaction({ characterId, transaction }));
+
+      // Update with new fields
+      const updates = {
+        harmClockId: 'clock-123',
+        harmTargetCharacterId: 'char-456',
+      };
+      store.dispatch(updateConsequenceTransaction({ characterId, updates }));
+
+      const state = store.getState().playerRoundState.byCharacterId[characterId];
+      expect(state.consequenceTransaction).toEqual({
+        ...transaction,
+        ...updates,
+      });
+    });
+
+    it('should clear consequence transaction', () => {
+      const characterId = 'char-123';
+
+      store.dispatch(initializePlayerState({ characterId }));
+
+      // Set transaction
+      const transaction = {
+        consequenceType: 'harm' as const,
+        calculatedHarmSegments: 3,
+        calculatedMomentumGain: 2,
+      };
+      store.dispatch(setConsequenceTransaction({ characterId, transaction }));
+
+      // Clear transaction
+      store.dispatch(clearConsequenceTransaction({ characterId }));
+
+      const state = store.getState().playerRoundState.byCharacterId[characterId];
+      expect(state.consequenceTransaction).toBeUndefined();
+    });
+
+    it('should throw error when updating non-existent transaction', () => {
+      const characterId = 'char-123';
+
+      store.dispatch(initializePlayerState({ characterId }));
+
+      // Try to update without setting first
+      expect(() => {
+        store.dispatch(
+          updateConsequenceTransaction({
+            characterId,
+            updates: { harmClockId: 'clock-123' },
+          })
+        );
+      }).toThrow('No consequence transaction to update');
+    });
+
+    it('should handle crew-clock consequence type', () => {
+      const characterId = 'char-123';
+
+      store.dispatch(initializePlayerState({ characterId }));
+
+      const transaction = {
+        consequenceType: 'crew-clock' as const,
+        crewClockId: 'clock-999',
+        crewClockSegments: 2,
+        calculatedMomentumGain: 2,
+      };
+
+      store.dispatch(setConsequenceTransaction({ characterId, transaction }));
+
+      const state = store.getState().playerRoundState.byCharacterId[characterId];
+      expect(state.consequenceTransaction?.consequenceType).toBe('crew-clock');
+      expect(state.consequenceTransaction?.crewClockId).toBe('clock-999');
+      expect(state.consequenceTransaction?.crewClockSegments).toBe(2);
+    });
+  });
+
+  describe('stims tracking actions', () => {
+    it('should set stims used flag', () => {
+      const characterId = 'char-123';
+
+      store.dispatch(initializePlayerState({ characterId }));
+      store.dispatch(setStimsUsed({ characterId, used: true }));
+
+      const state = store.getState().playerRoundState.byCharacterId[characterId];
+      expect(state.stimsUsedThisAction).toBe(true);
+    });
+
+    it('should clear stims used flag', () => {
+      const characterId = 'char-123';
+
+      store.dispatch(initializePlayerState({ characterId }));
+      store.dispatch(setStimsUsed({ characterId, used: true }));
+
+      // Clear flag
+      store.dispatch(clearStimsUsed({ characterId }));
+
+      const state = store.getState().playerRoundState.byCharacterId[characterId];
+      expect(state.stimsUsedThisAction).toBeUndefined();
+    });
+
+    it('should allow setting stims used to false', () => {
+      const characterId = 'char-123';
+
+      store.dispatch(initializePlayerState({ characterId }));
+      store.dispatch(setStimsUsed({ characterId, used: true }));
+      store.dispatch(setStimsUsed({ characterId, used: false }));
+
+      const state = store.getState().playerRoundState.byCharacterId[characterId];
+      expect(state.stimsUsedThisAction).toBe(false);
+    });
+
+    it('should track stims used independently per character', () => {
+      const char1 = 'char-123';
+      const char2 = 'char-456';
+
+      store.dispatch(initializePlayerState({ characterId: char1 }));
+      store.dispatch(initializePlayerState({ characterId: char2 }));
+
+      // Char1 uses stims
+      store.dispatch(setStimsUsed({ characterId: char1, used: true }));
+
+      const state = store.getState().playerRoundState;
+      expect(state.byCharacterId[char1].stimsUsedThisAction).toBe(true);
+      expect(state.byCharacterId[char2].stimsUsedThisAction).toBeUndefined();
     });
   });
 });

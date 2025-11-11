@@ -1,0 +1,35 @@
+<div class="selection-dialog fitgd-dialog">
+  {{#if items.length}}
+    <!-- Optional search -->
+    {{#if showSearch}}
+    <div class="search-box">
+      <input type="text" name="search" placeholder="Search..." class="search-input">
+    </div>
+    {{/if}}
+
+    <!-- Item list -->
+    <div class="item-list">
+      {{#each items}}
+      <button type="button"
+              class="item-option"
+              data-action="select-item"
+              data-item-id="{{this.id}}">
+        {{{../renderItem this}}}
+      </button>
+      {{/each}}
+    </div>
+  {{else}}
+    <p class="empty-message">{{emptyMessage}}</p>
+  {{/if}}
+
+  <!-- Create new button (if allowed) -->
+  {{#if allowCreate}}
+  <div class="create-new-section">
+    <button type="button"
+            class="create-new-btn"
+            data-action="create-new">
+      <i class="fas fa-plus"></i> Create New
+    </button>
+  </div>
+  {{/if}}
+</div>

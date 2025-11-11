@@ -985,10 +985,17 @@ async function receiveCommandsFromSocket(data) {
       for (const [characterId, receivedPlayerState] of Object.entries(data.playerRoundState.byCharacterId)) {
         const currentPlayerState = currentState.playerRoundState.byCharacterId[characterId];
 
+        console.log(`FitGD | Socket handler - character ${characterId.substring(0, 8)}:`);
+        console.log(`  Current state: ${currentPlayerState?.state}`);
+        console.log(`  Received state: ${receivedPlayerState.state}`);
+
         // Skip if identical (avoid unnecessary updates)
         if (JSON.stringify(currentPlayerState) === JSON.stringify(receivedPlayerState)) {
+          console.log(`  Skipping - states are identical`);
           continue;
         }
+
+        console.log(`  States differ - applying updates`);
 
         // Track that this character's state changed
         changedCharacterIds.push(characterId);
@@ -1054,6 +1061,68 @@ async function receiveCommandsFromSocket(data) {
               characterId,
               pushed: receivedPlayerState.pushed || false,
               pushType: receivedPlayerState.pushType || undefined
+            }
+          });
+        }
+
+        // CRITICAL: Handle state transitions
+        if (receivedPlayerState.state && receivedPlayerState.state !== currentPlayerState?.state) {
+          console.log(`  Dispatching state transition: ${currentPlayerState?.state} → ${receivedPlayerState.state}`);
+          game.fitgd.store.dispatch({
+            type: 'playerRoundState/transitionState',
+            payload: {
+              characterId,
+              newState: receivedPlayerState.state
+            }
+          });
+        } else {
+          console.log(`  State transition skipped - receivedPlayerState.state: ${receivedPlayerState.state}, currentPlayerState.state: ${currentPlayerState?.state}`);
+        }
+
+        // CRITICAL: Handle roll results (dicePool, rollResult, outcome)
+        if (receivedPlayerState.rollResult || receivedPlayerState.outcome || receivedPlayerState.dicePool !== undefined) {
+          if (JSON.stringify(receivedPlayerState.rollResult) !== JSON.stringify(currentPlayerState?.rollResult) ||
+              receivedPlayerState.outcome !== currentPlayerState?.outcome ||
+              receivedPlayerState.dicePool !== currentPlayerState?.dicePool) {
+            game.fitgd.store.dispatch({
+              type: 'playerRoundState/setRollResult',
+              payload: {
+                characterId,
+                dicePool: receivedPlayerState.dicePool || 0,
+                rollResult: receivedPlayerState.rollResult || [],
+                outcome: receivedPlayerState.outcome
+              }
+            });
+          }
+        }
+
+        // CRITICAL: Handle consequence transactions (NEW in Phase 3)
+        if (JSON.stringify(receivedPlayerState.consequenceTransaction) !== JSON.stringify(currentPlayerState?.consequenceTransaction)) {
+          if (receivedPlayerState.consequenceTransaction) {
+            // Set or update consequence transaction
+            game.fitgd.store.dispatch({
+              type: 'playerRoundState/setConsequenceTransaction',
+              payload: {
+                characterId,
+                transaction: receivedPlayerState.consequenceTransaction
+              }
+            });
+          } else if (currentPlayerState?.consequenceTransaction) {
+            // Clear consequence transaction
+            game.fitgd.store.dispatch({
+              type: 'playerRoundState/clearConsequenceTransaction',
+              payload: { characterId }
+            });
+          }
+        }
+
+        // CRITICAL: Handle stims usage tracking (NEW in Phase 5)
+        if (receivedPlayerState.stimsUsedThisAction !== currentPlayerState?.stimsUsedThisAction) {
+          game.fitgd.store.dispatch({
+            type: 'playerRoundState/setStimsUsed',
+            payload: {
+              characterId,
+              used: receivedPlayerState.stimsUsedThisAction || false
             }
           });
         }
