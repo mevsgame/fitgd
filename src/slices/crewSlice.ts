@@ -9,6 +9,7 @@ import {
   validateCharacterNotInCrew,
 } from '../validators/crewValidator';
 import { DEFAULT_CONFIG } from '../config';
+import { isOrphanedCommand } from '../utils/commandUtils';
 import type { Crew, Command } from '../types';
 
 /**
@@ -298,6 +299,31 @@ const crewSlice = createSlice({
     },
 
     /**
+     * Prune orphaned command history
+     *
+     * Removes commands that reference crews that no longer exist in the current state.
+     * This is useful for automatic cleanup after crew deletion while preserving:
+     * 1. Commands for crews that still exist
+     * 2. Deletion commands themselves (for audit trail)
+     *
+     * Used by auto-prune feature to reduce storage without losing current state or audit trail.
+     *
+     * @example
+     * ```typescript
+     * // Crew was created, modified, then deleted
+     * // Before: [createCrew, addMomentum, deleteCrew]
+     * // After: [deleteCrew]  // Only deletion command kept for audit
+     * ```
+     */
+    pruneOrphanedHistory: (state) => {
+      const currentCrewIds = new Set(state.allIds);
+
+      state.history = state.history.filter((command) => {
+        return !isOrphanedCommand(command, currentCrewIds);
+      });
+    },
+
+    /**
      * Hydrate state from serialized snapshot
      *
      * Used when loading saved state from Foundry world settings.
@@ -322,6 +348,7 @@ export const {
   spendMomentum,
   resetMomentum,
   pruneHistory: pruneCrewHistory,
+  pruneOrphanedHistory: pruneOrphanedCrewHistory,
   hydrateCrews,
 } = crewSlice.actions;
 

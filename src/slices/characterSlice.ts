@@ -10,6 +10,7 @@ import {
   calculateTotalActionDots,
 } from '../validators/characterValidator';
 import { DEFAULT_CONFIG } from '../config';
+import { isOrphanedCommand } from '../utils/commandUtils';
 import type {
   Character,
   Trait,
@@ -753,6 +754,31 @@ const characterSlice = createSlice({
     },
 
     /**
+     * Prune orphaned command history
+     *
+     * Removes commands that reference characters that no longer exist in the current state.
+     * This is useful for automatic cleanup after character deletion while preserving:
+     * 1. Commands for characters that still exist
+     * 2. Deletion commands themselves (for audit trail)
+     *
+     * Used by auto-prune feature to reduce storage without losing current state or audit trail.
+     *
+     * @example
+     * ```typescript
+     * // Character was created, modified, then deleted
+     * // Before: [createCharacter, addTrait, deleteCharacter]
+     * // After: [deleteCharacter]  // Only deletion command kept for audit
+     * ```
+     */
+    pruneOrphanedHistory: (state) => {
+      const currentCharacterIds = new Set(state.allIds);
+
+      state.history = state.history.filter((command) => {
+        return !isOrphanedCommand(command, currentCharacterIds);
+      });
+    },
+
+    /**
      * Hydrate state from serialized snapshot
      *
      * Used when loading saved state from Foundry world settings.
@@ -783,6 +809,7 @@ export const {
   createTraitFromFlashback,
   advanceActionDots,
   pruneHistory,
+  pruneOrphanedHistory,
   hydrateCharacters,
 } = characterSlice.actions;
 
