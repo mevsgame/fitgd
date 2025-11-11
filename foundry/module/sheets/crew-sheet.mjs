@@ -211,17 +211,32 @@ class FitGDCrewSheet extends ActorSheet {
 
     try {
       // Use the tested API method instead of reimplementing the logic
+      console.log('FitGD | Calling performReset for crew:', crewId);
+      console.log('FitGD | Crew characters:', crew.characters);
+
       const result = game.fitgd.api.crew.performReset(crewId);
+
+      console.log('FitGD | Momentum Reset result:', result);
+      console.log('FitGD | Characters reset:', result.charactersReset);
+      console.log('FitGD | Addiction reduced:', result.addictionReduced);
+
+      // Check Redux state before broadcast
+      const state = game.fitgd.store.getState();
+      console.log('FitGD | Clock history length BEFORE broadcast:', state.clocks.history.length);
+      console.log('FitGD | Last 5 clock commands:', state.clocks.history.slice(-5));
 
       // Broadcast changes to all clients
       await game.fitgd.saveImmediate();
+
+      // Check Redux state after broadcast
+      const stateAfter = game.fitgd.store.getState();
+      console.log('FitGD | Clock history length AFTER broadcast:', stateAfter.clocks.history.length);
 
       // Refresh affected sheets (crew + all member characters)
       const affectedIds = [crewId, ...crew.characters];
       refreshSheetsByReduxId(affectedIds, false);
 
       ui.notifications.info('Momentum Reset performed successfully');
-      console.log('FitGD | Momentum Reset result:', result);
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
       console.error('FitGD | Momentum Reset error:', error);
