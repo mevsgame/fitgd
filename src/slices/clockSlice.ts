@@ -10,6 +10,7 @@ import {
   validateClockExists,
   validateProgressClockSize,
 } from '../validators/clockValidator';
+import { isOrphanedCommand } from '../utils/commandUtils';
 import type { Clock, ClockType, Command } from '../types';
 
 /**
@@ -521,6 +522,31 @@ const clockSlice = createSlice({
     },
 
     /**
+     * Prune orphaned command history
+     *
+     * Removes commands that reference clocks that no longer exist in the current state.
+     * This is useful for automatic cleanup after clock deletion while preserving:
+     * 1. Commands for clocks that still exist
+     * 2. Deletion commands themselves (for audit trail)
+     *
+     * Used by auto-prune feature to reduce storage without losing current state or audit trail.
+     *
+     * @example
+     * ```typescript
+     * // Clock was created, modified, then deleted
+     * // Before: [createClock, addSegments, deleteClock]
+     * // After: [deleteClock]  // Only deletion command kept for audit
+     * ```
+     */
+    pruneOrphanedHistory: (state) => {
+      const currentClockIds = new Set(state.allIds);
+
+      state.history = state.history.filter((command) => {
+        return !isOrphanedCommand(command, currentClockIds);
+      });
+    },
+
+    /**
      * Hydrate state from serialized snapshot
      *
      * Used when loading saved state from Foundry world settings.
@@ -555,6 +581,7 @@ export const {
   updateMetadata,
   changeSubtype,
   pruneHistory: pruneClockHistory,
+  pruneOrphanedHistory: pruneOrphanedClockHistory,
   hydrateClocks,
 } = clockSlice.actions;
 

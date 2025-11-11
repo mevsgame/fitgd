@@ -7,6 +7,10 @@
         "Name": "Auto-save Interval",
         "Hint": "Seconds between auto-saves (0 to disable)"
       },
+      "AutoPruneHistory": {
+        "Name": "Auto-Prune Deleted Entity History",
+        "Hint": "Automatically remove command history for deleted characters, crews, and clocks during world saves. Deletion commands are kept for audit purposes. This reduces storage usage over time."
+      },
       "HistoryManagement": {
         "Name": "History Management",
         "Label": "Manage Command History",

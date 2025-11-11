@@ -1,5 +1,6 @@
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
+import { isOrphanedCommand } from '../utils/commandUtils';
 
 /**
  * History Statistics Interface
@@ -109,4 +110,83 @@ export const selectHistorySizeKB = createSelector(
 export const selectIsHistoryEmpty = createSelector(
   [selectHistoryStats],
   (stats) => stats.totalCommands === 0
+);
+
+/**
+ * Orphaned Commands Interface
+ */
+export interface OrphanedCommands {
+  characters: any[];
+  crews: any[];
+  clocks: any[];
+  total: number;
+}
+
+/**
+ * Select orphaned commands (commands referencing deleted entities)
+ *
+ * Orphaned commands are commands that reference entities (characters, crews, clocks)
+ * that no longer exist in the current state. These can be safely pruned without
+ * losing current state integrity.
+ *
+ * **IMPORTANT:** Deletion commands themselves are NEVER considered orphaned,
+ * even if the entity doesn't exist. This preserves audit trail: "who deleted what when".
+ *
+ * Useful for:
+ * - Debugging auto-prune feature
+ * - Showing "what would be pruned" in UI
+ * - Monitoring orphaned command growth
+ *
+ * @example
+ * ```typescript
+ * const orphaned = selectOrphanedCommands(state);
+ * console.log(`${orphaned.total} orphaned commands found`);
+ * console.log(`Characters: ${orphaned.characters.length}`);
+ * console.log(`Crews: ${orphaned.crews.length}`);
+ * console.log(`Clocks: ${orphaned.clocks.length}`);
+ * ```
+ */
+export const selectOrphanedCommands = createSelector(
+  [
+    (state: RootState) => state.characters,
+    (state: RootState) => state.crews,
+    (state: RootState) => state.clocks,
+  ],
+  (characters, crews, clocks): OrphanedCommands => {
+    const characterIds = new Set(characters.allIds);
+    const crewIds = new Set(crews.allIds);
+    const clockIds = new Set(clocks.allIds);
+
+    const orphanedCharacterCommands = characters.history.filter((cmd) =>
+      isOrphanedCommand(cmd, characterIds)
+    );
+
+    const orphanedCrewCommands = crews.history.filter((cmd) =>
+      isOrphanedCommand(cmd, crewIds)
+    );
+
+    const orphanedClockCommands = clocks.history.filter((cmd) =>
+      isOrphanedCommand(cmd, clockIds)
+    );
+
+    return {
+      characters: orphanedCharacterCommands,
+      crews: orphanedCrewCommands,
+      clocks: orphanedClockCommands,
+      total:
+        orphanedCharacterCommands.length +
+        orphanedCrewCommands.length +
+        orphanedClockCommands.length,
+    };
+  }
+);
+
+/**
+ * Select count of orphaned commands
+ *
+ * Quick accessor for total orphaned command count without full details.
+ */
+export const selectOrphanedCommandCount = createSelector(
+  [selectOrphanedCommands],
+  (orphaned) => orphaned.total
 );

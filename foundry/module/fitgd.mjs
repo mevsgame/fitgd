@@ -189,6 +189,41 @@ Hooks.once('init', async function() {
         console.log(`FitGD | No new commands or playerRoundState to broadcast`);
       }
 
+      // Auto-prune orphaned history if enabled
+      if (game.user.isGM) {
+        const autoPruneEnabled = game.settings.get('forged-in-the-grimdark', 'autoPruneHistory');
+
+        if (autoPruneEnabled) {
+          console.log('FitGD | Auto-prune enabled, checking for orphaned history...');
+
+          // Get command counts before pruning
+          const stateBefore = game.fitgd.store.getState();
+          const commandsBefore =
+            stateBefore.characters.history.length +
+            stateBefore.crews.history.length +
+            stateBefore.clocks.history.length;
+
+          // Dispatch prune actions for all slices
+          game.fitgd.store.dispatch({ type: 'characters/pruneOrphanedHistory' });
+          game.fitgd.store.dispatch({ type: 'crews/pruneOrphanedHistory' });
+          game.fitgd.store.dispatch({ type: 'clocks/pruneOrphanedHistory' });
+
+          // Get command counts after pruning
+          const stateAfter = game.fitgd.store.getState();
+          const commandsAfter =
+            stateAfter.characters.history.length +
+            stateAfter.crews.history.length +
+            stateAfter.clocks.history.length;
+
+          const prunedCount = commandsBefore - commandsAfter;
+
+          if (prunedCount > 0) {
+            console.log(`FitGD | Auto-pruned ${prunedCount} orphaned command(s) from history`);
+            ui.notifications.info(`Auto-pruned ${prunedCount} orphaned command(s) from history`);
+          }
+        }
+      }
+
       // Save to Foundry settings (only if user has permission - typically GM)
       // Players will broadcast but won't persist; GM will persist when receiving broadcasts
       if (game.user.isGM) {
@@ -758,6 +793,17 @@ function registerSystemSettings() {
       max: 300,
       step: 10
     }
+  });
+
+  // Auto-prune orphaned history
+  game.settings.register('forged-in-the-grimdark', 'autoPruneHistory', {
+    name: game.i18n.localize('FITGD.Settings.AutoPruneHistory.Name'),
+    hint: game.i18n.localize('FITGD.Settings.AutoPruneHistory.Hint'),
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: false,
+    requiresReload: false
   });
 }
 
