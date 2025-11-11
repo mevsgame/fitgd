@@ -7,6 +7,7 @@
 // @ts-check
 
 import { AddClockDialog } from '../dialogs.mjs';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.mjs';
 
 /* -------------------------------------------- */
 /*  Crew Sheet Class                            */
@@ -100,6 +101,7 @@ class FitGDCrewSheet extends ActorSheet {
     // Momentum controls
     html.find('.momentum-add-btn').click(this._onAddMomentum.bind(this));
     html.find('.momentum-spend-btn').click(this._onSpendMomentum.bind(this));
+    html.find('.momentum-reset-btn').click(this._onResetMomentum.bind(this));
 
     // Clocks
     html.find('.add-clock-btn').click(this._onAddClock.bind(this));
@@ -162,6 +164,66 @@ class FitGDCrewSheet extends ActorSheet {
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
       console.error('FitGD | Spend Momentum error:', error);
+    }
+  }
+
+  async _onResetMomentum(event) {
+    event.preventDefault();
+
+    // GM-only check
+    if (!game.user.isGM) {
+      ui.notifications.warn('Only the GM can perform a Momentum Reset');
+      return;
+    }
+
+    const crewId = this._getReduxId();
+    if (!crewId) return;
+
+    // Get crew and members
+    const crew = game.fitgd.api.crew.getCrew(crewId);
+    if (!crew) {
+      ui.notifications.error('Crew not found');
+      return;
+    }
+
+    // Show confirmation dialog
+    const confirmed = await Dialog.confirm({
+      title: 'Perform Momentum Reset?',
+      content: `
+        <p><strong>This will perform a Momentum Reset:</strong></p>
+        <ul>
+          <li>Set Momentum to <strong>5</strong></li>
+          <li>Reset Rally for all crew members</li>
+          <li>Re-enable all disabled traits</li>
+          <li>Reduce Addiction Clock by <strong>2 segments</strong></li>
+          <li>Recover all dying (6/6) harm clocks to <strong>5/6</strong></li>
+        </ul>
+        <p>Continue?</p>
+      `,
+      yes: () => true,
+      no: () => false,
+      options: {
+        classes: ['dialog', 'fitgd-dialog']
+      }
+    });
+
+    if (!confirmed) return;
+
+    try {
+      // Perform momentum reset
+      const result = game.fitgd.api.crew.performReset(crewId);
+
+      // Broadcast changes to all clients
+      await game.fitgd.saveImmediate();
+
+      // Refresh affected sheets (crew + all member characters)
+      const affectedIds = [crewId, ...crew.characters];
+      refreshSheetsByReduxId(affectedIds, false);
+
+      ui.notifications.info('Momentum Reset performed successfully');
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Momentum Reset error:', error);
     }
   }
 

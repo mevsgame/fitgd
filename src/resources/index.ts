@@ -6,6 +6,7 @@ import {
   createClock,
   addSegments,
   clearSegments,
+  deleteClock,
 } from '../slices/clockSlice';
 import {
   selectConsumableClockBySubtype,
@@ -297,11 +298,12 @@ export interface PerformMomentumResetParams {
 export interface MomentumResetResult {
   crewId: string;
   newMomentum: number;
-  addictionReduced: number | null; // Segments reduced, or null if no addiction clock
   charactersReset: {
     characterId: string;
     rallyReset: boolean;
     traitsReEnabled: number; // Count of traits re-enabled
+    harmClocksRecovered: number; // Count of harm clocks recovered
+    addictionClocksRecovered: number; // Count of addiction clocks recovered
   }[];
 }
 
@@ -310,9 +312,10 @@ export interface MomentumResetResult {
  *
  * A Momentum Reset marks the end of a dramatic "act" and resets:
  * 1. Crew Momentum to 5
- * 2. Addiction clock reduced by 2 segments
- * 3. Rally availability reset for all characters
- * 4. All disabled traits re-enabled for all characters
+ * 2. Rally availability reset for all characters
+ * 3. All disabled traits re-enabled for all characters
+ * 4. All harm clocks recovered (full: -1 segment, partial: -2 segments, 0: deleted)
+ * 5. All addiction clocks recovered (full: -1 segment, partial: -2 segments, 0: deleted)
  *
  * @param store - Redux store
  * @param params - Reset parameters
@@ -334,10 +337,7 @@ export function performMomentumReset(
   // 1. Reset Momentum to 5
   store.dispatch(resetMomentum({ crewId, userId }));
 
-  // 2. Reduce addiction clock by 2
-  const addictionSegments = reduceAddiction(store, crewId, userId);
-
-  // 3 & 4. Reset rally and re-enable traits for all characters in crew
+  // 2, 3, 4, & 5. Reset rally, re-enable traits, recover harm clocks, and recover addiction clocks for all characters in crew
   const characterResults = crew.characters.map((characterId: string) => {
     const character = state.characters.byId[characterId];
 
@@ -346,6 +346,8 @@ export function performMomentumReset(
         characterId,
         rallyReset: false,
         traitsReEnabled: 0,
+        harmClocksRecovered: 0,
+        addictionClocksRecovered: 0,
       };
     }
 
@@ -364,10 +366,101 @@ export function performMomentumReset(
       );
     });
 
+    // Recover harm clocks based on new reset rules
+    const currentState = store.getState();
+    const harmClockIds = currentState.clocks.byTypeAndEntity[`harm:${characterId}`] || [];
+    let harmClocksRecovered = 0;
+
+    harmClockIds.forEach((clockId: string) => {
+      const clock = currentState.clocks.byId[clockId];
+      if (clock && clock.segments > 0) {
+        if (clock.segments >= clock.maxSegments) {
+          // Full clock (6/6): reduce by 1 to make it 5/6
+          store.dispatch(
+            clearSegments({
+              clockId,
+              amount: 1,
+              userId,
+            })
+          );
+          harmClocksRecovered++;
+        } else {
+          // Partial clock: reduce by 2 (minimum 0)
+          const amountToReduce = Math.min(clock.segments, 2);
+          store.dispatch(
+            clearSegments({
+              clockId,
+              amount: amountToReduce,
+              userId,
+            })
+          );
+          harmClocksRecovered++;
+
+          // If clock reaches 0 after reduction, delete it
+          const updatedState = store.getState();
+          const updatedClock = updatedState.clocks.byId[clockId];
+          if (updatedClock && updatedClock.segments === 0) {
+            store.dispatch(
+              deleteClock({
+                clockId,
+                userId,
+              })
+            );
+          }
+        }
+      }
+    });
+
+    // Recover addiction clocks (per-character) based on new reset rules
+    const addictionClockIds = currentState.clocks.byTypeAndEntity[`addiction:${characterId}`] || [];
+    let addictionClocksRecovered = 0;
+
+    addictionClockIds.forEach((clockId: string) => {
+      const clock = currentState.clocks.byId[clockId];
+      if (clock && clock.segments > 0) {
+        if (clock.segments >= clock.maxSegments) {
+          // Full clock (8/8): reduce by 1 to make it 7/8
+          store.dispatch(
+            clearSegments({
+              clockId,
+              amount: 1,
+              userId,
+            })
+          );
+          addictionClocksRecovered++;
+        } else {
+          // Partial clock: reduce by 2 (minimum 0)
+          const amountToReduce = Math.min(clock.segments, 2);
+          store.dispatch(
+            clearSegments({
+              clockId,
+              amount: amountToReduce,
+              userId,
+            })
+          );
+          addictionClocksRecovered++;
+
+          // If clock reaches 0 after reduction, delete it
+          const updatedState = store.getState();
+          const updatedClock = updatedState.clocks.byId[clockId];
+          if (updatedClock && updatedClock.segments === 0) {
+            store.dispatch(
+              deleteClock({
+                clockId,
+                userId,
+              })
+            );
+          }
+        }
+      }
+    });
+
     return {
       characterId,
       rallyReset: true,
       traitsReEnabled: disabledTraits.length,
+      harmClocksRecovered,
+      addictionClocksRecovered,
     };
   });
 
@@ -377,7 +470,6 @@ export function performMomentumReset(
   return {
     crewId,
     newMomentum: updatedCrew.currentMomentum,
-    addictionReduced: addictionSegments,
     charactersReset: characterResults,
   };
 }
