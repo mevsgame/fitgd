@@ -240,7 +240,7 @@ class FitGDCrewSheet extends ActorSheet {
         }
 
         // Recover all 6/6 harm clocks to 5/6
-        const harmClocks = game.fitgd.bridge.getClocks(characterId, 'harm');
+        const harmClocks = game.fitgd.api.query.getHarmClocks(characterId);
         for (const clock of harmClocks) {
           if (clock.segments >= clock.maxSegments) {
             actions.push({
