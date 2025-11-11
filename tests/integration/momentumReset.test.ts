@@ -12,6 +12,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { configureStore } from '../../src/store';
 import { createGameAPI } from '../../src/api';
+import { createClock, addSegments } from '../../src/slices/clockSlice';
 
 describe('Momentum Reset Mechanic', () => {
   let store: ReturnType<typeof configureStore>;
@@ -64,15 +65,26 @@ describe('Momentum Reset Mechanic', () => {
 
       api.crew.addCharacter({ crewId, characterId });
 
+      // Set momentum to 3 so rally can be used
+      api.crew.setMomentum({ crewId, amount: 3 });
+
       // Use rally
       api.character.useRally({ characterId, crewId });
-      expect(api.character.canUseRally(characterId)).toBe(false);
+      expect(api.query.canUseRally({ characterId, crewId })).toBe(false);
 
       // Perform reset
       const result = api.crew.performReset(crewId);
 
       expect(result.charactersReset[0].rallyReset).toBe(true);
-      expect(api.character.canUseRally(characterId)).toBe(true);
+
+      // After reset, rally is available but can't be used yet (momentum = 5 > 3)
+      const character = api.character.getCharacter(characterId);
+      expect(character!.rallyAvailable).toBe(true); // Rally flag is reset
+      expect(api.query.canUseRally({ characterId, crewId })).toBe(false); // Can't use yet (momentum too high)
+
+      // Lower momentum to 3 to test that rally can now be used
+      api.crew.setMomentum({ crewId, amount: 3 });
+      expect(api.query.canUseRally({ characterId, crewId })).toBe(true); // Now can use rally
     });
 
     it('should re-enable all disabled traits', () => {
@@ -82,7 +94,6 @@ describe('Momentum Reset Mechanic', () => {
         traits: [
           { name: 'Role Trait', category: 'role', disabled: false },
           { name: 'Background Trait', category: 'background', disabled: false },
-          { name: 'Scar Trait', category: 'scar', disabled: false },
         ],
         actionDots: {
           shoot: 2, command: 2, skirmish: 2, skulk: 2,
@@ -93,10 +104,16 @@ describe('Momentum Reset Mechanic', () => {
 
       api.crew.addCharacter({ crewId, characterId });
 
+      // Add a scar trait after creation
+      api.character.addTrait({
+        characterId,
+        trait: { name: 'Battle Scar', category: 'scar', disabled: false },
+      });
+
       // Lean into traits (disable them)
       const character = api.character.getCharacter(characterId);
-      api.crew.leanIntoTrait({ crewId, characterId, traitId: character!.traits[0].id });
-      api.crew.leanIntoTrait({ crewId, characterId, traitId: character!.traits[2].id });
+      api.character.leanIntoTrait({ crewId, characterId, traitId: character!.traits[0].id });
+      api.character.leanIntoTrait({ crewId, characterId, traitId: character!.traits[2].id });
 
       // Verify 2 traits disabled
       const updatedChar = api.character.getCharacter(characterId);
@@ -119,32 +136,42 @@ describe('Momentum Reset Mechanic', () => {
       const crewId = api.crew.create('Test Crew');
 
       // Create addiction clock at 8 segments
-      const clockId = api.clock.createAddictionClock({ crewId });
-      api.clock.addSegments({ clockId, segments: 8 });
+      store.dispatch(createClock({
+        entityId: crewId,
+        clockType: 'addiction',
+      }));
+      const state = store.getState();
+      const clockId = state.clocks.allIds[state.clocks.allIds.length - 1];
+      store.dispatch(addSegments({ clockId, amount: 8 }));
 
-      expect(api.clock.getClock(clockId)!.segments).toBe(8);
+      expect(store.getState().clocks.byId[clockId].segments).toBe(8);
 
       // Perform reset
       const result = api.crew.performReset(crewId);
 
       expect(result.addictionReduced).toBe(6); // New value after reducing by 2
-      expect(api.clock.getClock(clockId)!.segments).toBe(6);
+      expect(store.getState().clocks.byId[clockId].segments).toBe(6);
     });
 
     it('should reduce addiction clock to minimum 0', () => {
       const crewId = api.crew.create('Test Crew');
 
       // Create addiction clock at 1 segment
-      const clockId = api.clock.createAddictionClock({ crewId });
-      api.clock.addSegments({ clockId, segments: 1 });
+      store.dispatch(createClock({
+        entityId: crewId,
+        clockType: 'addiction',
+      }));
+      const state = store.getState();
+      const clockId = state.clocks.allIds[state.clocks.allIds.length - 1];
+      store.dispatch(addSegments({ clockId, amount: 1 }));
 
-      expect(api.clock.getClock(clockId)!.segments).toBe(1);
+      expect(store.getState().clocks.byId[clockId].segments).toBe(1);
 
       // Perform reset (should reduce to 0, not negative)
       const result = api.crew.performReset(crewId);
 
       expect(result.addictionReduced).toBe(0);
-      expect(api.clock.getClock(clockId)!.segments).toBe(0);
+      expect(store.getState().clocks.byId[clockId].segments).toBe(0);
     });
 
     it('should handle crew with no addiction clock', () => {
@@ -177,27 +204,38 @@ describe('Momentum Reset Mechanic', () => {
       api.crew.addCharacter({ crewId, characterId });
 
       // Create 3 harm clocks at 6/6
-      const clock1Id = api.clock.createHarmClock({
-        characterId,
+      store.dispatch(createClock({
+        entityId: characterId,
+        clockType: 'harm',
         subtype: 'Physical Harm',
-      });
-      const clock2Id = api.clock.createHarmClock({
-        characterId,
-        subtype: 'Morale Harm',
-      });
-      const clock3Id = api.clock.createHarmClock({
-        characterId,
-        subtype: 'Psychic Corruption',
-      });
+      }));
+      const state1 = store.getState();
+      const clock1Id = state1.clocks.allIds[state1.clocks.allIds.length - 1];
 
-      api.clock.addSegments({ clockId: clock1Id, segments: 6 });
-      api.clock.addSegments({ clockId: clock2Id, segments: 6 });
-      api.clock.addSegments({ clockId: clock3Id, segments: 6 });
+      store.dispatch(createClock({
+        entityId: characterId,
+        clockType: 'harm',
+        subtype: 'Morale Harm',
+      }));
+      const state2 = store.getState();
+      const clock2Id = state2.clocks.allIds[state2.clocks.allIds.length - 1];
+
+      store.dispatch(createClock({
+        entityId: characterId,
+        clockType: 'harm',
+        subtype: 'Psychic Corruption',
+      }));
+      const state3 = store.getState();
+      const clock3Id = state3.clocks.allIds[state3.clocks.allIds.length - 1];
+
+      store.dispatch(addSegments({ clockId: clock1Id, amount: 6 }));
+      store.dispatch(addSegments({ clockId: clock2Id, amount: 6 }));
+      store.dispatch(addSegments({ clockId: clock3Id, amount: 6 }));
 
       // All at 6/6
-      expect(api.clock.getClock(clock1Id)!.segments).toBe(6);
-      expect(api.clock.getClock(clock2Id)!.segments).toBe(6);
-      expect(api.clock.getClock(clock3Id)!.segments).toBe(6);
+      expect(store.getState().clocks.byId[clock1Id].segments).toBe(6);
+      expect(store.getState().clocks.byId[clock2Id].segments).toBe(6);
+      expect(store.getState().clocks.byId[clock3Id].segments).toBe(6);
 
       // Perform reset
       const result = api.crew.performReset(crewId);
@@ -205,9 +243,9 @@ describe('Momentum Reset Mechanic', () => {
       expect(result.charactersReset[0].harmClocksRecovered).toBe(3);
 
       // All now at 5/6
-      expect(api.clock.getClock(clock1Id)!.segments).toBe(5);
-      expect(api.clock.getClock(clock2Id)!.segments).toBe(5);
-      expect(api.clock.getClock(clock3Id)!.segments).toBe(5);
+      expect(store.getState().clocks.byId[clock1Id].segments).toBe(5);
+      expect(store.getState().clocks.byId[clock2Id].segments).toBe(5);
+      expect(store.getState().clocks.byId[clock3Id].segments).toBe(5);
     });
 
     it('should not affect harm clocks below 6/6', () => {
@@ -228,21 +266,28 @@ describe('Momentum Reset Mechanic', () => {
       api.crew.addCharacter({ crewId, characterId });
 
       // Create harm clocks at various levels
-      const clock1Id = api.clock.createHarmClock({
-        characterId,
+      store.dispatch(createClock({
+        entityId: characterId,
+        clockType: 'harm',
         subtype: 'Physical Harm',
-      });
-      const clock2Id = api.clock.createHarmClock({
-        characterId,
-        subtype: 'Morale Harm',
-      });
+      }));
+      const state1 = store.getState();
+      const clock1Id = state1.clocks.allIds[state1.clocks.allIds.length - 1];
 
-      api.clock.addSegments({ clockId: clock1Id, segments: 3 }); // 3/6
-      api.clock.addSegments({ clockId: clock2Id, segments: 5 }); // 5/6
+      store.dispatch(createClock({
+        entityId: characterId,
+        clockType: 'harm',
+        subtype: 'Morale Harm',
+      }));
+      const state2 = store.getState();
+      const clock2Id = state2.clocks.allIds[state2.clocks.allIds.length - 1];
+
+      store.dispatch(addSegments({ clockId: clock1Id, amount: 3 })); // 3/6
+      store.dispatch(addSegments({ clockId: clock2Id, amount: 5 })); // 5/6
 
       // Check initial values
-      expect(api.clock.getClock(clock1Id)!.segments).toBe(3);
-      expect(api.clock.getClock(clock2Id)!.segments).toBe(5);
+      expect(store.getState().clocks.byId[clock1Id].segments).toBe(3);
+      expect(store.getState().clocks.byId[clock2Id].segments).toBe(5);
 
       // Perform reset
       const result = api.crew.performReset(crewId);
@@ -250,8 +295,8 @@ describe('Momentum Reset Mechanic', () => {
       expect(result.charactersReset[0].harmClocksRecovered).toBe(0);
 
       // Should remain unchanged
-      expect(api.clock.getClock(clock1Id)!.segments).toBe(3);
-      expect(api.clock.getClock(clock2Id)!.segments).toBe(5);
+      expect(store.getState().clocks.byId[clock1Id].segments).toBe(3);
+      expect(store.getState().clocks.byId[clock2Id].segments).toBe(5);
     });
 
     it('should handle character with no harm clocks', () => {
@@ -302,7 +347,6 @@ describe('Momentum Reset Mechanic', () => {
         traits: [
           { name: 'Elite Infantry', category: 'role', disabled: false },
           { name: 'Hive Gang Survivor', category: 'background', disabled: false },
-          { name: 'Battle Scar', category: 'scar', disabled: false },
         ],
         actionDots: {
           shoot: 3, command: 2, skirmish: 2, skulk: 1,
@@ -319,51 +363,74 @@ describe('Momentum Reset Mechanic', () => {
         ],
         actionDots: {
           shoot: 1, command: 1, skirmish: 1, skulk: 1,
-          wreck: 2, finesse: 2, survey: 2, study: 2,
-          tech: 2, attune: 0, consort: 0, sway: 0,
+          wreck: 2, finesse: 2, survey: 2, study: 1,
+          tech: 1, attune: 0, consort: 0, sway: 0,
         },
       });
 
       api.crew.addCharacter({ crewId, characterId: char1Id });
       api.crew.addCharacter({ crewId, characterId: char2Id });
 
-      // Set momentum to 10
-      api.crew.setMomentum({ crewId, amount: 10 });
+      // Add a scar trait to char1 after creation
+      api.character.addTrait({
+        characterId: char1Id,
+        trait: { name: 'Battle Scar', category: 'scar', disabled: false },
+      });
+
+      // Set momentum to 3 so rally can be used
+      api.crew.setMomentum({ crewId, amount: 3 });
 
       // Both use rally
       api.character.useRally({ characterId: char1Id, crewId });
       api.character.useRally({ characterId: char2Id, crewId });
 
+      // Set momentum to 10 for rest of test
+      api.crew.setMomentum({ crewId, amount: 10 });
+
       // Disable some traits
       const char1 = api.character.getCharacter(char1Id);
       const char2 = api.character.getCharacter(char2Id);
 
-      api.crew.leanIntoTrait({ crewId, characterId: char1Id, traitId: char1!.traits[0].id });
-      api.crew.leanIntoTrait({ crewId, characterId: char1Id, traitId: char1!.traits[2].id });
-      api.crew.leanIntoTrait({ crewId, characterId: char2Id, traitId: char2!.traits[0].id });
+      api.character.leanIntoTrait({ crewId, characterId: char1Id, traitId: char1!.traits[0].id });
+      api.character.leanIntoTrait({ crewId, characterId: char1Id, traitId: char1!.traits[2].id });
+      api.character.leanIntoTrait({ crewId, characterId: char2Id, traitId: char2!.traits[0].id });
 
       // Create addiction clock at 6 segments
-      const addictionClockId = api.clock.createAddictionClock({ crewId });
-      api.clock.addSegments({ clockId: addictionClockId, segments: 6 });
+      store.dispatch(createClock({
+        entityId: crewId,
+        clockType: 'addiction',
+      }));
+      const addictionState = store.getState();
+      const addictionClockId = addictionState.clocks.allIds[addictionState.clocks.allIds.length - 1];
+      store.dispatch(addSegments({ clockId: addictionClockId, amount: 6 }));
 
       // Create harm clocks (some at 6/6, some below)
-      const char1HarmClock1 = api.clock.createHarmClock({
-        characterId: char1Id,
+      store.dispatch(createClock({
+        entityId: char1Id,
+        clockType: 'harm',
         subtype: 'Physical Harm',
-      });
-      api.clock.addSegments({ clockId: char1HarmClock1, segments: 6 }); // 6/6
+      }));
+      const state1 = store.getState();
+      const char1HarmClock1 = state1.clocks.allIds[state1.clocks.allIds.length - 1];
+      store.dispatch(addSegments({ clockId: char1HarmClock1, amount: 6 })); // 6/6
 
-      const char1HarmClock2 = api.clock.createHarmClock({
-        characterId: char1Id,
+      store.dispatch(createClock({
+        entityId: char1Id,
+        clockType: 'harm',
         subtype: 'Morale Harm',
-      });
-      api.clock.addSegments({ clockId: char1HarmClock2, segments: 3 }); // 3/6
+      }));
+      const state2 = store.getState();
+      const char1HarmClock2 = state2.clocks.allIds[state2.clocks.allIds.length - 1];
+      store.dispatch(addSegments({ clockId: char1HarmClock2, amount: 3 })); // 3/6
 
-      const char2HarmClock1 = api.clock.createHarmClock({
-        characterId: char2Id,
+      store.dispatch(createClock({
+        entityId: char2Id,
+        clockType: 'harm',
         subtype: 'Physical Harm',
-      });
-      api.clock.addSegments({ clockId: char2HarmClock1, segments: 6 }); // 6/6
+      }));
+      const state3 = store.getState();
+      const char2HarmClock1 = state3.clocks.allIds[state3.clocks.allIds.length - 1];
+      store.dispatch(addSegments({ clockId: char2HarmClock1, amount: 6 })); // 6/6
 
       // PERFORM RESET
       const result = api.crew.performReset(crewId);
@@ -386,15 +453,15 @@ describe('Momentum Reset Mechanic', () => {
       expect(char2Result!.harmClocksRecovered).toBe(1);
 
       // Verify final state
-      expect(api.character.canUseRally(char1Id)).toBe(true);
-      expect(api.character.canUseRally(char2Id)).toBe(true);
+      expect(api.query.canUseRally({ characterId: char1Id, crewId })).toBe(false); // Still at momentum 5 after reset (>3)
+      expect(api.query.canUseRally({ characterId: char2Id, crewId })).toBe(false); // Still at momentum 5 after reset (>3)
       expect(api.character.getCharacter(char1Id)!.traits[0].disabled).toBe(false);
       expect(api.character.getCharacter(char1Id)!.traits[2].disabled).toBe(false);
       expect(api.character.getCharacter(char2Id)!.traits[0].disabled).toBe(false);
-      expect(api.clock.getClock(addictionClockId)!.segments).toBe(4);
-      expect(api.clock.getClock(char1HarmClock1)!.segments).toBe(5); // Recovered
-      expect(api.clock.getClock(char1HarmClock2)!.segments).toBe(3); // Unchanged
-      expect(api.clock.getClock(char2HarmClock1)!.segments).toBe(5); // Recovered
+      expect(store.getState().clocks.byId[addictionClockId].segments).toBe(4);
+      expect(store.getState().clocks.byId[char1HarmClock1].segments).toBe(5); // Recovered
+      expect(store.getState().clocks.byId[char1HarmClock2].segments).toBe(3); // Unchanged
+      expect(store.getState().clocks.byId[char2HarmClock1].segments).toBe(5); // Recovered
     });
   });
 });
