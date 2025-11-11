@@ -154,6 +154,12 @@ Hooks.once('init', async function() {
       const newCommands = getNewCommandsSinceLastBroadcast();
       const newCommandCount = newCommands.characters.length + newCommands.crews.length + newCommands.clocks.length;
 
+      // Circuit breaker: prevent infinite broadcast loops
+      if (!checkCircuitBreaker(newCommandCount)) {
+        console.error(`FitGD | Broadcast blocked by circuit breaker`);
+        return;
+      }
+
       // Also get current playerRoundState for real-time collaboration
       const state = game.fitgd.store.getState();
       const playerRoundState = state.playerRoundState;
@@ -249,6 +255,17 @@ Hooks.once('ready', async function() {
   };
 
   const totalCommands = validHistory.characters.length + validHistory.crews.length + validHistory.clocks.length;
+
+  // Warn if command history is bloated (possible corruption or spam issue)
+  if (totalCommands > 1000) {
+    console.warn(`FitGD | WARNING: Command history is large (${totalCommands} commands). This may indicate a previous spam issue.`);
+    console.warn(`FitGD | Breakdown: chars=${validHistory.characters.length}, crews=${validHistory.crews.length}, clocks=${validHistory.clocks.length}`);
+
+    if (totalCommands > 3000) {
+      console.error(`FitGD | CRITICAL: Command history is VERY large (${totalCommands} commands)!`);
+      ui.notifications.warn(`FitGD: Large command history detected (${totalCommands} commands). Performance may be affected. Consider using History Management to prune old commands.`, { permanent: true });
+    }
+  }
 
   if (stateSnapshot && stateSnapshot.timestamp) {
     // Load from snapshot first
@@ -983,11 +1000,24 @@ async function receiveCommandsFromSocket(data) {
 
       // Update each character's playerRoundState by dispatching actions
       for (const [characterId, receivedPlayerState] of Object.entries(data.playerRoundState.byCharacterId)) {
-        const currentPlayerState = currentState.playerRoundState.byCharacterId[characterId];
+        let currentPlayerState = currentState.playerRoundState.byCharacterId[characterId];
 
         console.log(`FitGD | Socket handler - character ${characterId.substring(0, 8)}:`);
         console.log(`  Current state: ${currentPlayerState?.state}`);
         console.log(`  Received state: ${receivedPlayerState.state}`);
+
+        // CRITICAL: Initialize player state if it doesn't exist!
+        if (!currentPlayerState) {
+          console.log(`  No current state - initializing player state first`);
+          game.fitgd.store.dispatch({
+            type: 'playerRoundState/initializePlayerState',
+            payload: { characterId }
+          });
+          // Re-fetch the newly initialized state for this character
+          const updatedState = game.fitgd.store.getState();
+          currentPlayerState = updatedState.playerRoundState.byCharacterId[characterId];
+          console.log(`  Initialized state: ${currentPlayerState?.state}`);
+        }
 
         // Skip if identical (avoid unnecessary updates)
         if (JSON.stringify(currentPlayerState) === JSON.stringify(receivedPlayerState)) {
@@ -1226,6 +1256,27 @@ function getNewCommandsSinceLastBroadcast() {
 
   if (totalNew > 0) {
     console.log(`FitGD | New command types:`, newCommands.characters.map(c => c.type), newCommands.crews.map(c => c.type), newCommands.clocks.map(c => c.type));
+
+    // DIAGNOSTIC: Warn if suspiciously large number of commands
+    if (totalNew > 100) {
+      console.error(`FitGD | WARNING: Suspiciously large command batch (${totalNew} commands)! Possible infinite loop!`);
+      console.error(`FitGD | Command breakdown:`, {
+        characters: newCommands.characters.length,
+        crews: newCommands.crews.length,
+        clocks: newCommands.clocks.length
+      });
+      console.error(`FitGD | Stack trace:`, new Error().stack);
+
+      // If it's all clock commands, log which clocks and operations
+      if (newCommands.clocks.length > 100) {
+        const clockOps = {};
+        newCommands.clocks.forEach(cmd => {
+          const key = `${cmd.type}:${cmd.payload?.clockId?.substring(0, 8)}`;
+          clockOps[key] = (clockOps[key] || 0) + 1;
+        });
+        console.error(`FitGD | Clock operation frequency:`, clockOps);
+      }
+    }
   }
 
   return newCommands;
@@ -1272,6 +1323,31 @@ function applyCommandsIncremental(commands) {
 
   console.log(`FitGD | Applied ${appliedCount} commands, skipped ${skippedCount} duplicates`);
   return appliedCount;
+}
+
+/**
+ * Circuit breaker to prevent broadcast loops
+ */
+let consecutiveLargeBroadcasts = 0;
+const MAX_CONSECUTIVE_LARGE_BROADCASTS = 3;
+const LARGE_BROADCAST_THRESHOLD = 50;
+
+function resetCircuitBreaker() {
+  consecutiveLargeBroadcasts = 0;
+}
+
+function checkCircuitBreaker(commandCount) {
+  if (commandCount > LARGE_BROADCAST_THRESHOLD) {
+    consecutiveLargeBroadcasts++;
+    if (consecutiveLargeBroadcasts >= MAX_CONSECUTIVE_LARGE_BROADCASTS) {
+      console.error(`FitGD | CIRCUIT BREAKER TRIPPED! Detected ${MAX_CONSECUTIVE_LARGE_BROADCASTS} consecutive large broadcasts (>${LARGE_BROADCAST_THRESHOLD} commands each). Possible infinite loop!`);
+      ui.notifications.error('FitGD: Broadcast loop detected! Auto-save disabled. Please report this bug and reload the page.');
+      return false; // Block broadcast
+    }
+  } else {
+    resetCircuitBreaker();
+  }
+  return true; // Allow broadcast
 }
 
 /**
@@ -1441,6 +1517,12 @@ async function saveCommandHistoryImmediate() {
     // Get new commands since last broadcast
     const newCommands = getNewCommandsSinceLastBroadcast();
     const newCommandCount = newCommands.characters.length + newCommands.crews.length + newCommands.clocks.length;
+
+    // Circuit breaker: prevent infinite broadcast loops
+    if (!checkCircuitBreaker(newCommandCount)) {
+      console.error(`FitGD | Broadcast blocked by circuit breaker (auto-save)`);
+      return;
+    }
 
     // Broadcast commands FIRST (before persistence) - all users can do this
     if (newCommandCount > 0) {
