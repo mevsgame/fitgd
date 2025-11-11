@@ -112,14 +112,14 @@ export function findClockWithFewestSegments(clocks: Clock[]): Clock | null {
 }
 
 /**
- * Validate only one addiction clock per crew
+ * Validate only one addiction clock per character
  */
 export function validateSingleAddictionClock(
   existingAddictionClocks: Clock[]
 ): void {
   if (existingAddictionClocks.length > 0) {
     throw new Error(
-      'Crew already has an addiction clock. Only one addiction clock per crew is allowed.'
+      'Character already has an addiction clock. Only one addiction clock per character is allowed.'
     );
   }
 }
