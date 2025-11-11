@@ -40,7 +40,15 @@ export class BaseSelectionDialog extends Application {
       resizable: true,
     });
 
-    this.options = options;
+    // Store callbacks separately to avoid serialization issues
+    this._onSelectCallback = options.onSelect;
+    this._onCreateCallback = options.onCreate;
+    this._renderItemCallback = options.renderItem;
+
+    // Store title separately (not serializable in some cases)
+    this._dialogTitle = options.title;
+
+    // Store only serializable data
     this.data = {
       items: options.items || [],
       allowCreate: options.allowCreate || false,
@@ -62,7 +70,7 @@ export class BaseSelectionDialog extends Application {
 
   /** @override */
   get title() {
-    return this.options.title || 'Select Item';
+    return this._dialogTitle || 'Select Item';
   }
 
   /** @override */
@@ -70,7 +78,7 @@ export class BaseSelectionDialog extends Application {
     const data = await super.getData(options);
 
     // Pre-render all items to avoid passing functions in data (socket serialization issue)
-    const renderFn = this.options.renderItem || this._defaultRenderItem.bind(this);
+    const renderFn = this._renderItemCallback || this._defaultRenderItem.bind(this);
     const renderedItems = this.data.items.map(item => ({
       id: item.id,
       html: renderFn(item)
@@ -114,8 +122,8 @@ export class BaseSelectionDialog extends Application {
     event.preventDefault();
     const itemId = event.currentTarget.dataset.itemId;
 
-    if (this.options.onSelect) {
-      await this.options.onSelect(itemId);
+    if (this._onSelectCallback) {
+      await this._onSelectCallback(itemId);
     }
 
     this.close();
@@ -130,8 +138,8 @@ export class BaseSelectionDialog extends Application {
   async _onCreateNew(event) {
     event.preventDefault();
 
-    if (this.options.onCreate) {
-      await this.options.onCreate();
+    if (this._onCreateCallback) {
+      await this._onCreateCallback();
     }
 
     this.close();
