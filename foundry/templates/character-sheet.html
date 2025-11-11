@@ -51,7 +51,7 @@
           <span class="allocation-text">
             {{system.allocatedActionDots}}/{{system.totalActionDots}}
             {{#if (eq system.unallocatedActionDots 0)}}
-              <i class="fas fa-check-circle" style="color: green;"></i>
+              <i class="fas fa-check-circle allocation-complete"></i>
             {{else}}
               ({{system.unallocatedActionDots}} to allocate)
             {{/if}}
