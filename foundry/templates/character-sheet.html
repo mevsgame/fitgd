@@ -113,9 +113,7 @@
         {{#each system.traits as |trait|}}
         <div class="trait-item {{#if trait.disabled}}disabled{{/if}}">
           <div class="trait-header">
-            <h4 class="trait-name {{#if @root.editable}}editable{{/if}}"
-                data-trait-id="{{trait.id}}"
-                contenteditable="{{@root.editable}}">{{trait.name}}</h4>
+            <h4 class="trait-name" data-trait-id="{{trait.id}}">{{trait.name}}</h4>
             <div class="trait-header-right">
               <span class="trait-category">{{trait.category}}</span>
               {{#if @root.editable}}
@@ -137,9 +135,6 @@
     <div class="tab harm" data-group="primary" data-tab="harm">
       <div class="harm-header">
         <h2>Harm Clocks</h2>
-        <button class="add-harm-btn" type="button">
-          <i class="fas fa-plus"></i> Take Harm
-        </button>
       </div>
 
       <div class="harm-clocks">

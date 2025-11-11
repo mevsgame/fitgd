@@ -239,35 +239,82 @@
 /* -------------------------------------------- */
 
 /* Apply dark theme to dialogs opened from FitGD sheets */
+/* Dialog window and content */
+.dialog.fitgd-dialog,
 .dialog.fitgd-dialog .window-content,
 .dialog .window-content.fitgd-dialog-content {
-  background: #1a1a1a;
-  color: #e0e0e0;
+  background: #1a1a1a !important;
+  background-color: #1a1a1a !important;
+  color: #e0e0e0 !important;
 }
 
 .dialog.fitgd-dialog .dialog-content,
 .dialog .dialog-content.fitgd-content {
-  background: #1a1a1a;
-  color: #e0e0e0;
+  background: #1a1a1a !important;
+  background-color: #1a1a1a !important;
+  color: #e0e0e0 !important;
 }
 
 .dialog.fitgd-dialog form,
 .dialog .fitgd-dialog-content form {
-  background: #1a1a1a;
+  background: #1a1a1a !important;
+  background-color: #1a1a1a !important;
 }
 
+/* Dialog header (window-header) */
+.dialog.fitgd-dialog .window-header,
+.dialog.fitgd-dialog header.window-header {
+  background: #2a2a2a !important;
+  background-color: #2a2a2a !important;
+  border-bottom: 1px solid #444 !important;
+  color: #e0e0e0 !important;
+}
+
+.dialog.fitgd-dialog .window-title {
+  color: #e0e0e0 !important;
+}
+
+/* Form elements */
 .dialog.fitgd-dialog .form-group label,
 .dialog .fitgd-dialog-content .form-group label {
-  color: #e0e0e0;
+  color: #e0e0e0 !important;
 }
 
 .dialog.fitgd-dialog select,
 .dialog .fitgd-dialog-content select,
-.dialog.fitgd-dialog input,
+.dialog.fitgd-dialog input[type="text"],
+.dialog.fitgd-dialog input[type="number"],
 .dialog .fitgd-dialog-content input {
-  background: #2a2a2a;
-  border: 1px solid #555;
-  color: #e0e0e0;
+  background: #2a2a2a !important;
+  background-color: #2a2a2a !important;
+  border: 1px solid #555 !important;
+  color: #e0e0e0 !important;
+}
+
+/* Dialog buttons container and buttons */
+.dialog.fitgd-dialog .dialog-buttons,
+.dialog .fitgd-dialog-content .dialog-buttons {
+  background: #1a1a1a !important;
+  background-color: #1a1a1a !important;
+  border-top: 1px solid #444 !important;
+}
+
+.dialog.fitgd-dialog .dialog-buttons button,
+.dialog .fitgd-dialog-content .dialog-buttons button,
+.dialog.fitgd-dialog button,
+.dialog .fitgd-dialog-content button {
+  background: linear-gradient(to bottom, #444, #222) !important;
+  border: 1px solid #666 !important;
+  color: #e0e0e0 !important;
+  font-weight: bold;
+}
+
+.dialog.fitgd-dialog .dialog-buttons button:hover,
+.dialog .fitgd-dialog-content .dialog-buttons button:hover,
+.dialog.fitgd-dialog button:hover,
+.dialog .fitgd-dialog-content button:hover {
+  background: linear-gradient(to bottom, #555, #333) !important;
+  border-color: #888 !important;
 }
 
 /* -------------------------------------------- */

@@ -8,7 +8,6 @@
 
 import {
   ActionRollDialog,
-  TakeHarmDialog,
   AddTraitDialog,
   FlashbackDialog,
   AddClockDialog
@@ -132,9 +131,6 @@ class FitGDCharacterSheet extends ActorSheet {
     // Toggle Edit Mode for action dots
     html.find('.toggle-edit-btn').click(this._onToggleEdit.bind(this));
 
-    // Harm
-    html.find('.add-harm-btn').click(this._onAddHarm.bind(this));
-
     // Clock controls (GM-only editing)
     html.find('.clock-container img.clock').click(this._onClickClockSVG.bind(this));
     html.find('.clock-value-input').change(this._onChangeClockValue.bind(this));
@@ -143,7 +139,6 @@ class FitGDCharacterSheet extends ActorSheet {
 
     // Traits
     html.find('.add-trait-btn').click(this._onAddTrait.bind(this));
-    html.find('.trait-name').blur(this._onRenameTraitBlur.bind(this));
     html.find('.delete-trait-btn').click(this._onDeleteTrait.bind(this));
 
     // Rally checkbox
@@ -388,16 +383,6 @@ class FitGDCharacterSheet extends ActorSheet {
     new ActionRollDialog(characterId, crewId).render(true);
   }
 
-  async _onAddHarm(event) {
-    event.preventDefault();
-    const characterId = this._getReduxId();
-    if (!characterId) return;
-
-    const crewId = this._getCrewId(characterId);
-
-    new TakeHarmDialog(characterId, crewId).render(true);
-  }
-
   /**
    * Handle clicking on clock SVG image (GM-only)
    * Cycles through clock segments
@@ -511,29 +496,6 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!characterId) return;
 
     new AddTraitDialog(characterId).render(true);
-  }
-
-  async _onRenameTraitBlur(event) {
-    if (!game.user.isGM) return;
-
-    const element = event.currentTarget;
-    const traitId = element.dataset.traitId;
-    const newName = element.textContent.trim();
-
-    if (!traitId || !newName) return;
-
-    const characterId = this._getReduxId();
-    if (!characterId) return;
-
-    try {
-      game.fitgd.api.character.renameTrait({ characterId, traitId, name: newName });
-      await game.fitgd.saveImmediate();
-      ui.notifications.info(`Trait renamed to "${newName}"`);
-    } catch (error) {
-      ui.notifications.error(`Error: ${error.message}`);
-      console.error('FitGD | Trait rename error:', error);
-      this.render(false); // Reset to original name
-    }
   }
 
   async _onDeleteTrait(event) {
