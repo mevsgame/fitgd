@@ -1122,6 +1122,7 @@ export class PlayerActionWidget extends Application {
 
             // Create clock via Bridge API
             const newClockId = foundry.utils.randomID();
+            console.log('FitGD | Generated new clock ID:', newClockId);
 
             // Validate IDs before passing to Bridge API
             if (!targetCharacterId) {
@@ -1129,6 +1130,8 @@ export class PlayerActionWidget extends Application {
               ui.notifications.error('Internal error: target character ID is missing');
               return;
             }
+
+            console.log('FitGD | About to create clock with ID:', newClockId, 'for entity:', targetCharacterId);
 
             await game.fitgd.bridge.execute(
               {
@@ -1145,7 +1148,8 @@ export class PlayerActionWidget extends Application {
               { affectedReduxIds: [targetCharacterId], silent: true }
             );
 
-            console.log('FitGD | Clock created, updating transaction');
+            console.log('FitGD | Clock created successfully, ID:', newClockId);
+            console.log('FitGD | Updating transaction with clockId:', newClockId);
 
             // Update transaction with new clock
             await game.fitgd.bridge.execute(
@@ -1396,11 +1400,29 @@ export class PlayerActionWidget extends Application {
    * @param {ConsequenceTransaction} transaction
    */
   async _applyConsequenceTransaction(transaction) {
+    console.log('FitGD | Applying consequence transaction:', JSON.stringify(transaction, null, 2));
+
     if (transaction.consequenceType === 'harm') {
       // Apply harm to selected clock
       // Note: Effect does NOT apply to consequences - only position matters
       const effectivePosition = this._getEffectivePosition();
       const segments = selectConsequenceSeverity(effectivePosition);
+
+      console.log('FitGD | Adding', segments, 'segments to clock:', transaction.harmClockId);
+      console.log('FitGD | Target character:', transaction.harmTargetCharacterId);
+
+      // Verify clock exists in current state
+      const state = game.fitgd.store.getState();
+      const clock = state.clocks.byId[transaction.harmClockId];
+      console.log('FitGD | Clock exists in state:', !!clock);
+      if (clock) {
+        console.log('FitGD | Clock details:', JSON.stringify(clock, null, 2));
+      } else {
+        console.error('FitGD | Clock NOT FOUND in state! ClockId:', transaction.harmClockId);
+        console.error('FitGD | Available clocks for character:', Object.values(state.clocks.byId)
+          .filter(c => c.entityId === transaction.harmTargetCharacterId)
+          .map(c => ({ id: c.id, type: c.clockType, subtype: c.subtype })));
+      }
 
       await game.fitgd.bridge.execute(
         {
@@ -1413,7 +1435,8 @@ export class PlayerActionWidget extends Application {
         { affectedReduxIds: [transaction.harmTargetCharacterId], silent: true }
       );
 
-      ui.notifications.info(`Applied ${segments} harm to ${transaction.harmClockId}`);
+      console.log('FitGD | addSegments command dispatched');
+      ui.notifications.info(`Applied ${segments} harm`);
 
     } else if (transaction.consequenceType === 'crew-clock') {
       // Advance crew clock using standardized position-based values
