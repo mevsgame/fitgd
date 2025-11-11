@@ -214,11 +214,27 @@ class FitGDCrewSheet extends ActorSheet {
       console.log('FitGD | Calling performReset for crew:', crewId);
       console.log('FitGD | Crew characters:', crew.characters);
 
+      // Check clocks BEFORE reset
+      crew.characters.forEach(charId => {
+        const harmClocks = game.fitgd.api.query.getHarmClocks(charId);
+        console.log(`FitGD | BEFORE reset - Character ${charId} harm clocks:`, harmClocks);
+      });
+      const addictionBefore = game.fitgd.api.query.getAddictionClock(crewId);
+      console.log('FitGD | BEFORE reset - Addiction clock:', addictionBefore);
+
       const result = game.fitgd.api.crew.performReset(crewId);
 
       console.log('FitGD | Momentum Reset result:', result);
-      console.log('FitGD | Characters reset:', result.charactersReset);
+      console.log('FitGD | Characters reset (detailed):', JSON.stringify(result.charactersReset, null, 2));
       console.log('FitGD | Addiction reduced:', result.addictionReduced);
+
+      // Check clocks AFTER reset
+      crew.characters.forEach(charId => {
+        const harmClocks = game.fitgd.api.query.getHarmClocks(charId);
+        console.log(`FitGD | AFTER reset - Character ${charId} harm clocks:`, harmClocks);
+      });
+      const addictionAfter = game.fitgd.api.query.getAddictionClock(crewId);
+      console.log('FitGD | AFTER reset - Addiction clock:', addictionAfter);
 
       // Check Redux state before broadcast
       const state = game.fitgd.store.getState();
