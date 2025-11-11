@@ -149,7 +149,7 @@
 }
 
 .fitgd .momentum-controls button {
-  flex: 1;
+  flex: 0;
   padding: 6px 12px;
   font-size: 13px;
   min-width: 0; /* Allow buttons to shrink */
@@ -165,18 +165,18 @@
   gap: 0;
   border-bottom: 2px solid #8b0000;
   background: #2a2a2a;
-  flex: 0 0 auto; /* Don't grow, don't shrink */
+  flex: 0; /* Don't grow, don't shrink */
 }
 
 .fitgd .sheet-tabs .item {
-  flex: 1;
+  flex: 0;
   text-align: center;
   padding: 10px;
   border: none;
   background: #2a2a2a;
   color: #aaa;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0s;
   font-weight: bold;
   text-transform: uppercase;
   font-size: 12px;

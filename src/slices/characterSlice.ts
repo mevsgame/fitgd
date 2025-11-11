@@ -62,6 +62,19 @@ interface EnableTraitPayload {
   userId?: string;
 }
 
+interface RemoveTraitPayload {
+  characterId: string;
+  traitId: string;
+  userId?: string;
+}
+
+interface UpdateTraitNamePayload {
+  characterId: string;
+  traitId: string;
+  name: string;
+  userId?: string;
+}
+
 interface SetActionDotsPayload {
   characterId: string;
   action: keyof ActionDots;
@@ -302,6 +315,97 @@ const characterSlice = createSlice({
       prepare: (payload: EnableTraitPayload) => {
         const command: Command = {
           type: 'characters/enableTrait',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    removeTrait: {
+      reducer: (
+        state,
+        action: PayloadAction<{ characterId: string; traitId: string }>
+      ) => {
+        const { characterId, traitId } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        character.traits = character.traits.filter((t) => t.id !== traitId);
+        character.updatedAt = Date.now();
+
+        // Log command to history
+        state.history.push({
+          type: 'characters/removeTrait',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: undefined,
+        });
+      },
+      prepare: (payload: RemoveTraitPayload) => {
+        const command: Command = {
+          type: 'characters/removeTrait',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    updateTraitName: {
+      reducer: (
+        state,
+        action: PayloadAction<{ characterId: string; traitId: string; name: string }>
+      ) => {
+        const { characterId, traitId, name } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        const trait = character.traits.find((t) => t.id === traitId);
+        if (!trait) {
+          throw new Error(
+            `Trait ${traitId} not found on character ${characterId}`
+          );
+        }
+
+        trait.name = name.trim();
+        character.updatedAt = Date.now();
+
+        // Log command to history
+        state.history.push({
+          type: 'characters/updateTraitName',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: undefined,
+        });
+      },
+      prepare: (payload: UpdateTraitNamePayload) => {
+        const command: Command = {
+          type: 'characters/updateTraitName',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -799,6 +903,8 @@ export const {
   addTrait,
   disableTrait,
   enableTrait,
+  removeTrait,
+  updateTraitName,
   setActionDots,
   addEquipment,
   removeEquipment,

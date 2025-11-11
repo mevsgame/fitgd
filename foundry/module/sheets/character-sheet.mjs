@@ -8,8 +8,7 @@
 
 import {
   ActionRollDialog,
-  AddTraitDialog,
-  FlashbackDialog,
+  AddTraitDialog, 
   AddClockDialog
 } from '../dialogs.mjs';
 
@@ -145,13 +144,11 @@ class FitGDCharacterSheet extends ActorSheet {
     // Traits
     html.find('.add-trait-btn').click(this._onAddTrait.bind(this));
     html.find('.delete-trait-btn').click(this._onDeleteTrait.bind(this));
+    html.find('.trait-name').blur(this._onRenameTraitBlur.bind(this));
 
     // Rally checkbox
     html.find('input[name="system.rallyAvailable"]').change(this._onRallyChange.bind(this));
-
-    // Flashback
-    html.find('.flashback-btn').click(this._onFlashback.bind(this));
-
+ 
     // Drag events for hotbar macros
     html.find('.draggable').on('dragstart', this._onDragStart.bind(this));
   }
@@ -590,6 +587,39 @@ class FitGDCharacterSheet extends ActorSheet {
     }
   }
 
+  async _onRenameTraitBlur(event) {
+    if (!game.user.isGM) return;
+
+    const element = event.currentTarget;
+    const traitId = element.dataset.traitId;
+    const newName = element.textContent.trim();
+
+    if (!traitId || !newName) {
+      this.render(false); // Reset to original name if empty
+      return;
+    }
+
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    // Get original name to check if it changed
+    const character = game.fitgd.api.character.getCharacter(characterId);
+    const trait = character?.traits.find((t) => t.id === traitId);
+    const originalName = trait?.name;
+
+    if (newName === originalName) return; // No change
+
+    try {
+      game.fitgd.api.character.updateTraitName({ characterId, traitId, name: newName });
+      await game.fitgd.saveImmediate();
+      ui.notifications.info(`Trait renamed to "${newName}"`);
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Trait rename error:', error);
+      this.render(false); // Reset to original name
+    }
+  }
+
   async _onRallyChange(event) {
     if (!game.user.isGM) return;
 
@@ -613,21 +643,6 @@ class FitGDCharacterSheet extends ActorSheet {
       // Revert checkbox on error
       event.currentTarget.checked = !isChecked;
     }
-  }
-
-  async _onFlashback(event) {
-    event.preventDefault();
-    const characterId = this._getReduxId();
-    if (!characterId) return;
-
-    const crewId = this._getCrewId(characterId);
-
-    if (!crewId) {
-      ui.notifications.warn('Character must be part of a crew to use Flashback');
-      return;
-    }
-
-    new FlashbackDialog(characterId, crewId).render(true);
   }
 }
 

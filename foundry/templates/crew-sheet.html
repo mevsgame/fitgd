@@ -18,15 +18,14 @@
             {{/times}}
           </div>
           <div class="momentum-value">{{system.currentMomentum}}/10</div>
-        </div>
-        <div class="momentum-controls">
+          
           <button class="momentum-add-btn" type="button" data-amount="1" title="Add 1 Momentum">
             <i class="fas fa-plus"></i>
           </button>
           <button class="momentum-spend-btn" type="button" data-amount="1" title="Spend 1 Momentum">
             <i class="fas fa-minus"></i>
           </button>
-        </div>
+        </div> 
       </div>
     </div>
   </header>
@@ -44,9 +43,11 @@
     <div class="tab members" data-group="primary" data-tab="members">
       <div class="members-header">
         <h2>Crew Members</h2>
-        <button class="add-character-btn" type="button">
-          <i class="fas fa-user-plus"></i> Add Character
-        </button>
+        <div class="header-buttons">
+          <button class="add-character-btn" type="button">
+            <i class="fas fa-user-plus"></i> Add Character
+          </button>
+        </div>
       </div>
       <div class="members-list">
         {{#each system.characters as |character|}}
@@ -78,9 +79,11 @@
     <div class="tab clocks" data-group="primary" data-tab="clocks">
       <div class="clocks-header">
         <h2>Progress Clocks</h2>
-        <button class="add-clock-btn" type="button">
-          <i class="fas fa-clock"></i> Add Clock
-        </button>
+        <div class="header-buttons">
+          <button class="add-clock-btn" type="button">
+            <i class="fas fa-clock"></i> Add Clock
+          </button>
+        </div>
       </div>
 
       {{!-- Addiction Clock --}}
