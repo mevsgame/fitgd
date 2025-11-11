@@ -9,14 +9,16 @@
       {{!-- Momentum Display --}}
       <div class="momentum-display">
         <label>Momentum</label>
-        <div class="momentum-track">
-          {{#times 10}}
-            <span class="momentum-box {{#if (lt this ../system.currentMomentum)}}filled{{/if}}">
-              {{#if (eq this ../system.currentMomentum)}}▶{{/if}}
-            </span>
-          {{/times}}
+        <div class="momentum-row">
+          <div class="momentum-track">
+            {{#times 10}}
+              <span class="momentum-box {{#if (lt this ../system.currentMomentum)}}filled{{/if}}">
+                {{#if (eq this ../system.currentMomentum)}}▶{{/if}}
+              </span>
+            {{/times}}
+          </div>
+          <div class="momentum-value">{{system.currentMomentum}}/10</div>
         </div>
-        <div class="momentum-value">{{system.currentMomentum}}/10</div>
         <div class="momentum-controls">
           <button class="momentum-add-btn" type="button" data-amount="1" title="Add 1 Momentum">
             <i class="fas fa-plus"></i>
@@ -161,7 +163,7 @@
         <h3>Progress & Threat Clocks</h3>
         <div class="clocks-flow-grid">
           {{#each system.progressClocks as |clock|}}
-          <div class="clock-item progress-clock" data-clock-id="{{clock.id}}">
+          <div class="clock-item progress-clock" data-clock-id="{{clock.id}}" data-category="{{clock.category}}">
             <div class="clock-info">
               <div class="clock-header-inline">
                 <h4 class="clock-name {{#if @root.editable}}editable{{/if}}"

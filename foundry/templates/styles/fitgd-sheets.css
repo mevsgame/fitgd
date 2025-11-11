@@ -9,14 +9,24 @@
 
 .fitgd {
   font-family: 'Signika', sans-serif;
-  background: #1a1a1a;
+  background: #1a1a1a !important;
   color: #e0e0e0;
 }
 
 .fitgd .window-content {
   /* background: url('../../ui/parchment-dark.jpg') repeat; */ /* Optional background texture */
-  background-color: #1a1a1a;
+  background-color: #1a1a1a !important;
+  background: #1a1a1a !important;
   padding: 0;
+}
+
+/* Ensure all window elements have dark background */
+.fitgd.sheet {
+  background: #1a1a1a !important;
+}
+
+.fitgd.sheet .window-app {
+  background: #1a1a1a !important;
 }
 
 .fitgd form {
@@ -92,10 +102,17 @@
   gap: 5px;
 }
 
+/* Row containing track and value */
+.fitgd .momentum-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .fitgd .momentum-track {
   display: flex;
   gap: 3px;
-  margin: 5px 0;
+  flex: 0 0 auto;
 }
 
 .fitgd .momentum-box {
@@ -118,24 +135,25 @@
 }
 
 .fitgd .momentum-value {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
   color: #ff6347;
-  text-align: center;
+  flex: 0 0 auto;
+  min-width: 40px;
 }
 
 .fitgd .momentum-controls {
   display: flex;
   gap: 5px;
-  justify-content: center;
-  max-width: 315px; /* Match width of momentum track (10 boxes * 30px + 9 gaps * 3px = 327px) */
+  width: 100%;
 }
 
 .fitgd .momentum-controls button {
   flex: 1;
-  padding: 4px 8px;
-  font-size: 12px;
+  padding: 6px 12px;
+  font-size: 13px;
   min-width: 0; /* Allow buttons to shrink */
+  font-weight: bold;
 }
 
 /* -------------------------------------------- */
@@ -183,6 +201,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 15px;
+  background: #1a1a1a;
 }
 
 .fitgd .sheet-body .tab {
@@ -534,12 +553,14 @@
   margin-bottom: 25px;
 }
 
-/* Free-flow grid layout for clocks - wraps left to right */
+/* Free-flow grid layout for clocks - wraps left to right to fill horizontal space first */
 .fitgd .clocks-flow-grid {
   display: flex;
   flex-wrap: wrap;
+  flex-direction: row;
   gap: 12px;
   align-items: flex-start;
+  justify-content: flex-start;
 }
 
 /* Clock item with two-column layout: info on left, SVG on right */
@@ -551,8 +572,9 @@
   border: 1px solid #444;
   border-radius: 4px;
   flex: 0 0 auto; /* Don't grow or shrink */
-  width: fit-content;
-  max-width: 280px; /* Prevent oversized clocks */
+  width: auto;
+  min-width: 230px;
+  max-width: 280px;
 }
 
 /* Clock info column (left side) */
@@ -592,12 +614,32 @@
   border-left: 4px solid #dc143c;
 }
 
+.fitgd .harm-clock svg {
+  filter: brightness(1.2) saturate(1.3);
+}
+
+.fitgd .harm-clock svg .filled {
+  fill: #dc143c !important;
+}
+
 .fitgd .addiction-clock {
   border-left: 4px solid #ffd700;
 }
 
+.fitgd .addiction-clock svg {
+  filter: brightness(1.2);
+}
+
+.fitgd .addiction-clock svg .filled {
+  fill: #ffd700 !important;
+}
+
 .fitgd .consumable-clock {
   border-left: 4px solid #32cd32;
+}
+
+.fitgd .consumable-clock svg .filled {
+  fill: #32cd32 !important;
 }
 
 .fitgd .consumable-clock.frozen {
@@ -607,6 +649,19 @@
 
 .fitgd .progress-clock {
   border-left: 4px solid #4169e1;
+}
+
+.fitgd .progress-clock svg .filled {
+  fill: #ffffff !important;
+}
+
+/* Threat clocks have red coloring */
+.fitgd .progress-clock[data-category="threat"] {
+  border-left-color: #dc143c;
+}
+
+.fitgd .progress-clock[data-category="threat"] svg .filled {
+  fill: #dc143c !important;
 }
 
 /* Clock Container */
@@ -833,11 +888,17 @@
   border: none;
   color: #ff6347;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 0;
   font-size: 14px;
   opacity: 0.6;
   transition: opacity 0.2s;
   flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
 }
 
 .fitgd .remove-character-btn:hover {

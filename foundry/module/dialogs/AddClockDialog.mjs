@@ -32,7 +32,7 @@ export class AddClockDialog {
    */
   async render(force) {
     // Dynamically import to avoid circular dependency
-    const { ClockCreationDialog } = await import('./dialogs/ClockCreationDialog.mjs');
+    const { ClockCreationDialog } = await import('./ClockCreationDialog.mjs');
 
     const dialog = new ClockCreationDialog(
       this.crewId,
