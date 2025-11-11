@@ -32,7 +32,6 @@
         <div class="effect">
           Effect: <span class="effect-level">{{uppercase (default playerState.effect "STANDARD")}}</span>
         </div>
-        <p class="gm-set-note">(Set by GM)</p>
       </div>
 
       <!-- Harm Clocks Display -->
@@ -52,7 +51,7 @@
 
       <!-- Momentum Replenishment -->
       <div class="momentum-replenishment">
-        <h4>MOMENTUM REPLENISHMENT:</h4>
+        <h4>GET MOMENTUM:</h4>
         <div class="replenishment-row">
           <!-- Momentum Track (Compact) -->
           <div class="momentum-track-compact">
@@ -76,7 +75,7 @@
 
       <!-- Action Modifiers Buttons -->
       <div class="prepare-actions">
-        <h4>ACTION MODIFIERS:</h4>
+        <h4>SPEND MOMENTUM:</h4>
         <div class="button-row">
           <button type="button" data-action="use-trait" class="{{#if playerState.traitTransaction}}active{{/if}}" {{#if (and (eq playerState.position "controlled") (lt momentum 1))}}disabled{{/if}}>
             Use Trait

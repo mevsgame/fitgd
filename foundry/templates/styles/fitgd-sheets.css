@@ -1589,6 +1589,10 @@
 
 .prepare-actions {
   margin: 15px 0;
+  padding: 10px;
+  background: #2a2a2a;
+  border-left: 3px solid #ff6347;
+  border-radius: 4px;
 }
 
 .prepare-actions h4 {
@@ -1641,8 +1645,7 @@
 
 .momentum-replenishment h4 {
   margin: 0 0 10px 0;
-  color: #ffd700;
-  font-size: 0.9em;
+  color: #ffd700; 
 }
 
 .replenishment-row {
@@ -1706,6 +1709,7 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+ 
 
 .action-plan-preview {
   margin: 15px 0;
