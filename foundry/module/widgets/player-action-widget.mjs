@@ -1095,16 +1095,12 @@ export class PlayerActionWidget extends Application {
       return;
     }
 
-    console.log('FitGD | Opening harm clock selection for target:', targetCharacterId);
-
     // Open ClockSelectionDialog for harm clocks
     const dialog = new ClockSelectionDialog(
       targetCharacterId,
       'harm',
       async (clockId) => {
         try {
-          console.log('FitGD | Harm clock selected:', clockId);
-
           if (clockId === '_new') {
             // Create new harm clock
             const clockType = await promptForText(
@@ -1114,15 +1110,11 @@ export class PlayerActionWidget extends Application {
             );
 
             if (!clockType) {
-              console.log('FitGD | Clock creation canceled');
               return; // User canceled
             }
 
-            console.log('FitGD | Creating new harm clock:', clockType, 'for character:', targetCharacterId);
-
             // Create clock via Bridge API
             const newClockId = foundry.utils.randomID();
-            console.log('FitGD | Generated new clock ID:', newClockId);
 
             // Validate IDs before passing to Bridge API
             if (!targetCharacterId) {
@@ -1130,8 +1122,6 @@ export class PlayerActionWidget extends Application {
               ui.notifications.error('Internal error: target character ID is missing');
               return;
             }
-
-            console.log('FitGD | About to create clock with ID:', newClockId, 'for entity:', targetCharacterId);
 
             await game.fitgd.bridge.execute(
               {
@@ -1148,9 +1138,6 @@ export class PlayerActionWidget extends Application {
               { affectedReduxIds: [targetCharacterId], silent: true }
             );
 
-            console.log('FitGD | Clock created successfully, ID:', newClockId);
-            console.log('FitGD | Updating transaction with clockId:', newClockId);
-
             // Update transaction with new clock
             await game.fitgd.bridge.execute(
               {
@@ -1165,8 +1152,6 @@ export class PlayerActionWidget extends Application {
               },
               { affectedReduxIds: [this.characterId], silent: true }
             );
-
-            console.log('FitGD | Transaction updated with new clock');
           } else {
             // Existing clock selected
             await game.fitgd.bridge.execute(
@@ -1369,7 +1354,8 @@ export class PlayerActionWidget extends Application {
       await game.fitgd.saveImmediate(); // TODO: Refactor to Bridge API
     }
 
-    // Clear transaction and transition to TURN_COMPLETE
+    // Clear transaction and transition through proper state machine
+    // APPLYING_EFFECTS → TURN_COMPLETE → IDLE_WAITING
     await game.fitgd.bridge.executeBatch([
       {
         type: 'playerRoundState/clearConsequenceTransaction',
@@ -1382,14 +1368,22 @@ export class PlayerActionWidget extends Application {
           newState: 'TURN_COMPLETE',
         },
       },
-      {
-        type: 'playerRoundState/resetPlayerState',
-        payload: { characterId: this.characterId },
-      }
     ], {
       affectedReduxIds: [this.characterId],
       silent: true,
     });
+
+    // Transition to IDLE_WAITING (complete the turn)
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/transitionState',
+        payload: {
+          characterId: this.characterId,
+          newState: 'IDLE_WAITING',
+        },
+      },
+      { affectedReduxIds: [this.characterId], silent: true }
+    );
 
     // Close widget after brief delay
     setTimeout(() => this.close(), 500);
@@ -1400,29 +1394,11 @@ export class PlayerActionWidget extends Application {
    * @param {ConsequenceTransaction} transaction
    */
   async _applyConsequenceTransaction(transaction) {
-    console.log('FitGD | Applying consequence transaction:', JSON.stringify(transaction, null, 2));
-
     if (transaction.consequenceType === 'harm') {
       // Apply harm to selected clock
       // Note: Effect does NOT apply to consequences - only position matters
       const effectivePosition = this._getEffectivePosition();
       const segments = selectConsequenceSeverity(effectivePosition);
-
-      console.log('FitGD | Adding', segments, 'segments to clock:', transaction.harmClockId);
-      console.log('FitGD | Target character:', transaction.harmTargetCharacterId);
-
-      // Verify clock exists in current state
-      const state = game.fitgd.store.getState();
-      const clock = state.clocks.byId[transaction.harmClockId];
-      console.log('FitGD | Clock exists in state:', !!clock);
-      if (clock) {
-        console.log('FitGD | Clock details:', JSON.stringify(clock, null, 2));
-      } else {
-        console.error('FitGD | Clock NOT FOUND in state! ClockId:', transaction.harmClockId);
-        console.error('FitGD | Available clocks for character:', Object.values(state.clocks.byId)
-          .filter(c => c.entityId === transaction.harmTargetCharacterId)
-          .map(c => ({ id: c.id, type: c.clockType, subtype: c.subtype })));
-      }
 
       await game.fitgd.bridge.execute(
         {
@@ -1435,7 +1411,6 @@ export class PlayerActionWidget extends Application {
         { affectedReduxIds: [transaction.harmTargetCharacterId], silent: true }
       );
 
-      console.log('FitGD | addSegments command dispatched');
       ui.notifications.info(`Applied ${segments} harm`);
 
     } else if (transaction.consequenceType === 'crew-clock') {
