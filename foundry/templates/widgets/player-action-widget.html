@@ -242,6 +242,68 @@
       </div>
     </div>
 
+    <!-- ==================== CURRENT CONSEQUENCE PLAN (SHARED BY GM AND PLAYER) ==================== -->
+    {{#if consequenceTransaction}}
+    <div class="consequence-plan-preview">
+      <h4>📋 Current Consequence Plan:</h4>
+      <div class="plan-box">
+        <div class="plan-line">
+          <strong>Type:</strong>
+          {{#if (eq consequenceTransaction.consequenceType 'harm')}}
+            💔 Harm
+          {{else}}
+            ⏱️ Crew Clock
+          {{/if}}
+        </div>
+
+        {{#if (eq consequenceTransaction.consequenceType 'harm')}}
+          {{#if harmTargetCharacter}}
+          <div class="plan-line">
+            <strong>Target:</strong> {{harmTargetCharacter.name}}
+            {{#if (eq harmTargetCharacter.id character.id)}}
+              <span class="label">(Acting)</span>
+            {{else}}
+              <span class="label protect">(Protected)</span>
+            {{/if}}
+          </div>
+          {{/if}}
+
+          {{#if selectedHarmClock}}
+          <div class="plan-line">
+            <strong>Clock:</strong> {{selectedHarmClock.subtype}} ({{selectedHarmClock.segments}}/{{selectedHarmClock.maxSegments}})
+          </div>
+          {{/if}}
+
+          {{#if calculatedHarmSegments}}
+          <div class="plan-line highlight">
+            <strong>Harm:</strong> +{{calculatedHarmSegments}} segments
+            <span class="calculation">({{uppercase effectivePosition}}/{{uppercase effectiveEffect}})</span>
+          </div>
+          {{/if}}
+        {{/if}}
+
+        {{#if (eq consequenceTransaction.consequenceType 'crew-clock')}}
+          {{#if selectedCrewClock}}
+          <div class="plan-line">
+            <strong>Clock:</strong> {{selectedCrewClock.subtype}} ({{selectedCrewClock.segments}}/{{selectedCrewClock.maxSegments}})
+          </div>
+          <div class="plan-line highlight">
+            <strong>Advance:</strong> +{{default consequenceTransaction.crewClockSegments 1}} segments
+          </div>
+          {{/if}}
+        {{/if}}
+
+        {{#if calculatedMomentumGain}}
+        <div class="plan-line momentum-gain">
+          <strong>Momentum Gain:</strong> <span class="positive">+{{calculatedMomentumGain}}M</span>
+        </div>
+        {{/if}}
+      </div>
+    </div>
+    {{else}}
+    <p class="waiting">⏳ {{#if isGM}}Select consequence type to begin...{{else}}Waiting for GM to configure consequence...{{/if}}</p>
+    {{/if}}
+
     {{#if isGM}}
     <!-- ==================== GM CONSEQUENCE CONFIGURATION ==================== -->
     <div class="gm-consequence-config">
@@ -288,15 +350,6 @@
           </button>
         </div>
 
-        <div class="consequence-preview">
-          <div class="preview-line">
-            <strong>Harm Segments:</strong> {{calculatedHarmSegments}}
-            <span class="calculation">({{uppercase effectivePosition}}/{{uppercase effectiveEffect}})</span>
-          </div>
-          <div class="preview-line momentum">
-            <strong>Momentum Gain:</strong> +{{calculatedMomentumGain}}
-          </div>
-        </div>
       </div>
       {{/if}}
 
@@ -326,11 +379,6 @@
         </div>
         {{/if}}
 
-        <div class="consequence-preview">
-          <div class="preview-line momentum">
-            <strong>Momentum Gain:</strong> +{{calculatedMomentumGain}}
-          </div>
-        </div>
       </div>
       {{/if}}
 
@@ -345,55 +393,8 @@
       </div>
     </div>
     {{else}}
-    <!-- ==================== PLAYER PREVIEW ==================== -->
-    <div class="player-consequence-preview">
-      <h4>📋 GM is configuring consequence...</h4>
-
-      {{#if consequenceTransaction}}
-      <div class="preview-box">
-        {{#if (eq consequenceTransaction.consequenceType 'harm')}}
-        <div class="preview-line">
-          <strong>Type:</strong> Harm
-        </div>
-        {{#if harmTargetCharacter}}
-        <div class="preview-line">
-          <strong>Target:</strong> {{harmTargetCharacter.name}}
-        </div>
-        {{/if}}
-        {{#if selectedHarmClock}}
-        <div class="preview-line">
-          <strong>Clock:</strong> {{selectedHarmClock.subtype}} ({{selectedHarmClock.segments}}/{{selectedHarmClock.maxSegments}})
-        </div>
-        {{/if}}
-        {{#if calculatedHarmSegments}}
-        <div class="preview-line highlight">
-          <strong>Harm:</strong> +{{calculatedHarmSegments}} segments
-        </div>
-        {{/if}}
-        {{else if (eq consequenceTransaction.consequenceType 'crew-clock')}}
-        <div class="preview-line">
-          <strong>Type:</strong> Crew Clock
-        </div>
-        {{#if selectedCrewClock}}
-        <div class="preview-line">
-          <strong>Clock:</strong> {{selectedCrewClock.subtype}}
-        </div>
-        <div class="preview-line highlight">
-          <strong>Advance:</strong> +{{default consequenceTransaction.crewClockSegments 1}} segments
-        </div>
-        {{/if}}
-        {{/if}}
-
-        {{#if calculatedMomentumGain}}
-        <div class="preview-line momentum">
-          <strong>Momentum Gain:</strong> +{{calculatedMomentumGain}}
-        </div>
-        {{/if}}
-      </div>
-      {{else}}
-      <p class="waiting">⏳ Waiting for GM to configure...</p>
-      {{/if}}
-
+    <!-- ==================== PLAYER ACTIONS ==================== -->
+    <div class="player-consequence-actions">
       <!-- Player can always use stims from this state -->
       <div class="player-action-buttons">
         <button type="button" data-action="use-stims-gm-phase" class="stims-btn" {{#if playerState.stimsUsedThisAction}}disabled{{/if}}>
