@@ -452,38 +452,50 @@ export class TakeHarmDialog extends Dialog {
    * @param {number} options.defaultSegments - Pre-calculate segments to display
    */
   constructor(characterId, crewId, options = {}) {
+    const defaultPosition = options.defaultPosition || 'risky';
+
     const content = `
-      <form>
-        <div class="form-group">
-          <label>Harm Type</label>
-          <select name="harmType">
-            <option value="Physical Harm">Physical Harm</option>
-            <option value="Shaken Morale">Shaken Morale</option>
-          </select>
+      <div class="clock-creation-dialog">
+        <div class="dialog-header">
+          <h2>Take Harm</h2>
+          <p class="help-text">Apply harm from consequences or enemy action</p>
         </div>
-        <div class="form-group">
-          <label>Position</label>
-          <select name="position">
-            <option value="controlled">Controlled</option>
-            <option value="risky" selected>Risky</option>
-            <option value="desperate">Desperate</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Effect (Harm Severity)</label>
-          <select name="effect">
-            <option value="limited">Limited</option>
-            <option value="standard" selected>Standard</option>
-            <option value="great">Great</option>
-          </select>
-        </div>
-        <p class="help-text">
-          <strong>Harm Segments:</strong><br/>
-          Controlled: 0/1/2 (Limited/Standard/Great)<br/>
-          Risky: 2/3/4 (Limited/Standard/Great)<br/>
-          Desperate: 4/5/6 (Limited/Standard/Great)
-        </p>
-      </form>
+
+        <form class="clock-creation-form">
+          <div class="form-group">
+            <label>Harm Type</label>
+            <select name="harmType">
+              <option value="Physical Harm">Physical Harm</option>
+              <option value="Shaken Morale">Shaken Morale</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Position</label>
+            <select name="position">
+              <option value="controlled" ${defaultPosition === 'controlled' ? 'selected' : ''}>Controlled</option>
+              <option value="risky" ${defaultPosition === 'risky' ? 'selected' : ''}>Risky</option>
+              <option value="desperate" ${defaultPosition === 'desperate' ? 'selected' : ''}>Desperate</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Effect (Harm Severity)</label>
+            <select name="effect">
+              <option value="limited">Limited</option>
+              <option value="standard" selected>Standard</option>
+              <option value="great">Great</option>
+            </select>
+          </div>
+
+          <div class="help-text harm-reference">
+            <strong>Harm Segments:</strong><br/>
+            • Controlled: 0/1/2 (Limited/Standard/Great)<br/>
+            • Risky: 2/3/4 (Limited/Standard/Great)<br/>
+            • Desperate: 4/5/6 (Limited/Standard/Great)
+          </div>
+        </form>
+      </div>
     `;
 
     const buttons = {
@@ -503,6 +515,7 @@ export class TakeHarmDialog extends Dialog {
       content,
       buttons,
       default: "apply",
+      classes: ['fitgd', 'clock-creation-dialog'],
       ...options
     });
 

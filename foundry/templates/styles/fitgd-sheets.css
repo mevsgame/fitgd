@@ -1732,6 +1732,14 @@
   min-height: 60px;
 }
 
+.clock-creation-form .harm-reference {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(139, 0, 0, 0.1);
+  border-left: 3px solid #8b0000;
+  border-radius: 4px;
+}
+
 /* -------------------------------------------- */
 /*  Selection Dialogs (Base & Clock)           */
 /* -------------------------------------------- */
