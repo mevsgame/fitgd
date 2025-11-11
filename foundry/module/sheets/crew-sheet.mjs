@@ -100,6 +100,7 @@ class FitGDCrewSheet extends ActorSheet {
     // Momentum controls
     html.find('.momentum-add-btn').click(this._onAddMomentum.bind(this));
     html.find('.momentum-spend-btn').click(this._onSpendMomentum.bind(this));
+    html.find('.momentum-reset-btn').click(this._onResetMomentum.bind(this));
 
     // Clocks
     html.find('.add-clock-btn').click(this._onAddClock.bind(this));
@@ -162,6 +163,111 @@ class FitGDCrewSheet extends ActorSheet {
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
       console.error('FitGD | Spend Momentum error:', error);
+    }
+  }
+
+  async _onResetMomentum(event) {
+    event.preventDefault();
+
+    // GM-only check
+    if (!game.user.isGM) {
+      ui.notifications.warn('Only the GM can perform a Momentum Reset');
+      return;
+    }
+
+    const crewId = this._getReduxId();
+    if (!crewId) return;
+
+    // Get crew and members
+    const crew = game.fitgd.api.crew.getCrew(crewId);
+    if (!crew) {
+      ui.notifications.error('Crew not found');
+      return;
+    }
+
+    // Show confirmation dialog
+    const confirmed = await Dialog.confirm({
+      title: 'Perform Momentum Reset?',
+      content: `
+        <p><strong>This will perform a Momentum Reset:</strong></p>
+        <ul>
+          <li>Set Momentum to <strong>5</strong></li>
+          <li>Reset Rally for all crew members</li>
+          <li>Re-enable all disabled traits</li>
+          <li>Reduce Addiction Clock by <strong>2 segments</strong></li>
+          <li>Recover all dying (6/6) harm clocks to <strong>5/6</strong></li>
+        </ul>
+        <p>Continue?</p>
+      `,
+      yes: () => true,
+      no: () => false,
+      options: {
+        classes: ['dialog', 'fitgd-dialog']
+      }
+    });
+
+    if (!confirmed) return;
+
+    try {
+      // Batch all reset actions together
+      const actions = [];
+
+      // 1. Reset crew momentum to 5
+      actions.push({
+        type: 'crews/resetMomentum',
+        payload: { crewId }
+      });
+
+      // 2. For each crew member:
+      for (const characterId of crew.characters) {
+        const character = game.fitgd.api.character.getCharacter(characterId);
+        if (!character) continue;
+
+        // Reset Rally
+        actions.push({
+          type: 'characters/resetRally',
+          payload: { characterId }
+        });
+
+        // Re-enable all disabled traits
+        for (const trait of character.traits) {
+          if (trait.disabled) {
+            actions.push({
+              type: 'characters/enableTrait',
+              payload: { characterId, traitId: trait.id }
+            });
+          }
+        }
+
+        // Recover all 6/6 harm clocks to 5/6
+        const harmClocks = game.fitgd.bridge.getClocks(characterId, 'harm');
+        for (const clock of harmClocks) {
+          if (clock.segments >= clock.maxSegments) {
+            actions.push({
+              type: 'clocks/clearSegments',
+              payload: { clockId: clock.id, amount: 1 }
+            });
+          }
+        }
+      }
+
+      // 3. Reduce addiction clock by 2 segments (if exists and has segments)
+      const addictionClock = game.fitgd.api.query.getAddictionClock(crewId);
+      if (addictionClock && addictionClock.segments > 0) {
+        const amountToReduce = Math.min(2, addictionClock.segments);
+        actions.push({
+          type: 'clocks/clearSegments',
+          payload: { clockId: addictionClock.id, amount: amountToReduce }
+        });
+      }
+
+      // Execute all actions as a single batch
+      await game.fitgd.bridge.executeBatch(actions);
+
+      ui.notifications.info('Momentum Reset performed successfully');
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Momentum Reset error:', error);
     }
   }
 

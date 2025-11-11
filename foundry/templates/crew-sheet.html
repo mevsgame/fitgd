@@ -25,6 +25,11 @@
           <button class="momentum-spend-btn" type="button" data-amount="1" title="Spend 1 Momentum">
             <i class="fas fa-minus"></i>
           </button>
+          {{#if @root.editable}}
+          <button class="momentum-reset-btn" type="button" title="Perform Momentum Reset (GM only)">
+            <i class="fas fa-redo"></i>
+          </button>
+          {{/if}}
         </div> 
       </div>
     </div>
