@@ -1,0 +1,50 @@
+{
+  "originalFile": "fitgd.mjs",
+  "originalLineCount": 2663,
+  "functions": [
+    "refreshSheetsByReduxId",
+    "registerSystemSettings",
+    "registerSheetClasses",
+    "registerHandlebarsHelpers",
+    "getNewCommandsSinceLastBroadcast",
+    "applyCommandsIncremental",
+    "resetCircuitBreaker",
+    "checkCircuitBreaker",
+    "trackInitialCommandsAsApplied",
+    "refreshAffectedSheets",
+    "saveCommandHistory",
+    "receiveCommandsFromSocket",
+    "reloadStateFromSettings",
+    "saveCommandHistoryImmediate"
+  ],
+  "classes": [
+    "FitGDCharacterSheet",
+    "FitGDCrewSheet",
+    "FitGDTraitSheet",
+    "FitGDEquipmentSheet"
+  ],
+  "hooks": [
+    "init",
+    "ready",
+    "combatStart",
+    "updateCombat",
+    "combatEnd",
+    "createActor",
+    "hotbarDrop"
+  ],
+  "globalAssignments": [
+    "game.fitgd.store",
+    "game.fitgd.api",
+    "game.fitgd.foundry",
+    "game.fitgd.socket",
+    "game.fitgd.saveImmediate",
+    "game.fitgd.bridge",
+    "game.fitgd.testSocket"
+  ],
+  "moduleState": [
+    "autoSaveTimer",
+    "lastBroadcastCount",
+    "appliedCommandIds",
+    "consecutiveLargeBroadcasts"
+  ]
+}
