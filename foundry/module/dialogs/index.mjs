@@ -23,4 +23,5 @@ export { PushDialog } from './PushDialog.mjs';
 export { FlashbackDialog } from './FlashbackDialog.mjs';
 export { AddTraitDialog } from './AddTraitDialog.mjs';
 export { FlashbackTraitsDialog } from './FlashbackTraitsDialog.mjs';
+export { LeanIntoTraitDialog } from './LeanIntoTraitDialog.mjs';
 export { AddClockDialog } from './AddClockDialog.mjs';
