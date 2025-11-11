@@ -7,7 +7,7 @@
       <h1 class="charname"><input name="name" type="text" value="{{actor.name}}" placeholder="Name"/></h1>
       <div class="resource">
         <label>Rally Available</label>
-        <input type="checkbox" name="system.rallyAvailable" {{checked system.rallyAvailable}} disabled/>
+        <input type="checkbox" name="system.rallyAvailable" {{checked system.rallyAvailable}} {{#unless editable}}disabled{{/unless}}/>
       </div>
     </div>
   </header>
@@ -113,38 +113,23 @@
         {{#each system.traits as |trait|}}
         <div class="trait-item {{#if trait.disabled}}disabled{{/if}}">
           <div class="trait-header">
-            <h4 class="trait-name draggable"
-                draggable="true"
+            <h4 class="trait-name {{#if @root.editable}}editable{{/if}}"
                 data-trait-id="{{trait.id}}"
-                data-trait-name="{{trait.name}}"
-                data-action-type="lean-trait"
-                title="Drag to hotbar to create 'Lean Into Trait' macro">
-              {{trait.name}}
-            </h4>
-            <span class="trait-category">{{trait.category}}</span>
+                contenteditable="{{@root.editable}}">{{trait.name}}</h4>
+            <div class="trait-header-right">
+              <span class="trait-category">{{trait.category}}</span>
+              {{#if @root.editable}}
+              <button class="delete-trait-btn" type="button" data-trait-id="{{trait.id}}" title="Delete Trait">
+                <i class="fas fa-trash"></i>
+              </button>
+              {{/if}}
+            </div>
           </div>
           {{#if trait.description}}
           <p class="trait-description">{{trait.description}}</p>
           {{/if}}
-          <div class="trait-actions">
-            {{#unless trait.disabled}}
-            <button class="trait-lean-btn" type="button" data-trait-id="{{trait.id}}">
-              <i class="fas fa-arrow-up"></i> Lean Into (+1 Momentum)
-            </button>
-            {{/unless}}
-            {{#if trait.disabled}}
-            <span class="trait-status"><i class="fas fa-times-circle"></i> Disabled</span>
-            {{/if}}
-          </div>
         </div>
         {{/each}}
-      </div>
-
-      <div class="rally-section">
-        <button class="use-rally-btn" type="button" {{#unless system.rallyAvailable}}disabled{{/unless}}>
-          <i class="fas fa-heartbeat"></i> Use Rally
-        </button>
-        <p class="help-text">Rally is available at 0-3 Momentum and re-enables a disabled trait.</p>
       </div>
     </div>
 

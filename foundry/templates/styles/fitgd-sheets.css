@@ -494,6 +494,46 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
+  gap: 8px;
+}
+
+.fitgd .trait-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fitgd .trait-name.editable {
+  cursor: text;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+.fitgd .trait-name.editable:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.fitgd .trait-name.editable:focus {
+  background: rgba(255, 255, 255, 0.1);
+  outline: 1px solid #4169e1;
+}
+
+.fitgd .delete-trait-btn {
+  background: transparent;
+  border: none;
+  color: #ff6347;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 12px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.fitgd .delete-trait-btn:hover {
+  opacity: 1;
+  background: rgba(255, 99, 71, 0.1);
 }
 
 .fitgd .trait-category {

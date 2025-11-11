@@ -9,7 +9,6 @@
 import {
   ActionRollDialog,
   TakeHarmDialog,
-  RallyDialog,
   AddTraitDialog,
   FlashbackDialog,
   AddClockDialog
@@ -143,11 +142,12 @@ class FitGDCharacterSheet extends ActorSheet {
     html.find('.delete-clock-btn').click(this._onDeleteClock.bind(this));
 
     // Traits
-    html.find('.trait-lean-btn').click(this._onLeanIntoTrait.bind(this));
     html.find('.add-trait-btn').click(this._onAddTrait.bind(this));
+    html.find('.trait-name').blur(this._onRenameTraitBlur.bind(this));
+    html.find('.delete-trait-btn').click(this._onDeleteTrait.bind(this));
 
-    // Rally
-    html.find('.use-rally-btn').click(this._onUseRally.bind(this));
+    // Rally checkbox
+    html.find('input[name="system.rallyAvailable"]').change(this._onRallyChange.bind(this));
 
     // Flashback
     html.find('.flashback-btn').click(this._onFlashback.bind(this));
@@ -505,41 +505,6 @@ class FitGDCharacterSheet extends ActorSheet {
     }
   }
 
-  async _onLeanIntoTrait(event) {
-    event.preventDefault();
-    const characterId = this._getReduxId();
-    if (!characterId) return;
-
-    const crewId = this._getCrewId(characterId);
-    const traitId = event.currentTarget.dataset.traitId;
-
-    if (!crewId) {
-      ui.notifications.warn('Character must be part of a crew to lean into traits');
-      return;
-    }
-
-    try {
-      const result = game.fitgd.api.action.leanIntoTrait({
-        crewId,
-        characterId,
-        traitId
-      });
-
-      ui.notifications.info(`Leaned into trait. Gained ${result.momentumGenerated} Momentum.`);
-
-      // Save immediately (critical state change)
-      await game.fitgd.saveImmediate();
-
-      // Re-render sheets
-      this.render(false);
-      refreshSheetsByReduxId([crewId], false);
-
-    } catch (error) {
-      ui.notifications.error(`Error: ${error.message}`);
-      console.error('FitGD | Lean into trait error:', error);
-    }
-  }
-
   async _onAddTrait(event) {
     event.preventDefault();
     const characterId = this._getReduxId();
@@ -548,19 +513,91 @@ class FitGDCharacterSheet extends ActorSheet {
     new AddTraitDialog(characterId).render(true);
   }
 
-  async _onUseRally(event) {
-    event.preventDefault();
+  async _onRenameTraitBlur(event) {
+    if (!game.user.isGM) return;
+
+    const element = event.currentTarget;
+    const traitId = element.dataset.traitId;
+    const newName = element.textContent.trim();
+
+    if (!traitId || !newName) return;
+
     const characterId = this._getReduxId();
     if (!characterId) return;
 
-    const crewId = this._getCrewId(characterId);
-
-    if (!crewId) {
-      ui.notifications.warn('Character must be part of a crew to use Rally');
-      return;
+    try {
+      game.fitgd.api.character.renameTrait({ characterId, traitId, name: newName });
+      await game.fitgd.saveImmediate();
+      ui.notifications.info(`Trait renamed to "${newName}"`);
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Trait rename error:', error);
+      this.render(false); // Reset to original name
     }
+  }
 
-    new RallyDialog(characterId, crewId).render(true);
+  async _onDeleteTrait(event) {
+    if (!game.user.isGM) return;
+
+    event.preventDefault();
+    const traitId = event.currentTarget.dataset.traitId;
+
+    if (!traitId) return;
+
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    // Get trait name for confirmation
+    const character = game.fitgd.api.character.getCharacter(characterId);
+    const trait = character?.traits.find(t => t.id === traitId);
+    const traitName = trait?.name || 'Unknown Trait';
+
+    const confirmed = await Dialog.confirm({
+      title: 'Delete Trait',
+      content: `<p>Are you sure you want to delete <strong>${traitName}</strong>?</p>`,
+      yes: () => true,
+      no: () => false,
+      options: {
+        classes: ['dialog', 'fitgd-dialog']
+      }
+    });
+
+    if (!confirmed) return;
+
+    try {
+      game.fitgd.api.character.removeTrait({ characterId, traitId });
+      await game.fitgd.saveImmediate();
+      this.render(false);
+      ui.notifications.info(`Trait "${traitName}" deleted`);
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Trait delete error:', error);
+    }
+  }
+
+  async _onRallyChange(event) {
+    if (!game.user.isGM) return;
+
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    const isChecked = event.currentTarget.checked;
+
+    try {
+      // Use the game API to set rally availability
+      game.fitgd.api.character.setRallyAvailable({
+        characterId,
+        available: isChecked
+      });
+
+      await game.fitgd.saveImmediate();
+      ui.notifications.info(`Rally ${isChecked ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Rally change error:', error);
+      // Revert checkbox on error
+      event.currentTarget.checked = !isChecked;
+    }
   }
 
   async _onFlashback(event) {
