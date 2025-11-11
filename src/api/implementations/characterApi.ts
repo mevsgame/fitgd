@@ -5,6 +5,7 @@ import {
   addTrait as addTraitAction,
   disableTrait,
   enableTrait,
+  removeTrait as removeTraitAction,
   groupTraits,
   setActionDots as setActionDotsAction,
   advanceActionDots,
@@ -240,6 +241,17 @@ export function createCharacterAPI(store: Store) {
       store.dispatch(addTraitAction({ characterId, trait: traitWithId }));
 
       return traitWithId.id;
+    },
+
+    /**
+     * Remove a trait from character
+     */
+    removeTrait(params: {
+      characterId: string;
+      traitId: string;
+    }): void {
+      const { characterId, traitId } = params;
+      store.dispatch(removeTraitAction({ characterId, traitId }));
     },
 
     /**
