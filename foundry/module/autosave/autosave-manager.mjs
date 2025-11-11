@@ -242,7 +242,11 @@ function refreshAffectedSheets(commands, clockEntityIds = new Map()) {
       continue;
     }
 
-    if (app instanceof FitGDCharacterSheet || app instanceof FitGDCrewSheet) {
+    // Check if it's a character or crew sheet by constructor name
+    const isCharSheet = app.constructor.name === 'FitGDCharacterSheet';
+    const isCrewSheet = app.constructor.name === 'FitGDCrewSheet';
+
+    if (isCharSheet || isCrewSheet) {
       // Try to get Redux ID from the actor flags
       let reduxId = null;
       try {
