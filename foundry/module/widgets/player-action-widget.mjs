@@ -28,7 +28,7 @@ import {
   selectIsDying,
 } from '../../dist/fitgd-core.es.js';
 import { FlashbackTraitsDialog, refreshSheetsByReduxId } from '../dialogs.mjs';
-import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog } from '../dialogs/index.mjs';
+import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog, RallyDialog } from '../dialogs/index.mjs';
 
 /* -------------------------------------------- */
 /*  Player Action Widget Application            */
@@ -727,10 +727,25 @@ export class PlayerActionWidget extends Application {
   /**
    * Handle Rally button
    */
-  _onRally(event) {
+  async _onRally(event) {
     event.preventDefault();
-    // TODO: Open Rally dialog
-    ui.notifications.info('Rally dialog - to be implemented');
+
+    if (!this.crewId) {
+      ui.notifications.warn('Character must be in a crew to rally');
+      return;
+    }
+
+    // Check if crew has other members
+    const state = game.fitgd.store.getState();
+    const teammates = this.crew.characters.filter(id => id !== this.characterId);
+    if (teammates.length === 0) {
+      ui.notifications.warn('No other teammates in crew to rally');
+      return;
+    }
+
+    // Open rally dialog
+    const dialog = new RallyDialog(this.characterId, this.crewId);
+    dialog.render(true);
   }
 
   /**
