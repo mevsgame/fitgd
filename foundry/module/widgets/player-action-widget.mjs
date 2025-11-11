@@ -1190,16 +1190,12 @@ export class PlayerActionWidget extends Application {
       return;
     }
 
-    console.log('FitGD | Opening crew clock selection for crew:', crewId);
-
     // Open ClockSelectionDialog for crew clocks (non-harm)
     const dialog = new ClockSelectionDialog(
       crewId,
       'crew',
       async (clockId) => {
         try {
-          console.log('FitGD | Crew clock selected:', clockId);
-
           if (clockId === '_new') {
             // Create new crew clock
             const clockName = await promptForText(
@@ -1209,11 +1205,8 @@ export class PlayerActionWidget extends Application {
             );
 
             if (!clockName) {
-              console.log('FitGD | Clock creation canceled');
               return; // User canceled
             }
-
-            console.log('FitGD | Creating new crew clock:', clockName, 'for crew:', crewId);
 
             // Create clock via Bridge API
             const newClockId = foundry.utils.randomID();
@@ -1240,8 +1233,6 @@ export class PlayerActionWidget extends Application {
               { affectedReduxIds: [crewId], silent: true }
             );
 
-            console.log('FitGD | Clock created, updating transaction');
-
             // Update transaction with new clock
             await game.fitgd.bridge.execute(
               {
@@ -1256,8 +1247,6 @@ export class PlayerActionWidget extends Application {
               },
               { affectedReduxIds: [this.characterId], silent: true }
             );
-
-            console.log('FitGD | Transaction updated with new clock');
           } else {
             // Existing clock selected
             await game.fitgd.bridge.execute(
