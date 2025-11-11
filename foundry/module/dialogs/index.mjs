@@ -13,6 +13,7 @@ export { promptForText, confirmAction } from './base/dialogHelpers.mjs';
 // Specific dialog implementations
 export { ClockSelectionDialog } from './ClockSelectionDialog.mjs';
 export { CharacterSelectionDialog } from './CharacterSelectionDialog.mjs';
+export { ClockCreationDialog } from './ClockCreationDialog.mjs';
 
 // Note: Existing dialogs from dialogs.mjs are NOT re-exported here
 // to avoid naming conflicts. They should be imported directly from dialogs.mjs:
