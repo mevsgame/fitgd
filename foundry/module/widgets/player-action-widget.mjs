@@ -992,15 +992,23 @@ export class PlayerActionWidget extends Application {
     event.preventDefault();
     const consequenceType = event.currentTarget.dataset.type;
 
+    // Build transaction with defaults
+    const transaction = {
+      consequenceType,
+    };
+
+    // Default harm target to acting character
+    if (consequenceType === 'harm') {
+      transaction.harmTargetCharacterId = this.characterId;
+    }
+
     // Set consequence type (creates or updates transaction)
     await game.fitgd.bridge.execute(
       {
         type: 'playerRoundState/setConsequenceTransaction',
         payload: {
           characterId: this.characterId,
-          transaction: {
-            consequenceType,
-          },
+          transaction,
         },
       },
       { affectedReduxIds: [this.characterId], silent: true }
