@@ -228,6 +228,9 @@ export class PlayerActionWidget extends Application {
       // GM controls
       isGM: game.user.isGM,
 
+      // Stims availability
+      stimsLocked: this._areStimsLocked(state),
+
       // Consequence transaction data (for GM_RESOLVING_CONSEQUENCE state)
       ...(this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE' ? this._getConsequenceData(state) : {}),
     };
@@ -487,6 +490,31 @@ export class PlayerActionWidget extends Application {
     }
 
     return improvements;
+  }
+
+  /**
+   * Check if stims are locked for this character's crew
+   * @param {RootState} state - Redux state
+   * @returns {boolean} True if any character in crew has filled addiction clock
+   * @private
+   */
+  _areStimsLocked(state) {
+    if (!this.crewId) return false;
+
+    const crew = state.crews.byId[this.crewId];
+    if (!crew) return false;
+
+    // Check if ANY character in crew has filled addiction clock
+    for (const characterId of crew.characters) {
+      const characterAddictionClock = Object.values(state.clocks.byId).find(
+        clock => clock.entityId === characterId && clock.clockType === 'addiction'
+      );
+      if (characterAddictionClock && characterAddictionClock.segments >= characterAddictionClock.maxSegments) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -1448,36 +1476,7 @@ export class PlayerActionWidget extends Application {
 
     if (teamAddictionLocked) {
       ui.notifications.error('Stims are LOCKED due to crew addiction! Cannot use stims.');
-
-      // Transition to STIMS_LOCKED state briefly, then back
-      await game.fitgd.bridge.execute(
-        {
-          type: 'playerRoundState/transitionState',
-          payload: {
-            characterId: this.characterId,
-            newState: 'STIMS_LOCKED',
-          },
-        },
-        { affectedReduxIds: [this.characterId], silent: true }
-      );
-
-      // Auto-return to previous state after notification
-      setTimeout(async () => {
-        const currentState = this.playerState?.state;
-        if (currentState === 'STIMS_LOCKED') {
-          await game.fitgd.bridge.execute(
-            {
-              type: 'playerRoundState/transitionState',
-              payload: {
-                characterId: this.characterId,
-                newState: 'ROLLING',
-              },
-            },
-            { affectedReduxIds: [this.characterId], silent: true }
-          );
-        }
-      }, 2000);
-
+      // UI should prevent this from being clicked, but catching it here as a safety check
       return;
     }
 
