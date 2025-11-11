@@ -287,7 +287,7 @@ export class ActionRollDialog extends Dialog {
    * - Devil's Bargain: GM adds complication
    *
    * @param {string} outcome - Roll outcome ('critical', 'success', 'partial', 'failure')
-   * @param {Position} position - Position of the roll ('controlled', 'risky', 'desperate')
+   * @param {import('../../dist/types').Position} position - Position of the roll ('controlled', 'risky', 'desperate')
    * @param {string} characterId - Redux ID of the character
    * @param {string} crewId - Redux ID of the crew
    * @param {boolean} devilsBargain - Whether a devil's bargain was accepted

@@ -14,7 +14,7 @@ import { FitGDTraitSheet, FitGDEquipmentSheet } from '../sheets/item-sheets.mjs'
 /*  Sheet Registration                          */
 /* -------------------------------------------- */
 
-function registerSheetClasses() {
+export function registerSheetClasses() {
   // Unregister default sheets
   Actors.unregisterSheet('core', ActorSheet);
   Items.unregisterSheet('core', ItemSheet);

@@ -10,6 +10,14 @@
 
 // @ts-check
 
+import {
+  updateBroadcastTracking,
+  applyCommandsIncremental,
+  refreshAffectedSheets,
+  reloadStateFromSettings
+} from '../autosave/autosave-manager.mjs';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.mjs';
+
 /* -------------------------------------------- */
 /*  Socket Communication (socketlib)            */
 /* -------------------------------------------- */
@@ -239,14 +247,8 @@ async function receiveCommandsFromSocket(data) {
     }
 
     if (appliedCount > 0 || data.playerRoundState) {
-      // Update lastBroadcastCount to prevent re-broadcasting received commands
-      const history = game.fitgd.foundry.exportHistory();
-      lastBroadcastCount = {
-        characters: history.characters.length,
-        crews: history.crews.length,
-        clocks: history.clocks.length
-      };
-      console.log(`FitGD | Updated broadcast tracking after receiving commands`);
+      // Update broadcast tracking to prevent re-broadcasting received commands
+      updateBroadcastTracking();
 
       // Refresh affected sheets (pass the captured entityIds for deleted clocks)
       refreshAffectedSheets(data.commands, clockEntityIds);
@@ -255,7 +257,6 @@ async function receiveCommandsFromSocket(data) {
       // This ensures GM sees player's trait transactions and plan updates
       if (changedCharacterIds.length > 0) {
         console.log(`FitGD | Refreshing widgets for ${changedCharacterIds.length} changed characters:`, changedCharacterIds);
-        const { refreshSheetsByReduxId } = await import('./dialogs.mjs');
         refreshSheetsByReduxId(changedCharacterIds, false);
       }
 

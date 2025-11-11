@@ -75,3 +75,5 @@ export class ClockSelectionDialog extends BaseSelectionDialog {
         <span class="clock-segments">${clock.segments}/${clock.maxSegments}</span>
       </div>
     `;
+  }
+}

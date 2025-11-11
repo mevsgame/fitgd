@@ -148,6 +148,20 @@ function checkCircuitBreaker(commandCount) {
 }
 
 /**
+ * Update broadcast tracking after receiving commands from other clients
+ * This prevents re-broadcasting commands that were received via socket
+ */
+function updateBroadcastTracking() {
+  const history = game.fitgd.foundry.exportHistory();
+  lastBroadcastCount = {
+    characters: history.characters.length,
+    crews: history.crews.length,
+    clocks: history.clocks.length
+  };
+  console.log(`FitGD | Updated broadcast tracking after receiving commands`);
+}
+
+/**
  * Track initial commands as applied (called on ready)
  */
 function trackInitialCommandsAsApplied() {
@@ -228,7 +242,11 @@ function refreshAffectedSheets(commands, clockEntityIds = new Map()) {
       continue;
     }
 
-    if (app instanceof FitGDCharacterSheet || app instanceof FitGDCrewSheet) {
+    // Check if it's a character or crew sheet by constructor name
+    const isCharSheet = app.constructor.name === 'FitGDCharacterSheet';
+    const isCrewSheet = app.constructor.name === 'FitGDCrewSheet';
+
+    if (isCharSheet || isCrewSheet) {
       // Try to get Redux ID from the actor flags
       let reduxId = null;
       try {
@@ -283,10 +301,12 @@ async function reloadStateFromSettings() {
     if (totalCommands > 0) {
       console.log(`FitGD | Replaying ${totalCommands} commands...`);
 
-      // Reset store to initial state, then replay all commands
-      // This ensures we rebuild state from scratch rather than applying changes twice
-      const { configureStore } = await import('../dist/fitgd-core.es.js');
-      game.fitgd.store = configureStore();
+      // Clear existing state by dispatching reset actions
+      console.log('FitGD | Resetting store to initial state...');
+      game.fitgd.store.dispatch({ type: 'characters/reset' });
+      game.fitgd.store.dispatch({ type: 'crews/reset' });
+      game.fitgd.store.dispatch({ type: 'clocks/reset' });
+      game.fitgd.store.dispatch({ type: 'playerRoundState/reset' });
 
       // Replay commands
       game.fitgd.foundry.replayCommands(validHistory);
@@ -295,9 +315,13 @@ async function reloadStateFromSettings() {
 
       // Re-render all open sheets to show updated state
       for (const app of Object.values(ui.windows)) {
-        if (app.rendered && (app instanceof FitGDCharacterSheet || app instanceof FitGDCrewSheet)) {
-          console.log(`FitGD | Re-rendering ${app.constructor.name}`);
-          app.render(false);
+        if (app.rendered) {
+          const isCharSheet = app.constructor.name === 'FitGDCharacterSheet';
+          const isCrewSheet = app.constructor.name === 'FitGDCrewSheet';
+          if (isCharSheet || isCrewSheet) {
+            console.log(`FitGD | Re-rendering ${app.constructor.name}`);
+            app.render(false);
+          }
         }
       }
     }
@@ -377,6 +401,8 @@ function saveCommandHistory() {
 export {
   saveCommandHistory,
   trackInitialCommandsAsApplied,
+  updateBroadcastTracking,
+  applyCommandsIncremental,
   getNewCommandsSinceLastBroadcast,
   checkCircuitBreaker,
   refreshAffectedSheets,
