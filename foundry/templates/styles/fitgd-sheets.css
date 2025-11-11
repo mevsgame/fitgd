@@ -300,6 +300,11 @@
   margin-left: 10px;
 }
 
+.fitgd .allocation-complete {
+  color: #4caf50;
+  margin-left: 5px;
+}
+
 .fitgd .edit-mode-active {
   color: #ffd700;
   background: rgba(255, 215, 0, 0.1);
@@ -1098,7 +1103,8 @@
 .fitgd-history-management .notification {
   padding: 1em;
   border-radius: 4px;
-  margin: 1em 0;
+  margin-top: 1em;
+  margin-bottom: 1em;
 }
 
 .fitgd-history-management .notification.info {
@@ -1636,4 +1642,226 @@
 
 .addiction-warning i {
   margin-right: 5px;
+}
+
+/* -------------------------------------------- */
+/*  Clock Creation Dialog                      */
+/* -------------------------------------------- */
+
+.clock-creation-dialog {
+  font-family: "Signika", sans-serif;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  padding: 15px;
+}
+
+.clock-creation-dialog .dialog-header {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.clock-creation-dialog .dialog-header h2 {
+  margin: 0 0 8px 0;
+  color: #ffd700;
+  font-size: 1.4em;
+}
+
+.clock-creation-dialog .help-text {
+  margin: 0;
+  font-size: 0.9em;
+  color: #aaa;
+  font-style: italic;
+}
+
+.clock-creation-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.clock-creation-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.clock-creation-form label {
+  font-weight: bold;
+  color: #ffd700;
+  font-size: 0.95em;
+}
+
+.clock-creation-form input[type="text"],
+.clock-creation-form select,
+.clock-creation-form textarea {
+  width: 100%;
+  padding: 10px 8px;
+  background: #2a2a2a;
+  border: 1px solid #555;
+  color: #e0e0e0;
+  border-radius: 4px;
+  font-family: "Signika", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  height: auto;
+  min-height: 38px;
+  transition: border-color 0.2s;
+}
+
+.clock-creation-form select option {
+  padding: 8px;
+  line-height: 1.5;
+  background: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.clock-creation-form input[type="text"]:focus,
+.clock-creation-form select:focus,
+.clock-creation-form textarea:focus {
+  outline: none;
+  border-color: #ffd700;
+  background: #2f2f2f;
+}
+
+.clock-creation-form select {
+  cursor: pointer;
+}
+
+.clock-creation-form textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.clock-creation-form .harm-reference {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(139, 0, 0, 0.1);
+  border-left: 3px solid #8b0000;
+  border-radius: 4px;
+}
+
+/* -------------------------------------------- */
+/*  Selection Dialogs (Base & Clock)           */
+/* -------------------------------------------- */
+
+.fitgd-selection-dialog,
+.fitgd-dialog {
+  font-family: "Signika", sans-serif;
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+
+.selection-dialog {
+  padding: 15px;
+}
+
+.selection-dialog .search-box {
+  margin-bottom: 15px;
+}
+
+.selection-dialog .search-input {
+  width: 100%;
+  padding: 10px;
+  background: #2a2a2a;
+  border: 1px solid #555;
+  color: #e0e0e0;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: "Signika", sans-serif;
+}
+
+.selection-dialog .search-input:focus {
+  outline: none;
+  border-color: #ffd700;
+  background: #2f2f2f;
+}
+
+.selection-dialog .item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 15px;
+  padding: 5px;
+}
+
+.selection-dialog .item-option {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+  border: 2px solid #555;
+  color: #e0e0e0;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+  font-family: "Signika", sans-serif;
+}
+
+.selection-dialog .item-option:hover {
+  border-color: #ffd700;
+  background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+  transform: translateX(2px);
+}
+
+.selection-dialog .item-option .clock-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.selection-dialog .item-option .clock-name {
+  font-weight: bold;
+  color: #fff;
+}
+
+.selection-dialog .item-option .clock-segments {
+  color: #ff6347;
+  font-weight: bold;
+  font-size: 0.95em;
+}
+
+.selection-dialog .empty-message {
+  text-align: center;
+  color: #777;
+  font-style: italic;
+  padding: 40px 20px;
+  margin: 0;
+}
+
+.selection-dialog .create-new-section {
+  border-top: 1px solid #444;
+  padding-top: 15px;
+  margin-top: 10px;
+}
+
+.selection-dialog .create-new-btn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #8b0000 0%, #5a0000 100%);
+  border: 2px solid #ff6347;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 1em;
+  transition: all 0.2s;
+  font-family: "Signika", sans-serif;
+}
+
+.selection-dialog .create-new-btn:hover {
+  background: linear-gradient(135deg, #a00000 0%, #700000 100%);
+  box-shadow: 0 0 15px rgba(255, 99, 71, 0.6);
+  transform: translateY(-2px);
+}
+
+.selection-dialog .create-new-btn i {
+  margin-right: 8px;
+}
+
+/* Hidden utility class for search filtering */
+.selection-dialog .item-option.hidden {
+  display: none;
 }

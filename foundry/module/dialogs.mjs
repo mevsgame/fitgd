@@ -452,38 +452,50 @@ export class TakeHarmDialog extends Dialog {
    * @param {number} options.defaultSegments - Pre-calculate segments to display
    */
   constructor(characterId, crewId, options = {}) {
+    const defaultPosition = options.defaultPosition || 'risky';
+
     const content = `
-      <form>
-        <div class="form-group">
-          <label>Harm Type</label>
-          <select name="harmType">
-            <option value="Physical Harm">Physical Harm</option>
-            <option value="Shaken Morale">Shaken Morale</option>
-          </select>
+      <div class="clock-creation-dialog">
+        <div class="dialog-header">
+          <h2>Take Harm</h2>
+          <p class="help-text">Apply harm from consequences or enemy action</p>
         </div>
-        <div class="form-group">
-          <label>Position</label>
-          <select name="position">
-            <option value="controlled">Controlled</option>
-            <option value="risky" selected>Risky</option>
-            <option value="desperate">Desperate</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Effect (Harm Severity)</label>
-          <select name="effect">
-            <option value="limited">Limited</option>
-            <option value="standard" selected>Standard</option>
-            <option value="great">Great</option>
-          </select>
-        </div>
-        <p class="help-text">
-          <strong>Harm Segments:</strong><br/>
-          Controlled: 0/1/2 (Limited/Standard/Great)<br/>
-          Risky: 2/3/4 (Limited/Standard/Great)<br/>
-          Desperate: 4/5/6 (Limited/Standard/Great)
-        </p>
-      </form>
+
+        <form class="clock-creation-form">
+          <div class="form-group">
+            <label>Harm Type</label>
+            <select name="harmType">
+              <option value="Physical Harm">Physical Harm</option>
+              <option value="Shaken Morale">Shaken Morale</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Position</label>
+            <select name="position">
+              <option value="controlled" ${defaultPosition === 'controlled' ? 'selected' : ''}>Controlled</option>
+              <option value="risky" ${defaultPosition === 'risky' ? 'selected' : ''}>Risky</option>
+              <option value="desperate" ${defaultPosition === 'desperate' ? 'selected' : ''}>Desperate</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Effect (Harm Severity)</label>
+            <select name="effect">
+              <option value="limited">Limited</option>
+              <option value="standard" selected>Standard</option>
+              <option value="great">Great</option>
+            </select>
+          </div>
+
+          <div class="help-text harm-reference">
+            <strong>Harm Segments:</strong><br/>
+            • Controlled: 0/1/2 (Limited/Standard/Great)<br/>
+            • Risky: 2/3/4 (Limited/Standard/Great)<br/>
+            • Desperate: 4/5/6 (Limited/Standard/Great)
+          </div>
+        </form>
+      </div>
     `;
 
     const buttons = {
@@ -503,6 +515,7 @@ export class TakeHarmDialog extends Dialog {
       content,
       buttons,
       default: "apply",
+      classes: ['fitgd', 'clock-creation-dialog'],
       ...options
     });
 
@@ -1362,102 +1375,60 @@ export class FlashbackTraitsDialog extends Application {
  *
  * @extends Dialog
  */
-export class AddClockDialog extends Dialog {
+export class AddClockDialog {
   /**
    * Create a new Add Clock Dialog
+   *
+   * This is now a wrapper around ClockCreationDialog for backwards compatibility.
+   * Consolidates duplicate clock creation logic.
    *
    * @param {string} crewId - Redux ID of the crew
    * @param {Object} options - Additional options passed to Dialog constructor
    */
   constructor(crewId, options = {}) {
-    const content = `
-      <form>
-        <div class="form-group">
-          <label>Clock Name</label>
-          <input type="text" name="clockName" placeholder="e.g., 'Infiltrate Enemy Base'" />
-        </div>
-        <div class="form-group">
-          <label>Size (segments)</label>
-          <select name="segments">
-            <option value="4">4 segments (short)</option>
-            <option value="6" selected>6 segments</option>
-            <option value="8">8 segments</option>
-            <option value="12">12 segments (long)</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Category</label>
-          <select name="category">
-            <option value="long-term-project">Long-term Project</option>
-            <option value="threat">Threat (countdown)</option>
-            <option value="personal-goal">Personal Goal</option>
-            <option value="obstacle">Obstacle</option>
-            <option value="faction">Faction</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Description (optional)</label>
-          <textarea name="description" rows="2"></textarea>
-        </div>
-      </form>
-    `;
-
-    const buttons = {
-      add: {
-        icon: '<i class="fas fa-clock"></i>',
-        label: "Add Clock",
-        callback: (html) => this._onApply(html, crewId)
-      },
-      cancel: {
-        icon: '<i class="fas fa-times"></i>',
-        label: "Cancel"
-      }
-    };
-
-    super({
-      title: "Add Progress Clock",
-      content,
-      buttons,
-      default: "add",
-      ...options
-    });
-
     this.crewId = crewId;
+    this.options = options;
+    this._dialogPromise = null;
   }
 
-  async _onApply(html, crewId) {
-    const form = html.find('form')[0];
-    const clockName = form.clockName.value.trim();
-    const segments = parseInt(form.segments.value);
-    const category = form.category.value;
-    const description = form.description.value.trim();
+  /**
+   * Render the underlying clock creation dialog
+   *
+   * @param {boolean} force - Force render
+   * @returns {Promise<Application>}
+   */
+  async render(force) {
+    // Dynamically import to avoid circular dependency
+    const { ClockCreationDialog } = await import('./dialogs/ClockCreationDialog.mjs');
 
-    if (!clockName) {
-      ui.notifications.warn('Please enter a clock name');
-      return;
-    }
+    const dialog = new ClockCreationDialog(
+      this.crewId,
+      'progress',
+      async (clockData) => {
+        try {
+          const clockId = game.fitgd.api.clock.createProgress({
+            entityId: this.crewId,
+            name: clockData.name,
+            segments: clockData.segments,
+            category: clockData.category,
+            isCountdown: clockData.isCountdown,
+            description: clockData.description
+          });
 
-    try {
-      const clockId = game.fitgd.api.clock.createProgress({
-        entityId: crewId,
-        name: clockName,
-        segments,
-        category,
-        isCountdown: category === 'threat',
-        description: description || undefined
-      });
+          // Save immediately (critical state change)
+          await game.fitgd.saveImmediate();
 
-      // Save immediately (critical state change)
-      await game.fitgd.saveImmediate();
+          // Re-render sheet (force = true to ensure new clock appears)
+          refreshSheetsByReduxId([this.crewId], true);
+        } catch (error) {
+          ui.notifications.error(`Error: ${error.message}`);
+          console.error('FitGD | Add Clock error:', error);
+          throw error; // Re-throw so dialog can handle it
+        }
+      },
+      this.options
+    );
 
-      ui.notifications.info(`Clock "${clockName}" created`);
-
-      // Re-render sheet (force = true to ensure new clock appears)
-      refreshSheetsByReduxId([crewId], true);
-
-    } catch (error) {
-      ui.notifications.error(`Error: ${error.message}`);
-      console.error('FitGD | Add Clock error:', error);
-    }
+    return dialog.render(force);
   }
 }

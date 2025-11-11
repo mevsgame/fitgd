@@ -157,7 +157,14 @@ export class BaseSelectionDialog extends Application {
 
     items.each((i, el) => {
       const text = el.textContent.toLowerCase();
-      el.style.display = text.includes(query) ? '' : 'none';
+      const matches = text.includes(query);
+
+      // Use CSS class instead of inline style
+      if (matches) {
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
     });
   }
 
