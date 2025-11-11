@@ -50,13 +50,34 @@
       </div>
       {{/if}}
 
+      <!-- Momentum Replenishment -->
+      <div class="momentum-replenishment">
+        <h4>MOMENTUM REPLENISHMENT:</h4>
+        <div class="replenishment-row">
+          <!-- Momentum Track (Compact) -->
+          <div class="momentum-track-compact">
+            {{#times 10}}
+              <span class="momentum-box-compact {{#if (lt this ../momentum)}}filled{{/if}}">
+                {{#if (eq this ../momentum)}}▶{{/if}}
+              </span>
+            {{/times}}
+          </div>
+          <!-- Replenishment Buttons -->
+          <div class="replenishment-buttons">
+            <button type="button" data-action="rally" {{#unless canRally}}disabled{{/unless}}>
+              Rally
+            </button>
+            <button type="button" data-action="lean-into-trait" {{#if (lt (countArray character.traits) 1)}}disabled{{/if}}>
+              Lean Into Trait
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Action Modifiers Buttons -->
       <div class="prepare-actions">
         <h4>ACTION MODIFIERS:</h4>
         <div class="button-row">
-          <button type="button" data-action="rally" {{#unless canRally}}disabled{{/unless}}>
-            Rally
-          </button>
           <button type="button" data-action="use-trait" class="{{#if playerState.traitTransaction}}active{{/if}}" {{#if (and (eq playerState.position "controlled") (lt momentum 1))}}disabled{{/if}}>
             Use Trait
           </button>
