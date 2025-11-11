@@ -8,12 +8,12 @@
 
 import {
   ActionRollDialog,
-  TakeHarmDialog,
-  RallyDialog,
   AddTraitDialog,
   FlashbackDialog,
   AddClockDialog
 } from '../dialogs.mjs';
+
+import { ClockCreationDialog } from '../dialogs/index.mjs';
 
 /**
  * FitGD Character Sheet
@@ -143,11 +143,11 @@ class FitGDCharacterSheet extends ActorSheet {
     html.find('.delete-clock-btn').click(this._onDeleteClock.bind(this));
 
     // Traits
-    html.find('.trait-lean-btn').click(this._onLeanIntoTrait.bind(this));
     html.find('.add-trait-btn').click(this._onAddTrait.bind(this));
+    html.find('.delete-trait-btn').click(this._onDeleteTrait.bind(this));
 
-    // Rally
-    html.find('.use-rally-btn').click(this._onUseRally.bind(this));
+    // Rally checkbox
+    html.find('input[name="system.rallyAvailable"]').change(this._onRallyChange.bind(this));
 
     // Flashback
     html.find('.flashback-btn').click(this._onFlashback.bind(this));
@@ -388,14 +388,52 @@ class FitGDCharacterSheet extends ActorSheet {
     new ActionRollDialog(characterId, crewId).render(true);
   }
 
+  /**
+   * Handle Add Harm button
+   * Opens ClockCreationDialog to create a new harm clock
+   */
   async _onAddHarm(event) {
     event.preventDefault();
     const characterId = this._getReduxId();
     if (!characterId) return;
 
-    const crewId = this._getCrewId(characterId);
+    // Open ClockCreationDialog for harm clocks (same pattern as player-action-widget)
+    const dialog = new ClockCreationDialog(
+      characterId,
+      'harm',
+      async (clockData) => {
+        try {
+          // Create clock via Bridge API
+          const newClockId = foundry.utils.randomID();
 
-    new TakeHarmDialog(characterId, crewId).render(true);
+          await game.fitgd.bridge.execute(
+            {
+              type: 'clocks/createClock',
+              payload: {
+                id: newClockId,
+                entityId: characterId,
+                clockType: 'harm',
+                subtype: clockData.name,
+                maxSegments: clockData.segments,
+                segments: 0,
+                metadata: clockData.description ? { description: clockData.description } : undefined,
+              },
+            },
+            { affectedReduxIds: [characterId], force: true }
+          );
+
+          ui.notifications.info(`Harm clock "${clockData.name}" created`);
+        } catch (error) {
+          console.error('FitGD | Error creating harm clock:', error);
+          ui.notifications.error(`Error creating harm clock: ${error.message}`);
+        }
+      },
+      {
+        classes: ['dialog', 'fitgd-dialog']
+      }
+    );
+
+    dialog.render(true);
   }
 
   /**
@@ -505,41 +543,6 @@ class FitGDCharacterSheet extends ActorSheet {
     }
   }
 
-  async _onLeanIntoTrait(event) {
-    event.preventDefault();
-    const characterId = this._getReduxId();
-    if (!characterId) return;
-
-    const crewId = this._getCrewId(characterId);
-    const traitId = event.currentTarget.dataset.traitId;
-
-    if (!crewId) {
-      ui.notifications.warn('Character must be part of a crew to lean into traits');
-      return;
-    }
-
-    try {
-      const result = game.fitgd.api.action.leanIntoTrait({
-        crewId,
-        characterId,
-        traitId
-      });
-
-      ui.notifications.info(`Leaned into trait. Gained ${result.momentumGenerated} Momentum.`);
-
-      // Save immediately (critical state change)
-      await game.fitgd.saveImmediate();
-
-      // Re-render sheets
-      this.render(false);
-      refreshSheetsByReduxId([crewId], false);
-
-    } catch (error) {
-      ui.notifications.error(`Error: ${error.message}`);
-      console.error('FitGD | Lean into trait error:', error);
-    }
-  }
-
   async _onAddTrait(event) {
     event.preventDefault();
     const characterId = this._getReduxId();
@@ -548,19 +551,68 @@ class FitGDCharacterSheet extends ActorSheet {
     new AddTraitDialog(characterId).render(true);
   }
 
-  async _onUseRally(event) {
+  async _onDeleteTrait(event) {
+    if (!game.user.isGM) return;
+
     event.preventDefault();
+    const traitId = event.currentTarget.dataset.traitId;
+
+    if (!traitId) return;
+
     const characterId = this._getReduxId();
     if (!characterId) return;
 
-    const crewId = this._getCrewId(characterId);
+    // Get trait name for confirmation
+    const character = game.fitgd.api.character.getCharacter(characterId);
+    const trait = character?.traits.find(t => t.id === traitId);
+    const traitName = trait?.name || 'Unknown Trait';
 
-    if (!crewId) {
-      ui.notifications.warn('Character must be part of a crew to use Rally');
-      return;
+    const confirmed = await Dialog.confirm({
+      title: 'Delete Trait',
+      content: `<p>Are you sure you want to delete <strong>${traitName}</strong>?</p>`,
+      yes: () => true,
+      no: () => false,
+      options: {
+        classes: ['dialog', 'fitgd-dialog']
+      }
+    });
+
+    if (!confirmed) return;
+
+    try {
+      game.fitgd.api.character.removeTrait({ characterId, traitId });
+      await game.fitgd.saveImmediate();
+      this.render(false);
+      ui.notifications.info(`Trait "${traitName}" deleted`);
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Trait delete error:', error);
     }
+  }
 
-    new RallyDialog(characterId, crewId).render(true);
+  async _onRallyChange(event) {
+    if (!game.user.isGM) return;
+
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    const isChecked = event.currentTarget.checked;
+
+    try {
+      // Use the game API to set rally availability
+      game.fitgd.api.character.setRallyAvailable({
+        characterId,
+        available: isChecked
+      });
+
+      await game.fitgd.saveImmediate();
+      ui.notifications.info(`Rally ${isChecked ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Rally change error:', error);
+      // Revert checkbox on error
+      event.currentTarget.checked = !isChecked;
+    }
   }
 
   async _onFlashback(event) {

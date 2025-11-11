@@ -82,7 +82,7 @@ export class TakeHarmDialog extends Dialog {
       content,
       buttons,
       default: "apply",
-      classes: ['fitgd', 'clock-creation-dialog'],
+      classes: ['fitgd', 'fitgd-dialog', 'clock-creation-dialog'],
       ...options
     });
 
