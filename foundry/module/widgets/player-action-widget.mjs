@@ -228,6 +228,9 @@ export class PlayerActionWidget extends Application {
       // GM controls
       isGM: game.user.isGM,
 
+      // Stims availability
+      stimsLocked: this._areStimsLocked(state),
+
       // Consequence transaction data (for GM_RESOLVING_CONSEQUENCE state)
       ...(this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE' ? this._getConsequenceData(state) : {}),
     };
@@ -490,6 +493,31 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
+   * Check if stims are locked for this character's crew
+   * @param {RootState} state - Redux state
+   * @returns {boolean} True if any character in crew has filled addiction clock
+   * @private
+   */
+  _areStimsLocked(state) {
+    if (!this.crewId) return false;
+
+    const crew = state.crews.byId[this.crewId];
+    if (!crew) return false;
+
+    // Check if ANY character in crew has filled addiction clock
+    for (const characterId of crew.characters) {
+      const characterAddictionClock = Object.values(state.clocks.byId).find(
+        clock => clock.entityId === characterId && clock.clockType === 'addiction'
+      );
+      if (characterAddictionClock && characterAddictionClock.segments >= characterAddictionClock.maxSegments) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * Get consequence transaction data for template
    * Resolves IDs to objects and computes derived values
    *
@@ -532,10 +560,11 @@ export class PlayerActionWidget extends Application {
       selectedCrewClock = state.clocks.byId[transaction.crewClockId];
     }
 
-    // Calculate harm segments and momentum gain using effective position/effect
+    // Calculate harm segments and momentum gain using effective position
+    // Note: Effect does NOT apply to consequences - only to success clocks
     const effectivePosition = this._getEffectivePosition();
     const effectiveEffect = this._getEffectiveEffect();
-    const calculatedHarmSegments = selectConsequenceSeverity(effectivePosition, effectiveEffect);
+    const calculatedHarmSegments = selectConsequenceSeverity(effectivePosition);
     const calculatedMomentumGain = selectMomentumGain(effectivePosition);
 
     // Determine if consequence is fully configured
@@ -992,15 +1021,23 @@ export class PlayerActionWidget extends Application {
     event.preventDefault();
     const consequenceType = event.currentTarget.dataset.type;
 
+    // Build transaction with defaults
+    const transaction = {
+      consequenceType,
+    };
+
+    // Default harm target to acting character
+    if (consequenceType === 'harm') {
+      transaction.harmTargetCharacterId = this.characterId;
+    }
+
     // Set consequence type (creates or updates transaction)
     await game.fitgd.bridge.execute(
       {
         type: 'playerRoundState/setConsequenceTransaction',
         payload: {
           characterId: this.characterId,
-          transaction: {
-            consequenceType,
-          },
+          transaction,
         },
       },
       { affectedReduxIds: [this.characterId], silent: true }
@@ -1058,16 +1095,12 @@ export class PlayerActionWidget extends Application {
       return;
     }
 
-    console.log('FitGD | Opening harm clock selection for target:', targetCharacterId);
-
     // Open ClockSelectionDialog for harm clocks
     const dialog = new ClockSelectionDialog(
       targetCharacterId,
       'harm',
       async (clockId) => {
         try {
-          console.log('FitGD | Harm clock selected:', clockId);
-
           if (clockId === '_new') {
             // Create new harm clock
             const clockType = await promptForText(
@@ -1077,11 +1110,8 @@ export class PlayerActionWidget extends Application {
             );
 
             if (!clockType) {
-              console.log('FitGD | Clock creation canceled');
               return; // User canceled
             }
-
-            console.log('FitGD | Creating new harm clock:', clockType, 'for character:', targetCharacterId);
 
             // Create clock via Bridge API
             const newClockId = foundry.utils.randomID();
@@ -1108,8 +1138,6 @@ export class PlayerActionWidget extends Application {
               { affectedReduxIds: [targetCharacterId], silent: true }
             );
 
-            console.log('FitGD | Clock created, updating transaction');
-
             // Update transaction with new clock
             await game.fitgd.bridge.execute(
               {
@@ -1124,8 +1152,6 @@ export class PlayerActionWidget extends Application {
               },
               { affectedReduxIds: [this.characterId], silent: true }
             );
-
-            console.log('FitGD | Transaction updated with new clock');
           } else {
             // Existing clock selected
             await game.fitgd.bridge.execute(
@@ -1164,16 +1190,12 @@ export class PlayerActionWidget extends Application {
       return;
     }
 
-    console.log('FitGD | Opening crew clock selection for crew:', crewId);
-
     // Open ClockSelectionDialog for crew clocks (non-harm)
     const dialog = new ClockSelectionDialog(
       crewId,
       'crew',
       async (clockId) => {
         try {
-          console.log('FitGD | Crew clock selected:', clockId);
-
           if (clockId === '_new') {
             // Create new crew clock
             const clockName = await promptForText(
@@ -1183,11 +1205,8 @@ export class PlayerActionWidget extends Application {
             );
 
             if (!clockName) {
-              console.log('FitGD | Clock creation canceled');
               return; // User canceled
             }
-
-            console.log('FitGD | Creating new crew clock:', clockName, 'for crew:', crewId);
 
             // Create clock via Bridge API
             const newClockId = foundry.utils.randomID();
@@ -1214,8 +1233,6 @@ export class PlayerActionWidget extends Application {
               { affectedReduxIds: [crewId], silent: true }
             );
 
-            console.log('FitGD | Clock created, updating transaction');
-
             // Update transaction with new clock
             await game.fitgd.bridge.execute(
               {
@@ -1230,8 +1247,6 @@ export class PlayerActionWidget extends Application {
               },
               { affectedReduxIds: [this.characterId], silent: true }
             );
-
-            console.log('FitGD | Transaction updated with new clock');
           } else {
             // Existing clock selected
             await game.fitgd.bridge.execute(
@@ -1328,7 +1343,8 @@ export class PlayerActionWidget extends Application {
       await game.fitgd.saveImmediate(); // TODO: Refactor to Bridge API
     }
 
-    // Clear transaction and transition to TURN_COMPLETE
+    // Clear transaction and transition through proper state machine
+    // APPLYING_EFFECTS → TURN_COMPLETE → IDLE_WAITING
     await game.fitgd.bridge.executeBatch([
       {
         type: 'playerRoundState/clearConsequenceTransaction',
@@ -1341,14 +1357,22 @@ export class PlayerActionWidget extends Application {
           newState: 'TURN_COMPLETE',
         },
       },
-      {
-        type: 'playerRoundState/resetPlayerState',
-        payload: { characterId: this.characterId },
-      }
     ], {
       affectedReduxIds: [this.characterId],
       silent: true,
     });
+
+    // Transition to IDLE_WAITING (complete the turn)
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/transitionState',
+        payload: {
+          characterId: this.characterId,
+          newState: 'IDLE_WAITING',
+        },
+      },
+      { affectedReduxIds: [this.characterId], silent: true }
+    );
 
     // Close widget after brief delay
     setTimeout(() => this.close(), 500);
@@ -1361,9 +1385,9 @@ export class PlayerActionWidget extends Application {
   async _applyConsequenceTransaction(transaction) {
     if (transaction.consequenceType === 'harm') {
       // Apply harm to selected clock
+      // Note: Effect does NOT apply to consequences - only position matters
       const effectivePosition = this._getEffectivePosition();
-      const effectiveEffect = this._getEffectiveEffect();
-      const segments = selectConsequenceSeverity(effectivePosition, effectiveEffect);
+      const segments = selectConsequenceSeverity(effectivePosition);
 
       await game.fitgd.bridge.execute(
         {
@@ -1376,22 +1400,25 @@ export class PlayerActionWidget extends Application {
         { affectedReduxIds: [transaction.harmTargetCharacterId], silent: true }
       );
 
-      ui.notifications.info(`Applied ${segments} harm to ${transaction.harmClockId}`);
+      ui.notifications.info(`Applied ${segments} harm`);
 
     } else if (transaction.consequenceType === 'crew-clock') {
-      // Advance crew clock
+      // Advance crew clock using standardized position-based values
+      const effectivePosition = this._getEffectivePosition();
+      const segments = selectConsequenceSeverity(effectivePosition);
+
       await game.fitgd.bridge.execute(
         {
           type: 'clocks/addSegments',
           payload: {
             clockId: transaction.crewClockId,
-            amount: transaction.crewClockSegments,
+            amount: segments,
           },
         },
         { affectedReduxIds: [this.crewId], silent: true }
       );
 
-      ui.notifications.info(`Advanced crew clock by ${transaction.crewClockSegments} segments`);
+      ui.notifications.info(`Advanced crew clock by ${segments} segments (${effectivePosition})`);
     }
   }
 
@@ -1420,47 +1447,30 @@ export class PlayerActionWidget extends Application {
     }
 
     const state = game.fitgd.store.getState();
+    const crew = state.crews.byId[this.crewId];
 
-    // Find addiction clock for crew
-    const addictionClock = Object.values(state.clocks.byId).find(
-      clock => clock.entityId === this.crewId && clock.clockType === 'addiction'
-    );
-
-    // Check if stims are locked (addiction clock filled)
-    if (addictionClock && addictionClock.segments >= addictionClock.maxSegments) {
-      ui.notifications.error('Stims are LOCKED due to addiction! Cannot use stims.');
-
-      // Transition to STIMS_LOCKED state briefly, then back
-      await game.fitgd.bridge.execute(
-        {
-          type: 'playerRoundState/transitionState',
-          payload: {
-            characterId: this.characterId,
-            newState: 'STIMS_LOCKED',
-          },
-        },
-        { affectedReduxIds: [this.characterId], silent: true }
+    // Check if ANY character in crew has filled addiction clock (team-wide lock)
+    let teamAddictionLocked = false;
+    for (const characterId of crew.characters) {
+      const characterAddictionClock = Object.values(state.clocks.byId).find(
+        clock => clock.entityId === characterId && clock.clockType === 'addiction'
       );
+      if (characterAddictionClock && characterAddictionClock.segments >= characterAddictionClock.maxSegments) {
+        teamAddictionLocked = true;
+        break;
+      }
+    }
 
-      // Auto-return to previous state after notification
-      setTimeout(async () => {
-        const currentState = this.playerState?.state;
-        if (currentState === 'STIMS_LOCKED') {
-          await game.fitgd.bridge.execute(
-            {
-              type: 'playerRoundState/transitionState',
-              payload: {
-                characterId: this.characterId,
-                newState: 'ROLLING',
-              },
-            },
-            { affectedReduxIds: [this.characterId], silent: true }
-          );
-        }
-      }, 2000);
-
+    if (teamAddictionLocked) {
+      ui.notifications.error('Stims are LOCKED due to crew addiction! Cannot use stims.');
+      // UI should prevent this from being clicked, but catching it here as a safety check
       return;
     }
+
+    // Find this character's addiction clock
+    const addictionClock = Object.values(state.clocks.byId).find(
+      clock => clock.entityId === this.characterId && clock.clockType === 'addiction'
+    );
 
     // Create addiction clock if it doesn't exist
     let addictionClockId = addictionClock?.id;
@@ -1471,29 +1481,39 @@ export class PlayerActionWidget extends Application {
           type: 'clocks/createClock',
           payload: {
             id: addictionClockId,
-            entityId: this.crewId,
+            entityId: this.characterId, // Per-character, not per-crew
             clockType: 'addiction',
             subtype: 'Addiction',
             maxSegments: 8,
             segments: 0,
           },
         },
-        { affectedReduxIds: [this.crewId], silent: true }
+        { affectedReduxIds: [this.characterId], silent: true }
       );
 
       ui.notifications.info('Addiction clock created');
     }
 
-    // Advance addiction clock by 1
+    // Roll d6 to determine addiction advance
+    const addictionRoll = await new Roll('1d6').evaluate();
+    const addictionAmount = addictionRoll.total;
+
+    // Post addiction roll to chat
+    await addictionRoll.toMessage({
+      speaker: ChatMessage.getSpeaker(),
+      flavor: `${this.character.name} - Addiction Roll (Stims)`,
+    });
+
+    // Advance addiction clock by roll result
     await game.fitgd.bridge.execute(
       {
         type: 'clocks/addSegments',
         payload: {
           clockId: addictionClockId,
-          amount: 1,
+          amount: addictionAmount,
         },
       },
-      { affectedReduxIds: [this.crewId], silent: true }
+      { affectedReduxIds: [this.characterId], silent: true }
     );
 
     // Get updated clock state
@@ -1501,7 +1521,7 @@ export class PlayerActionWidget extends Application {
     const updatedClock = updatedState.clocks.byId[addictionClockId];
     const newSegments = updatedClock.segments;
 
-    ui.notifications.warn(`Addiction clock: ${newSegments}/${updatedClock.maxSegments}`);
+    ui.notifications.warn(`Addiction clock: ${newSegments}/${updatedClock.maxSegments} (+${addictionAmount})`);
 
     // Check if addiction clock just filled
     if (newSegments >= updatedClock.maxSegments) {

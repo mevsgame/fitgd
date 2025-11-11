@@ -218,7 +218,7 @@ const clockSlice = createSlice({
           }
         }
 
-        // Special handling for addiction clocks (only one per crew)
+        // Special handling for addiction clocks (only one per character)
         if (clock.clockType === 'addiction') {
           const existingAddictionClocks = getClocksByTypeAndEntity(
             state,

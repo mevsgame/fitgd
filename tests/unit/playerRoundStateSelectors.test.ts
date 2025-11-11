@@ -265,33 +265,30 @@ describe('playerRoundStateSelectors', () => {
   });
 
   describe('selectConsequenceSeverity', () => {
-    it('should return correct harm for all position/effect combinations', () => {
-      // Controlled
-      expect(selectConsequenceSeverity('controlled', 'limited')).toBe(0);
-      expect(selectConsequenceSeverity('controlled', 'standard')).toBe(1);
-      expect(selectConsequenceSeverity('controlled', 'great')).toBe(2);
+    it('should return correct segments based on position only (not effect)', () => {
+      // Controlled: 1 segment
+      expect(selectConsequenceSeverity('controlled')).toBe(1);
 
-      // Risky
-      expect(selectConsequenceSeverity('risky', 'limited')).toBe(1);
-      expect(selectConsequenceSeverity('risky', 'standard')).toBe(2);
-      expect(selectConsequenceSeverity('risky', 'great')).toBe(3);
+      // Risky: 3 segments
+      expect(selectConsequenceSeverity('risky')).toBe(3);
 
-      // Desperate
-      expect(selectConsequenceSeverity('desperate', 'limited')).toBe(2);
-      expect(selectConsequenceSeverity('desperate', 'standard')).toBe(4);
-      expect(selectConsequenceSeverity('desperate', 'great')).toBe(6);
+      // Desperate: 5 segments
+      expect(selectConsequenceSeverity('desperate')).toBe(5);
     });
 
     it('should match CONSEQUENCE_TABLE', () => {
-      Object.entries(CONSEQUENCE_TABLE).forEach(([position, effects]) => {
-        Object.entries(effects).forEach(([effect, expectedHarm]) => {
-          const result = selectConsequenceSeverity(
-            position as any,
-            effect as any
-          );
-          expect(result).toBe(expectedHarm);
-        });
+      Object.entries(CONSEQUENCE_TABLE).forEach(([position, expectedSegments]) => {
+        const result = selectConsequenceSeverity(position as any);
+        expect(result).toBe(expectedSegments);
       });
+    });
+
+    it('should NOT vary by effect (effect only applies to success clocks)', () => {
+      // All positions should return same value regardless of effect
+      // This test documents that effect is intentionally ignored for consequences
+      expect(selectConsequenceSeverity('controlled')).toBe(1);
+      expect(selectConsequenceSeverity('risky')).toBe(3);
+      expect(selectConsequenceSeverity('desperate')).toBe(5);
     });
   });
 

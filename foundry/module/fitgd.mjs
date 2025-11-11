@@ -1645,12 +1645,19 @@ class FitGDCharacterSheet extends ActorSheet {
           dots
         }));
 
+        // Get addiction clock for this character
+        const state = game.fitgd.store.getState();
+        const addictionClock = Object.values(state.clocks.byId).find(
+          clock => clock.entityId === reduxId && clock.clockType === 'addiction'
+        );
+
         context.system = {
           actionDots: actionDotsArray,
           traits: character.traits,
           equipment: character.equipment,
           rallyAvailable: character.rallyAvailable,
           harmClocks: game.fitgd.api.query.getHarmClocks(reduxId),
+          addictionClock: addictionClock || null,
           unallocatedActionDots: unallocatedDots,
           allocatedActionDots: allocatedDots,
           totalActionDots: totalDots
