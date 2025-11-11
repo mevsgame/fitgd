@@ -8,8 +8,7 @@
 
 import {
   ActionRollDialog,
-  AddTraitDialog,
-  FlashbackDialog,
+  AddTraitDialog, 
   AddClockDialog
 } from '../dialogs.mjs';
 
@@ -149,10 +148,7 @@ class FitGDCharacterSheet extends ActorSheet {
 
     // Rally checkbox
     html.find('input[name="system.rallyAvailable"]').change(this._onRallyChange.bind(this));
-
-    // Flashback
-    html.find('.flashback-btn').click(this._onFlashback.bind(this));
-
+ 
     // Drag events for hotbar macros
     html.find('.draggable').on('dragstart', this._onDragStart.bind(this));
   }
@@ -647,21 +643,6 @@ class FitGDCharacterSheet extends ActorSheet {
       // Revert checkbox on error
       event.currentTarget.checked = !isChecked;
     }
-  }
-
-  async _onFlashback(event) {
-    event.preventDefault();
-    const characterId = this._getReduxId();
-    if (!characterId) return;
-
-    const crewId = this._getCrewId(characterId);
-
-    if (!crewId) {
-      ui.notifications.warn('Character must be part of a crew to use Flashback');
-      return;
-    }
-
-    new FlashbackDialog(characterId, crewId).render(true);
   }
 }
 

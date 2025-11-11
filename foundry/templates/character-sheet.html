@@ -6,7 +6,7 @@
     <div class="header-fields">
       <h1 class="charname"><input name="name" type="text" value="{{actor.name}}" placeholder="Name"/></h1>
       <div class="resource">
-        <label>Rally Available</label>
+        <label class="allocation-label">Rally Available</label>
         <input type="checkbox" name="system.rallyAvailable" {{checked system.rallyAvailable}} {{#unless editable}}disabled{{/unless}}/>
       </div>
     </div>
@@ -34,10 +34,7 @@
             {{else}}
               <i class="fas fa-edit"></i> Edit
             {{/if}}
-          </button>
-          <button class="action-roll-btn" type="button">
-            <i class="fas fa-dice-d6"></i> Roll Action
-          </button>
+          </button> 
         </div>
       </div>
 
@@ -92,21 +89,18 @@
         </div>
         {{/each}}
       </div>
-
-      <div class="action-buttons">
-        <button class="flashback-btn" type="button">
-          <i class="fas fa-history"></i> Flashback
-        </button>
-      </div>
+ 
     </div>
 
     {{!-- Traits Tab --}}
     <div class="tab traits" data-group="primary" data-tab="traits">
       <div class="traits-header">
         <h2>Traits</h2>
-        <button class="add-trait-btn" type="button">
-          <i class="fas fa-plus"></i> Add Trait
-        </button>
+        <div class="header-buttons">
+          <button class="add-trait-btn" type="button">
+            <i class="fas fa-plus"></i> Add Trait
+          </button>
+        </div>
       </div>
 
       <div class="traits-list">
@@ -119,12 +113,16 @@
                 spellcheck="false">{{trait.name}}</h4>
             <div class="trait-header-right">
               <span class="trait-category">{{trait.category}}</span>
+            </div>
+            
               {{#if @root.editable}}
+            <div class="trait-header-right">
               <button class="delete-trait-btn" type="button" data-trait-id="{{trait.id}}" title="Delete Trait">
                 <i class="fas fa-trash"></i>
               </button>
-              {{/if}}
+              
             </div>
+              {{/if}}
           </div>
           {{#if trait.description}}
           <p class="trait-description">{{trait.description}}</p>
