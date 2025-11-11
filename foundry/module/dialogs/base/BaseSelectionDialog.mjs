@@ -69,10 +69,20 @@ export class BaseSelectionDialog extends Application {
   async getData(options = {}) {
     const data = await super.getData(options);
 
+    // Pre-render all items to avoid passing functions in data (socket serialization issue)
+    const renderFn = this.options.renderItem || this._defaultRenderItem.bind(this);
+    const renderedItems = this.data.items.map(item => ({
+      id: item.id,
+      html: renderFn(item)
+    }));
+
     return {
       ...data,
-      ...this.data,
-      renderItem: this.options.renderItem || this._defaultRenderItem.bind(this),
+      items: renderedItems,
+      allowCreate: this.data.allowCreate,
+      emptyMessage: this.data.emptyMessage,
+      showSearch: this.data.showSearch,
+      hasItems: this.data.items.length > 0,
     };
   }
 

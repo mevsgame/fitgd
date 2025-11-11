@@ -1,5 +1,5 @@
 <div class="selection-dialog fitgd-dialog">
-  {{#if items.length}}
+  {{#if hasItems}}
     <!-- Optional search -->
     {{#if showSearch}}
     <div class="search-box">
@@ -14,7 +14,7 @@
               class="item-option"
               data-action="select-item"
               data-item-id="{{this.id}}">
-        {{{../renderItem this}}}
+        {{{this.html}}}
       </button>
       {{/each}}
     </div>
