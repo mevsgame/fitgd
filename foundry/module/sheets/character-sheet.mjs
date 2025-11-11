@@ -597,5 +597,6 @@ class FitGDCharacterSheet extends ActorSheet {
  * Sheet provides UI for triggering crew-level actions (spend Momentum, use consumables).
  *
  * @extends ActorSheet
+ */
 
 export { FitGDCharacterSheet };
