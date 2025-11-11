@@ -96,11 +96,26 @@ export class PlayerActionWidget extends Application {
 
       this.storeUnsubscribe = game.fitgd.store.subscribe(() => {
         const currentState = game.fitgd.store.getState();
-        const currentPlayerState = currentState.playerRoundState.byCharacterId[this.characterId];
-        const previousPlayerState = previousState.playerRoundState.byCharacterId[this.characterId];
 
-        // Only re-render if this character's state actually changed
-        if (currentPlayerState !== previousPlayerState) {
+        // Get current crew ID (character might have changed crews)
+        const currentCrewId = Object.values(currentState.crews.byId)
+          .find(crew => crew.characters.includes(this.characterId))?.id;
+
+        // Check if any relevant state changed
+        const playerStateChanged = currentState.playerRoundState.byCharacterId[this.characterId]
+          !== previousState.playerRoundState.byCharacterId[this.characterId];
+
+        const characterChanged = currentState.characters.byId[this.characterId]
+          !== previousState.characters.byId[this.characterId];
+
+        const crewChanged = currentCrewId && (
+          currentState.crews.byId[currentCrewId] !== previousState.crews.byId[currentCrewId]
+        );
+
+        const clocksChanged = currentState.clocks !== previousState.clocks;
+
+        // Re-render if any relevant state changed
+        if (playerStateChanged || characterChanged || crewChanged || clocksChanged) {
           this.render(true); // Force full re-render to update template
         }
 
