@@ -8,7 +8,6 @@
     </p>
   </div>
 
-  {{#unless hasRolled}}
   <!-- Selection Phase -->
   <div class="selection-phase">
     <!-- Action Selection -->
@@ -82,50 +81,12 @@
     </div>
     {{/if}}
   </div>
-  {{/unless}}
-
-  {{#if hasRolled}}
-  <!-- Result Phase -->
-  <div class="result-phase">
-    <div class="roll-result">
-      <h3 class="outcome-{{outcome}}">
-        {{#if (eq outcome "critical")}}✨ CRITICAL SUCCESS ✨{{/if}}
-        {{#if (eq outcome "success")}}✅ SUCCESS{{/if}}
-        {{#if (eq outcome "partial")}}⚠️ PARTIAL SUCCESS{{/if}}
-        {{#if (eq outcome "fail")}}❌ FAILURE{{/if}}
-      </h3>
-      <div class="dice-rolled">Rolled: {{join rollResult ", "}}</div>
-    </div>
-
-    <div class="result-summary">
-      <p><strong>Action:</strong> {{capitalize selectedAction}} ({{actionDots}}d)</p>
-      <p><strong>Target:</strong> {{targetCharacter.name}}</p>
-      <p><strong>Trait:</strong> "{{#each targetTraits}}{{#if (eq this.id ../selectedTraitId)}}{{this.name}}{{/if}}{{/each}}"</p>
-      <hr>
-      <p class="momentum-gain"><strong>Momentum Gain:</strong> +{{momentumGain}}M</p>
-      {{#if (lookup targetTraits selectedTraitId)}}
-        {{#with (lookup targetTraits selectedTraitId)}}
-          {{#if this.disabled}}
-          <p class="trait-enabled">✨ <strong>Trait Will Be Re-Enabled</strong></p>
-          {{/if}}
-        {{/with}}
-      {{/if}}
-    </div>
-  </div>
-  {{/if}}
 
   <!-- Action Buttons -->
   <div class="dialog-buttons">
     <button type="button" data-action="cancel" class="secondary">Cancel</button>
-    {{#unless hasRolled}}
     <button type="button" data-action="roll" class="primary" {{#unless canRoll}}disabled{{/unless}}>
-      🎲 Roll ({{#if actionDots}}{{actionDots}}{{else}}2{{/if}}d6)
+      🎲 Roll & Apply ({{#if actionDots}}{{actionDots}}{{else}}2{{/if}}d6)
     </button>
-    {{/unless}}
-    {{#if hasRolled}}
-    <button type="button" data-action="apply" class="primary">
-      ✓ Apply Results
-    </button>
-    {{/if}}
   </div>
 </div>

@@ -130,9 +130,6 @@ export class RallyDialog extends Application {
     // Roll button
     html.find('[data-action="roll"]').click(this._onRoll.bind(this));
 
-    // Apply button (after roll)
-    html.find('[data-action="apply"]').click(this._onApply.bind(this));
-
     // Cancel button
     html.find('[data-action="cancel"]').click(() => this.close());
   }
@@ -234,20 +231,7 @@ export class RallyDialog extends Application {
       flavor: `<strong>Rally: ${this.selectedAction}</strong> (Controlled)`,
     });
 
-    this.render();
-  }
-
-  /**
-   * Handle apply button - add momentum and re-enable trait
-   */
-  async _onApply(event) {
-    event.preventDefault();
-
-    if (!this.hasRolled) {
-      ui.notifications.warn('Please roll first');
-      return;
-    }
-
+    // Automatically apply results after roll
     try {
       const state = game.fitgd.store.getState();
       const targetCharacter = state.characters.byId[this.selectedTargetId];
@@ -259,7 +243,7 @@ export class RallyDialog extends Application {
       }
 
       const currentMomentum = this.crew.currentMomentum;
-      const newMomentum = Math.min(currentMomentum + this.momentumGain, 10);
+      const newMomentum = Math.min(currentMomentum + momentumGain, 10);
       const actualGain = newMomentum - currentMomentum;
 
       // Build list of actions
@@ -306,7 +290,7 @@ export class RallyDialog extends Application {
         success: 'SUCCESS',
         partial: 'PARTIAL SUCCESS',
         fail: 'FAILURE',
-      }[this.outcome];
+      }[outcome];
 
       let chatContent = `
         <div class="fitgd-rally-summary">
@@ -323,7 +307,7 @@ export class RallyDialog extends Application {
         chatContent += `<p class="rally-trait-enabled">✨ <strong>Trait Re-Enabled:</strong> "${trait.name}"</p>`;
       }
 
-      if (actualGain < this.momentumGain) {
+      if (actualGain < momentumGain) {
         chatContent += `<p class="rally-capped">(Capped at 10 Momentum)</p>`;
       }
 
@@ -336,7 +320,7 @@ export class RallyDialog extends Application {
 
       ui.notifications.info(`Rally complete - Gained ${actualGain}M${wasDisabled ? ', trait re-enabled' : ''}`);
 
-      // Close dialog
+      // Close dialog automatically
       this.close();
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
