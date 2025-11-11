@@ -210,43 +210,11 @@ class FitGDCrewSheet extends ActorSheet {
     if (!confirmed) return;
 
     try {
-      // Use the tested API method instead of reimplementing the logic
-      console.log('FitGD | Calling performReset for crew:', crewId);
-      console.log('FitGD | Crew characters:', crew.characters);
-
-      // Check clocks BEFORE reset
-      crew.characters.forEach(charId => {
-        const harmClocks = game.fitgd.api.query.getHarmClocks(charId);
-        console.log(`FitGD | BEFORE reset - Character ${charId} harm clocks:`, harmClocks);
-      });
-      const addictionBefore = game.fitgd.api.query.getAddictionClock(crewId);
-      console.log('FitGD | BEFORE reset - Addiction clock:', addictionBefore);
-
+      // Perform momentum reset
       const result = game.fitgd.api.crew.performReset(crewId);
-
-      console.log('FitGD | Momentum Reset result:', result);
-      console.log('FitGD | Characters reset (detailed):', JSON.stringify(result.charactersReset, null, 2));
-      console.log('FitGD | Addiction reduced:', result.addictionReduced);
-
-      // Check clocks AFTER reset
-      crew.characters.forEach(charId => {
-        const harmClocks = game.fitgd.api.query.getHarmClocks(charId);
-        console.log(`FitGD | AFTER reset - Character ${charId} harm clocks:`, harmClocks);
-      });
-      const addictionAfter = game.fitgd.api.query.getAddictionClock(crewId);
-      console.log('FitGD | AFTER reset - Addiction clock:', addictionAfter);
-
-      // Check Redux state before broadcast
-      const state = game.fitgd.store.getState();
-      console.log('FitGD | Clock history length BEFORE broadcast:', state.clocks.history.length);
-      console.log('FitGD | Last 5 clock commands:', state.clocks.history.slice(-5));
 
       // Broadcast changes to all clients
       await game.fitgd.saveImmediate();
-
-      // Check Redux state after broadcast
-      const stateAfter = game.fitgd.store.getState();
-      console.log('FitGD | Clock history length AFTER broadcast:', stateAfter.clocks.history.length);
 
       // Refresh affected sheets (crew + all member characters)
       const affectedIds = [crewId, ...crew.characters];
