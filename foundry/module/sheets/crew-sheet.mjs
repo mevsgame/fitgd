@@ -7,6 +7,7 @@
 // @ts-check
 
 import { AddClockDialog } from '../dialogs.mjs';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.mjs';
 
 /* -------------------------------------------- */
 /*  Crew Sheet Class                            */
@@ -209,62 +210,18 @@ class FitGDCrewSheet extends ActorSheet {
     if (!confirmed) return;
 
     try {
-      // Batch all reset actions together
-      const actions = [];
+      // Use the tested API method instead of reimplementing the logic
+      const result = game.fitgd.api.crew.performReset(crewId);
 
-      // 1. Reset crew momentum to 5
-      actions.push({
-        type: 'crews/resetMomentum',
-        payload: { crewId }
-      });
+      // Broadcast changes to all clients
+      await game.fitgd.saveImmediate();
 
-      // 2. For each crew member:
-      for (const characterId of crew.characters) {
-        const character = game.fitgd.api.character.getCharacter(characterId);
-        if (!character) continue;
-
-        // Reset Rally
-        actions.push({
-          type: 'characters/resetRally',
-          payload: { characterId }
-        });
-
-        // Re-enable all disabled traits
-        for (const trait of character.traits) {
-          if (trait.disabled) {
-            actions.push({
-              type: 'characters/enableTrait',
-              payload: { characterId, traitId: trait.id }
-            });
-          }
-        }
-
-        // Recover all 6/6 harm clocks to 5/6
-        const harmClocks = game.fitgd.api.query.getHarmClocks(characterId);
-        for (const clock of harmClocks) {
-          if (clock.segments >= clock.maxSegments) {
-            actions.push({
-              type: 'clocks/clearSegments',
-              payload: { clockId: clock.id, amount: 1 }
-            });
-          }
-        }
-      }
-
-      // 3. Reduce addiction clock by 2 segments (if exists and has segments)
-      const addictionClock = game.fitgd.api.query.getAddictionClock(crewId);
-      if (addictionClock && addictionClock.segments > 0) {
-        const amountToReduce = Math.min(2, addictionClock.segments);
-        actions.push({
-          type: 'clocks/clearSegments',
-          payload: { clockId: addictionClock.id, amount: amountToReduce }
-        });
-      }
-
-      // Execute all actions as a single batch
-      await game.fitgd.bridge.executeBatch(actions);
+      // Refresh affected sheets (crew + all member characters)
+      const affectedIds = [crewId, ...crew.characters];
+      refreshSheetsByReduxId(affectedIds, false);
 
       ui.notifications.info('Momentum Reset performed successfully');
+      console.log('FitGD | Momentum Reset result:', result);
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
       console.error('FitGD | Momentum Reset error:', error);
