@@ -28,7 +28,7 @@ import {
   selectIsDying,
 } from '../../dist/fitgd-core.es.js';
 import { FlashbackTraitsDialog, refreshSheetsByReduxId } from '../dialogs.mjs';
-import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog } from '../dialogs/index.mjs';
+import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog } from '../dialogs/index.mjs';
 
 /* -------------------------------------------- */
 /*  Player Action Widget Application            */
@@ -252,6 +252,7 @@ export class PlayerActionWidget extends Application {
 
     // Prepare action buttons
     html.find('[data-action="rally"]').click(this._onRally.bind(this));
+    html.find('[data-action="lean-into-trait"]').click(this._onLeanIntoTrait.bind(this));
     html.find('[data-action="use-trait"]').click(this._onUseTrait.bind(this));
     html.find('[data-action="equipment"]').click(this._onEquipment.bind(this));
     html.find('[data-action="push-die"]').click(this._onTogglePushDie.bind(this));
@@ -715,6 +716,29 @@ export class PlayerActionWidget extends Application {
     event.preventDefault();
     // TODO: Open Rally dialog
     ui.notifications.info('Rally dialog - to be implemented');
+  }
+
+  /**
+   * Handle Lean Into Trait button
+   */
+  async _onLeanIntoTrait(event) {
+    event.preventDefault();
+
+    if (!this.crewId) {
+      ui.notifications.warn('Character must be in a crew to lean into trait');
+      return;
+    }
+
+    // Check if character has any available (non-disabled) traits
+    const availableTraits = this.character.traits.filter(t => !t.disabled);
+    if (availableTraits.length === 0) {
+      ui.notifications.warn('No available traits - all traits are currently disabled');
+      return;
+    }
+
+    // Open lean into trait dialog
+    const dialog = new LeanIntoTraitDialog(this.characterId, this.crewId);
+    dialog.render(true);
   }
 
   /**
