@@ -15,7 +15,7 @@ export class TakeHarmDialog extends Dialog {
    * @param {string} characterId - Redux ID of the character taking harm
    * @param {string} crewId - Redux ID of the character's crew
    * @param {Object} options - Additional options
-   * @param {Position} options.defaultPosition - Pre-select position (default: 'risky')
+   * @param {import('dist/types').Position} options.defaultPosition - Pre-select position (default: 'risky')
    * @param {number} options.defaultSegments - Pre-calculate segments to display
    */
   constructor(characterId, crewId, options = {}) {
@@ -133,22 +133,4 @@ export class TakeHarmDialog extends Dialog {
     }
   }
 }
-
-/* -------------------------------------------- */
-/*  Rally Dialog                                */
-/* -------------------------------------------- */
-
-/**
- * Rally Dialog
- *
- * Allows a character to Rally, spending up to 3 Momentum to re-enable disabled traits
- * and clear harm clocks. Rally is only available when crew Momentum is 0-3, and can
- * only be used once per character per Momentum Reset.
- *
- * Features:
- * - Spend 1-3 Momentum (must be affordable by current crew Momentum)
- * - Re-enable disabled traits (1 trait per Momentum spent)
- * - Clear harm clock segments (2 segments per Momentum spent)
- *
- * @extends Dialog
- */
+ 

@@ -112,20 +112,4 @@ export class RallyDialog extends Dialog {
     }
   }
 }
-
-/* -------------------------------------------- */
-/*  Push Yourself Dialog                        */
-/* -------------------------------------------- */
-
-/**
- * Push Yourself Dialog
- *
- * Allows a character to spend 1 Momentum to push themselves, choosing one benefit:
- * - Add +1d to your roll
- * - Improve Effect (+1 level: Limited → Standard → Great)
- * - Improve Position (+1 level: Desperate → Risky → Controlled)
- *
- * Requires crew to have at least 1 Momentum available.
- *
- * @extends Dialog
- */
+ 
