@@ -629,13 +629,15 @@ class FitGDCharacterSheet extends ActorSheet {
     const isChecked = event.currentTarget.checked;
 
     try {
-      // Use the game API to set rally availability
-      game.fitgd.api.character.setRallyAvailable({
-        characterId,
-        available: isChecked
-      });
+      // Use Bridge API with correct Redux action
+      await game.fitgd.bridge.execute(
+        {
+          type: isChecked ? 'characters/resetRally' : 'characters/useRally',
+          payload: { characterId }
+        },
+        { affectedReduxIds: [characterId] }
+      );
 
-      await game.fitgd.saveImmediate();
       ui.notifications.info(`Rally ${isChecked ? 'enabled' : 'disabled'}`);
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
