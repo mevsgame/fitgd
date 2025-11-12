@@ -31,6 +31,7 @@ const initialState: CrewState = {
  * Payload Types
  */
 interface CreateCrewPayload {
+  id?: string; // Optional: If provided, use this ID (e.g., Foundry Actor ID)
   name: string;
   userId?: string;
 }
@@ -96,7 +97,7 @@ const crewSlice = createSlice({
       prepare: (payload: CreateCrewPayload) => {
         const timestamp = Date.now();
         const crew: Crew = {
-          id: generateId(),
+          id: payload.id || generateId(), // Use provided ID or generate new one
           name: payload.name,
           characters: [],
           currentMomentum: DEFAULT_CONFIG.crew.startingMomentum, // 5

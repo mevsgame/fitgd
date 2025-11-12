@@ -43,6 +43,7 @@ const initialState: ClockState = {
  * Payload Types
  */
 interface CreateClockPayload {
+  id?: string; // Optional: If provided, use this ID (e.g., Foundry Item ID)
   entityId: string;
   clockType: ClockType;
   subtype?: string;
@@ -283,7 +284,7 @@ const clockSlice = createSlice({
         }
 
         const clock: Clock = {
-          id: generateId(),
+          id: payload.id || generateId(), // Use provided ID or generate new one
           entityId: payload.entityId,
           clockType: payload.clockType,
           subtype: payload.subtype,

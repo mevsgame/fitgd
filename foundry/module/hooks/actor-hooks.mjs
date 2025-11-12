@@ -35,9 +35,10 @@ Hooks.on('createActor', async function(actor, options, userId) {
   console.log(`FitGD | Creating ${actor.type}: ${actor.name} (${actor.id}) [user: ${userId}]`);
 
   if (actor.type === 'character') {
-    // Create character in Redux with 0 dots (player allocates 12 during creation)
+    // Create character in Redux with Foundry Actor ID (unified IDs!)
     try {
       const characterId = game.fitgd.api.character.create({
+        id: actor.id, // Use Foundry Actor ID directly!
         name: actor.name,
         traits: [
           { name: 'Role Trait (edit me)', category: 'role', disabled: false },
@@ -50,9 +51,7 @@ Hooks.on('createActor', async function(actor, options, userId) {
         }
       });
 
-      // Store the Redux ID in Foundry actor flags (only creator/GM can do this)
-      await actor.setFlag('forged-in-the-grimdark', 'reduxId', characterId);
-      console.log(`FitGD | Character created in Redux: ${characterId}`);
+      console.log(`FitGD | Character created in Redux with unified ID: ${characterId}`);
 
       // Save immediately (will broadcast to other clients)
       await saveCommandHistoryImmediate();
@@ -68,13 +67,11 @@ Hooks.on('createActor', async function(actor, options, userId) {
     }
 
   } else if (actor.type === 'crew') {
-    // Create crew in Redux
+    // Create crew in Redux with Foundry Actor ID (unified IDs!)
     try {
-      const crewId = game.fitgd.api.crew.create(actor.name);
+      const crewId = game.fitgd.api.crew.create({ id: actor.id, name: actor.name });
 
-      // Store the Redux ID in Foundry actor flags (only creator/GM can do this)
-      await actor.setFlag('forged-in-the-grimdark', 'reduxId', crewId);
-      console.log(`FitGD | Crew created in Redux: ${crewId}`);
+      console.log(`FitGD | Crew created in Redux with unified ID: ${crewId}`);
 
       // Save immediately (will broadcast to other clients)
       await saveCommandHistoryImmediate();
