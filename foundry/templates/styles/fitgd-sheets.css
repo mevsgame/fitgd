@@ -737,30 +737,49 @@
   gap: 8px;
   align-items: center;
   flex-shrink: 0;
+  min-width: fit-content;
+  margin-left: auto;
 }
 
-.fitgd .edit-equipment-btn,
-.fitgd .delete-equipment-btn {
+.fitgd .edit-equipment-btn {
   background: transparent;
   border: none;
-  color: #ddd;
+  color: #4169e1;
   cursor: pointer;
   padding: 4px 8px;
   font-size: 14px;
-  opacity: 0.6;
+  opacity: 0.7;
   transition: all 0.2s;
   flex-shrink: 0;
+  min-width: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fitgd .delete-equipment-btn {
+  background: transparent;
+  border: none;
+  color: #ff6347;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 14px;
+  opacity: 0.7;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  min-width: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .fitgd .edit-equipment-btn:hover {
   opacity: 1;
-  color: #4169e1;
   background: rgba(65, 105, 225, 0.1);
 }
 
 .fitgd .delete-equipment-btn:hover {
   opacity: 1;
-  color: #ff6347;
   background: rgba(255, 99, 71, 0.1);
 }
 
