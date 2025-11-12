@@ -242,12 +242,16 @@ export class EquipmentBrowserDialog extends Dialog {
       return;
     }
 
+    // Generate unique ID for this equipment instance
+    const equipmentId = foundry.utils.randomID();
+
     // Copy template data to Redux (full duplication, no reference!)
     await game.fitgd.bridge.execute({
       type: 'characters/addEquipment',
       payload: {
         characterId: this.characterId,
         equipment: {
+          id: equipmentId,
           name: template.name,
           tier: template.tier,
           category: template.category,

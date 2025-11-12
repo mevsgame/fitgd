@@ -108,8 +108,6 @@ class FitGDCharacterSheet extends ActorSheet {
 
         console.log('FitGD | Context system data:', context.system);
         console.log('FitGD | Harm clocks:', context.system.harmClocks);
-        console.log('FitGD | Equipment array:', context.system.equipment);
-        console.log('FitGD | Equipment IDs:', context.system.equipment?.map(e => ({ id: e.id, name: e.name })));
       } else {
         console.warn('FitGD | Character not found in Redux for ID:', reduxId);
       }
@@ -654,17 +652,10 @@ class FitGDCharacterSheet extends ActorSheet {
     const characterId = this._getReduxId();
     if (!characterId) return;
 
-    console.log('FitGD | Edit equipment clicked - equipmentId:', equipmentId);
-
     const character = game.fitgd.api.character.getCharacter(characterId);
-    console.log('FitGD | Character equipment array:', character?.equipment);
-    console.log('FitGD | Equipment IDs:', character?.equipment?.map(e => e.id));
-
     const equipment = character?.equipment?.find((e) => e.id === equipmentId);
 
     if (!equipment) {
-      console.error('FitGD | Equipment not found. Looking for ID:', equipmentId);
-      console.error('FitGD | Available equipment:', character?.equipment);
       ui.notifications.error('Equipment not found');
       return;
     }
@@ -681,16 +672,10 @@ class FitGDCharacterSheet extends ActorSheet {
     const characterId = this._getReduxId();
     if (!characterId) return;
 
-    console.log('FitGD | Delete equipment clicked - equipmentId:', equipmentId);
-
     const character = game.fitgd.api.character.getCharacter(characterId);
-    console.log('FitGD | Character equipment array:', character?.equipment);
-
     const equipment = character?.equipment?.find((e) => e.id === equipmentId);
 
     if (!equipment) {
-      console.error('FitGD | Equipment not found. Looking for ID:', equipmentId);
-      console.error('FitGD | Available equipment:', character?.equipment);
       ui.notifications.error('Equipment not found');
       return;
     }
@@ -719,12 +704,6 @@ class FitGDCharacterSheet extends ActorSheet {
     const characterId = this._getReduxId();
     if (!characterId) return;
 
-    console.log('FitGD | Toggle equipped clicked - equipmentId:', equipmentId, 'equipped:', equipped);
-
-    const character = game.fitgd.api.character.getCharacter(characterId);
-    console.log('FitGD | Character equipment array:', character?.equipment);
-    console.log('FitGD | Equipment IDs:', character?.equipment?.map(e => e.id));
-
     try {
       await game.fitgd.bridge.execute({
         type: 'characters/toggleEquipped',
@@ -733,8 +712,6 @@ class FitGDCharacterSheet extends ActorSheet {
     } catch (error) {
       ui.notifications.error(`Error: ${error.message}`);
       console.error('FitGD | Toggle equipped error:', error);
-      console.error('FitGD | Looking for equipment ID:', equipmentId);
-      console.error('FitGD | Available equipment:', character?.equipment);
       // Revert checkbox on error
       event.currentTarget.checked = !equipped;
     }
