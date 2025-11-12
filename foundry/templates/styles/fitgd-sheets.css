@@ -635,6 +635,309 @@
 }
 
 /* -------------------------------------------- */
+/*  Equipment                                   */
+/* -------------------------------------------- */
+
+.fitgd .equipment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.fitgd .equipment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fitgd .equipment-item {
+  padding: 12px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-left: 4px solid #4169e1;
+  border-radius: 4px;
+}
+
+.fitgd .equipment-item.equipped {
+  border-left-color: #ffd700;
+  background: rgba(255, 215, 0, 0.05);
+}
+
+.fitgd .equipment-item.tier-inaccessible {
+  border-left-color: #ff9800;
+}
+
+.fitgd .equipment-item.tier-epic {
+  border-left-color: #9c27b0;
+}
+
+.fitgd .equipment-item-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.fitgd .equipped-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.fitgd .equipped-checkbox-label input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.fitgd .equipped-indicator {
+  font-size: 16px;
+  color: #ffd700;
+  min-width: 20px;
+  text-align: center;
+}
+
+.fitgd .equipment-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.fitgd .equipment-name {
+  margin: 0 0 4px 0;
+  color: #fff;
+  font-size: 14px;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.fitgd .equipment-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.fitgd .equipment-description {
+  font-size: 13px;
+  color: #aaa;
+  margin: 8px 0 0 0;
+  font-style: italic;
+}
+
+.fitgd .equipment-note {
+  font-size: 12px;
+  color: #ff9800;
+  margin: 4px 0 0 0;
+  font-style: italic;
+}
+
+.fitgd .equipment-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.fitgd .edit-equipment-btn,
+.fitgd .delete-equipment-btn {
+  background: transparent;
+  border: none;
+  color: #ddd;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 14px;
+  opacity: 0.6;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.fitgd .edit-equipment-btn:hover {
+  opacity: 1;
+  color: #4169e1;
+  background: rgba(65, 105, 225, 0.1);
+}
+
+.fitgd .delete-equipment-btn:hover {
+  opacity: 1;
+  color: #ff6347;
+  background: rgba(255, 99, 71, 0.1);
+}
+
+/* Tier badges */
+.fitgd .tier-badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+.fitgd .tier-badge.tier-accessible {
+  background: #4caf50;
+  color: #fff;
+}
+
+.fitgd .tier-badge.tier-inaccessible {
+  background: #ff9800;
+  color: #fff;
+}
+
+.fitgd .tier-badge.tier-epic {
+  background: #9c27b0;
+  color: #fff;
+}
+
+.fitgd .category-badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #999;
+  background: #1a1a1a;
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.fitgd .no-equipment {
+  text-align: center;
+  color: #666;
+  padding: 20px;
+  font-style: italic;
+}
+
+/* -------------------------------------------- */
+/*  Equipment Browser Dialog                   */
+/* -------------------------------------------- */
+
+.equipment-browser-dialog .equipment-browser {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 10px;
+}
+
+.equipment-browser-dialog .browser-filters {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  background: #2a2a2a;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.equipment-browser-dialog .browser-filters select,
+.equipment-browser-dialog .browser-filters input {
+  flex: 1;
+  min-width: 0;
+}
+
+.equipment-browser-dialog .equipment-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: #1a1a1a;
+  border-radius: 4px;
+}
+
+.equipment-browser-dialog .browser-equipment-item {
+  display: block;
+  padding: 12px;
+  background: #2a2a2a;
+  border: 2px solid #555;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.equipment-browser-dialog .browser-equipment-item:hover {
+  border-color: #4169e1;
+  background: #333;
+}
+
+.equipment-browser-dialog .browser-equipment-item input[type="radio"] {
+  display: none;
+}
+
+.equipment-browser-dialog .browser-equipment-item input[type="radio"]:checked + .browser-equipment-row {
+  outline: 2px solid #4169e1;
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+.equipment-browser-dialog .browser-equipment-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.equipment-browser-dialog .browser-equipment-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a1a1a;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.equipment-browser-dialog .browser-equipment-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.equipment-browser-dialog .browser-equipment-icon i {
+  font-size: 24px;
+  color: #666;
+}
+
+.equipment-browser-dialog .browser-equipment-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.equipment-browser-dialog .browser-equipment-name {
+  margin: 0 0 6px 0;
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.equipment-browser-dialog .browser-equipment-meta {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.equipment-browser-dialog .browser-equipment-description {
+  font-size: 12px;
+  color: #aaa;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.equipment-browser-dialog .source-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #666;
+  background: #1a1a1a;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.equipment-browser-dialog .no-items {
+  text-align: center;
+  color: #666;
+  padding: 40px;
+  font-style: italic;
+}
+
+/* -------------------------------------------- */
 /*  Clocks                                      */
 /* -------------------------------------------- */
 

@@ -27,7 +27,13 @@ export class EquipmentBrowserDialog extends Dialog {
         default: 'add',
         render: (html) => this._onRender(html),
       },
-      { ...options, classes: ['fitgd', 'dialog', 'equipment-browser'] }
+      {
+        ...options,
+        classes: ['fitgd', 'dialog', 'fitgd-dialog', 'equipment-browser-dialog'],
+        width: 700,
+        height: 600,
+        resizable: true,
+      }
     );
 
     this.characterId = characterId;
@@ -143,25 +149,26 @@ export class EquipmentBrowserDialog extends Dialog {
     return this.items
       .map(
         (item) => `
-      <label class="equipment-item tier-${item.tier}" data-name="${item.name}">
+      <label class="browser-equipment-item tier-${item.tier}" data-name="${item.name}">
         <input type="radio" name="equipment" value="${item.id}"/>
-
-        <div class="equipment-preview">
-          ${
-            item.img
-              ? `<img src="${item.img}" alt="${item.name}"/>`
-              : '<div class="equipment-placeholder"><i class="fas fa-box"></i></div>'
-          }
-        </div>
-
-        <div class="equipment-details">
-          <h4>${item.name}</h4>
-          <div class="equipment-meta">
-            <span class="tier-badge tier-${item.tier}">${item.tier}</span>
-            <span class="category-badge">${item.category}</span>
-            <span class="source-badge">${item.source}</span>
+        <div class="browser-equipment-row">
+          <div class="browser-equipment-icon">
+            ${
+              item.img
+                ? `<img src="${item.img}" alt="${item.name}"/>`
+                : '<i class="fas fa-box"></i>'
+            }
           </div>
-          <p class="equipment-description">${item.description}</p>
+
+          <div class="browser-equipment-details">
+            <h4 class="browser-equipment-name">${item.name}</h4>
+            <div class="browser-equipment-meta">
+              <span class="tier-badge tier-${item.tier}">${item.tier}</span>
+              <span class="category-badge">${item.category}</span>
+              <span class="source-badge">${item.source}</span>
+            </div>
+            <p class="browser-equipment-description">${item.description || '<em>No description</em>'}</p>
+          </div>
         </div>
       </label>
     `
@@ -197,7 +204,7 @@ export class EquipmentBrowserDialog extends Dialog {
   _onSearch(event, html) {
     const query = event.target.value.toLowerCase();
 
-    html.find('.equipment-item').each(function () {
+    html.find('.browser-equipment-item').each(function () {
       const name = $(this).data('name').toLowerCase();
       $(this).toggle(name.includes(query));
     });

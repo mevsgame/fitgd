@@ -216,11 +216,11 @@
         </button>
       </div>
 
-      {{#if system.equipment}}
+      {{#if system.equipment.length}}
       <div class="equipment-list">
         {{#each system.equipment as |item|}}
         <div class="equipment-item tier-{{item.tier}} {{#if item.equipped}}equipped{{/if}}">
-          <div class="equipment-item-header">
+          <div class="equipment-item-row">
             <label class="equipped-checkbox-label">
               <input type="checkbox"
                      class="equipped-checkbox"
@@ -232,7 +232,7 @@
             </label>
 
             <div class="equipment-info">
-              <h4>{{item.name}}</h4>
+              <h4 class="equipment-name">{{item.name}}</h4>
               <div class="equipment-meta">
                 <span class="tier-badge tier-{{item.tier}}">{{item.tier}}</span>
                 <span class="category-badge">{{item.category}}</span>
