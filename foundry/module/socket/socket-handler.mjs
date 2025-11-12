@@ -17,6 +17,7 @@ import {
   reloadStateFromSettings
 } from '../autosave/autosave-manager.mjs';
 import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.mjs';
+import { PlayerActionWidget } from '../widgets/player-action-widget.mjs';
 
 /* -------------------------------------------- */
 /*  Socket Communication (socketlib)            */
@@ -282,6 +283,69 @@ async function receiveCommandsFromSocket(data) {
   }
 }
 
+/**
+ * Handle "Take Action" event from socketlib
+ * Called on ALL clients when any client initiates a takeAction
+ * Each client decides whether to show the widget based on ownership
+ *
+ * @param {Object} data - Message data
+ * @param {string} data.characterId - Character Redux ID taking action
+ * @param {string} data.userId - User ID who initiated the action
+ * @param {string} data.userName - User name who initiated the action
+ */
+async function handleTakeAction(data) {
+  const { characterId, userId, userName } = data;
 
-// Export socket handler function
-export { receiveCommandsFromSocket };
+  console.log(`FitGD | Received takeAction for character ${characterId} from ${userName} (${userId})`);
+
+  // Get the actor to check ownership
+  const actor = game.actors.get(characterId); // Unified IDs
+  if (!actor) {
+    console.warn(`FitGD | Actor not found for characterId ${characterId}`);
+    return;
+  }
+
+  // Check if this client should show the widget
+  const isOwner = actor.isOwner;
+  const isGM = game.user.isGM;
+
+  console.log(`FitGD | Widget visibility check:`, {
+    actorName: actor.name,
+    currentUser: game.user.name,
+    isOwner,
+    isGM,
+    permission: actor.permission,
+    willShow: isOwner || isGM
+  });
+
+  // Only show widget if this user owns the actor or is GM
+  if (isOwner || isGM) {
+    // Check if widget already exists for this character
+    const existingWidget = Object.values(ui.windows).find(
+      app => app instanceof PlayerActionWidget && app.characterId === characterId
+    );
+
+    if (existingWidget) {
+      console.log(`FitGD | Bringing existing Player Action Widget to front for character ${characterId}`);
+      existingWidget.bringToTop();
+      existingWidget.render(true);
+    } else {
+      console.log(`FitGD | Creating new Player Action Widget for character ${characterId}`);
+      const widget = new PlayerActionWidget(characterId);
+      widget.render(true);
+    }
+
+    // Get character name for notification
+    const state = game.fitgd.store.getState();
+    const character = state.characters.byId[characterId];
+    const characterName = character?.name || 'Character';
+
+    ui.notifications.info(`${characterName} is taking action!`);
+  } else {
+    console.log(`FitGD | Widget NOT shown - user is not owner or GM`);
+  }
+}
+
+
+// Export socket handler functions
+export { receiveCommandsFromSocket, handleTakeAction };

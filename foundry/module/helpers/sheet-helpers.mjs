@@ -6,8 +6,6 @@
 
 // @ts-check
 
-import { PlayerActionWidget } from '../widgets/player-action-widget.mjs';
-
 /**
  * Refresh sheets for the given entity IDs
  *
@@ -46,6 +44,8 @@ export function refreshSheetsByReduxId(reduxIds, force = true) {
 /**
  * Open Player Action Widget for a character
  * This replicates the experience of entering a turn in combat
+ *
+ * Broadcasts the action via socketlib so all clients (GM + owning player) can show the widget
  *
  * @param {string} characterId - Character Redux ID (unified with Foundry Actor ID)
  * @returns {Promise<void>}
@@ -87,21 +87,17 @@ export async function takeAction(characterId) {
     { affectedReduxIds: [characterId], silent: true }
   );
 
-  // Show Player Action Widget
-  // Check if widget already exists for this character
-  const existingWidget = Object.values(ui.windows).find(
-    app => app instanceof PlayerActionWidget && app.characterId === characterId
-  );
-
-  if (existingWidget) {
-    console.log(`FitGD | Bringing existing Player Action Widget to front for character ${characterId}`);
-    existingWidget.bringToTop();
-    existingWidget.render(true);
-  } else {
-    console.log(`FitGD | Creating new Player Action Widget for character ${characterId}`);
-    const widget = new PlayerActionWidget(characterId);
-    widget.render(true);
+  // Broadcast "takeAction" event to ALL clients via socketlib
+  // Each client will decide whether to show the widget based on ownership
+  try {
+    await game.fitgd.socket.executeForEveryone('takeAction', {
+      characterId,
+      userId: game.user.id,
+      userName: game.user.name
+    });
+    console.log(`FitGD | Broadcast takeAction for character ${characterId} to all clients`);
+  } catch (error) {
+    console.error('FitGD | Failed to broadcast takeAction:', error);
+    ui.notifications.error('Failed to open action widget - check console for details');
   }
-
-  ui.notifications.info(`${character.name} is taking action!`);
 }
