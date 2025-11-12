@@ -4,12 +4,20 @@
  * Handles drag-and-drop to hotbar for quick actions
  */
 
-// @ts-check
+interface HotbarDropData {
+  type: string;
+  actorId: string;
+  characterId: string;
+  actionType: string;
+  action?: string;
+  traitId?: string;
+  traitName?: string;
+}
 
 /**
  * Register hotbar-related hooks
  */
-export function registerHotbarHooks() {
+export function registerHotbarHooks(): void {
 /* -------------------------------------------- */
 /*  Hotbar Drop Hook                            */
 /* -------------------------------------------- */
@@ -17,25 +25,25 @@ export function registerHotbarHooks() {
 /**
  * Create a macro when something is dropped on the hotbar
  */
-Hooks.on('hotbarDrop', async function(bar, data, slot) {
+Hooks.on('hotbarDrop' as any, async function(_bar: Hotbar, data: any, slot: number) {
   // Only handle FitGD drops
   if (data.type !== 'FitGD') return;
 
-  const { actorId, characterId, actionType, action, traitId, traitName } = data;
+  const { actorId, characterId, actionType, action, traitId, traitName } = data as HotbarDropData;
 
   // Get the actor
-  const actor = game.actors.get(actorId);
+  const actor = game.actors!.get(actorId);
   if (!actor) {
-    ui.notifications.error('Actor not found');
+    ui.notifications!.error('Actor not found');
     return false;
   }
 
   // Create macro command based on action type
-  let command, name, img;
+  let command: string, name: string, img: string;
 
   if (actionType === 'roll') {
     // Action roll macro
-    name = `${actor.name}: ${action.charAt(0).toUpperCase() + action.slice(1)}`;
+    name = `${actor.name}: ${action!.charAt(0).toUpperCase() + action!.slice(1)}`;
     img = 'icons/svg/d20-grey.svg';
     command = `// ${name}
 const actor = game.actors.get("${actorId}");
@@ -136,11 +144,14 @@ try {
         action,
         traitId
       }
-    }
-  });
+    } as any
+  } as any);
 
   // Assign macro to hotbar slot
-  game.user.assignHotbarMacro(macro, slot);
+  if (macro) {
+    game.user!.assignHotbarMacro(macro as any, slot);
+  }
 
+  return false;
+});
 }
-)}

@@ -45,8 +45,8 @@ class FitGDCrewSheet extends ActorSheet {
     // Override editable to be GM-only for clock editing
     context.editable = game.user.isGM;
 
-    // Get Redux ID from Foundry actor flags
-    const reduxId = this.actor.getFlag('forged-in-the-grimdark', 'reduxId');
+    // Unified IDs: Foundry Actor ID === Redux ID
+    const reduxId = this.actor.id;
     console.log('FitGD | Crew Sheet getData - reduxId:', reduxId, 'editable:', context.editable);
 
     if (reduxId) {
@@ -81,18 +81,11 @@ class FitGDCrewSheet extends ActorSheet {
   }
 
   /**
-   * Find Foundry actor ID from Redux character ID
+   * Get Foundry actor ID from Redux character ID
+   * (With unified IDs, they're the same!)
    */
   _findFoundryActorId(characterReduxId) {
-    for (const actor of game.actors) {
-      if (actor.type === 'character') {
-        const actorReduxId = actor.getFlag('forged-in-the-grimdark', 'reduxId');
-        if (actorReduxId === characterReduxId) {
-          return actor.id;
-        }
-      }
-    }
-    return null;
+    return characterReduxId; // Unified IDs: Redux ID === Foundry Actor ID
   }
 
   activateListeners(html) {
@@ -119,10 +112,10 @@ class FitGDCrewSheet extends ActorSheet {
   }
 
   /**
-   * Get Redux crew ID from Foundry actor
+   * Get Redux crew ID (unified with Foundry Actor ID)
    */
   _getReduxId() {
-    return this.actor.getFlag('forged-in-the-grimdark', 'reduxId');
+    return this.actor.id; // Unified IDs: Foundry Actor ID === Redux ID
   }
 
   async _onAddMomentum(event) {
@@ -400,7 +393,7 @@ class FitGDCrewSheet extends ActorSheet {
 
     // Filter out characters already in the crew
     const availableCharacters = characters.filter(char => {
-      const reduxId = char.getFlag('forged-in-the-grimdark', 'reduxId');
+      const reduxId = char.id; // Unified IDs
       return reduxId && !currentMemberIds.has(reduxId);
     });
 
@@ -429,7 +422,7 @@ class FitGDCrewSheet extends ActorSheet {
           callback: async (html) => {
             const selectedFoundryId = html.find('[name="characterId"]').val();
             const selectedActor = game.actors.get(selectedFoundryId);
-            const characterReduxId = selectedActor?.getFlag('forged-in-the-grimdark', 'reduxId');
+            const characterReduxId = selectedActor?.id; // Unified IDs
 
             if (characterReduxId) {
               try {

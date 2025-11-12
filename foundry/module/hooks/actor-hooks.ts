@@ -4,12 +4,10 @@
  * Handles Actor creation and lifecycle events
  */
 
-// @ts-check
-
 /**
  * Register all actor-related hooks
  */
-export function registerActorHooks() {
+export function registerActorHooks(): void {
 /* -------------------------------------------- */
 /*  Actor Lifecycle Hooks                       */
 /* -------------------------------------------- */
@@ -21,11 +19,11 @@ export function registerActorHooks() {
  * (or GM) should execute the logic. Other clients will receive the Redux
  * commands via socket broadcast.
  */
-Hooks.on('createActor', async function(actor, options, userId) {
+Hooks.on('createActor', async function(actor: Actor, _options: object, userId: string) {
   // Only execute on the client that created the actor, or on GM's client
   // Other clients will receive updates via socket broadcast
-  const isCreatingUser = userId === game.user.id;
-  const isGM = game.user.isGM;
+  const isCreatingUser = userId === game.user!.id;
+  const isGM = game.user!.isGM;
 
   if (!isCreatingUser && !isGM) {
     console.log(`FitGD | Skipping createActor hook (not creator, not GM) for ${actor.type}: ${actor.name}`);
@@ -34,11 +32,11 @@ Hooks.on('createActor', async function(actor, options, userId) {
 
   console.log(`FitGD | Creating ${actor.type}: ${actor.name} (${actor.id}) [user: ${userId}]`);
 
-  if (actor.type === 'character') {
+  if ((actor.type as string) === 'character') {
     // Create character in Redux with Foundry Actor ID (unified IDs!)
     try {
-      const characterId = game.fitgd.api.character.create({
-        id: actor.id, // Use Foundry Actor ID directly!
+      const characterId = game.fitgd!.api.character.create({
+        id: actor.id ?? undefined, // Use Foundry Actor ID directly!
         name: actor.name,
         traits: [
           { name: 'Role Trait (edit me)', category: 'role', disabled: false },
@@ -54,7 +52,7 @@ Hooks.on('createActor', async function(actor, options, userId) {
       console.log(`FitGD | Character created in Redux with unified ID: ${characterId}`);
 
       // Save immediately (will broadcast to other clients)
-      await saveCommandHistoryImmediate();
+      await game.fitgd!.saveImmediate();
 
       // Force re-render the sheet if it's already open
       if (actor.sheet?.rendered) {
@@ -63,18 +61,18 @@ Hooks.on('createActor', async function(actor, options, userId) {
       }
     } catch (error) {
       console.error('FitGD | Failed to create character in Redux:', error);
-      ui.notifications.error(`Failed to create character: ${error.message}`);
+      ui.notifications!.error(`Failed to create character: ${(error as Error).message}`);
     }
 
-  } else if (actor.type === 'crew') {
+  } else if ((actor.type as string) === 'crew') {
     // Create crew in Redux with Foundry Actor ID (unified IDs!)
     try {
-      const crewId = game.fitgd.api.crew.create({ id: actor.id, name: actor.name });
+      const crewId = game.fitgd!.api.crew.create({ id: actor.id ?? undefined, name: actor.name });
 
       console.log(`FitGD | Crew created in Redux with unified ID: ${crewId}`);
 
       // Save immediately (will broadcast to other clients)
-      await saveCommandHistoryImmediate();
+      await game.fitgd!.saveImmediate();
 
       // Force re-render the sheet if it's already open
       if (actor.sheet?.rendered) {
@@ -83,9 +81,8 @@ Hooks.on('createActor', async function(actor, options, userId) {
       }
     } catch (error) {
       console.error('FitGD | Failed to create crew in Redux:', error);
-      ui.notifications.error(`Failed to create crew: ${error.message}`);
+      ui.notifications!.error(`Failed to create crew: ${(error as Error).message}`);
     }
-  }})
+  }
+});
 }
-
-

@@ -1,5 +1,3 @@
-// @ts-check
-
 /**
  * Foundry-Redux Bridge API
  *
@@ -14,13 +12,39 @@
  * WHY THIS EXISTS:
  * The pattern "dispatch → broadcast → refresh" must happen together or state
  * won't propagate to other clients. By using this API, you can't forget.
- *
- * @typedef {import('../dist/store').RootState} RootState
- * @typedef {import('../dist/types').Character} Character
- * @typedef {import('../dist/types').Crew} Crew
- * @typedef {import('../dist/types').Clock} Clock
- * @typedef {import('../dist/types').PlayerRoundState} PlayerRoundState
  */
+
+import type { Store, UnknownAction } from '@reduxjs/toolkit';
+import type { RootState } from '@/store';
+import type { Character } from '@/types/character';
+import type { Crew } from '@/types/crew';
+import type { Clock } from '@/types/clock';
+import type { PlayerRoundState } from '@/types/playerRoundState';
+
+/**
+ * Entity ID type (Foundry Actor ID === Redux ID after unification)
+ */
+export type EntityId = string;
+
+/**
+ * Redux action shape
+ */
+export interface ReduxAction extends UnknownAction {
+  type: string;
+  payload?: Record<string, unknown>;
+}
+
+/**
+ * Options for execute() and executeBatch() operations
+ */
+export interface ExecuteOptions {
+  /** Character/crew IDs to refresh (auto-detected if not provided) */
+  affectedReduxIds?: EntityId[];
+  /** Force full re-render (default: false) */
+  force?: boolean;
+  /** Skip sheet refresh (default: false) */
+  silent?: boolean;
+}
 
 /**
  * Core Foundry-Redux Bridge
@@ -31,13 +55,16 @@
  * 3. Refresh affected sheets
  */
 export class FoundryReduxBridge {
+  private readonly store: Store<RootState>;
+  private readonly saveImmediate: () => Promise<void>;
+
   /**
    * Create a new Foundry-Redux Bridge instance
    *
-   * @param {Object} store - Redux store instance (game.fitgd.store)
-   * @param {Function} saveFunction - Broadcast function (game.fitgd.saveImmediate)
+   * @param store - Redux store instance (game.fitgd.store)
+   * @param saveFunction - Broadcast function (game.fitgd.saveImmediate)
    */
-  constructor(store, saveFunction) {
+  constructor(store: Store<RootState>, saveFunction: () => Promise<void>) {
     this.store = store;
     this.saveImmediate = saveFunction;
   }
@@ -49,23 +76,20 @@ export class FoundryReduxBridge {
    * (getCharacter, getCrew, getClocks, getPlayerRoundState) as they provide
    * better type safety and ID conversion.
    *
-   * @returns {RootState} Current Redux state
+   * @returns Current Redux state
    */
-  getState() {
+  getState(): RootState {
     return this.store.getState();
   }
 
   /**
    * Execute a single Redux action and propagate to all clients.
    *
-   * @param {Object} action - Redux action to dispatch
-   * @param {Object} options - Execution options
-   * @param {string[]} options.affectedReduxIds - Character/crew IDs to refresh (auto-detected if not provided)
-   * @param {boolean} options.force - Force full re-render (default: false)
-   * @param {boolean} options.silent - Skip sheet refresh (default: false)
-   * @returns {Promise<void>}
+   * @param action - Redux action to dispatch
+   * @param options - Execution options
+   * @returns Promise that resolves when complete
    */
-  async execute(action, options = {}) {
+  async execute(action: ReduxAction, options: ExecuteOptions = {}): Promise<void> {
     const { affectedReduxIds, force = false, silent = false } = options;
 
     // Dispatch to Redux
@@ -89,11 +113,11 @@ export class FoundryReduxBridge {
    * CRITICAL: This ensures only ONE broadcast happens for multiple state changes,
    * preventing render race conditions.
    *
-   * @param {Object[]} actions - Array of Redux actions to dispatch
-   * @param {Object} options - Execution options (same as execute())
-   * @returns {Promise<void>}
+   * @param actions - Array of Redux actions to dispatch
+   * @param options - Execution options (same as execute())
+   * @returns Promise that resolves when complete
    */
-  async executeBatch(actions, options = {}) {
+  async executeBatch(actions: ReduxAction[], options: ExecuteOptions = {}): Promise<void> {
     const { affectedReduxIds, force = false, silent = false } = options;
 
     // Dispatch all actions synchronously (single Redux transaction)
@@ -116,43 +140,45 @@ export class FoundryReduxBridge {
   /**
    * Query a character by ID (auto-detects Redux vs Foundry ID).
    *
-   * @param {string} id - Either Redux UUID or Foundry Actor ID
-   * @returns {Character|null} Character state from Redux
+   * @param id - Either Redux UUID or Foundry Actor ID
+   * @returns Character state from Redux, or undefined if not found
    */
-  getCharacter(id) {
+  getCharacter(id: EntityId): Character | undefined {
     const reduxId = this._ensureReduxId(id, 'character');
-    if (!reduxId) return null;
+    if (!reduxId) return undefined;
 
     const state = this.getState();
-    return state.characters.byId[reduxId] || null;
+    return state.characters.byId[reduxId];
   }
 
   /**
    * Query a crew by ID (auto-detects Redux vs Foundry ID).
    *
-   * @param {string} id - Either Redux UUID or Foundry Actor ID
-   * @returns {Crew|null} Crew state from Redux
+   * @param id - Either Redux UUID or Foundry Actor ID
+   * @returns Crew state from Redux, or undefined if not found
    */
-  getCrew(id) {
+  getCrew(id: EntityId): Crew | undefined {
     const reduxId = this._ensureReduxId(id, 'crew');
-    if (!reduxId) return null;
+    if (!reduxId) return undefined;
 
     const state = this.getState();
-    return state.crews.byId[reduxId] || null;
+    return state.crews.byId[reduxId];
   }
 
   /**
    * Query clocks for an entity.
    *
-   * @param {string} entityId - Redux ID of character/crew
-   * @param {string|null} clockType - Optional: filter by 'harm', 'consumable', 'addiction'
-   * @returns {Clock[]} Array of clocks
+   * @param entityId - Redux ID of character/crew
+   * @param clockType - Optional: filter by 'harm', 'consumable', 'addiction', 'progress'
+   * @returns Array of clocks
    */
-  getClocks(entityId, clockType = null) {
+  getClocks(entityId: EntityId, clockType: string | null = null): Clock[] {
     const state = this.getState();
     const clockIds = state.clocks.byEntityId[entityId] || [];
 
-    let clocks = clockIds.map(id => state.clocks.byId[id]).filter(Boolean);
+    let clocks = clockIds
+      .map(id => state.clocks.byId[id])
+      .filter((clock): clock is Clock => Boolean(clock));
 
     if (clockType) {
       clocks = clocks.filter(clock => clock.clockType === clockType);
@@ -164,12 +190,12 @@ export class FoundryReduxBridge {
   /**
    * Get player round state for a character.
    *
-   * @param {string} characterId - Redux ID of character
-   * @returns {PlayerRoundState|null} Player round state
+   * @param characterId - Redux ID of character
+   * @returns Player round state, or undefined if not found
    */
-  getPlayerRoundState(characterId) {
+  getPlayerRoundState(characterId: EntityId): PlayerRoundState | undefined {
     const state = this.getState();
-    return state.playerRoundState.byCharacterId[characterId] || null;
+    return state.playerRoundState.byCharacterId[characterId];
   }
 
   // ==================== INTERNAL HELPERS ====================
@@ -181,32 +207,17 @@ export class FoundryReduxBridge {
    * Kept for API compatibility but greatly simplified from the old version
    * which had to translate between Foundry Actor IDs and Redux UUIDs.
    *
-   * @param {string} id - Entity ID to validate
-   * @param {string} entityType - Entity type ('character' or 'crew') for error messages
-   * @returns {string|null} The ID if valid, null otherwise
+   * @param id - Entity ID to validate
+   * @param entityType - Entity type ('character' or 'crew') for error messages
+   * @returns The ID if valid, null otherwise
    * @private
    */
-  _ensureReduxId(id, entityType) {
+  private _ensureReduxId(id: EntityId, entityType: string): EntityId | null {
     if (!id || typeof id !== 'string') {
       console.warn(`[FoundryReduxBridge] Invalid ${entityType} ID:`, id);
       return null;
     }
     return id; // With unified IDs, no translation needed!
-  }
-
-  /**
-   * Check if ID is valid (simplified with unified IDs)
-   *
-   * Previously checked if ID was a Redux UUID vs Foundry Actor ID.
-   * With unified IDs, this just validates it's a non-empty string.
-   * Kept for backwards compatibility.
-   *
-   * @param {string} id - ID to check
-   * @returns {boolean} True if ID is valid
-   * @private
-   */
-  _isReduxId(id) {
-    return Boolean(id && typeof id === 'string');
   }
 
   /**
@@ -218,12 +229,12 @@ export class FoundryReduxBridge {
    * For clock operations, resolves the clock's entityId so the owning character/crew
    * sheet gets refreshed automatically.
    *
-   * @param {Object} action - Redux action to inspect
-   * @returns {string[]} Array of Redux UUIDs that should have their sheets refreshed
+   * @param action - Redux action to inspect
+   * @returns Array of Redux IDs that should have their sheets refreshed
    * @private
    */
-  _extractAffectedIds(action) {
-    const ids = new Set();
+  private _extractAffectedIds(action: ReduxAction): EntityId[] {
+    const ids = new Set<EntityId>();
     const payload = action.payload || {};
 
     // Common patterns for entity IDs in payloads
@@ -241,12 +252,14 @@ export class FoundryReduxBridge {
     // For clock operations, also refresh the entity that owns the clock
     if (payload.clockId) {
       const state = this.getState();
-      const clock = state.clocks.byId[payload.clockId];
-      if (clock && clock.entityId) ids.add(clock.entityId);
+      const clock = state.clocks.byId[payload.clockId as string];
+      if (clock?.entityId) {
+        ids.add(clock.entityId);
+      }
     }
 
     // Filter out any null/undefined that may have snuck in
-    return Array.from(ids).filter(id => id && typeof id === 'string');
+    return Array.from(ids).filter((id): id is EntityId => Boolean(id && typeof id === 'string'));
   }
 
   /**
@@ -255,12 +268,12 @@ export class FoundryReduxBridge {
    * Combines ID extraction across multiple actions to determine the complete
    * set of entities that need sheet refresh after a batch operation.
    *
-   * @param {Object[]} actions - Array of Redux actions to inspect
-   * @returns {string[]} Array of unique Redux UUIDs that should have their sheets refreshed
+   * @param actions - Array of Redux actions to inspect
+   * @returns Array of unique Redux IDs that should have their sheets refreshed
    * @private
    */
-  _extractAffectedIdsFromBatch(actions) {
-    const ids = new Set();
+  private _extractAffectedIdsFromBatch(actions: ReduxAction[]): EntityId[] {
+    const ids = new Set<EntityId>();
 
     for (const action of actions) {
       const actionIds = this._extractAffectedIds(action);
@@ -277,19 +290,18 @@ export class FoundryReduxBridge {
    * sheets that match the provided Redux IDs. This is the safe alternative to
    * trying to use `game.actors.get(reduxId)` which fails silently.
    *
-   * @param {string[]} reduxIds - Array of Redux UUIDs to refresh
-   * @param {boolean} force - Whether to force full re-render (default: false)
-   * @returns {void}
+   * @param reduxIds - Array of Redux IDs to refresh
+   * @param force - Whether to force full re-render (default: false)
    * @private
    */
-  _refreshSheets(ids, force = false) {
+  private _refreshSheets(ids: EntityId[], force = false): void {
     const affectedIds = new Set(ids.filter(id => id));
 
     for (const app of Object.values(ui.windows)) {
       if (app.constructor.name === 'FitGDCharacterSheet' ||
           app.constructor.name === 'FitGDCrewSheet') {
 
-        const actorId = app.actor?.id; // Unified IDs: actor.id === Redux ID
+        const actorId = (app as any).actor?.id as EntityId | undefined; // Unified IDs: actor.id === Redux ID
 
         if (actorId && affectedIds.has(actorId)) {
           app.render(force);
@@ -305,12 +317,15 @@ export class FoundryReduxBridge {
  * Create a Foundry-Redux Bridge instance.
  *
  * This should be called once during Foundry initialization and stored
- * at game.fitgd.api for global access.
+ * at game.fitgd.bridge for global access.
  *
- * @param {Object} store - Redux store
- * @param {Function} saveFunction - Function that broadcasts state (game.fitgd.saveImmediate)
- * @returns {FoundryReduxBridge}
+ * @param store - Redux store
+ * @param saveFunction - Function that broadcasts state (game.fitgd.saveImmediate)
+ * @returns FoundryReduxBridge instance
  */
-export function createFoundryReduxBridge(store, saveFunction) {
+export function createFoundryReduxBridge(
+  store: Store<RootState>,
+  saveFunction: () => Promise<void>
+): FoundryReduxBridge {
   return new FoundryReduxBridge(store, saveFunction);
 }

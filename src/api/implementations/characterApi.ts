@@ -30,6 +30,7 @@ export function createCharacterAPI(store: Store) {
      * Create a new character
      */
     create(params: {
+      id?: string; // Optional: provide explicit ID (e.g., Foundry Actor ID)
       name: string;
       traits: Omit<Trait, 'id' | 'acquiredAt'>[];
       actionDots: ActionDots;
@@ -40,16 +41,18 @@ export function createCharacterAPI(store: Store) {
         acquiredAt: Date.now(),
       }));
 
+      const characterId = params.id || generateId();
+
       store.dispatch(
         createCharacter({
+          id: characterId,
           name: params.name,
           traits,
           actionDots: params.actionDots,
         })
       );
 
-      const state = store.getState();
-      return state.characters.allIds[state.characters.allIds.length - 1];
+      return characterId;
     },
 
     /**

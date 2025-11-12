@@ -19,11 +19,19 @@ export function createCrewAPI(store: Store) {
     /**
      * Create a new crew
      */
-    create(name: string): string {
-      store.dispatch(createCrew({ name }));
+    create(params: { id?: string; name: string } | string): string {
+      // Support both old signature create(name) and new create({id, name})
+      const { id, name } = typeof params === 'string'
+        ? { id: undefined, name: params }
+        : params;
+
+      const crewId = id || undefined; // Let slice generate if not provided
+
+      store.dispatch(createCrew({ id: crewId, name }));
 
       const state = store.getState();
-      return state.crews.allIds[state.crews.allIds.length - 1];
+      // If we provided an ID, return it; otherwise get the last added ID
+      return id || state.crews.allIds[state.crews.allIds.length - 1];
     },
 
     /**

@@ -298,6 +298,7 @@ export interface PerformMomentumResetParams {
 export interface MomentumResetResult {
   crewId: string;
   newMomentum: number;
+  addictionReduced: number | null; // Crew-level addiction clock segments after reduction (null if no clock)
   charactersReset: {
     characterId: string;
     rallyReset: boolean;
@@ -315,7 +316,8 @@ export interface MomentumResetResult {
  * 2. Rally availability reset for all characters
  * 3. All disabled traits re-enabled for all characters
  * 4. All harm clocks recovered (full: -1 segment, partial: -2 segments, 0: deleted)
- * 5. All addiction clocks recovered (full: -1 segment, partial: -2 segments, 0: deleted)
+ * 5. All addiction clocks (per-character) recovered (full: -1 segment, partial: -2 segments, 0: deleted)
+ * 6. Crew-level addiction clock reduced by 2 segments
  *
  * @param store - Redux store
  * @param params - Reset parameters
@@ -464,12 +466,16 @@ export function performMomentumReset(
     };
   });
 
+  // 6. Reduce crew-level addiction clock by 2 segments
+  const addictionReduced = reduceAddiction(store, crewId, userId);
+
   const updatedState = store.getState();
   const updatedCrew = updatedState.crews.byId[crewId];
 
   return {
     crewId,
     newMomentum: updatedCrew.currentMomentum,
+    addictionReduced,
     charactersReset: characterResults,
   };
 }

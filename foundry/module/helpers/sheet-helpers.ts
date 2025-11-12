@@ -4,17 +4,15 @@
  * Utilities for managing Foundry sheet lifecycle and rendering
  */
 
-// @ts-check
-
 /**
  * Refresh sheets for the given entity IDs
  *
  * With unified IDs, Redux ID === Foundry Actor ID, so we just match by actor.id
  *
- * @param {string[]} reduxIds - Array of entity IDs to refresh (unified IDs)
- * @param {boolean} force - Whether to force re-render (default: true)
+ * @param reduxIds - Array of entity IDs to refresh (unified IDs)
+ * @param force - Whether to force re-render (default: true)
  */
-export function refreshSheetsByReduxId(reduxIds, force = true) {
+export function refreshSheetsByReduxId(reduxIds: string[], force = true): void {
   const affectedIds = new Set(reduxIds.filter(id => id)); // Remove nulls/undefined
   if (affectedIds.size === 0) return;
 
@@ -26,7 +24,7 @@ export function refreshSheetsByReduxId(reduxIds, force = true) {
 
     if (app.constructor.name === 'FitGDCharacterSheet' || app.constructor.name === 'FitGDCrewSheet') {
       try {
-        const actorId = app.actor?.id; // Unified IDs: actor.id === Redux ID
+        const actorId = (app as any).actor?.id; // Unified IDs: actor.id === Redux ID
         if (actorId && affectedIds.has(actorId)) {
           console.log(`FitGD | Re-rendering ${app.constructor.name} for ID ${actorId}`);
           app.render(force);

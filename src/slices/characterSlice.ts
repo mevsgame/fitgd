@@ -38,6 +38,7 @@ const initialState: CharacterState = {
  * Payload Types
  */
 interface CreateCharacterPayload {
+  id?: string; // Optional: If provided, use this ID (e.g., Foundry Actor ID)
   name: string;
   traits: Trait[];
   actionDots: ActionDots;
@@ -158,7 +159,7 @@ const characterSlice = createSlice({
         const unallocatedDots = DEFAULT_CONFIG.character.startingActionDots - allocatedDots;
 
         const character: Character = {
-          id: generateId(),
+          id: payload.id || generateId(), // Use provided ID or generate new one
           name: payload.name,
           traits: payload.traits,
           actionDots: payload.actionDots,

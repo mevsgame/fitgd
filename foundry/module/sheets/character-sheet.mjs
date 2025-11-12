@@ -59,8 +59,8 @@ class FitGDCharacterSheet extends ActorSheet {
     // Override editable to be GM-only for clock editing
     context.editable = game.user.isGM;
 
-    // Get Redux ID from Foundry actor flags
-    const reduxId = this.actor.getFlag('forged-in-the-grimdark', 'reduxId');
+    // Unified IDs: Foundry Actor ID === Redux ID
+    const reduxId = this.actor.id;
     console.log('FitGD | Character Sheet getData - reduxId:', reduxId, 'editable:', context.editable);
 
     if (reduxId) {
@@ -154,10 +154,10 @@ class FitGDCharacterSheet extends ActorSheet {
   }
 
   /**
-   * Get Redux character ID from Foundry actor
+   * Get Redux character ID (unified with Foundry Actor ID)
    */
   _getReduxId() {
-    return this.actor.getFlag('forged-in-the-grimdark', 'reduxId');
+    return this.actor.id; // Unified IDs: Foundry Actor ID === Redux ID
   }
 
   /**
