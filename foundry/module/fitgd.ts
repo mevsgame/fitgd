@@ -32,8 +32,7 @@ import { registerActorHooks } from './hooks/actor-hooks';
 import { registerHotbarHooks } from './hooks/hotbar-hooks';
 
 // Socket and autosave modules
-// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { receiveCommandsFromSocket } from './socket/socket-handler.mjs';
+import { receiveCommandsFromSocket } from './socket/socket-handler';
 // @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
 import { saveCommandHistory, trackInitialCommandsAsApplied, getNewCommandsSinceLastBroadcast, checkCircuitBreaker } from './autosave/autosave-manager.mjs';
 
