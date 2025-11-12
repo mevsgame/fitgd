@@ -6,6 +6,8 @@
 
 // @ts-check
 
+import { PlayerActionWidget } from '../widgets/player-action-widget.mjs';
+
 /**
  * Refresh sheets for the given entity IDs
  *
@@ -39,4 +41,67 @@ export function refreshSheetsByReduxId(reduxIds, force = true) {
   }
 
   console.log(`FitGD | Refreshed ${refreshedCount} sheet(s)`);
+}
+
+/**
+ * Open Player Action Widget for a character
+ * This replicates the experience of entering a turn in combat
+ *
+ * @param {string} characterId - Character Redux ID (unified with Foundry Actor ID)
+ * @returns {Promise<void>}
+ */
+export async function takeAction(characterId) {
+  if (!characterId) {
+    ui.notifications.error('Invalid character ID');
+    return;
+  }
+
+  // Verify character exists in Redux
+  const state = game.fitgd.store.getState();
+  const character = state.characters.byId[characterId];
+  if (!character) {
+    ui.notifications.error('Character not found');
+    return;
+  }
+
+  console.log(`FitGD | Taking action for character: ${character.name} (${characterId})`);
+
+  // Initialize player state if not already initialized
+  const existingPlayerState = state.playerRoundState.byCharacterId[characterId];
+  if (!existingPlayerState) {
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/initializePlayerState',
+        payload: { characterId },
+      },
+      { affectedReduxIds: [characterId], silent: true }
+    );
+  }
+
+  // Set as active player
+  await game.fitgd.bridge.execute(
+    {
+      type: 'playerRoundState/setActivePlayer',
+      payload: { characterId },
+    },
+    { affectedReduxIds: [characterId], silent: true }
+  );
+
+  // Show Player Action Widget
+  // Check if widget already exists for this character
+  const existingWidget = Object.values(ui.windows).find(
+    app => app instanceof PlayerActionWidget && app.characterId === characterId
+  );
+
+  if (existingWidget) {
+    console.log(`FitGD | Bringing existing Player Action Widget to front for character ${characterId}`);
+    existingWidget.bringToTop();
+    existingWidget.render(true);
+  } else {
+    console.log(`FitGD | Creating new Player Action Widget for character ${characterId}`);
+    const widget = new PlayerActionWidget(characterId);
+    widget.render(true);
+  }
+
+  ui.notifications.info(`${character.name} is taking action!`);
 }

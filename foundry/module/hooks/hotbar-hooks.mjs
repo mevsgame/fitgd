@@ -33,10 +33,10 @@ Hooks.on('hotbarDrop', async function(bar, data, slot) {
   // Create macro command based on action type
   let command, name, img;
 
-  if (actionType === 'roll') {
-    // Action roll macro
-    name = `${actor.name}: ${action.charAt(0).toUpperCase() + action.slice(1)}`;
-    img = 'icons/svg/d20-grey.svg';
+  if (actionType === 'take-action') {
+    // Take Action macro (opens Player Action Widget)
+    name = `${actor.name}: Take Action`;
+    img = 'icons/svg/dice-target.svg';
     command = `// ${name}
 const actor = game.actors.get("${actorId}");
 const characterId = actor?.id; // Unified IDs
@@ -46,34 +46,8 @@ if (!characterId) {
   return;
 }
 
-// Find crew
-const state = game.fitgd.store.getState();
-let crewId = null;
-for (const id of state.crews.allIds) {
-  const crew = state.crews.byId[id];
-  if (crew.characters.includes(characterId)) {
-    crewId = id;
-    break;
-  }
-}
-
-if (!crewId) {
-  ui.notifications.warn("Character must be part of a crew");
-  return;
-}
-
-// Open action roll dialog
-const { ActionRollDialog } = await import('./systems/forged-in-the-grimdark/module/dialogs.mjs');
-const dialog = new ActionRollDialog(characterId, crewId);
-dialog.render(true);
-
-// Pre-select action
-setTimeout(() => {
-  const select = dialog.element.find('[name="action"]');
-  if (select.length) {
-    select.val('${action}').trigger('change');
-  }
-}, 100);`;
+// Call takeAction API
+await game.fitgd.api.action.takeAction(characterId);`;
 
   } else if (actionType === 'lean-trait') {
     // Lean into trait macro

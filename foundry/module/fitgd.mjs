@@ -31,7 +31,7 @@ import { createFoundryAdapter } from '../dist/fitgd-core.es.js';
 import { createFoundryReduxBridge } from './foundry-redux-bridge.mjs';
 
 // Helper modules
-import { refreshSheetsByReduxId } from './helpers/sheet-helpers.mjs';
+import { refreshSheetsByReduxId, takeAction } from './helpers/sheet-helpers.mjs';
 import { registerSystemSettings } from './settings/system-settings.mjs';
 import { registerSheetClasses } from './helpers/sheet-registration.mjs';
 import { registerHandlebarsHelpers } from './helpers/handlebars-helpers.mjs';
@@ -226,6 +226,10 @@ Hooks.once('init', async function() {
     console.error('FitGD | Failed to create Foundry-Redux Bridge:', error);
     return;
   }
+
+  // Extend game.fitgd.api.action with Foundry-specific takeAction helper
+  game.fitgd.api.action.takeAction = takeAction;
+  console.log('FitGD | Extended action API with takeAction helper');
 
   // Register settings
   registerSystemSettings();
