@@ -1,0 +1,11 @@
+{
+  "name": "Autogun",
+  "type": "equipment",
+  "img": "icons/weapons/guns/rifle-brown.webp",
+  "system": {
+    "description": "<p>Solid-projectile automatic rifle. Less sophisticated than a lasgun but packs a solid punch. Ammunition can be scavenged more easily than power packs.</p><p><strong>Effect:</strong> Can improve Position from Desperate to Risky in close-quarters combat.</p>",
+    "tier": "accessible",
+    "category": "weapon"
+  },
+  "flags": {}
+}

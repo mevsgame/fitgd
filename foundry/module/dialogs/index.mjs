@@ -25,3 +25,7 @@ export { AddTraitDialog } from './AddTraitDialog.mjs';
 export { FlashbackTraitsDialog } from './FlashbackTraitsDialog.mjs';
 export { LeanIntoTraitDialog } from './LeanIntoTraitDialog.mjs';
 export { AddClockDialog } from './AddClockDialog.mjs';
+
+// Equipment dialogs
+export { EquipmentBrowserDialog } from './equipment-browser-dialog.mjs';
+export { EquipmentEditDialog } from './equipment-edit-dialog.mjs';

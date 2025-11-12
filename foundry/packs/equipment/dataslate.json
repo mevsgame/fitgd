@@ -1,0 +1,11 @@
+{
+  "name": "Dataslate",
+  "type": "equipment",
+  "img": "icons/sundries/books/book-embossed-bound-brown.webp",
+  "system": {
+    "description": "<p>Portable data storage and computing device. Contains tactical maps, mission briefings, technical manuals, and communication protocols. Standard issue for squad leaders and specialists.</p><p><strong>Effect:</strong> Can improve Position or Effect when gathering information, planning operations, or accessing technical data.</p>",
+    "tier": "accessible",
+    "category": "tool"
+  },
+  "flags": {}
+}

@@ -8,11 +8,15 @@
 
 import {
   ActionRollDialog,
-  AddTraitDialog, 
+  AddTraitDialog,
   AddClockDialog
 } from '../dialogs.mjs';
 
-import { ClockCreationDialog } from '../dialogs/index.mjs';
+import {
+  ClockCreationDialog,
+  EquipmentBrowserDialog,
+  EquipmentEditDialog
+} from '../dialogs/index.mjs';
 
 /**
  * FitGD Character Sheet
@@ -148,7 +152,13 @@ class FitGDCharacterSheet extends ActorSheet {
 
     // Rally checkbox
     html.find('input[name="system.rallyAvailable"]').change(this._onRallyChange.bind(this));
- 
+
+    // Equipment
+    html.find('.add-equipment-btn').click(this._onAddEquipment.bind(this));
+    html.find('.edit-equipment-btn').click(this._onEditEquipment.bind(this));
+    html.find('.delete-equipment-btn').click(this._onDeleteEquipment.bind(this));
+    html.find('.equipped-checkbox').change(this._onToggleEquipped.bind(this));
+
     // Drag events for hotbar macros
     html.find('.draggable').on('dragstart', this._onDragStart.bind(this));
   }
@@ -644,6 +654,94 @@ class FitGDCharacterSheet extends ActorSheet {
       console.error('FitGD | Rally change error:', error);
       // Revert checkbox on error
       event.currentTarget.checked = !isChecked;
+    }
+  }
+
+  /**
+   * Open equipment browser dialog
+   */
+  async _onAddEquipment(event) {
+    event.preventDefault();
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    // Players can only browse accessible items
+    const tierFilter = game.user.isGM ? null : 'accessible';
+
+    new EquipmentBrowserDialog(characterId, { tierFilter }).render(true);
+  }
+
+  /**
+   * Edit equipment instance
+   */
+  async _onEditEquipment(event) {
+    event.preventDefault();
+    const equipmentId = event.currentTarget.dataset.equipmentId;
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    const character = game.fitgd.api.character.getCharacter(characterId);
+    const equipment = character.equipment.find((e) => e.id === equipmentId);
+
+    if (!equipment) {
+      ui.notifications.error('Equipment not found');
+      return;
+    }
+
+    new EquipmentEditDialog(characterId, equipment).render(true);
+  }
+
+  /**
+   * Delete equipment instance
+   */
+  async _onDeleteEquipment(event) {
+    event.preventDefault();
+    const equipmentId = event.currentTarget.dataset.equipmentId;
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    const character = game.fitgd.api.character.getCharacter(characterId);
+    const equipment = character.equipment.find((e) => e.id === equipmentId);
+
+    if (!equipment) {
+      ui.notifications.error('Equipment not found');
+      return;
+    }
+
+    const confirmed = await Dialog.confirm({
+      title: 'Remove Equipment',
+      content: `<p>Remove <strong>${equipment.name}</strong>?</p>`,
+    });
+
+    if (!confirmed) return;
+
+    await game.fitgd.bridge.execute({
+      type: 'characters/removeEquipment',
+      payload: { characterId, equipmentId },
+    });
+
+    ui.notifications.info(`Removed ${equipment.name}`);
+  }
+
+  /**
+   * Toggle equipped state
+   */
+  async _onToggleEquipped(event) {
+    const equipmentId = event.currentTarget.dataset.equipmentId;
+    const equipped = event.currentTarget.checked;
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    try {
+      await game.fitgd.bridge.execute({
+        type: 'characters/toggleEquipped',
+        payload: { characterId, equipmentId, equipped },
+      });
+    } catch (error) {
+      ui.notifications.error(`Error: ${error.message}`);
+      console.error('FitGD | Toggle equipped error:', error);
+      // Revert checkbox on error
+      event.currentTarget.checked = !equipped;
     }
   }
 }

@@ -1,0 +1,11 @@
+{
+  "name": "Flak Armor",
+  "type": "equipment",
+  "img": "icons/equipment/chest/breastplate-layered-steel.webp",
+  "system": {
+    "description": "<p>Layered protective plates designed to stop shrapnel and glancing blows. Standard issue for Imperial Guard and PDF forces. Won't stop everything, but better than nothing.</p><p><strong>Effect:</strong> Can improve Position from Desperate to Risky when taking fire from small arms or shrapnel.</p>",
+    "tier": "accessible",
+    "category": "armor"
+  },
+  "flags": {}
+}

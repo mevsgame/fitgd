@@ -1,0 +1,11 @@
+{
+  "name": "Carapace Armor",
+  "type": "equipment",
+  "img": "icons/equipment/chest/breastplate-helmet-silver.webp",
+  "system": {
+    "description": "<p>Advanced composite armor plates over flexible mesh. Provides excellent protection without sacrificing mobility. Reserved for storm troopers, special operations teams, and officers.</p><p><strong>Effect:</strong> Improves Position by one step when taking fire from most weapons. Can improve Effect when taking aggressive actions (intimidation, breaching, etc.).</p>",
+    "tier": "inaccessible",
+    "category": "armor"
+  },
+  "flags": {}
+}

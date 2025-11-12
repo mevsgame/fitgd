@@ -83,9 +83,45 @@ interface SetActionDotsPayload {
   userId?: string;
 }
 
+interface CreateEquipmentPayload {
+  // Required fields
+  name: string;
+  tier: 'accessible' | 'inaccessible' | 'epic';
+  category: string;
+
+  // Optional fields
+  description?: string;
+  img?: string;
+  equipped?: boolean;
+  acquiredVia?: 'creation' | 'flashback' | 'reward' | 'loot';
+  sourceItemId?: string; // Track template source (optional)
+  metadata?: Record<string, unknown>;
+}
+
 interface AddEquipmentPayload {
   characterId: string;
-  equipment: Equipment;
+  equipment: CreateEquipmentPayload;
+  userId?: string;
+}
+
+interface UpdateEquipmentPayload {
+  characterId: string;
+  equipmentId: string;
+  changes: {
+    name?: string;
+    tier?: 'accessible' | 'inaccessible' | 'epic';
+    category?: string;
+    description?: string;
+    img?: string;
+    metadata?: Record<string, unknown>;
+  };
+  userId?: string;
+}
+
+interface ToggleEquippedPayload {
+  characterId: string;
+  equipmentId: string;
+  equipped: boolean;
   userId?: string;
 }
 
@@ -501,24 +537,41 @@ const characterSlice = createSlice({
         state.history.push({
           type: 'characters/addEquipment',
           payload: action.payload,
-          timestamp: character.updatedAt,
+          timestamp: equipment.acquiredAt,
           version: 1,
           commandId: generateId(),
           userId: undefined,
         });
       },
       prepare: (payload: AddEquipmentPayload) => {
+        const timestamp = Date.now();
+
+        // Create full Equipment instance from template data
+        const equipment: Equipment = {
+          id: generateId(),
+          name: payload.equipment.name,
+          tier: payload.equipment.tier,
+          category: payload.equipment.category,
+          description: payload.equipment.description || '',
+          img: payload.equipment.img,
+          equipped: payload.equipment.equipped ?? false,
+          acquiredAt: timestamp,
+          acquiredVia: payload.equipment.acquiredVia,
+          sourceItemId: payload.equipment.sourceItemId,
+          metadata: payload.equipment.metadata,
+        };
+
         const command: Command = {
           type: 'characters/addEquipment',
-          payload,
-          timestamp: Date.now(),
+          payload: { characterId: payload.characterId, equipment },
+          timestamp,
           version: 1,
           userId: payload.userId,
           commandId: generateId(),
         };
 
         return {
-          payload,
+          payload: { characterId: payload.characterId, equipment },
           meta: { command },
         };
       },
@@ -554,6 +607,106 @@ const characterSlice = createSlice({
       prepare: (payload: RemoveEquipmentPayload) => {
         const command: Command = {
           type: 'characters/removeEquipment',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    updateEquipment: {
+      reducer: (state, action: PayloadAction<UpdateEquipmentPayload>) => {
+        const { characterId, equipmentId, changes } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        const equipment = character.equipment.find((e) => e.id === equipmentId);
+
+        if (!equipment) {
+          throw new Error(`Equipment ${equipmentId} not found`);
+        }
+
+        // Apply changes (all fields editable!)
+        if (changes.name !== undefined) equipment.name = changes.name;
+        if (changes.tier !== undefined) equipment.tier = changes.tier;
+        if (changes.category !== undefined) equipment.category = changes.category;
+        if (changes.description !== undefined)
+          equipment.description = changes.description;
+        if (changes.img !== undefined) equipment.img = changes.img;
+        if (changes.metadata !== undefined) {
+          equipment.metadata = { ...equipment.metadata, ...changes.metadata };
+        }
+
+        character.updatedAt = Date.now();
+
+        // Log command to history
+        state.history.push({
+          type: 'characters/updateEquipment',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: undefined,
+        });
+      },
+      prepare: (payload: UpdateEquipmentPayload) => {
+        const command: Command = {
+          type: 'characters/updateEquipment',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    toggleEquipped: {
+      reducer: (state, action: PayloadAction<ToggleEquippedPayload>) => {
+        const { characterId, equipmentId, equipped } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        const equipment = character.equipment.find((e) => e.id === equipmentId);
+
+        if (!equipment) {
+          throw new Error(`Equipment ${equipmentId} not found`);
+        }
+
+        equipment.equipped = equipped;
+        character.updatedAt = Date.now();
+
+        // Log command to history
+        state.history.push({
+          type: 'characters/toggleEquipped',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: undefined,
+        });
+      },
+      prepare: (payload: ToggleEquippedPayload) => {
+        const command: Command = {
+          type: 'characters/toggleEquipped',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -908,6 +1061,8 @@ export const {
   updateTraitName,
   setActionDots,
   addEquipment,
+  updateEquipment,
+  toggleEquipped,
   removeEquipment,
   addUnallocatedDots,
   useRally,

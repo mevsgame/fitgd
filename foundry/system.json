@@ -31,7 +31,18 @@
   "styles": [
     "templates/styles/fitgd-sheets.css"
   ],
-  "packs": [],
+  "packs": [
+    {
+      "name": "equipment",
+      "label": "Equipment",
+      "path": "packs/equipment",
+      "type": "Item",
+      "ownership": {
+        "PLAYER": "LIMITED",
+        "ASSISTANT": "OWNER"
+      }
+    }
+  ],
   "languages": [
     {
       "lang": "en",

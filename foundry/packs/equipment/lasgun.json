@@ -1,0 +1,11 @@
+{
+  "name": "Lasgun",
+  "type": "equipment",
+  "img": "icons/weapons/guns/rifle-crosshair-orange.webp",
+  "system": {
+    "description": "<p>Standard-issue energy rifle. Reliable, accurate, and easy to maintain. The workhorse of Imperial forces across the galaxy.</p><p><strong>Effect:</strong> Can improve Position from Desperate to Risky when used appropriately in narrative context.</p>",
+    "tier": "accessible",
+    "category": "weapon"
+  },
+  "flags": {}
+}

@@ -1,0 +1,11 @@
+{
+  "name": "Relic Blade of Saint Macharius",
+  "type": "equipment",
+  "img": "icons/weapons/swords/sword-guard-gold-orange.webp",
+  "system": {
+    "description": "<p>An ancient power sword carried by the legendary Warmaster Macharius during his conquests. Its blade never dulls, its field generator never fails, and it is said to glow with inner light when wielded by the righteous. This weapon carries the weight of history and legend.</p><p><strong>Effect:</strong> Dramatically improves Effect in melee combat (often two levels). Improves Position when facing enemies susceptible to faith or fear. Grants narrative advantages when invoking history or inspiring allies. Cannot be acquired through flashbacks - must be earned as a major story reward.</p>",
+    "tier": "epic",
+    "category": "weapon"
+  },
+  "flags": {}
+}
