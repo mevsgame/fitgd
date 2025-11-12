@@ -8,8 +8,7 @@
  * from other clients and must NOT re-broadcast to avoid infinite loops.
  */
 
-// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { updateBroadcastTracking, applyCommandsIncremental, refreshAffectedSheets, reloadStateFromSettings } from '../autosave/autosave-manager.mjs';
+import { updateBroadcastTracking, applyCommandsIncremental, refreshAffectedSheets, reloadStateFromSettings } from '../autosave/autosave-manager';
 import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 
 /* -------------------------------------------- */
