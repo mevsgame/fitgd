@@ -1,0 +1,57 @@
+{
+  "compilerOptions": {
+    // Target & Module
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+
+    // Emit behavior
+    "noEmit": true,  // Type-check only, no transpilation (keep .mjs for now)
+    "allowJs": false,  // During migration, only check .ts files
+    "checkJs": false,  // Don't type-check .mjs files, only .ts
+
+    // Strict Type-Checking
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+
+    // Additional Checks
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+
+    // Module Resolution
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+
+    // Path Mapping
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["../src/*"],
+      "@foundry/*": ["./module/*"]
+    },
+
+    // Foundry VTT Types
+    "types": ["@league-of-foundry-developers/foundry-vtt-types"]
+  },
+  "include": [
+    "module/**/*.ts",
+    "module/types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "module/foundry-types.d.ts",  // Exclude old custom types (replaced by fvtt-types)
+    "../src"  // Core src/ is checked by root tsconfig.json
+  ]
+}
