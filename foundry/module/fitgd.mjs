@@ -360,6 +360,177 @@ Hooks.once('ready', async function() {
     }
   };
 
+  // Cleanup function for orphaned entities
+  game.fitgd.cleanupOrphans = async function() {
+    if (!game.user.isGM) {
+      ui.notifications.error('Only the GM can clean up orphaned entities');
+      return;
+    }
+
+    console.log('='.repeat(60));
+    console.log('FitGD | Orphaned Entity Cleanup - Starting...');
+    console.log('='.repeat(60));
+
+    // Create backup
+    console.log('\n[1/6] Creating backup...');
+    const backup = game.fitgd.foundry.exportState();
+    game.fitgd.__cleanupBackup = backup;
+    console.log('  ✓ Backup created (stored in game.fitgd.__cleanupBackup)');
+
+    // Identify orphaned entities
+    console.log('\n[2/6] Identifying orphaned entities...');
+    const state = game.fitgd.store.getState();
+    const foundryActorIds = new Set(game.actors.map(a => a.id));
+
+    const orphanedCharacterIds = state.characters.allIds.filter(id => !foundryActorIds.has(id));
+    const orphanedCrewIds = state.crews.allIds.filter(id => !foundryActorIds.has(id));
+
+    const validEntityIds = new Set([...state.characters.allIds, ...state.crews.allIds]);
+    const orphanedClockIds = state.clocks.allIds.filter(id => {
+      const clock = state.clocks.byId[id];
+      return !validEntityIds.has(clock.entityId);
+    });
+
+    console.log(`  Found ${orphanedCharacterIds.length} orphaned characters`);
+    console.log(`  Found ${orphanedCrewIds.length} orphaned crews`);
+    console.log(`  Found ${orphanedClockIds.length} orphaned clocks`);
+
+    const totalOrphaned = orphanedCharacterIds.length + orphanedCrewIds.length + orphanedClockIds.length;
+
+    if (totalOrphaned === 0) {
+      console.log('\n✓ No orphaned entities found!');
+      return { orphanedCharacterIds: [], orphanedCrewIds: [], orphanedClockIds: [], totalCleaned: 0 };
+    }
+
+    // Confirm with user
+    const confirmed = await Dialog.confirm({
+      title: 'Clean Up Orphaned Entities',
+      content: `
+        <p><strong>Found ${totalOrphaned} orphaned entities:</strong></p>
+        <ul>
+          <li>${orphanedCharacterIds.length} characters</li>
+          <li>${orphanedCrewIds.length} crews</li>
+          <li>${orphanedClockIds.length} clocks</li>
+        </ul>
+        <p>These are Redux entities with no corresponding Foundry Actors.</p>
+        <p><strong>This will permanently delete them from Redux state.</strong></p>
+        <p>A backup has been created. Continue?</p>
+      `,
+      defaultYes: false
+    });
+
+    if (!confirmed) {
+      console.log('\n❌ Cleanup cancelled by user');
+      return { cancelled: true };
+    }
+
+    // Delete orphaned entities from Redux
+    console.log('\n[3/6] Deleting orphaned entities from Redux...');
+
+    // Build cleaned state (removing orphaned entities)
+    const cleanedCharacters = {};
+    for (const charId of state.characters.allIds) {
+      if (!orphanedCharacterIds.includes(charId)) {
+        cleanedCharacters[charId] = state.characters.byId[charId];
+      } else {
+        console.log(`  Removing character: ${state.characters.byId[charId].name} (${charId})`);
+      }
+    }
+
+    const cleanedCrews = {};
+    for (const crewId of state.crews.allIds) {
+      if (!orphanedCrewIds.includes(crewId)) {
+        cleanedCrews[crewId] = state.crews.byId[crewId];
+      } else {
+        console.log(`  Removing crew: ${state.crews.byId[crewId].name} (${crewId})`);
+      }
+    }
+
+    const cleanedClocks = {};
+    for (const clockId of state.clocks.allIds) {
+      if (!orphanedClockIds.includes(clockId)) {
+        cleanedClocks[clockId] = state.clocks.byId[clockId];
+      } else {
+        const clock = state.clocks.byId[clockId];
+        console.log(`  Removing clock: ${clock.clockType} - ${clock.subtype || 'N/A'} (${clockId})`);
+      }
+    }
+
+    // Hydrate cleaned state using Redux actions
+    game.fitgd.store.dispatch({
+      type: 'characters/hydrateCharacters',
+      payload: cleanedCharacters
+    });
+
+    game.fitgd.store.dispatch({
+      type: 'crews/hydrateCrews',
+      payload: cleanedCrews
+    });
+
+    game.fitgd.store.dispatch({
+      type: 'clocks/hydrateClocks',
+      payload: cleanedClocks
+    });
+
+    console.log(`  ✓ Removed ${totalOrphaned} entities from Redux`);
+
+    // Prune orphaned commands from history
+    console.log('\n[4/6] Pruning orphaned commands from history...');
+    const orphanedEntityIds = new Set([...orphanedCharacterIds, ...orphanedCrewIds, ...orphanedClockIds]);
+
+    game.fitgd.store.dispatch({ type: 'characters/pruneOrphanedHistory' });
+    game.fitgd.store.dispatch({ type: 'crews/pruneOrphanedHistory' });
+    game.fitgd.store.dispatch({ type: 'clocks/pruneOrphanedHistory' });
+
+    console.log('  ✓ Pruned orphaned commands from history');
+
+    // Save cleaned state
+    console.log('\n[5/6] Saving cleaned state...');
+    await game.fitgd.saveImmediate();
+    console.log('  ✓ State saved and broadcasted');
+
+    // Create snapshot to prevent replay of deleted entities
+    console.log('\n[6/6] Creating state snapshot...');
+    const cleanedState = game.fitgd.foundry.exportState();
+    await game.settings.set('forged-in-the-grimdark', 'stateSnapshot', cleanedState);
+    console.log('  ✓ Snapshot created');
+
+    // Summary
+    console.log('\n' + '='.repeat(60));
+    console.log('FitGD | Orphaned Entity Cleanup - Complete!');
+    console.log('='.repeat(60));
+    console.log(`✓ Deleted ${orphanedCharacterIds.length} orphaned characters`);
+    console.log(`✓ Deleted ${orphanedCrewIds.length} orphaned crews`);
+    console.log(`✓ Deleted ${orphanedClockIds.length} orphaned clocks`);
+    console.log(`✓ Total cleaned: ${totalOrphaned} entities`);
+    console.log('\n📝 Backup available at: game.fitgd.__cleanupBackup');
+    console.log('   To restore: game.fitgd.restoreCleanupBackup()');
+    console.log('='.repeat(60));
+
+    ui.notifications.info(`Cleaned up ${totalOrphaned} orphaned entities`);
+
+    return {
+      orphanedCharacterIds,
+      orphanedCrewIds,
+      orphanedClockIds,
+      totalCleaned: totalOrphaned
+    };
+  };
+
+  // Restore cleanup backup
+  game.fitgd.restoreCleanupBackup = async function() {
+    if (!game.fitgd.__cleanupBackup) {
+      ui.notifications.error('No cleanup backup found');
+      return;
+    }
+
+    console.log('FitGD | Restoring cleanup backup...');
+    game.fitgd.foundry.importState(game.fitgd.__cleanupBackup);
+    await game.fitgd.saveImmediate();
+    console.log('FitGD | Backup restored successfully');
+    ui.notifications.info('Cleanup backup restored');
+  };
+
   console.log('FitGD | Ready (socketlib handlers active)');
 });
 
