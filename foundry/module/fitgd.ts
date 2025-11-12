@@ -27,12 +27,9 @@ import { registerSheetClasses } from './helpers/sheet-registration';
 import { registerHandlebarsHelpers } from './helpers/handlebars-helpers';
 
 // Hook modules
-// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { registerCombatHooks } from './hooks/combat-hooks.mjs';
-// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { registerActorHooks } from './hooks/actor-hooks.mjs';
-// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { registerHotbarHooks } from './hooks/hotbar-hooks.mjs';
+import { registerCombatHooks } from './hooks/combat-hooks';
+import { registerActorHooks } from './hooks/actor-hooks';
+import { registerHotbarHooks } from './hooks/hotbar-hooks';
 
 // Socket and autosave modules
 // @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
