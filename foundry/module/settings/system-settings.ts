@@ -4,8 +4,7 @@
  * Registers all Foundry game settings for the system
  */
 
-// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { HistoryManagementConfig } from '../history-management.mjs';
+import { HistoryManagementConfig } from '../history-management';
 
 /**
  * Register all system settings
