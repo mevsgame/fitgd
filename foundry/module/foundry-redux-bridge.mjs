@@ -175,56 +175,38 @@ export class FoundryReduxBridge {
   // ==================== INTERNAL HELPERS ====================
 
   /**
-   * Convert Foundry Actor ID to Redux ID if needed
+   * Validate entity ID (unified IDs: Foundry Actor ID === Redux ID)
    *
-   * Handles the common pattern of accepting either a Redux UUID or a Foundry Actor ID
-   * and always returning the Redux UUID. This solves the ID confusion bug where code
-   * tries to use Foundry Actor IDs with Redux state lookups.
+   * With unified IDs, this just validates that the ID is a valid string.
+   * Kept for API compatibility but greatly simplified from the old version
+   * which had to translate between Foundry Actor IDs and Redux UUIDs.
    *
-   * @param {string} id - Either Redux UUID or Foundry Actor ID
+   * @param {string} id - Entity ID to validate
    * @param {string} entityType - Entity type ('character' or 'crew') for error messages
-   * @returns {string|null} Redux UUID if found, null if actor doesn't exist or has no Redux ID
+   * @returns {string|null} The ID if valid, null otherwise
    * @private
    */
   _ensureReduxId(id, entityType) {
-    // If it's already a Redux ID (UUID format), return as-is
-    if (this._isReduxId(id)) {
-      return id;
-    }
-
-    // It's a Foundry Actor ID - look up Redux ID from flags
-    const actor = game.actors.get(id);
-    if (!actor) {
-      console.warn(`[FoundryReduxBridge] Actor not found: ${id}`);
+    if (!id || typeof id !== 'string') {
+      console.warn(`[FoundryReduxBridge] Invalid ${entityType} ID:`, id);
       return null;
     }
-
-    const reduxId = actor.getFlag('forged-in-the-grimdark', 'reduxId');
-    if (!reduxId) {
-      console.warn(`[FoundryReduxBridge] Actor ${id} has no Redux ID flag`);
-      return null;
-    }
-
-    return reduxId;
+    return id; // With unified IDs, no translation needed!
   }
 
   /**
-   * Check if ID is a Redux UUID vs Foundry Actor ID
+   * Check if ID is valid (simplified with unified IDs)
    *
-   * Redux IDs are standard UUIDs (e.g., "e5bc6b24-350f-4b15-8acf-b0f6d5f26bfd")
-   * Foundry Actor IDs contain dots (e.g., "Actor.abc123def456")
+   * Previously checked if ID was a Redux UUID vs Foundry Actor ID.
+   * With unified IDs, this just validates it's a non-empty string.
+   * Kept for backwards compatibility.
    *
    * @param {string} id - ID to check
-   * @returns {boolean} True if ID is a Redux UUID, false if it's a Foundry Actor ID
+   * @returns {boolean} True if ID is valid
    * @private
    */
   _isReduxId(id) {
-    // Guard against null/undefined
-    if (!id || typeof id !== 'string') {
-      return false;
-    }
-    // Redux IDs are UUIDs, Foundry Actor IDs contain dots
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    return Boolean(id && typeof id === 'string');
   }
 
   /**
@@ -300,16 +282,16 @@ export class FoundryReduxBridge {
    * @returns {void}
    * @private
    */
-  _refreshSheets(reduxIds, force = false) {
-    const affectedReduxIds = new Set(reduxIds.filter(id => id));
+  _refreshSheets(ids, force = false) {
+    const affectedIds = new Set(ids.filter(id => id));
 
     for (const app of Object.values(ui.windows)) {
       if (app.constructor.name === 'FitGDCharacterSheet' ||
           app.constructor.name === 'FitGDCrewSheet') {
 
-        const reduxId = app.actor?.getFlag('forged-in-the-grimdark', 'reduxId');
+        const actorId = app.actor?.id; // Unified IDs: actor.id === Redux ID
 
-        if (reduxId && affectedReduxIds.has(reduxId)) {
+        if (actorId && affectedIds.has(actorId)) {
           app.render(force);
         }
       }
