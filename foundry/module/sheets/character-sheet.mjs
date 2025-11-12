@@ -7,12 +7,12 @@
 // @ts-check
 
 import {
-  ActionRollDialog,
-  AddTraitDialog, 
+  AddTraitDialog,
   AddClockDialog
 } from '../dialogs.mjs';
 
 import { ClockCreationDialog } from '../dialogs/index.mjs';
+import { PlayerActionWidget } from '../widgets/player-action-widget.mjs';
 
 /**
  * FitGD Character Sheet
@@ -117,12 +117,8 @@ class FitGDCharacterSheet extends ActorSheet {
     super.activateListeners(html);
     console.log('FitGD | Character Sheet activateListeners called');
 
-    // Action Rolls
-    const actionRollBtn = html.find('.action-roll-btn');
-    const actionRollSingleBtn = html.find('.action-roll-single-btn');
-    console.log('FitGD | Found action roll buttons:', actionRollBtn.length, 'single:', actionRollSingleBtn.length);
-    actionRollBtn.click(this._onActionRoll.bind(this));
-    actionRollSingleBtn.click(this._onActionRollSingle.bind(this));
+    // Take Action button
+    html.find('.take-action-btn').click(this._onTakeAction.bind(this));
 
     // Action Dots (clickable)
     const dots = html.find('.dot');
@@ -148,7 +144,7 @@ class FitGDCharacterSheet extends ActorSheet {
 
     // Rally checkbox
     html.find('input[name="system.rallyAvailable"]').change(this._onRallyChange.bind(this));
- 
+
     // Drag events for hotbar macros
     html.find('.draggable').on('dragstart', this._onDragStart.bind(this));
   }
@@ -181,6 +177,14 @@ class FitGDCharacterSheet extends ActorSheet {
    * Handle drag start for creating hotbar macros
    */
   _onDragStart(event) {
+    // jQuery wraps the native event, so we need to access originalEvent
+    const dataTransfer = event.originalEvent?.dataTransfer || event.dataTransfer;
+
+    if (!dataTransfer) {
+      console.warn('FitGD | Drag not supported - dataTransfer unavailable');
+      return;
+    }
+
     const element = event.currentTarget;
     const actionType = element.dataset.actionType;
     const characterId = this._getReduxId();
@@ -194,14 +198,16 @@ class FitGDCharacterSheet extends ActorSheet {
       actionType: actionType,
     };
 
+    // Add action-specific data
     if (actionType === 'roll') {
       dragData.action = element.dataset.action;
     } else if (actionType === 'lean-trait') {
       dragData.traitId = element.dataset.traitId;
       dragData.traitName = element.dataset.traitName;
     }
+    // take-action type doesn't need additional data
 
-    event.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+    dataTransfer.setData('text/plain', JSON.stringify(dragData));
   }
 
   /**
@@ -338,51 +344,16 @@ class FitGDCharacterSheet extends ActorSheet {
   }
 
   /**
-   * Handle clicking on single action roll button
+   * Handle "Take Action" button click
+   * Opens the Player Action Widget (same as entering turn in combat)
    */
-  async _onActionRollSingle(event) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const characterId = this._getReduxId();
-    if (!characterId) return;
-
-    const crewId = this._getCrewId(characterId);
-
-    if (!crewId) {
-      ui.notifications.warn('Character must be part of a crew to make action rolls');
-      return;
-    }
-
-    const action = event.currentTarget.dataset.action;
-
-    if (action) {
-      const dialog = new ActionRollDialog(characterId, crewId);
-      dialog.render(true);
-
-      // Pre-select the action after dialog renders
-      setTimeout(() => {
-        const select = dialog.element.find('[name="action"]');
-        if (select.length) {
-          select.val(action.toLowerCase()).trigger('change');
-        }
-      }, 100);
-    }
-  }
-
-  async _onActionRoll(event) {
+  async _onTakeAction(event) {
     event.preventDefault();
     const characterId = this._getReduxId();
     if (!characterId) return;
 
-    const crewId = this._getCrewId(characterId);
-
-    if (!crewId) {
-      ui.notifications.warn('Character must be part of a crew to make action rolls');
-      return;
-    }
-
-    new ActionRollDialog(characterId, crewId).render(true);
+    // Call the API helper function
+    await game.fitgd.api.action.takeAction(characterId);
   }
 
   /**

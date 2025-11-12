@@ -31,7 +31,7 @@ import { createFoundryAdapter } from '../dist/fitgd-core.es.js';
 import { createFoundryReduxBridge } from './foundry-redux-bridge.mjs';
 
 // Helper modules
-import { refreshSheetsByReduxId } from './helpers/sheet-helpers.mjs';
+import { refreshSheetsByReduxId, takeAction } from './helpers/sheet-helpers.mjs';
 import { registerSystemSettings } from './settings/system-settings.mjs';
 import { registerSheetClasses } from './helpers/sheet-registration.mjs';
 import { registerHandlebarsHelpers } from './helpers/handlebars-helpers.mjs';
@@ -42,7 +42,7 @@ import { registerActorHooks } from './hooks/actor-hooks.mjs';
 import { registerHotbarHooks } from './hooks/hotbar-hooks.mjs';
 
 // Socket and autosave modules
-import { receiveCommandsFromSocket } from './socket/socket-handler.mjs';
+import { receiveCommandsFromSocket, handleTakeAction } from './socket/socket-handler.mjs';
 
 import {
   saveCommandHistory,
@@ -112,8 +112,9 @@ Hooks.once('init', async function() {
     // Register socket handlers
     // Note: Handler function must be defined before registration
     game.fitgd.socket.register('syncCommands', receiveCommandsFromSocket);
-    console.log('FitGD | Socket handlers registered for "syncCommands"');
-    console.log('FitGD | Handler function:', receiveCommandsFromSocket);
+    game.fitgd.socket.register('takeAction', handleTakeAction);
+    console.log('FitGD | Socket handlers registered for "syncCommands" and "takeAction"');
+    console.log('FitGD | Handler functions:', receiveCommandsFromSocket, handleTakeAction);
   } catch (error) {
     console.error('FitGD | Failed to initialize socketlib:', error);
     console.error('FitGD | Make sure socketlib module is installed and enabled');
@@ -226,6 +227,10 @@ Hooks.once('init', async function() {
     console.error('FitGD | Failed to create Foundry-Redux Bridge:', error);
     return;
   }
+
+  // Extend game.fitgd.api.action with Foundry-specific takeAction helper
+  game.fitgd.api.action.takeAction = takeAction;
+  console.log('FitGD | Extended action API with takeAction helper');
 
   // Register settings
   registerSystemSettings();
