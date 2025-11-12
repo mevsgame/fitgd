@@ -52,7 +52,8 @@
     "equipment": {
       "templates": ["base"],
       "tier": "accessible",
-      "category": "weapon"
+      "category": "weapon",
+      "equipped": false
     }
   }
 }
