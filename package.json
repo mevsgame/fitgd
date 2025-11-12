@@ -34,6 +34,7 @@
     "immer": "^10.2.0"
   },
   "devDependencies": {
+    "@league-of-foundry-developers/foundry-vtt-types": "13.346.0-beta.20251110213629",
     "@types/node": "^24.9.2",
     "@vitest/ui": "^4.0.6",
     "tsx": "^4.20.6",
