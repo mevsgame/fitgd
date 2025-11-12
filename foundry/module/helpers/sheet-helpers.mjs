@@ -7,20 +7,18 @@
 // @ts-check
 
 /**
- * Refresh sheets for the given Redux entity IDs
+ * Refresh sheets for the given entity IDs
  *
- * This properly handles the fact that characterId/crewId are Redux IDs,
- * not Foundry Actor IDs. We need to find sheets by matching the Redux ID
- * stored in the actor's flags.
+ * With unified IDs, Redux ID === Foundry Actor ID, so we just match by actor.id
  *
- * @param {string[]} reduxIds - Array of Redux entity IDs to refresh
+ * @param {string[]} reduxIds - Array of entity IDs to refresh (unified IDs)
  * @param {boolean} force - Whether to force re-render (default: true)
  */
 export function refreshSheetsByReduxId(reduxIds, force = true) {
-  const affectedReduxIds = new Set(reduxIds.filter(id => id)); // Remove nulls/undefined
-  if (affectedReduxIds.size === 0) return;
+  const affectedIds = new Set(reduxIds.filter(id => id)); // Remove nulls/undefined
+  if (affectedIds.size === 0) return;
 
-  console.log(`FitGD | Refreshing sheets for Redux IDs:`, Array.from(affectedReduxIds));
+  console.log(`FitGD | Refreshing sheets for IDs:`, Array.from(affectedIds));
 
   let refreshedCount = 0;
   for (const app of Object.values(ui.windows)) {
@@ -28,9 +26,9 @@ export function refreshSheetsByReduxId(reduxIds, force = true) {
 
     if (app.constructor.name === 'FitGDCharacterSheet' || app.constructor.name === 'FitGDCrewSheet') {
       try {
-        const reduxId = app.actor?.getFlag('forged-in-the-grimdark', 'reduxId');
-        if (reduxId && affectedReduxIds.has(reduxId)) {
-          console.log(`FitGD | Re-rendering ${app.constructor.name} for Redux ID ${reduxId}`);
+        const actorId = app.actor?.id; // Unified IDs: actor.id === Redux ID
+        if (actorId && affectedIds.has(actorId)) {
+          console.log(`FitGD | Re-rendering ${app.constructor.name} for ID ${actorId}`);
           app.render(force);
           refreshedCount++;
         }

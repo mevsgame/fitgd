@@ -39,7 +39,7 @@ Hooks.on('hotbarDrop', async function(bar, data, slot) {
     img = 'icons/svg/d20-grey.svg';
     command = `// ${name}
 const actor = game.actors.get("${actorId}");
-const characterId = actor?.getFlag('forged-in-the-grimdark', 'reduxId');
+const characterId = actor?.id; // Unified IDs
 
 if (!characterId) {
   ui.notifications.error("Character not linked to Redux");
@@ -81,7 +81,7 @@ setTimeout(() => {
     img = 'icons/svg/fire.svg';
     command = `// ${name}
 const actor = game.actors.get("${actorId}");
-const characterId = actor?.getFlag('forged-in-the-grimdark', 'reduxId');
+const characterId = actor?.id; // Unified IDs
 const traitId = "${traitId}";
 
 if (!characterId) {

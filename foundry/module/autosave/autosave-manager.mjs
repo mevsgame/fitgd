@@ -247,22 +247,16 @@ function refreshAffectedSheets(commands, clockEntityIds = new Map()) {
     const isCrewSheet = app.constructor.name === 'FitGDCrewSheet';
 
     if (isCharSheet || isCrewSheet) {
-      // Try to get Redux ID from the actor flags
-      let reduxId = null;
-      try {
-        reduxId = app.actor?.getFlag('forged-in-the-grimdark', 'reduxId');
-      } catch (error) {
-        console.warn(`FitGD | Could not read reduxId flag from actor (permission issue?):`, error);
-        continue;
-      }
+      // Get entity ID (unified IDs: actor.id === Redux ID)
+      const entityId = app.actor?.id;
 
-      console.log(`FitGD | Checking ${app.constructor.name} - Actor: ${app.actor?.name}, ReduxId: ${reduxId}, Match: ${affectedEntityIds.has(reduxId)}`);
+      console.log(`FitGD | Checking ${app.constructor.name} - Actor: ${app.actor?.name}, ID: ${entityId}, Match: ${affectedEntityIds.has(entityId)}`);
 
-      if (reduxId && affectedEntityIds.has(reduxId)) {
+      if (entityId && affectedEntityIds.has(entityId)) {
         try {
           const permission = app.actor?.testUserPermission(game.user, 'OBSERVER') ? 'observer+' :
                            app.actor?.testUserPermission(game.user, 'OWNER') ? 'owner' : 'limited';
-          console.log(`FitGD | Re-rendering ${app.constructor.name} for ${reduxId} (user: ${game.user.name}, permission: ${permission})`);
+          console.log(`FitGD | Re-rendering ${app.constructor.name} for ${entityId} (user: ${game.user.name}, permission: ${permission})`);
 
           // Force a full re-render (true = force) to ensure observers see updates
           // The sheet's getData() will read from Redux which has the latest state

@@ -39,7 +39,7 @@ Hooks.on('combatStart', async function(combat, updateData) {
     const actor = combatant.actor;
     if (!actor) continue;
 
-    const characterId = actor.getFlag('forged-in-the-grimdark', 'reduxId');
+    const characterId = actor.id; // Unified IDs
     if (characterId) {
       characterIds.push(characterId);
     }

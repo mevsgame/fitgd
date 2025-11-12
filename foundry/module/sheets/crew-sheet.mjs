@@ -393,7 +393,7 @@ class FitGDCrewSheet extends ActorSheet {
 
     // Filter out characters already in the crew
     const availableCharacters = characters.filter(char => {
-      const reduxId = char.getFlag('forged-in-the-grimdark', 'reduxId');
+      const reduxId = char.id; // Unified IDs
       return reduxId && !currentMemberIds.has(reduxId);
     });
 
@@ -422,7 +422,7 @@ class FitGDCrewSheet extends ActorSheet {
           callback: async (html) => {
             const selectedFoundryId = html.find('[name="characterId"]').val();
             const selectedActor = game.actors.get(selectedFoundryId);
-            const characterReduxId = selectedActor?.getFlag('forged-in-the-grimdark', 'reduxId');
+            const characterReduxId = selectedActor?.id; // Unified IDs
 
             if (characterReduxId) {
               try {
