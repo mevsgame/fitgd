@@ -530,6 +530,11 @@ const characterSlice = createSlice({
           throw new Error(`Character ${characterId} not found`);
         }
 
+        // Safety: Ensure equipment has an ID (handles legacy data or edge cases)
+        if (!equipment.id) {
+          equipment.id = generateId();
+        }
+
         character.equipment.push(equipment);
         character.updatedAt = Date.now();
 

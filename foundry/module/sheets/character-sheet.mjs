@@ -653,7 +653,7 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!characterId) return;
 
     const character = game.fitgd.api.character.getCharacter(characterId);
-    const equipment = character.equipment.find((e) => e.id === equipmentId);
+    const equipment = character?.equipment?.find((e) => e.id === equipmentId);
 
     if (!equipment) {
       ui.notifications.error('Equipment not found');
@@ -673,7 +673,7 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!characterId) return;
 
     const character = game.fitgd.api.character.getCharacter(characterId);
-    const equipment = character.equipment.find((e) => e.id === equipmentId);
+    const equipment = character?.equipment?.find((e) => e.id === equipmentId);
 
     if (!equipment) {
       ui.notifications.error('Equipment not found');
