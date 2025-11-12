@@ -82,9 +82,14 @@ Hooks.on('updateCombat', async function(combat, updateData, options, userId) {
 
   console.log(`FitGD | Active combatant: ${activeCombatant.actor.name}`);
 
-  const characterId = activeCombatant.actor.getFlag('forged-in-the-grimdark', 'reduxId');
-  if (!characterId) {
-    console.log('FitGD | Active combatant has no Redux characterId');
+  // Unified IDs: Foundry Actor ID IS the Redux ID
+  const characterId = activeCombatant.actor.id;
+
+  // Verify this character exists in Redux state
+  const state = game.fitgd.store.getState();
+  const character = state.characters.byId[characterId];
+  if (!character) {
+    console.log(`FitGD | Active combatant actor (${activeCombatant.actor.name}) has no Redux character state`);
     return;
   }
 
