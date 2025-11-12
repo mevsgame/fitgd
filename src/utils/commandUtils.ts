@@ -15,13 +15,34 @@ import type { Command } from '../types';
  * - Update commands: payload.characterId, payload.crewId, payload.clockId
  * - Delete commands: payload.characterId, payload.crewId, payload.clockId
  *
+ * IMPORTANT: Extracts the ID of the entity being MODIFIED, not referenced.
+ * For example, crews/addCharacterToCrew modifies a crew (crewId), even though
+ * it references a character (characterId). We return crewId, not characterId.
+ *
  * @param command - Command to extract entity ID from
  * @returns Entity ID if found, null otherwise
  */
 export function extractEntityIdFromCommand(command: Command): string | null {
   const payload = command.payload as any;
 
-  // Try common entity ID fields
+  // Check command type to determine which entity is being modified
+  // This prevents extracting the wrong ID (e.g., characterId from crews/addCharacterToCrew)
+  if (command.type.startsWith('crews/')) {
+    // Crew commands always modify the crew, even if they reference characters
+    return payload?.crewId || payload?.id || null;
+  }
+
+  if (command.type.startsWith('characters/')) {
+    // Character commands modify the character
+    return payload?.characterId || payload?.id || null;
+  }
+
+  if (command.type.startsWith('clocks/')) {
+    // Clock commands modify the clock
+    return payload?.clockId || payload?.id || null;
+  }
+
+  // Fallback for unknown command types: try all common fields
   return (
     payload?.characterId ||
     payload?.crewId ||
