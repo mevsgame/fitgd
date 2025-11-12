@@ -1,0 +1,409 @@
+/**
+ * Forged in the Grimdark - Foundry VTT System
+ *
+ * Main module entry point. Integrates Redux-based state management with Foundry VTT.
+ *
+ * Architecture:
+ * - Redux store maintains single source of truth
+ * - Foundry Actors/Items sync from Redux state
+ * - All mutations go through Redux actions
+ * - Full event sourcing with command history
+ */
+
+import type { Store } from '@reduxjs/toolkit';
+import type { RootState } from '@/store';
+
+// Core Redux modules
+// @ts-expect-error - Built library has no type declarations in dist
+import { configureStore, createGameAPI } from '../dist/fitgd-core.es.js';
+// @ts-expect-error - Built library has no type declarations in dist
+import { createFoundryAdapter } from '../dist/fitgd-core.es.js';
+import { createFoundryReduxBridge } from './foundry-redux-bridge';
+
+// Helper modules
+// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
+import { refreshSheetsByReduxId } from './helpers/sheet-helpers.mjs';
+// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
+import { registerSystemSettings } from './settings/system-settings.mjs';
+// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
+import { registerSheetClasses } from './helpers/sheet-registration.mjs';
+// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
+import { registerHandlebarsHelpers } from './helpers/handlebars-helpers.mjs';
+
+// Hook modules
+// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
+import { registerCombatHooks } from './hooks/combat-hooks.mjs';
+// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
+import { registerActorHooks } from './hooks/actor-hooks.mjs';
+// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
+import { registerHotbarHooks } from './hooks/hotbar-hooks.mjs';
+
+// Socket and autosave modules
+// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
+import { receiveCommandsFromSocket } from './socket/socket-handler.mjs';
+// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
+import { saveCommandHistory, trackInitialCommandsAsApplied, getNewCommandsSinceLastBroadcast, checkCircuitBreaker } from './autosave/autosave-manager.mjs';
+
+// Developer commands
+// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
+import { registerDevCommands } from './console/dev-commands.mjs';
+
+/* -------------------------------------------- */
+/*  Type Definitions                            */
+/* -------------------------------------------- */
+
+/**
+ * Command history structure stored in Foundry settings
+ */
+interface CommandHistory {
+  characters: unknown[];
+  crews: unknown[];
+  clocks: unknown[];
+}
+
+/**
+ * State snapshot structure (used after history pruning)
+ */
+interface StateSnapshot {
+  timestamp: number;
+  version: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Socket data structure for command synchronization
+ */
+interface SocketCommandData {
+  type: 'commandsAdded';
+  userId: string;
+  userName: string;
+  commandCount: number;
+  commands: CommandHistory;
+  playerRoundState: RootState['playerRoundState'];
+  timestamp: number;
+}
+
+/**
+ * Helper to access game settings with custom namespace
+ * Foundry types only include "core" namespace, but we use custom namespace
+ */
+function getSetting<T>(key: string): T {
+  return (game.settings as any).get('forged-in-the-grimdark', key) as T;
+}
+
+function setSetting<T>(key: string, value: T): Promise<T> {
+  return (game.settings as any).set('forged-in-the-grimdark', key, value) as Promise<T>;
+}
+
+/* -------------------------------------------- */
+/*  System Initialization                       */
+/* -------------------------------------------- */
+
+/**
+ * Initialize the FitGD system
+ */
+Hooks.once('init', async function() {
+  console.log('FitGD | Initializing Forged in the Grimdark system');
+
+  // Create global namespace
+  if (!game.fitgd) {
+    (game as any).fitgd = {};
+  }
+
+  // Initialize Redux store
+  console.log('FitGD | Creating Redux store...');
+  try {
+    game.fitgd!.store = configureStore() as Store<RootState>;
+    console.log('FitGD | Redux store created successfully');
+  } catch (error) {
+    console.error('FitGD | Failed to create Redux store:', error);
+    return;
+  }
+
+  // Initialize Game API
+  console.log('FitGD | Creating Game API...');
+  try {
+    game.fitgd!.api = createGameAPI(game.fitgd!.store);
+    console.log('FitGD | Game API created successfully. Available APIs:', Object.keys(game.fitgd!.api));
+  } catch (error) {
+    console.error('FitGD | Failed to create Game API:', error);
+    return;
+  }
+
+  // Initialize Foundry adapter
+  console.log('FitGD | Creating Foundry adapter...');
+  try {
+    game.fitgd!.foundry = createFoundryAdapter(game.fitgd!.store);
+    console.log('FitGD | Foundry adapter created successfully');
+  } catch (error) {
+    console.error('FitGD | Failed to create Foundry adapter:', error);
+    return;
+  }
+
+  // Initialize socketlib for reliable multi-client communication
+  console.log('FitGD | Initializing socketlib...');
+  console.log('FitGD | socketlib available?', typeof socketlib !== 'undefined');
+
+  try {
+    if (typeof socketlib === 'undefined') {
+      throw new Error('socketlib is not defined - module may not be installed or enabled');
+    }
+
+    game.fitgd!.socket = socketlib.registerSystem('forged-in-the-grimdark');
+    console.log('FitGD | socketlib registered successfully, socket object:', game.fitgd!.socket);
+
+    // Register socket handlers
+    // Note: Handler function must be defined before registration
+    game.fitgd!.socket.register('syncCommands', receiveCommandsFromSocket);
+    console.log('FitGD | Socket handlers registered for "syncCommands"');
+    console.log('FitGD | Handler function:', receiveCommandsFromSocket);
+  } catch (error) {
+    console.error('FitGD | Failed to initialize socketlib:', error);
+    console.error('FitGD | Make sure socketlib module is installed and enabled');
+    return;
+  }
+
+  // Expose save function for dialogs and sheets to use
+  game.fitgd!.saveImmediate = async function(): Promise<void> {
+    try {
+      // Get new commands since last broadcast
+      const newCommands = getNewCommandsSinceLastBroadcast();
+      const newCommandCount = newCommands.characters.length + newCommands.crews.length + newCommands.clocks.length;
+
+      // Circuit breaker: prevent infinite broadcast loops
+      if (!checkCircuitBreaker(newCommandCount)) {
+        console.error(`FitGD | Broadcast blocked by circuit breaker`);
+        return;
+      }
+
+      // Also get current playerRoundState for real-time collaboration
+      const state = game.fitgd!.store.getState();
+      const playerRoundState = state.playerRoundState;
+
+      // Broadcast commands FIRST (before persistence) - all users can do this
+      if (newCommandCount > 0 || Object.keys(playerRoundState.byCharacterId).length > 0) {
+        const socketData: SocketCommandData = {
+          type: 'commandsAdded',
+          userId: game.user!.id,
+          userName: game.user!.name,
+          commandCount: newCommandCount,
+          commands: newCommands,
+          playerRoundState: playerRoundState, // Include ephemeral UI state
+          timestamp: Date.now()
+        };
+
+        console.log(`FitGD | Broadcasting ${newCommandCount} commands + playerRoundState via socketlib`);
+
+        try {
+          // Use socketlib to broadcast to OTHER clients (not self)
+          const result = await game.fitgd!.socket.executeForOthers('syncCommands', socketData);
+          console.log(`FitGD | socketlib broadcast completed, result:`, result);
+        } catch (error) {
+          console.error('FitGD | socketlib broadcast error:', error);
+        }
+      } else {
+        console.log(`FitGD | No new commands or playerRoundState to broadcast`);
+      }
+
+      // Auto-prune orphaned history if enabled
+      if (game.user!.isGM) {
+        const autoPruneEnabled = getSetting<boolean>('autoPruneHistory');
+
+        if (autoPruneEnabled) {
+          console.log('FitGD | Auto-prune enabled, checking for orphaned history...');
+
+          // Get command counts before pruning
+          const stateBefore = game.fitgd!.store.getState();
+          const commandsBefore =
+            stateBefore.characters.history.length +
+            stateBefore.crews.history.length +
+            stateBefore.clocks.history.length;
+
+          // Dispatch prune actions for all slices
+          game.fitgd!.store.dispatch({ type: 'characters/pruneOrphanedHistory' });
+          game.fitgd!.store.dispatch({ type: 'crews/pruneOrphanedHistory' });
+          game.fitgd!.store.dispatch({ type: 'clocks/pruneOrphanedHistory' });
+
+          // Get command counts after pruning
+          const stateAfter = game.fitgd!.store.getState();
+          const commandsAfter =
+            stateAfter.characters.history.length +
+            stateAfter.crews.history.length +
+            stateAfter.clocks.history.length;
+
+          const prunedCount = commandsBefore - commandsAfter;
+
+          if (prunedCount > 0) {
+            console.log(`FitGD | Auto-pruned ${prunedCount} orphaned command(s) from history`);
+            ui.notifications!.info(`Auto-pruned ${prunedCount} orphaned command(s) from history`);
+          }
+        }
+      }
+
+      // Save to Foundry settings (only if user has permission - typically GM)
+      // Players will broadcast but won't persist; GM will persist when receiving broadcasts
+      if (game.user!.isGM) {
+        const history = game.fitgd!.foundry.exportHistory() as CommandHistory;
+        await setSetting('commandHistory', history);
+        const total = history.characters.length + history.crews.length + history.clocks.length;
+        console.log(`FitGD | Saved ${total} commands to world settings (GM only)`);
+      } else {
+        console.log(`FitGD | Skipped settings save (player - GM will persist on receipt)`);
+      }
+    } catch (error) {
+      console.error('FitGD | Error in saveImmediate:', error);
+      // Don't throw - we still want broadcasts to work even if save fails
+    }
+  };
+
+  // Initialize Foundry-Redux Bridge API
+  console.log('FitGD | Creating Foundry-Redux Bridge...');
+  try {
+    game.fitgd!.bridge = createFoundryReduxBridge(
+      game.fitgd!.store,
+      game.fitgd!.saveImmediate
+    );
+    console.log('FitGD | Foundry-Redux Bridge created successfully');
+    console.log('FitGD | Bridge API available at game.fitgd.bridge');
+  } catch (error) {
+    console.error('FitGD | Failed to create Foundry-Redux Bridge:', error);
+    return;
+  }
+
+  // Register settings
+  registerSystemSettings();
+
+  // Register sheet classes
+  registerSheetClasses();
+
+  // Register Handlebars helpers
+  registerHandlebarsHelpers();
+
+  // Register hooks
+  registerCombatHooks();
+  registerActorHooks();
+  registerHotbarHooks();
+
+  // Register developer console commands
+  registerDevCommands();
+
+  console.log('FitGD | Initialization complete');
+});
+
+/* -------------------------------------------- */
+/*  Ready Hook                                  */
+/* -------------------------------------------- */
+
+/**
+ * Load saved game state when world is ready
+ */
+Hooks.once('ready', async function() {
+  console.log(`FitGD | World ready for user: ${game.user!.name} (isGM: ${game.user!.isGM})`);
+  console.log(`FitGD | game.fitgd initialized: ${!!game.fitgd}, has store: ${!!game.fitgd?.store}, has api: ${!!game.fitgd?.api}`);
+
+  // Check for state snapshot first (used after history pruning)
+  const stateSnapshot = getSetting<StateSnapshot | undefined>('stateSnapshot');
+  const defaultHistory: CommandHistory = { characters: [], crews: [], clocks: [] };
+  const history = getSetting<CommandHistory | undefined>('commandHistory') || defaultHistory;
+
+  // Ensure history has the correct structure
+  const validHistory: CommandHistory = {
+    characters: history.characters || [],
+    crews: history.crews || [],
+    clocks: history.clocks || []
+  };
+
+  const totalCommands = validHistory.characters.length + validHistory.crews.length + validHistory.clocks.length;
+
+  // Warn if command history is bloated (possible corruption or spam issue)
+  if (totalCommands > 1000) {
+    console.warn(`FitGD | WARNING: Command history is large (${totalCommands} commands). This may indicate a previous spam issue.`);
+    console.warn(`FitGD | Breakdown: chars=${validHistory.characters.length}, crews=${validHistory.crews.length}, clocks=${validHistory.clocks.length}`);
+
+    if (totalCommands > 3000) {
+      console.error(`FitGD | CRITICAL: Command history is VERY large (${totalCommands} commands)!`);
+      ui.notifications!.warn(`FitGD: Large command history detected (${totalCommands} commands). Performance may be affected. Consider using History Management to prune old commands.`, { permanent: true });
+    }
+  }
+
+  if (stateSnapshot?.timestamp) {
+    // Load from snapshot first
+    console.log('FitGD | State snapshot found, hydrating from snapshot...');
+    console.log(`FitGD | Snapshot timestamp: ${new Date(stateSnapshot.timestamp).toLocaleString()}`);
+
+    try {
+      // Hydrate Redux store from snapshot
+      game.fitgd!.foundry.importState(stateSnapshot);
+      console.log('FitGD | State restored from snapshot');
+
+      // Then replay any new commands that occurred after the snapshot
+      if (totalCommands > 0) {
+        console.log(`FitGD | Replaying ${totalCommands} commands on top of snapshot...`);
+        game.fitgd!.foundry.replayCommands(validHistory);
+        console.log('FitGD | New commands applied');
+      }
+
+      // Track all commands as applied
+      trackInitialCommandsAsApplied();
+    } catch (error) {
+      console.error('FitGD | Error loading from snapshot:', error);
+      ui.notifications!.error('Failed to load game state from snapshot');
+    }
+  } else if (totalCommands > 0) {
+    // No snapshot, use command history replay (old behavior)
+    console.log(`FitGD | Replaying ${totalCommands} commands from history...`);
+    game.fitgd!.foundry.replayCommands(validHistory);
+    console.log('FitGD | State restored from command history');
+
+    // Track all initial commands as applied (prevents re-application on sync)
+    trackInitialCommandsAsApplied();
+  } else {
+    console.log('FitGD | No command history or snapshot found, starting fresh');
+  }
+
+  // Subscribe to store changes to auto-save
+  game.fitgd!.store.subscribe(() => {
+    saveCommandHistory();
+  });
+
+  // Save on page unload to catch any unsaved changes (GM only)
+  window.addEventListener('beforeunload', () => {
+    if (game.user!.isGM) {
+      // Synchronous save (no await) for immediate execution
+      try {
+        const history = game.fitgd!.foundry.exportHistory() as CommandHistory;
+        setSetting('commandHistory', history);
+        const total = history.characters.length + history.crews.length + history.clocks.length;
+        console.log(`FitGD | Saved ${total} commands (on unload - GM)`);
+      } catch (error) {
+        console.error('FitGD | Failed to save on unload:', error);
+      }
+    }
+  });
+
+  // Expose test function for manual socket testing
+  game.fitgd!.testSocket = async function(): Promise<void> {
+    console.log('FitGD | Testing socketlib...');
+    console.log('FitGD | Socket object:', game.fitgd!.socket);
+
+    const testData = {
+      test: 'Hello from ' + game.user!.name,
+      timestamp: Date.now(),
+      userId: game.user!.id
+    };
+
+    try {
+      console.log('FitGD | Sending test message:', testData);
+      const result = await game.fitgd!.socket.executeForOthers('syncCommands', testData);
+      console.log('FitGD | Test message sent, result:', result);
+    } catch (error) {
+      console.error('FitGD | Test message failed:', error);
+      throw error;
+    }
+  };
+
+  console.log('FitGD | Ready (socketlib handlers active)');
+});
+
+// Export helper for use in other modules if needed
+export { refreshSheetsByReduxId };
