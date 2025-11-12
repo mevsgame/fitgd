@@ -23,8 +23,7 @@ import { createFoundryReduxBridge } from './foundry-redux-bridge';
 // Helper modules
 // @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
 import { refreshSheetsByReduxId } from './helpers/sheet-helpers.mjs';
-// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { registerSystemSettings } from './settings/system-settings.mjs';
+import { registerSystemSettings } from './settings/system-settings';
 // @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
 import { registerSheetClasses } from './helpers/sheet-registration.mjs';
 // @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
@@ -45,8 +44,7 @@ import { receiveCommandsFromSocket } from './socket/socket-handler.mjs';
 import { saveCommandHistory, trackInitialCommandsAsApplied, getNewCommandsSinceLastBroadcast, checkCircuitBreaker } from './autosave/autosave-manager.mjs';
 
 // Developer commands
-// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { registerDevCommands } from './console/dev-commands.mjs';
+import { registerDevCommands } from './console/dev-commands';
 
 /* -------------------------------------------- */
 /*  Type Definitions                            */
