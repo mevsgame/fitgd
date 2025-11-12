@@ -177,6 +177,12 @@ class FitGDCharacterSheet extends ActorSheet {
    * Handle drag start for creating hotbar macros
    */
   _onDragStart(event) {
+    // Check if dataTransfer is available (some elements like buttons may not support it properly)
+    if (!event.dataTransfer) {
+      console.warn('FitGD | Drag not supported on this element type');
+      return;
+    }
+
     const element = event.currentTarget;
     const actionType = element.dataset.actionType;
     const characterId = this._getReduxId();
@@ -190,12 +196,14 @@ class FitGDCharacterSheet extends ActorSheet {
       actionType: actionType,
     };
 
+    // Add action-specific data
     if (actionType === 'roll') {
       dragData.action = element.dataset.action;
     } else if (actionType === 'lean-trait') {
       dragData.traitId = element.dataset.traitId;
       dragData.traitName = element.dataset.traitName;
     }
+    // take-action type doesn't need additional data
 
     event.dataTransfer.setData('text/plain', JSON.stringify(dragData));
   }
