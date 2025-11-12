@@ -28,13 +28,20 @@
       <div class="actions-header">
         <h2>Action Ratings</h2>
         <div class="header-buttons">
+          <button class="take-action-btn draggable"
+                  type="button"
+                  draggable="true"
+                  data-action-type="take-action"
+                  title="Take an action (drag to hotbar to create macro)">
+            <i class="fas fa-cube"></i> Take Action
+          </button>
           <button class="toggle-edit-btn" type="button">
             {{#if editMode}}
               <i class="fas fa-save"></i> Save
             {{else}}
               <i class="fas fa-edit"></i> Edit
             {{/if}}
-          </button> 
+          </button>
         </div>
       </div>
 
@@ -67,11 +74,7 @@
       <div class="actions-grid">
         {{#each system.actionDots}}
         <div class="action-row">
-          <label class="action-label draggable"
-                 draggable="true"
-                 data-action="{{action}}"
-                 data-action-type="roll"
-                 title="Drag to hotbar to create macro">
+          <label class="action-label">
             {{action}}
           </label>
           <div class="action-dots" data-action="{{action}}">
@@ -83,9 +86,6 @@
             {{/times}}
           </div>
           <span class="action-value">{{dots}}</span>
-          <button class="action-roll-single-btn" type="button" data-action="{{action}}" title="Roll {{action}}">
-            <i class="fas fa-dice-d6"></i>
-          </button>
         </div>
         {{/each}}
       </div>
