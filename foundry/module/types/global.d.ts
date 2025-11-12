@@ -10,43 +10,7 @@ import type { Store } from '@reduxjs/toolkit';
 import type { RootState } from '@/store';
 import type { GameAPI } from '@/api';
 import type { FoundryAdapter } from '@/adapters/foundryAdapter';
-
-/**
- * Foundry Redux Bridge API
- * Provides safe abstraction over Redux store operations
- */
-export interface FoundryReduxBridge {
-  /**
-   * Execute a single Redux action with automatic broadcast and sheet refresh
-   */
-  execute(
-    action: { type: string; payload?: unknown },
-    options?: { affectedReduxIds?: string[] }
-  ): Promise<void>;
-
-  /**
-   * Execute multiple Redux actions in a batch (single broadcast)
-   */
-  executeBatch(
-    actions: Array<{ type: string; payload?: unknown }>,
-    options?: { affectedReduxIds?: string[] }
-  ): Promise<void>;
-
-  /**
-   * Get character by Redux ID
-   */
-  getCharacter(id: string): import('@/types/character').Character | undefined;
-
-  /**
-   * Get crew by Redux ID
-   */
-  getCrew(id: string): import('@/types/crew').Crew | undefined;
-
-  /**
-   * Get clocks for an entity
-   */
-  getClocks(entityId: string, clockType?: string): import('@/types/clock').Clock[];
-}
+import type { FoundryReduxBridge } from '../foundry-redux-bridge';
 
 /**
  * Socketlib socket interface
