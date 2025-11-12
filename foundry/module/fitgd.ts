@@ -21,13 +21,10 @@ import { createFoundryAdapter } from '../dist/fitgd-core.es.js';
 import { createFoundryReduxBridge } from './foundry-redux-bridge';
 
 // Helper modules
-// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { refreshSheetsByReduxId } from './helpers/sheet-helpers.mjs';
+import { refreshSheetsByReduxId } from './helpers/sheet-helpers';
 import { registerSystemSettings } from './settings/system-settings';
-// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { registerSheetClasses } from './helpers/sheet-registration.mjs';
-// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { registerHandlebarsHelpers } from './helpers/handlebars-helpers.mjs';
+import { registerSheetClasses } from './helpers/sheet-registration';
+import { registerHandlebarsHelpers } from './helpers/handlebars-helpers';
 
 // Hook modules
 // @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
