@@ -28,13 +28,13 @@
       <div class="actions-header">
         <h2>Action Ratings</h2>
         <div class="header-buttons">
-          <div class="take-action-btn draggable"
-               draggable="true"
-               data-action-type="take-action"
-               title="Take an action (drag to hotbar to create macro)"
-               style="cursor: pointer; display: inline-block;">
+          <button class="take-action-btn draggable"
+                  type="button"
+                  draggable="true"
+                  data-action-type="take-action"
+                  title="Take an action (drag to hotbar to create macro)">
             <i class="fas fa-cube"></i> Take Action
-          </div>
+          </button>
           <button class="toggle-edit-btn" type="button">
             {{#if editMode}}
               <i class="fas fa-save"></i> Save

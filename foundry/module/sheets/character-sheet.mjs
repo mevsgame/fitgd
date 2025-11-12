@@ -177,9 +177,11 @@ class FitGDCharacterSheet extends ActorSheet {
    * Handle drag start for creating hotbar macros
    */
   _onDragStart(event) {
-    // Check if dataTransfer is available (some elements like buttons may not support it properly)
-    if (!event.dataTransfer) {
-      console.warn('FitGD | Drag not supported on this element type');
+    // jQuery wraps the native event, so we need to access originalEvent
+    const dataTransfer = event.originalEvent?.dataTransfer || event.dataTransfer;
+
+    if (!dataTransfer) {
+      console.warn('FitGD | Drag not supported - dataTransfer unavailable');
       return;
     }
 
@@ -205,7 +207,7 @@ class FitGDCharacterSheet extends ActorSheet {
     }
     // take-action type doesn't need additional data
 
-    event.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+    dataTransfer.setData('text/plain', JSON.stringify(dragData));
   }
 
   /**
