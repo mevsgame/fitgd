@@ -20,11 +20,8 @@ import type { Character } from '@/types/character';
 import type { Crew } from '@/types/crew';
 import type { Clock } from '@/types/clock';
 import type { PlayerRoundState } from '@/types/playerRoundState';
-
-/**
- * Entity ID type (Foundry Actor ID === Redux ID after unification)
- */
-export type EntityId = string;
+import type { ReduxId } from './types/ids';
+import { isValidId } from './types/ids';
 
 /**
  * Redux action shape
@@ -39,7 +36,7 @@ export interface ReduxAction extends UnknownAction {
  */
 export interface ExecuteOptions {
   /** Character/crew IDs to refresh (auto-detected if not provided) */
-  affectedReduxIds?: EntityId[];
+  affectedReduxIds?: ReduxId[];
   /** Force full re-render (default: false) */
   force?: boolean;
   /** Skip sheet refresh (default: false) */
@@ -138,12 +135,12 @@ export class FoundryReduxBridge {
   }
 
   /**
-   * Query a character by ID (auto-detects Redux vs Foundry ID).
+   * Query a character by ID.
    *
-   * @param id - Either Redux UUID or Foundry Actor ID
+   * @param id - Redux ID (unified with Foundry Actor ID after migration)
    * @returns Character state from Redux, or undefined if not found
    */
-  getCharacter(id: EntityId): Character | undefined {
+  getCharacter(id: ReduxId): Character | undefined {
     const reduxId = this._ensureReduxId(id, 'character');
     if (!reduxId) return undefined;
 
@@ -152,12 +149,12 @@ export class FoundryReduxBridge {
   }
 
   /**
-   * Query a crew by ID (auto-detects Redux vs Foundry ID).
+   * Query a crew by ID.
    *
-   * @param id - Either Redux UUID or Foundry Actor ID
+   * @param id - Redux ID (unified with Foundry Actor ID after migration)
    * @returns Crew state from Redux, or undefined if not found
    */
-  getCrew(id: EntityId): Crew | undefined {
+  getCrew(id: ReduxId): Crew | undefined {
     const reduxId = this._ensureReduxId(id, 'crew');
     if (!reduxId) return undefined;
 
@@ -172,7 +169,7 @@ export class FoundryReduxBridge {
    * @param clockType - Optional: filter by 'harm', 'consumable', 'addiction', 'progress'
    * @returns Array of clocks
    */
-  getClocks(entityId: EntityId, clockType: string | null = null): Clock[] {
+  getClocks(entityId: ReduxId, clockType: string | null = null): Clock[] {
     const state = this.getState();
     const clockIds = state.clocks.byEntityId[entityId] || [];
 
@@ -193,7 +190,7 @@ export class FoundryReduxBridge {
    * @param characterId - Redux ID of character
    * @returns Player round state, or undefined if not found
    */
-  getPlayerRoundState(characterId: EntityId): PlayerRoundState | undefined {
+  getPlayerRoundState(characterId: ReduxId): PlayerRoundState | undefined {
     const state = this.getState();
     return state.playerRoundState.byCharacterId[characterId];
   }
@@ -212,8 +209,8 @@ export class FoundryReduxBridge {
    * @returns The ID if valid, null otherwise
    * @private
    */
-  private _ensureReduxId(id: EntityId, entityType: string): EntityId | null {
-    if (!id || typeof id !== 'string') {
+  private _ensureReduxId(id: ReduxId, entityType: string): ReduxId | null {
+    if (!isValidId(id)) {
       console.warn(`[FoundryReduxBridge] Invalid ${entityType} ID:`, id);
       return null;
     }
@@ -233,20 +230,20 @@ export class FoundryReduxBridge {
    * @returns Array of Redux IDs that should have their sheets refreshed
    * @private
    */
-  private _extractAffectedIds(action: ReduxAction): EntityId[] {
-    const ids = new Set<EntityId>();
+  private _extractAffectedIds(action: ReduxAction): ReduxId[] {
+    const ids = new Set<ReduxId>();
     const payload = action.payload || {};
 
     // Common patterns for entity IDs in payloads
     // Guard against null/undefined values
     if (payload.characterId && typeof payload.characterId === 'string') {
-      ids.add(payload.characterId);
+      ids.add(payload.characterId as ReduxId);
     }
     if (payload.crewId && typeof payload.crewId === 'string') {
-      ids.add(payload.crewId);
+      ids.add(payload.crewId as ReduxId);
     }
     if (payload.entityId && typeof payload.entityId === 'string') {
-      ids.add(payload.entityId);
+      ids.add(payload.entityId as ReduxId);
     }
 
     // For clock operations, also refresh the entity that owns the clock
@@ -254,12 +251,12 @@ export class FoundryReduxBridge {
       const state = this.getState();
       const clock = state.clocks.byId[payload.clockId as string];
       if (clock?.entityId) {
-        ids.add(clock.entityId);
+        ids.add(clock.entityId as ReduxId);
       }
     }
 
     // Filter out any null/undefined that may have snuck in
-    return Array.from(ids).filter((id): id is EntityId => Boolean(id && typeof id === 'string'));
+    return Array.from(ids).filter((id): id is ReduxId => isValidId(id));
   }
 
   /**
@@ -272,8 +269,8 @@ export class FoundryReduxBridge {
    * @returns Array of unique Redux IDs that should have their sheets refreshed
    * @private
    */
-  private _extractAffectedIdsFromBatch(actions: ReduxAction[]): EntityId[] {
-    const ids = new Set<EntityId>();
+  private _extractAffectedIdsFromBatch(actions: ReduxAction[]): ReduxId[] {
+    const ids = new Set<ReduxId>();
 
     for (const action of actions) {
       const actionIds = this._extractAffectedIds(action);
@@ -294,14 +291,14 @@ export class FoundryReduxBridge {
    * @param force - Whether to force full re-render (default: false)
    * @private
    */
-  private _refreshSheets(ids: EntityId[], force = false): void {
-    const affectedIds = new Set(ids.filter(id => id));
+  private _refreshSheets(ids: ReduxId[], force = false): void {
+    const affectedIds = new Set(ids.filter(id => isValidId(id)));
 
     for (const app of Object.values(ui.windows)) {
       if (app.constructor.name === 'FitGDCharacterSheet' ||
           app.constructor.name === 'FitGDCrewSheet') {
 
-        const actorId = (app as any).actor?.id as EntityId | undefined; // Unified IDs: actor.id === Redux ID
+        const actorId = (app as any).actor?.id as ReduxId | undefined; // Unified IDs: actor.id === Redux ID
 
         if (actorId && affectedIds.has(actorId)) {
           app.render(force);
