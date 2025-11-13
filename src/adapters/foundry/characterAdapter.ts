@@ -121,7 +121,7 @@ export function importCharacterFromFoundry(
     });
 
   // Extract equipment from items
-  const equipment = (foundryActor.items || [])
+  const equipment: Equipment[] = (foundryActor.items || [])
     .filter((item) => item.type === 'equipment')
     .map((item) => {
       const equipData = item.system as any;
@@ -131,6 +131,8 @@ export function importCharacterFromFoundry(
         tier: equipData.tier,
         category: equipData.category,
         description: equipData.description,
+        equipped : false,
+        acquiredAt : Date.now()
       };
     });
 
