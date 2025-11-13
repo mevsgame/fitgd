@@ -55,6 +55,14 @@ export default defineConfig({
         'dialogs/AddTraitDialog': path.resolve(__dirname, 'foundry/module/dialogs/AddTraitDialog.ts'),
         'dialogs/ClockSelectionDialog': path.resolve(__dirname, 'foundry/module/dialogs/ClockSelectionDialog.ts'),
         'dialogs/CharacterSelectionDialog': path.resolve(__dirname, 'foundry/module/dialogs/CharacterSelectionDialog.ts'),
+
+        // Dialogs - Medium
+        'dialogs/ClockCreationDialog': path.resolve(__dirname, 'foundry/module/dialogs/ClockCreationDialog.ts'),
+        'dialogs/FlashbackDialog': path.resolve(__dirname, 'foundry/module/dialogs/FlashbackDialog.ts'),
+        'dialogs/LeanIntoTraitDialog': path.resolve(__dirname, 'foundry/module/dialogs/LeanIntoTraitDialog.ts'),
+        'dialogs/PushDialog': path.resolve(__dirname, 'foundry/module/dialogs/PushDialog.ts'),
+        'dialogs/TakeHarmDialog': path.resolve(__dirname, 'foundry/module/dialogs/TakeHarmDialog.ts'),
+        'dialogs/equipment-edit-dialog': path.resolve(__dirname, 'foundry/module/dialogs/equipment-edit-dialog.ts'),
       },
       formats: ['es'],
     },
