@@ -13,17 +13,17 @@ export { ClockSelectionDialog } from './ClockSelectionDialog';
 export { CharacterSelectionDialog } from './CharacterSelectionDialog';
 export { ClockCreationDialog } from './ClockCreationDialog';
 
-// Main game dialogs (newly refactored from dialogs.mjs)
-export { ActionRollDialog } from './ActionRollDialog.mjs';
+// Main game dialogs (all TypeScript)
+export { ActionRollDialog } from './ActionRollDialog';
 export { TakeHarmDialog } from './TakeHarmDialog';
-export { RallyDialog } from './RallyDialog.mjs';
+export { RallyDialog } from './RallyDialog';
 export { PushDialog } from './PushDialog';
 export { FlashbackDialog } from './FlashbackDialog';
 export { AddTraitDialog } from './AddTraitDialog';
-export { FlashbackTraitsDialog } from './FlashbackTraitsDialog.mjs';
+export { FlashbackTraitsDialog } from './FlashbackTraitsDialog';
 export { LeanIntoTraitDialog } from './LeanIntoTraitDialog';
 export { AddClockDialog } from './AddClockDialog';
 
-// Equipment dialogs
-export { EquipmentBrowserDialog } from './equipment-browser-dialog.mjs';
+// Equipment dialogs (all TypeScript)
+export { EquipmentBrowserDialog } from './equipment-browser-dialog';
 export { EquipmentEditDialog } from './equipment-edit-dialog';

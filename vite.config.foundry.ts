@@ -63,6 +63,12 @@ export default defineConfig({
         'dialogs/PushDialog': path.resolve(__dirname, 'foundry/module/dialogs/PushDialog.ts'),
         'dialogs/TakeHarmDialog': path.resolve(__dirname, 'foundry/module/dialogs/TakeHarmDialog.ts'),
         'dialogs/equipment-edit-dialog': path.resolve(__dirname, 'foundry/module/dialogs/equipment-edit-dialog.ts'),
+
+        // Dialogs - Complex
+        'dialogs/ActionRollDialog': path.resolve(__dirname, 'foundry/module/dialogs/ActionRollDialog.ts'),
+        'dialogs/FlashbackTraitsDialog': path.resolve(__dirname, 'foundry/module/dialogs/FlashbackTraitsDialog.ts'),
+        'dialogs/RallyDialog': path.resolve(__dirname, 'foundry/module/dialogs/RallyDialog.ts'),
+        'dialogs/equipment-browser-dialog': path.resolve(__dirname, 'foundry/module/dialogs/equipment-browser-dialog.ts'),
       },
       formats: ['es'],
     },
