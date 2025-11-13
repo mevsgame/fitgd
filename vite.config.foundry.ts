@@ -44,6 +44,17 @@ export default defineConfig({
         'settings/system-settings': path.resolve(__dirname, 'foundry/module/settings/system-settings.ts'),
         'autosave/autosave-manager': path.resolve(__dirname, 'foundry/module/autosave/autosave-manager.ts'),
         'console/dev-commands': path.resolve(__dirname, 'foundry/module/console/dev-commands.ts'),
+
+        // Dialogs - Base
+        'dialogs/base/dialogHelpers': path.resolve(__dirname, 'foundry/module/dialogs/base/dialogHelpers.ts'),
+        'dialogs/base/BaseSelectionDialog': path.resolve(__dirname, 'foundry/module/dialogs/base/BaseSelectionDialog.ts'),
+
+        // Dialogs - Simple
+        'dialogs/index': path.resolve(__dirname, 'foundry/module/dialogs/index.ts'),
+        'dialogs/AddClockDialog': path.resolve(__dirname, 'foundry/module/dialogs/AddClockDialog.ts'),
+        'dialogs/AddTraitDialog': path.resolve(__dirname, 'foundry/module/dialogs/AddTraitDialog.ts'),
+        'dialogs/ClockSelectionDialog': path.resolve(__dirname, 'foundry/module/dialogs/ClockSelectionDialog.ts'),
+        'dialogs/CharacterSelectionDialog': path.resolve(__dirname, 'foundry/module/dialogs/CharacterSelectionDialog.ts'),
       },
       formats: ['es'],
     },

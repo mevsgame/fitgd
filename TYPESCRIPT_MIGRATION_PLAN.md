@@ -1,9 +1,9 @@
 # TypeScript Migration Plan - Action Items
 
-**Status:** ✅ Phase 1 Complete - Ready for Foundry Testing
-**Date:** 2025-11-13 (Updated after Phase 1)
+**Status:** ✅ Phase 1 Complete | 🔄 Phase 2 In Progress (7/17 dialogs converted)
+**Date:** 2025-11-13 (Updated after Phase 2 partial)
 **Estimated Time:** 12-17 hours (3-4 sessions)
-**Time Spent:** 2 hours (Phase 1)
+**Time Spent:** 2 hours (Phase 1) + 1 hour (Phase 2 partial) = 3 hours total
 
 ---
 
@@ -68,22 +68,24 @@ You have **13 TypeScript files** that aren't being used. Foundry loads `.mjs` fi
 
 ---
 
-### Phase 2: Convert Dialogs (Session 2 - 5 hours)
+### Phase 2: Convert Dialogs 🔄 IN PROGRESS (7/17 files - 1 hour)
 
 **Goal:** Convert 17 dialog files to TypeScript
 
+**Status:** ✅ Base + Simple dialogs done (7 files), awaiting medium/complex
+
 **Order of conversion:**
 
-1. **Base dialogs** (30 min)
-   - [ ] dialogs/base/dialogHelpers.mjs → .ts
-   - [ ] dialogs/base/BaseSelectionDialog.mjs → .ts
+1. ✅ **Base dialogs** (30 min) - **DONE**
+   - [x] dialogs/base/dialogHelpers.mjs → .ts
+   - [x] dialogs/base/BaseSelectionDialog.mjs → .ts
 
-2. **Simple dialogs** (1 hour)
-   - [ ] dialogs/AddClockDialog.mjs → .ts
-   - [ ] dialogs/AddTraitDialog.mjs → .ts
-   - [ ] dialogs/ClockSelectionDialog.mjs → .ts
-   - [ ] dialogs/CharacterSelectionDialog.mjs → .ts
-   - [ ] dialogs/index.mjs → .ts
+2. ✅ **Simple dialogs** (1 hour) - **DONE**
+   - [x] dialogs/AddClockDialog.mjs → .ts
+   - [x] dialogs/AddTraitDialog.mjs → .ts
+   - [x] dialogs/ClockSelectionDialog.mjs → .ts
+   - [x] dialogs/CharacterSelectionDialog.mjs → .ts
+   - [x] dialogs/index.mjs → .ts
 
 3. **Medium dialogs** (2 hours)
    - [ ] dialogs/ClockCreationDialog.mjs → .ts
