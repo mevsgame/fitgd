@@ -7,7 +7,9 @@ foundry/dist/
 
 # Build outputs
 *.tsbuildinfo
-foundry/module-dist/  # TypeScript transpiled to .mjs (generated from foundry/module/*.ts)
+
+# TypeScript transpiled to .mjs (generated from foundry/module/*.ts)
+foundry/module-dist/
 
 # Test results
 coverage/
