@@ -1,9 +1,9 @@
 # TypeScript Migration Plan - Action Items
 
-**Status:** ✅ Phase 1 Complete | 🔄 Phase 2 In Progress (7/17 dialogs converted)
-**Date:** 2025-11-13 (Updated after Phase 2 partial)
+**Status:** ✅ Phase 1 Complete | ✅ Phase 2 Complete (17/17 dialogs converted)
+**Date:** 2025-11-13 (Updated after Phase 2 complete)
 **Estimated Time:** 12-17 hours (3-4 sessions)
-**Time Spent:** 2 hours (Phase 1) + 1 hour (Phase 2 partial) = 3 hours total
+**Time Spent:** 2 hours (Phase 1) + 2.5 hours (Phase 2) = 4.5 hours total
 
 ---
 
@@ -68,11 +68,11 @@ You have **13 TypeScript files** that aren't being used. Foundry loads `.mjs` fi
 
 ---
 
-### Phase 2: Convert Dialogs 🔄 IN PROGRESS (7/17 files - 1 hour)
+### Phase 2: Convert Dialogs ✅ COMPLETE (17/17 files - 2.5 hours)
 
 **Goal:** Convert 17 dialog files to TypeScript
 
-**Status:** ✅ Base + Simple dialogs done (7 files), awaiting medium/complex
+**Status:** ✅ **COMPLETE** - All dialogs converted and building successfully
 
 **Order of conversion:**
 
@@ -87,19 +87,19 @@ You have **13 TypeScript files** that aren't being used. Foundry loads `.mjs` fi
    - [x] dialogs/CharacterSelectionDialog.mjs → .ts
    - [x] dialogs/index.mjs → .ts
 
-3. **Medium dialogs** (2 hours)
-   - [ ] dialogs/ClockCreationDialog.mjs → .ts
-   - [ ] dialogs/FlashbackDialog.mjs → .ts
-   - [ ] dialogs/LeanIntoTraitDialog.mjs → .ts
-   - [ ] dialogs/PushDialog.mjs → .ts
-   - [ ] dialogs/TakeHarmDialog.mjs → .ts
-   - [ ] dialogs/equipment-edit-dialog.mjs → .ts
+3. ✅ **Medium dialogs** (30 min) - **DONE**
+   - [x] dialogs/ClockCreationDialog.mjs → .ts
+   - [x] dialogs/FlashbackDialog.mjs → .ts
+   - [x] dialogs/LeanIntoTraitDialog.mjs → .ts
+   - [x] dialogs/PushDialog.mjs → .ts
+   - [x] dialogs/TakeHarmDialog.mjs → .ts
+   - [x] dialogs/equipment-edit-dialog.mjs → .ts
 
-4. **Complex dialogs** (1.5 hours)
-   - [ ] dialogs/ActionRollDialog.mjs → .ts
-   - [ ] dialogs/FlashbackTraitsDialog.mjs → .ts
-   - [ ] dialogs/RallyDialog.mjs → .ts
-   - [ ] dialogs/equipment-browser-dialog.mjs → .ts
+4. ✅ **Complex dialogs** (30 min) - **DONE**
+   - [x] dialogs/ActionRollDialog.mjs → .ts
+   - [x] dialogs/FlashbackTraitsDialog.mjs → .ts
+   - [x] dialogs/RallyDialog.mjs → .ts
+   - [x] dialogs/equipment-browser-dialog.mjs → .ts
 
 **Per-file process:**
 1. Copy .mjs → .ts
