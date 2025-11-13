@@ -69,6 +69,11 @@ export default defineConfig({
         'dialogs/FlashbackTraitsDialog': path.resolve(__dirname, 'foundry/module/dialogs/FlashbackTraitsDialog.ts'),
         'dialogs/RallyDialog': path.resolve(__dirname, 'foundry/module/dialogs/RallyDialog.ts'),
         'dialogs/equipment-browser-dialog': path.resolve(__dirname, 'foundry/module/dialogs/equipment-browser-dialog.ts'),
+
+        // Sheets
+        'sheets/item-sheets': path.resolve(__dirname, 'foundry/module/sheets/item-sheets.ts'),
+        'sheets/crew-sheet': path.resolve(__dirname, 'foundry/module/sheets/crew-sheet.ts'),
+        'sheets/character-sheet': path.resolve(__dirname, 'foundry/module/sheets/character-sheet.ts'),
       },
       formats: ['es'],
     },
