@@ -123,7 +123,8 @@ export default defineConfig({
 
       // Don't bundle these - they're external to the module build
       external: [
-        /^\.\.\/dist\//,  // Core library
+        /^\.\.\/dist\//,  // Core library (relative import)
+        /\/foundry\/dist\//,  // Core library (absolute path)
         '@reduxjs/toolkit',
         'immer',
         // During migration: .mjs files that haven't been converted to .ts yet

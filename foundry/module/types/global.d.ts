@@ -11,6 +11,7 @@ import type { RootState } from '@/store';
 import type { GameAPI } from '@/api';
 import type { FoundryAdapter } from '@/adapters/foundryAdapter';
 import type { FoundryReduxBridge } from '../foundry-redux-bridge';
+import type { ReduxId, FoundryActorId } from './ids';
 
 /**
  * Socketlib socket interface
