@@ -74,6 +74,9 @@ export default defineConfig({
         'sheets/item-sheets': path.resolve(__dirname, 'foundry/module/sheets/item-sheets.ts'),
         'sheets/crew-sheet': path.resolve(__dirname, 'foundry/module/sheets/crew-sheet.ts'),
         'sheets/character-sheet': path.resolve(__dirname, 'foundry/module/sheets/character-sheet.ts'),
+
+        // Widgets
+        'widgets/player-action-widget': path.resolve(__dirname, 'foundry/module/widgets/player-action-widget.ts'),
       },
       formats: ['es'],
     },
