@@ -10,6 +10,7 @@
     "noEmit": true,  // Type-check only, no transpilation (keep .mjs for now)
     "allowJs": false,  // During migration, only check .ts files
     "checkJs": false,  // Don't type-check .mjs files, only .ts
+    "allowImportingTsExtensions": true,
 
     // Strict Type-Checking
     "strict": true,
