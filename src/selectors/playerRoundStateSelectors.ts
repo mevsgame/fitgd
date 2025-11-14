@@ -7,7 +7,7 @@
 
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
-import type { PlayerRoundState, Position } from '../types/playerRoundState';
+import type { PlayerRoundState, Position, Effect } from '../types/playerRoundState';
 
 /**
  * Select player state by character ID
@@ -91,6 +91,7 @@ export const selectDicePool = createSelector(
  * - Controlled: 1 segment
  * - Risky: 3 segments
  * - Desperate: 5 segments
+ * - Impossible: 6 segments (fills harm clock completely, instant dying)
  *
  * This is a house rule deviation from Blades in the Dark.
  */
@@ -98,6 +99,7 @@ export const CONSEQUENCE_TABLE: Record<Position, number> = {
   controlled: 1,
   risky: 3,
   desperate: 5,
+  impossible: 6,
 };
 
 /**
@@ -118,6 +120,7 @@ export const MOMENTUM_GAIN_TABLE: Record<Position, number> = {
   controlled: 1,
   risky: 2,
   desperate: 4,
+  impossible: 6,
 };
 
 /**
@@ -125,6 +128,46 @@ export const MOMENTUM_GAIN_TABLE: Record<Position, number> = {
  */
 export const selectMomentumGain = (position: Position): number => {
   return MOMENTUM_GAIN_TABLE[position] ?? 0;
+};
+
+/**
+ * Success Clock Base Progress Table
+ * Returns base segments based on POSITION only
+ */
+export const SUCCESS_CLOCK_BASE_TABLE: Record<Position, number> = {
+  controlled: 1,
+  risky: 3,
+  desperate: 5,
+  impossible: 6,
+};
+
+/**
+ * Effect Modifier Table
+ * Modifies success clock progress based on EFFECT level
+ */
+export const EFFECT_MODIFIER_TABLE: Record<Effect, number> = {
+  limited: -1,
+  standard: 0,
+  great: 1,
+  spectacular: 2,
+};
+
+/**
+ * Calculate success clock progress based on position and effect
+ * Formula: Base Progress (from position) + Effect Modifier
+ *
+ * Examples:
+ * - Risky (3) + Great (+1) = 4 segments
+ * - Desperate (5) + Spectacular (+2) = 7 segments
+ * - Controlled (1) + Limited (-1) = 0 segments (minimum)
+ */
+export const selectSuccessClockProgress = (
+  position: Position,
+  effect: Effect
+): number => {
+  const baseProgress = SUCCESS_CLOCK_BASE_TABLE[position] ?? 0;
+  const effectModifier = EFFECT_MODIFIER_TABLE[effect] ?? 0;
+  return Math.max(0, baseProgress + effectModifier);
 };
 
 /**

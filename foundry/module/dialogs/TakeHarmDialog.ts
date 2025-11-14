@@ -7,7 +7,7 @@
 import type { Position } from '@/types/action';
 import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 
-type Effect = 'limited' | 'standard' | 'great';
+type Effect = 'limited' | 'standard' | 'great' | 'spectacular';
 
 interface TakeHarmOptions extends Partial<DialogOptions> {
   defaultPosition?: Position;
@@ -50,6 +50,7 @@ export class TakeHarmDialog extends Dialog {
               <option value="controlled" ${defaultPosition === 'controlled' ? 'selected' : ''}>Controlled</option>
               <option value="risky" ${defaultPosition === 'risky' ? 'selected' : ''}>Risky</option>
               <option value="desperate" ${defaultPosition === 'desperate' ? 'selected' : ''}>Desperate</option>
+              <option value="impossible" ${defaultPosition === 'impossible' ? 'selected' : ''}>Impossible</option>
             </select>
           </div>
 
@@ -59,14 +60,18 @@ export class TakeHarmDialog extends Dialog {
               <option value="limited">Limited</option>
               <option value="standard" selected>Standard</option>
               <option value="great">Great</option>
+              <option value="spectacular">Spectacular</option>
             </select>
           </div>
 
           <div class="help-text harm-reference">
-            <strong>Harm Segments:</strong><br/>
-            • Controlled: 0/1/2 (Limited/Standard/Great)<br/>
-            • Risky: 2/3/4 (Limited/Standard/Great)<br/>
-            • Desperate: 4/5/6 (Limited/Standard/Great)
+            <strong>Harm Segments (Position Only):</strong><br/>
+            • Controlled: 1 segment<br/>
+            • Risky: 3 segments<br/>
+            • Desperate: 5 segments<br/>
+            • Impossible: 6 segments (instant dying)<br/>
+            <br/>
+            <em>Note: Effect does not modify harm, only success clocks.</em>
           </div>
         </form>
       </div>

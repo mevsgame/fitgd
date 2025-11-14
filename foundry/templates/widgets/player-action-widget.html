@@ -104,6 +104,7 @@
           <option value="controlled" {{#if (eq playerState.position "controlled")}}selected{{/if}}>Controlled</option>
           <option value="risky" {{#if (eq (default playerState.position "risky") "risky")}}selected{{/if}}>Risky</option>
           <option value="desperate" {{#if (eq playerState.position "desperate")}}selected{{/if}}>Desperate</option>
+          <option value="impossible" {{#if (eq playerState.position "impossible")}}selected{{/if}}>Impossible</option>
         </select>
       </div>
       <div class="form-group">
@@ -112,6 +113,7 @@
           <option value="limited" {{#if (eq playerState.effect "limited")}}selected{{/if}}>Limited</option>
           <option value="standard" {{#if (eq (default playerState.effect "standard") "standard")}}selected{{/if}}>Standard</option>
           <option value="great" {{#if (eq playerState.effect "great")}}selected{{/if}}>Great</option>
+          <option value="spectacular" {{#if (eq playerState.effect "spectacular")}}selected{{/if}}>Spectacular</option>
         </select>
       </div>
     </div>
