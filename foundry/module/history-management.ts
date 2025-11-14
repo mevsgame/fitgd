@@ -57,7 +57,7 @@ export class HistoryManagementConfig extends FormApplication {
    */
   getData(): HistoryManagementData {
     // Get history stats from the Foundry adapter
-    const adapter = game.fitgd?.foundry;
+    const adapter = game.fitgd!?.foundry;
 
     if (!adapter) {
       return {
@@ -136,10 +136,10 @@ export class HistoryManagementConfig extends FormApplication {
 
           // Export current state snapshot and save
           const state = adapter.exportState();
-          await (game.settings as any).set('forged-in-the-grimdark', 'stateSnapshot', state);
+          await (game.settings! as any).set('forged-in-the-grimdark', 'stateSnapshot', state);
 
           // Save empty command history
-          await (game.settings as any).set('forged-in-the-grimdark', 'commandHistory', {
+          await (game.settings! as any).set('forged-in-the-grimdark', 'commandHistory', {
             characters: [],
             crews: [],
             clocks: []

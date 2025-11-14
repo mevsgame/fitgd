@@ -4,7 +4,7 @@
  * Dialog for initiating flashbacks
  */
 
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.mjs';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.js';
 
 export class FlashbackDialog extends Dialog {
   private characterId: string;
@@ -17,12 +17,12 @@ export class FlashbackDialog extends Dialog {
    * @param crewId - Redux ID of the character's crew
    * @param options - Additional options passed to Dialog constructor
    */
-  constructor(characterId: string, crewId: string, options: Partial<DialogOptions> = {}) {
-    const crew = game.fitgd.api.crew.getCrew(crewId);
+  constructor(characterId: string, crewId: string, options: Partial<Dialog.Options> = {}) {
+    const crew = game.fitgd!.api.crew.getCrew(crewId);
     const momentum = crew?.currentMomentum || 0;
 
     if (momentum < 1) {
-      ui.notifications.warn('Not enough Momentum for flashback (need 1)');
+      ui.notifications!.warn('Not enough Momentum for flashback (need 1)');
       // @ts-expect-error - Returning from constructor to prevent dialog creation
       return;
     }
@@ -73,12 +73,12 @@ export class FlashbackDialog extends Dialog {
     const traitDescription = (form.elements.namedItem('traitDescription') as HTMLTextAreaElement).value.trim();
 
     if (!traitName) {
-      ui.notifications.warn('Please enter a trait name');
+      ui.notifications!.warn('Please enter a trait name');
       return;
     }
 
     try {
-      const result = game.fitgd.api.action.flashback({
+      const result = game.fitgd!.api.action.flashback({
         crewId,
         characterId,
         trait: {
@@ -89,16 +89,16 @@ export class FlashbackDialog extends Dialog {
       });
 
       // Save immediately (critical state change)
-      await game.fitgd.saveImmediate();
+      await game.fitgd!.saveImmediate();
 
-      ui.notifications.info(`Flashback! New trait "${traitName}" added. Momentum: ${result.newMomentum}/10`);
+      ui.notifications!.info(`Flashback! New trait "${traitName}" added. Momentum: ${result.newMomentum}/10`);
 
       // Re-render sheets (force = true to ensure new trait appears)
       refreshSheetsByReduxId([characterId, crewId], true);
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications!.error(`Error: ${errorMessage}`);
       console.error('FitGD | Flashback error:', error);
     }
   }

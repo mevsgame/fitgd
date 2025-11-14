@@ -5,7 +5,8 @@
  */
 
 // @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { PlayerActionWidget } from "../widgets/player-action-widget.mjs";
+import { PlayerActionWidget } from "../widgets/player-action-widget.js";
+import { asReduxId } from '../types/ids.js';
 
 /**
  * Register all combat-related hooks
@@ -96,7 +97,7 @@ Hooks.on('updateCombat', async function(combat: Combat, updateData: any, _option
       type: 'playerRoundState/setActivePlayer',
       payload: { characterId },
     },
-    { affectedReduxIds: [characterId], silent: true } // Silent: we'll show widget manually below
+    { affectedReduxIds: [asReduxId(characterId)], silent: true } // Silent: we'll show widget manually below
   );
 
   // Show the Player Action Widget for this character

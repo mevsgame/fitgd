@@ -31,7 +31,7 @@ export type FoundryActorId = string & { readonly __brand: 'foundry' };
  *
  * @example
  * const reduxId = asReduxId(actor.id);
- * await game.fitgd.bridge.execute(action, { affectedReduxIds: [reduxId] });
+ * await game.fitgd!.bridge.execute(action, { affectedReduxIds: [asReduxId(reduxId)] });
  */
 export function asReduxId(id: string): ReduxId {
   return id as ReduxId;

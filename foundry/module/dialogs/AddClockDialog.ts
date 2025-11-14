@@ -52,7 +52,7 @@ export class AddClockDialog {
       'progress',
       async (clockData: ClockData) => {
         try {
-          const clockId = game.fitgd.api.clock.createProgress({
+          const clockId = game.fitgd!.api.clock.createProgress({
             entityId: this.crewId,
             name: clockData.name,
             segments: clockData.segments,
@@ -62,12 +62,12 @@ export class AddClockDialog {
           });
 
           // Save immediately (critical state change)
-          await game.fitgd.saveImmediate();
+          await game.fitgd!.saveImmediate();
 
           // Re-render sheet (force = true to ensure new clock appears)
           refreshSheetsByReduxId([this.crewId], true);
         } catch (error) {
-          ui.notifications.error(`Error: ${(error as Error).message}`);
+          ui.notifications!.error(`Error: ${(error as Error).message}`);
           console.error('FitGD | Add Clock error:', error);
           throw error; // Re-throw so dialog can handle it
         }

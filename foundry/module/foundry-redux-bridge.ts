@@ -58,8 +58,8 @@ export class FoundryReduxBridge {
   /**
    * Create a new Foundry-Redux Bridge instance
    *
-   * @param store - Redux store instance (game.fitgd.store)
-   * @param saveFunction - Broadcast function (game.fitgd.saveImmediate)
+   * @param store - Redux store instance (game.fitgd!.store)
+   * @param saveFunction - Broadcast function (game.fitgd!.saveImmediate)
    */
   constructor(store: Store<RootState>, saveFunction: () => Promise<void>) {
     this.store = store;
@@ -285,7 +285,7 @@ export class FoundryReduxBridge {
    *
    * Iterates through all open Foundry windows and refreshes any character/crew
    * sheets that match the provided Redux IDs. This is the safe alternative to
-   * trying to use `game.actors.get(reduxId)` which fails silently.
+   * trying to use `game.actors!.get(reduxId)` which fails silently.
    *
    * @param reduxIds - Array of Redux IDs to refresh
    * @param force - Whether to force full re-render (default: false)
@@ -314,10 +314,10 @@ export class FoundryReduxBridge {
  * Create a Foundry-Redux Bridge instance.
  *
  * This should be called once during Foundry initialization and stored
- * at game.fitgd.bridge for global access.
+ * at game.fitgd!.bridge for global access.
  *
  * @param store - Redux store
- * @param saveFunction - Function that broadcasts state (game.fitgd.saveImmediate)
+ * @param saveFunction - Function that broadcasts state (game.fitgd!.saveImmediate)
  * @returns FoundryReduxBridge instance
  */
 export function createFoundryReduxBridge(

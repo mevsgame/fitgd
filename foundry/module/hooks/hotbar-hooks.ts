@@ -46,16 +46,16 @@ Hooks.on('hotbarDrop' as any, async function(_bar: Hotbar, data: any, slot: numb
     name = `${actor.name}: ${action!.charAt(0).toUpperCase() + action!.slice(1)}`;
     img = 'icons/svg/d20-grey.svg';
     command = `// ${name}
-const actor = game.actors.get("${actorId}");
+const actor = game.actors!.get("${actorId}");
 const characterId = actor?.id; // Unified IDs
 
 if (!characterId) {
-  ui.notifications.error("Character not linked to Redux");
+  ui.notifications!.error("Character not linked to Redux");
   return;
 }
 
 // Find crew
-const state = game.fitgd.store.getState();
+const state = game.fitgd!.store.getState();
 let crewId = null;
 for (const id of state.crews.allIds) {
   const crew = state.crews.byId[id];
@@ -66,7 +66,7 @@ for (const id of state.crews.allIds) {
 }
 
 if (!crewId) {
-  ui.notifications.warn("Character must be part of a crew");
+  ui.notifications!.warn("Character must be part of a crew");
   return;
 }
 
@@ -88,17 +88,17 @@ setTimeout(() => {
     name = `${actor.name}: Lean into ${traitName}`;
     img = 'icons/svg/fire.svg';
     command = `// ${name}
-const actor = game.actors.get("${actorId}");
+const actor = game.actors!.get("${actorId}");
 const characterId = actor?.id; // Unified IDs
 const traitId = "${traitId}";
 
 if (!characterId) {
-  ui.notifications.error("Character not linked to Redux");
+  ui.notifications!.error("Character not linked to Redux");
   return;
 }
 
 // Find crew
-const state = game.fitgd.store.getState();
+const state = game.fitgd!.store.getState();
 let crewId = null;
 for (const id of state.crews.allIds) {
   const crew = state.crews.byId[id];
@@ -109,21 +109,21 @@ for (const id of state.crews.allIds) {
 }
 
 if (!crewId) {
-  ui.notifications.warn("Character must be part of a crew");
+  ui.notifications!.warn("Character must be part of a crew");
   return;
 }
 
 // Lean into trait
 try {
-  const result = game.fitgd.api.character.leanIntoTrait({
+  const result = game.fitgd!.api.character.leanIntoTrait({
     characterId,
     traitId,
     crewId
   });
 
-  ui.notifications.info(\`Leaned into trait! Gained 2 Momentum (now \${result.newMomentum}/10)\`);
+  ui.notifications!.info(\`Leaned into trait! Gained 2 Momentum (now \${result.newMomentum}/10)\`);
 } catch (error) {
-  ui.notifications.error(\`Error: \${error.message}\`);
+  ui.notifications!.error(\`Error: \${error.message}\`);
 }`;
 
   } else {

@@ -17,7 +17,8 @@
 
 import type { Character } from '@/types/character';
 import type { Crew } from '@/types/crew';
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.mjs';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.js';
+import { asReduxId } from '../types/ids.js';
 
 type SocialAction = 'command' | 'consort' | 'sway';
 type RallyOutcome = 'critical' | 'success' | 'partial' | 'fail';
@@ -66,16 +67,16 @@ export class RallyDialog extends Application {
    * @param crewId - Redux ID of the character's crew
    * @param options - Additional options passed to Application constructor
    */
-  constructor(characterId: string, crewId: string, options: Partial<ApplicationOptions> = {}) {
+  constructor(characterId: string, crewId: string, options: Partial<Application.Options> = {}) {
     super(options);
 
     this.characterId = characterId;
     this.crewId = crewId;
-    this.character = game.fitgd.api.character.getCharacter(characterId);
-    this.crew = game.fitgd.api.crew.getCrew(crewId);
+    this.character = game.fitgd!.api.character.getCharacter(characterId);
+    this.crew = game.fitgd!.api.crew.getCrew(crewId);
   }
 
-  static override get defaultOptions(): ApplicationOptions {
+  static override get defaultOptions(): Application.Options {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ['fitgd', 'rally-dialog'],
       template: 'systems/forged-in-the-grimdark/templates/dialogs/rally-dialog.html',
@@ -90,11 +91,11 @@ export class RallyDialog extends Application {
     return `rally-dialog-${this.characterId}`;
   }
 
-  override async getData(options: Partial<ApplicationOptions> = {}): Promise<RallyDialogData> {
+  override async getData(options: Partial<Application.Options> = {}): Promise<RallyDialogData> {
     const data = await super.getData(options);
 
     // Get crew members excluding acting character
-    const state = game.fitgd.store.getState();
+    const state = game.fitgd!.store.getState();
     const teammates = this.crew.characters
       .filter(id => id !== this.characterId)
       .map(id => state.characters.byId[id])
@@ -191,7 +192,7 @@ export class RallyDialog extends Application {
     event.preventDefault();
 
     if (!this.selectedAction || !this.selectedTargetId || !this.selectedTraitId) {
-      ui.notifications.warn('Please select action, target, and trait');
+      ui.notifications!.warn('Please select action, target, and trait');
       return;
     }
 
@@ -257,12 +258,12 @@ export class RallyDialog extends Application {
 
     // Automatically apply results after roll
     try {
-      const state = game.fitgd.store.getState();
+      const state = game.fitgd!.store.getState();
       const targetCharacter = state.characters.byId[this.selectedTargetId];
       const trait = targetCharacter.traits.find(t => t.id === this.selectedTraitId);
 
       if (!trait) {
-        ui.notifications.error('Selected trait not found');
+        ui.notifications!.error('Selected trait not found');
         return;
       }
 
@@ -277,7 +278,7 @@ export class RallyDialog extends Application {
       actions.push({
         type: 'crews/setMomentum',
         payload: {
-          crewId: this.crewId,
+          crewId: asReduxId(this.crewId),
           amount: newMomentum,
         },
       });
@@ -298,12 +299,12 @@ export class RallyDialog extends Application {
       actions.push({
         type: 'characters/useRally',
         payload: {
-          characterId: this.characterId,
+          characterId: asReduxId(this.characterId),
         },
       });
 
       // Execute all actions together
-      await game.fitgd.bridge.executeBatch(
+      await game.fitgd!.bridge.executeBatch(
         actions,
         { affectedReduxIds: [this.characterId, this.selectedTargetId, this.crewId] }
       );
@@ -342,13 +343,13 @@ export class RallyDialog extends Application {
         content: chatContent,
       });
 
-      ui.notifications.info(`Rally complete - Gained ${actualGain}M${wasDisabled ? ', trait re-enabled' : ''}`);
+      ui.notifications!.info(`Rally complete - Gained ${actualGain}M${wasDisabled ? ', trait re-enabled' : ''}`);
 
       // Close dialog automatically
       this.close();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications!.error(`Error: ${errorMessage}`);
       console.error('FitGD | Rally error:', error);
     }
   }

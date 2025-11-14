@@ -6,7 +6,8 @@
 
 import type { Character, Trait } from '@/types/character';
 import type { Crew } from '@/types/crew';
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.mjs';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.js';
+import { asReduxId } from '../types/ids.js';
 
 type FlashbackMode = 'use-existing' | 'create-new' | 'consolidate';
 
@@ -51,19 +52,19 @@ export class FlashbackTraitsDialog extends Application {
    * @param crewId - Redux ID of the character's crew
    * @param options - Additional options passed to Application constructor
    */
-  constructor(characterId: string, crewId: string, options: Partial<ApplicationOptions> = {}) {
+  constructor(characterId: string, crewId: string, options: Partial<Application.Options> = {}) {
     super(options);
 
     this.characterId = characterId;
     this.crewId = crewId;
-    this.character = game.fitgd.api.character.getCharacter(characterId);
-    this.crew = game.fitgd.api.crew.getCrew(crewId);
+    this.character = game.fitgd!.api.character.getCharacter(characterId);
+    this.crew = game.fitgd!.api.crew.getCrew(crewId);
 
     // Determine if player is eligible for editable mode (fewest traits)
     this.isEditable = this._checkTraitEligibility();
   }
 
-  static override get defaultOptions(): ApplicationOptions {
+  static override get defaultOptions(): Application.Options {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ['fitgd', 'flashback-traits-dialog'],
       template: 'systems/forged-in-the-grimdark/templates/dialogs/flashback-traits-dialog.html',
@@ -78,7 +79,7 @@ export class FlashbackTraitsDialog extends Application {
     return `flashback-traits-dialog-${this.characterId}`;
   }
 
-  override async getData(options: Partial<ApplicationOptions> = {}): Promise<FlashbackTraitsData> {
+  override async getData(options: Partial<Application.Options> = {}): Promise<FlashbackTraitsData> {
     const data = await super.getData(options);
 
     // Get traits, excluding disabled ones
@@ -131,7 +132,7 @@ export class FlashbackTraitsDialog extends Application {
    * Check if character is eligible for editable mode (fewest traits in crew)
    */
   private _checkTraitEligibility(): boolean {
-    const state = game.fitgd.store.getState();
+    const state = game.fitgd!.store.getState();
     const crewCharacters = this.crew.characters;
 
     // Count traits for all characters in crew
@@ -200,7 +201,7 @@ export class FlashbackTraitsDialog extends Application {
       this.close();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications!.error(`Error: ${errorMessage}`);
       console.error('FitGD | Flashback Traits error:', error);
     }
   }
@@ -210,22 +211,22 @@ export class FlashbackTraitsDialog extends Application {
    */
   private async _applyUseExisting(): Promise<void> {
     if (!this.selectedTraitId) {
-      ui.notifications.warn('Please select a trait');
+      ui.notifications!.warn('Please select a trait');
       return;
     }
 
     // Check Momentum (costs 1M for position improvement)
     if (this.crew.currentMomentum < 1) {
-      ui.notifications.warn('Not enough Momentum (need 1 for flashback)');
+      ui.notifications!.warn('Not enough Momentum (need 1 for flashback)');
       return;
     }
 
     // Use Bridge API to dispatch trait transaction and broadcast to all clients
-    await game.fitgd.bridge.execute(
+    await game.fitgd!.bridge.execute(
       {
         type: 'playerRoundState/setTraitTransaction',
         payload: {
-          characterId: this.characterId,
+          characterId: asReduxId(this.characterId),
           transaction: {
             mode: 'existing',
             selectedTraitId: this.selectedTraitId,
@@ -234,10 +235,10 @@ export class FlashbackTraitsDialog extends Application {
           },
         },
       },
-      { affectedReduxIds: [this.characterId], force: false }
+      { affectedReduxIds: [asReduxId(this.characterId)], force: false }
     );
 
-    ui.notifications.info('Trait selected - will improve position on roll (costs 1M)');
+    ui.notifications!.info('Trait selected - will improve position on roll (costs 1M)');
   }
 
   /**
@@ -246,7 +247,7 @@ export class FlashbackTraitsDialog extends Application {
   private async _applyCreateNew(): Promise<void> {
     // Get trait name and description from form
     if (!this.html) {
-      ui.notifications.error('Dialog HTML not found');
+      ui.notifications!.error('Dialog HTML not found');
       return;
     }
 
@@ -254,22 +255,22 @@ export class FlashbackTraitsDialog extends Application {
     const newTraitDescription = (this.html.find('[name="newTraitDescription"]').val() as string)?.trim();
 
     if (!newTraitName) {
-      ui.notifications.warn('Please enter a trait name');
+      ui.notifications!.warn('Please enter a trait name');
       return;
     }
 
     // Check Momentum (costs 1M for flashback)
     if (this.crew.currentMomentum < 1) {
-      ui.notifications.warn('Not enough Momentum (need 1 for flashback)');
+      ui.notifications!.warn('Not enough Momentum (need 1 for flashback)');
       return;
     }
 
     // Use Bridge API to dispatch trait transaction and broadcast to all clients
-    await game.fitgd.bridge.execute(
+    await game.fitgd!.bridge.execute(
       {
         type: 'playerRoundState/setTraitTransaction',
         payload: {
-          characterId: this.characterId,
+          characterId: asReduxId(this.characterId),
           transaction: {
             mode: 'new',
             newTrait: {
@@ -282,10 +283,10 @@ export class FlashbackTraitsDialog extends Application {
           },
         },
       },
-      { affectedReduxIds: [this.characterId], force: false }
+      { affectedReduxIds: [asReduxId(this.characterId)], force: false }
     );
 
-    ui.notifications.info(`New trait "${newTraitName}" will be created on roll (costs 1M)`);
+    ui.notifications!.info(`New trait "${newTraitName}" will be created on roll (costs 1M)`);
   }
 
   /**
@@ -293,13 +294,13 @@ export class FlashbackTraitsDialog extends Application {
    */
   private async _applyConsolidate(): Promise<void> {
     if (this.selectedTraitIds.length !== 3) {
-      ui.notifications.warn('Please select exactly 3 traits to consolidate');
+      ui.notifications!.warn('Please select exactly 3 traits to consolidate');
       return;
     }
 
     // Get consolidated trait name and description from form
     if (!this.html) {
-      ui.notifications.error('Dialog HTML not found');
+      ui.notifications!.error('Dialog HTML not found');
       return;
     }
 
@@ -307,22 +308,22 @@ export class FlashbackTraitsDialog extends Application {
     const newTraitDescription = (this.html.find('[name="newTraitDescription"]').val() as string)?.trim();
 
     if (!newTraitName) {
-      ui.notifications.warn('Please enter a name for the consolidated trait');
+      ui.notifications!.warn('Please enter a name for the consolidated trait');
       return;
     }
 
     // Check Momentum (costs 1M for flashback)
     if (this.crew.currentMomentum < 1) {
-      ui.notifications.warn('Not enough Momentum (need 1 for flashback)');
+      ui.notifications!.warn('Not enough Momentum (need 1 for flashback)');
       return;
     }
 
     // Use Bridge API to dispatch trait transaction and broadcast to all clients
-    await game.fitgd.bridge.execute(
+    await game.fitgd!.bridge.execute(
       {
         type: 'playerRoundState/setTraitTransaction',
         payload: {
-          characterId: this.characterId,
+          characterId: asReduxId(this.characterId),
           transaction: {
             mode: 'consolidate',
             consolidation: {
@@ -338,9 +339,9 @@ export class FlashbackTraitsDialog extends Application {
           },
         },
       },
-      { affectedReduxIds: [this.characterId], force: false }
+      { affectedReduxIds: [asReduxId(this.characterId)], force: false }
     );
 
-    ui.notifications.info(`Traits will be consolidated into "${newTraitName}" on roll (costs 1M)`);
+    ui.notifications!.info(`Traits will be consolidated into "${newTraitName}" on roll (costs 1M)`);
   }
 }

@@ -6,7 +6,7 @@
 
 /**
  * Register developer console commands
- * Exposes game.fitgd API to window.fitgd for easy console access
+ * Exposes game.fitgd! API to window.fitgd for easy console access
  */
 export function registerDevCommands(): void {
   /* -------------------------------------------- */

@@ -40,7 +40,7 @@ export class ClockCreationDialog extends Dialog {
     entityId: string,
     clockType: ClockType,
     onCreate: (clockData: ClockData) => void | Promise<void>,
-    options: Partial<DialogOptions> = {}
+    options: Partial<Dialog.Options> = {}
   ) {
     const isHarm = clockType === 'harm';
     const title = isHarm ? 'Create Harm Clock' : 'Create Crew Clock';
@@ -139,12 +139,12 @@ export class ClockCreationDialog extends Dialog {
 
     // Validation
     if (!clockName) {
-      ui.notifications.warn('Please enter a clock name');
+      ui.notifications!.warn('Please enter a clock name');
       return false; // Prevent dialog from closing
     }
 
     if (!segments || segments < 4 || segments > 12) {
-      ui.notifications.error('Invalid segment count');
+      ui.notifications!.error('Invalid segment count');
       return false;
     }
 
@@ -164,11 +164,11 @@ export class ClockCreationDialog extends Dialog {
     try {
       // Call the onCreate callback with the clock data
       await onCreate(clockData);
-      ui.notifications.info(`Clock "${clockName}" created`);
+      ui.notifications!.info(`Clock "${clockName}" created`);
     } catch (error) {
       console.error('FitGD | Clock creation error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error creating clock: ${errorMessage}`);
+      ui.notifications!.error(`Error creating clock: ${errorMessage}`);
       return false; // Prevent dialog from closing on error
     }
 

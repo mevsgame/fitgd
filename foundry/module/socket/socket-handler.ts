@@ -310,7 +310,7 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
       if (game.user!.isGM) {
         try {
           const history = game.fitgd!.foundry.exportHistory();
-          await (game.settings as any).set('forged-in-the-grimdark', 'commandHistory', history);
+          await (game.settings! as any).set('forged-in-the-grimdark', 'commandHistory', history);
           console.log(`FitGD | GM persisted player changes to world settings`);
         } catch (error) {
           console.error('FitGD | GM failed to persist player changes:', error);
