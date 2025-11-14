@@ -4,11 +4,10 @@
  * Foundry VTT Actor Sheet for character entities
  */
 
-import type { Character } from '@/types/character';
-import type { Trait } from '@/types/character';
-import type { ActionRating } from '@/types/playerRoundState';
-import type { Equipment } from '@/types/equipment';
+import type { Character, Trait, ActionDots, Equipment } from '@/types/character';
 import type { Clock } from '@/types/clock';
+
+type ActionRating = keyof ActionDots;
 
 import {
   ActionRollDialog,

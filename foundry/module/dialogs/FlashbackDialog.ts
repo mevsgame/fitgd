@@ -7,8 +7,8 @@
 import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.js';
 
 export class FlashbackDialog extends Dialog {
-  private characterId: string;
-  private crewId: string;
+  private characterId!: string;
+  private crewId!: string;
 
   /**
    * Create a new Flashback Dialog

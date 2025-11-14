@@ -9,7 +9,7 @@ import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.js';
 type PushType = 'extra-die' | 'improved-effect' | 'improved-position';
 
 export class PushDialog extends Dialog {
-  private crewId: string;
+  private crewId!: string;
 
   /**
    * Create a new Push Yourself Dialog

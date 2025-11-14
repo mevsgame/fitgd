@@ -86,14 +86,14 @@ export class EquipmentBrowserDialog extends Dialog {
     const items: EquipmentTemplate[] = [];
 
     // World items
-    for (const item of game.items) {
+    for (const item of game.items!) {
       if (item.type === 'equipment') {
         items.push(this._templateFromItem(item, false));
       }
     }
 
     // Compendium items
-    const compendium = game.packs.get('forged-in-the-grimdark.equipment');
+    const compendium = game.packs!.get('forged-in-the-grimdark.equipment');
     if (compendium) {
       const index = await compendium.getIndex({ fields: ['name', 'type', 'system', 'img'] });
 

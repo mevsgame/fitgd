@@ -320,7 +320,7 @@ export class ActionRollDialog extends Dialog {
       ui.notifications!.warn(`Failure! Taking ${harmSegments[position]} harm (${position} position).`);
 
       // Auto-open harm dialog
-      const { TakeHarmDialog } = await import('./TakeHarmDialog.mjs');
+      const { TakeHarmDialog } = await import('./TakeHarmDialog.js');
       new TakeHarmDialog(characterId, crewId, {
         defaultPosition: position,
         defaultSegments: harmSegments[position]
