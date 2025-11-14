@@ -64,21 +64,21 @@ export async function takeAction(characterId: string): Promise<void> {
 
   console.log(`FitGD | Taking action for character: ${character.name} (${characterId})`);
 
-  // First, transition player to TURN_COMPLETE so setActivePlayer will reset them
-  // This ensures fresh start even if same player takes action multiple times
+  // Reset player state to ensure fresh start
+  // resetPlayerState bypasses state machine validation and sets to IDLE_WAITING
   const currentState = state.playerRoundState.byCharacterId[characterId];
-  if (currentState && currentState.state !== 'IDLE_WAITING' && currentState.state !== 'TURN_COMPLETE') {
+  if (currentState && currentState.state !== 'IDLE_WAITING') {
+    console.log(`FitGD | Resetting player state from ${currentState.state} to IDLE_WAITING`);
     await game.fitgd!.bridge.execute(
       {
-        type: 'playerRoundState/transitionState',
-        payload: { characterId, newState: 'TURN_COMPLETE' },
+        type: 'playerRoundState/resetPlayerState',
+        payload: { characterId },
       },
       { affectedReduxIds: [characterId], silent: true }
     );
   }
 
-  // Set as active player (this handles state transition to DECISION_PHASE)
-  // setActivePlayer only transitions if player is in IDLE_WAITING or TURN_COMPLETE
+  // Set as active player (this transitions IDLE_WAITING -> DECISION_PHASE)
   await game.fitgd!.bridge.execute(
     {
       type: 'playerRoundState/setActivePlayer',
