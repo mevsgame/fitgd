@@ -11,7 +11,7 @@ import { HistoryManagementConfig } from '../history-management';
  */
 export function registerSystemSettings(): void {
   // History Management Menu
-  (game.settings as any).registerMenu('forged-in-the-grimdark', 'historyManagement', {
+  (game.settings! as any).registerMenu('forged-in-the-grimdark', 'historyManagement', {
     name: game.i18n!.localize('FITGD.Settings.HistoryManagement.Name'),
     label: game.i18n!.localize('FITGD.Settings.HistoryManagement.Label'),
     hint: game.i18n!.localize('FITGD.Settings.HistoryManagement.Hint'),
@@ -21,7 +21,7 @@ export function registerSystemSettings(): void {
   });
 
   // Command history (for event sourcing)
-  (game.settings as any).register('forged-in-the-grimdark', 'commandHistory', {
+  (game.settings! as any).register('forged-in-the-grimdark', 'commandHistory', {
     name: 'Command History',
     hint: 'Event-sourced command history for state reconstruction',
     scope: 'world',
@@ -31,7 +31,7 @@ export function registerSystemSettings(): void {
   });
 
   // Game state snapshot (for performance)
-  (game.settings as any).register('forged-in-the-grimdark', 'stateSnapshot', {
+  (game.settings! as any).register('forged-in-the-grimdark', 'stateSnapshot', {
     name: 'State Snapshot',
     hint: 'Periodic state snapshot for faster loading',
     scope: 'world',
@@ -41,7 +41,7 @@ export function registerSystemSettings(): void {
   });
 
   // Auto-save interval
-  (game.settings as any).register('forged-in-the-grimdark', 'autoSaveInterval', {
+  (game.settings! as any).register('forged-in-the-grimdark', 'autoSaveInterval', {
     name: game.i18n!.localize('FITGD.Settings.AutoSaveInterval.Name'),
     hint: game.i18n!.localize('FITGD.Settings.AutoSaveInterval.Hint'),
     scope: 'world',
@@ -56,7 +56,7 @@ export function registerSystemSettings(): void {
   });
 
   // Auto-prune orphaned history
-  (game.settings as any).register('forged-in-the-grimdark', 'autoPruneHistory', {
+  (game.settings! as any).register('forged-in-the-grimdark', 'autoPruneHistory', {
     name: game.i18n!.localize('FITGD.Settings.AutoPruneHistory.Name'),
     hint: game.i18n!.localize('FITGD.Settings.AutoPruneHistory.Hint'),
     scope: 'world',

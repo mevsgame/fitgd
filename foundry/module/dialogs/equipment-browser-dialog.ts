@@ -6,6 +6,7 @@
  */
 
 import type { Equipment } from '@/types/character';
+import { asReduxId } from '../types/ids.js';
 
 interface EquipmentTemplate {
   id: string;
@@ -18,7 +19,7 @@ interface EquipmentTemplate {
   sourceItemId: string;
 }
 
-interface EquipmentBrowserOptions extends Partial<DialogOptions> {
+interface EquipmentBrowserOptions extends Partial<Dialog.Options> {
   tierFilter?: Equipment['tier'] | null;
   categoryFilter?: string | null;
 }
@@ -85,14 +86,14 @@ export class EquipmentBrowserDialog extends Dialog {
     const items: EquipmentTemplate[] = [];
 
     // World items
-    for (const item of game.items) {
+    for (const item of game.items!) {
       if (item.type === 'equipment') {
         items.push(this._templateFromItem(item, false));
       }
     }
 
     // Compendium items
-    const compendium = game.packs.get('forged-in-the-grimdark.equipment');
+    const compendium = game.packs!.get('forged-in-the-grimdark.equipment');
     if (compendium) {
       const index = await compendium.getIndex({ fields: ['name', 'type', 'system', 'img'] });
 
@@ -242,26 +243,26 @@ export class EquipmentBrowserDialog extends Dialog {
     const selectedId = html.find('input[name="equipment"]:checked').val() as string;
 
     if (!selectedId) {
-      ui.notifications.warn('Please select an equipment item');
+      ui.notifications!.warn('Please select an equipment item');
       return;
     }
 
     const template = this.items.find((t) => t.id === selectedId);
 
     if (!template) {
-      ui.notifications.error('Equipment template not found');
+      ui.notifications!.error('Equipment template not found');
       return;
     }
 
     // Check tier restrictions (players can only add accessible items)
     if (!game.user.isGM && template.tier === 'inaccessible') {
-      ui.notifications.warn('Inaccessible equipment requires a flashback (1 Momentum + trait)');
+      ui.notifications!.warn('Inaccessible equipment requires a flashback (1 Momentum + trait)');
       // TODO: Open flashback dialog
       return;
     }
 
     if (!game.user.isGM && template.tier === 'epic') {
-      ui.notifications.error(
+      ui.notifications!.error(
         'Epic equipment cannot be acquired through flashbacks - must be earned'
       );
       return;
@@ -271,10 +272,10 @@ export class EquipmentBrowserDialog extends Dialog {
     const equipmentId = foundry.utils.randomID();
 
     // Copy template data to Redux (full duplication, no reference!)
-    await game.fitgd.bridge.execute({
+    await game.fitgd!.bridge.execute({
       type: 'characters/addEquipment',
       payload: {
-        characterId: this.characterId,
+        characterId: asReduxId(this.characterId),
         equipment: {
           id: equipmentId,
           name: template.name,
@@ -289,6 +290,6 @@ export class EquipmentBrowserDialog extends Dialog {
       },
     });
 
-    ui.notifications.info(`Added ${template.name}`);
+    ui.notifications!.info(`Added ${template.name}`);
   }
 }

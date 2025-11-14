@@ -4,11 +4,10 @@
  * Foundry VTT Actor Sheet for character entities
  */
 
-import type { Character } from '@/types/character';
-import type { Trait } from '@/types/character';
-import type { ActionRating } from '@/types/action';
-import type { Equipment } from '@/types/equipment';
+import type { Character, Trait, ActionDots, Equipment } from '@/types/character';
 import type { Clock } from '@/types/clock';
+
+type ActionRating = keyof ActionDots;
 
 import {
   ActionRollDialog,
@@ -22,6 +21,7 @@ import {
   EquipmentEditDialog
 } from '../dialogs/index';
 import { PlayerActionWidget } from '../widgets/player-action-widget';
+import { asReduxId } from '../types/ids.js';
 
 interface CharacterSheetData extends ActorSheet.Data {
   editMode: boolean;
@@ -81,14 +81,14 @@ class FitGDCharacterSheet extends ActorSheet {
     context.editMode = this.editMode;
 
     // Override editable to be GM-only for clock editing
-    context.editable = game.user.isGM;
+    context.editable = game.user!.isGM;
 
     // Unified IDs: Foundry Actor ID === Redux ID
     const reduxId = this.actor.id;
     console.log('FitGD | Character Sheet getData - reduxId:', reduxId, 'editable:', context.editable);
 
     if (reduxId) {
-      const character = game.fitgd.api.character.getCharacter(reduxId);
+      const character = game.fitgd!.api.character.getCharacter(reduxId);
       console.log('FitGD | Character from Redux:', character);
 
       if (character) {
@@ -104,7 +104,7 @@ class FitGDCharacterSheet extends ActorSheet {
         }));
 
         // Get addiction clock for this character
-        const state = game.fitgd.store.getState();
+        const state = game.fitgd!.store.getState();
         const addictionClock = Object.values(state.clocks.byId).find(
           clock => clock.entityId === reduxId && clock.clockType === 'addiction'
         );
@@ -114,7 +114,7 @@ class FitGDCharacterSheet extends ActorSheet {
           traits: character.traits,
           equipment: character.equipment,
           rallyAvailable: character.rallyAvailable,
-          harmClocks: game.fitgd.api.query.getHarmClocks(reduxId),
+          harmClocks: game.fitgd!.api.query.getHarmClocks(reduxId),
           addictionClock: addictionClock || null,
           unallocatedActionDots: unallocatedDots,
           allocatedActionDots: allocatedDots,
@@ -190,7 +190,7 @@ class FitGDCharacterSheet extends ActorSheet {
    * Find the crew that contains this character
    */
   private _getCrewId(characterId: string): string | null {
-    const state = game.fitgd.store.getState();
+    const state = game.fitgd!.store.getState();
 
     // Search all crews for this character
     for (const crewId of state.crews.allIds) {
@@ -253,7 +253,7 @@ class FitGDCharacterSheet extends ActorSheet {
 
     // Only allow editing in edit mode
     if (!this.editMode) {
-      ui.notifications.warn('Click Edit to allocate action dots');
+      ui.notifications!.warn('Click Edit to allocate action dots');
       return;
     }
 
@@ -288,7 +288,7 @@ class FitGDCharacterSheet extends ActorSheet {
 
     try {
       // Get current character state to check if we should toggle to 0
-      const character = game.fitgd.api.character.getCharacter(characterId);
+      const character = game.fitgd!.api.character.getCharacter(characterId);
       if (!character) {
         console.error('FitGD | Character not found');
         return;
@@ -306,7 +306,7 @@ class FitGDCharacterSheet extends ActorSheet {
       console.log('FitGD | Calling setActionDots with:', { characterId, action, dots: newDots });
 
       // Update the action dots (Redux will handle unallocated dots validation)
-      game.fitgd.api.character.setActionDots({
+      game.fitgd!.api.character.setActionDots({
         characterId,
         action,
         dots: newDots
@@ -315,14 +315,14 @@ class FitGDCharacterSheet extends ActorSheet {
       console.log('FitGD | setActionDots succeeded');
 
       // Save and broadcast changes to other clients
-      await game.fitgd.saveImmediate();
+      await game.fitgd!.saveImmediate();
 
       // Re-render sheet
       this.render(false);
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications!.error(`Error: ${errorMessage}`);
       console.error('FitGD | Set action dots error:', error);
     }
   }
@@ -343,7 +343,7 @@ class FitGDCharacterSheet extends ActorSheet {
 
     if (this.editMode) {
       // Trying to save - validate that all dots are allocated
-      const character = game.fitgd.api.character.getCharacter(characterId);
+      const character = game.fitgd!.api.character.getCharacter(characterId);
       if (!character) {
         console.error('FitGD | Character not found');
         return;
@@ -352,7 +352,7 @@ class FitGDCharacterSheet extends ActorSheet {
       console.log('FitGD | Attempting to save, unallocated dots:', character.unallocatedActionDots);
 
       if (character.unallocatedActionDots > 0) {
-        ui.notifications.warn(`You must allocate all ${character.unallocatedActionDots} remaining action dots before saving`);
+        ui.notifications!.warn(`You must allocate all ${character.unallocatedActionDots} remaining action dots before saving`);
         return;
       }
 
@@ -361,14 +361,14 @@ class FitGDCharacterSheet extends ActorSheet {
       console.log('FitGD | Exiting edit mode, saving changes');
 
       // Save and broadcast final dot allocation to other clients
-      await game.fitgd.saveImmediate();
+      await game.fitgd!.saveImmediate();
 
-      ui.notifications.info('Action dots saved');
+      ui.notifications!.info('Action dots saved');
     } else {
       // Enter edit mode
       this.editMode = true;
       console.log('FitGD | Entering edit mode');
-      ui.notifications.info('Edit mode: Click dots to allocate action ratings');
+      ui.notifications!.info('Edit mode: Click dots to allocate action ratings');
     }
 
     // Re-render to update button text and dot states
@@ -386,7 +386,7 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!characterId) return;
 
     // Call the API helper function
-    await game.fitgd.api.action.takeAction(characterId);
+    await game.fitgd!.api.action.takeAction(characterId);
   }
 
   /**
@@ -407,7 +407,7 @@ class FitGDCharacterSheet extends ActorSheet {
           // Create clock via Bridge API
           const newClockId = foundry.utils.randomID();
 
-          await game.fitgd.bridge.execute(
+          await game.fitgd!.bridge.execute(
             {
               type: 'clocks/createClock',
               payload: {
@@ -420,14 +420,14 @@ class FitGDCharacterSheet extends ActorSheet {
                 metadata: clockData.description ? { description: clockData.description } : undefined,
               },
             },
-            { affectedReduxIds: [characterId], force: true }
+            { affectedReduxIds: [asReduxId(characterId)], force: true }
           );
 
-          ui.notifications.info(`Harm clock "${clockData.name}" created`);
+          ui.notifications!.info(`Harm clock "${clockData.name}" created`);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           console.error('FitGD | Error creating harm clock:', error);
-          ui.notifications.error(`Error creating harm clock: ${errorMessage}`);
+          ui.notifications!.error(`Error creating harm clock: ${errorMessage}`);
         }
       },
       {
@@ -457,12 +457,12 @@ class FitGDCharacterSheet extends ActorSheet {
       // Cycle: 0 -> max, then back to 0
       const newValue = currentValue >= maxValue ? 0 : currentValue + 1;
 
-      game.fitgd.api.clock.setSegments({ clockId, segments: newValue });
-      await game.fitgd.saveImmediate();
+      game.fitgd!.api.clock.setSegments({ clockId, segments: newValue });
+      await game.fitgd!.saveImmediate();
       this.render(false);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications!.error(`Error: ${errorMessage}`);
       console.error('FitGD | Clock SVG click error:', error);
     }
   }
@@ -482,12 +482,12 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!clockId) return;
 
     try {
-      game.fitgd.api.clock.setSegments({ clockId, segments: newValue });
-      await game.fitgd.saveImmediate();
+      game.fitgd!.api.clock.setSegments({ clockId, segments: newValue });
+      await game.fitgd!.saveImmediate();
       this.render(false);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications!.error(`Error: ${errorMessage}`);
       console.error('FitGD | Clock value change error:', error);
     }
   }
@@ -506,12 +506,12 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!clockId || !newName) return;
 
     try {
-      game.fitgd.api.clock.rename({ clockId, name: newName });
-      await game.fitgd.saveImmediate();
-      ui.notifications.info(`Clock renamed to "${newName}"`);
+      game.fitgd!.api.clock.rename({ clockId, name: newName });
+      await game.fitgd!.saveImmediate();
+      ui.notifications!.info(`Clock renamed to "${newName}"`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications!.error(`Error: ${errorMessage}`);
       console.error('FitGD | Clock rename error:', error);
       this.render(false); // Reset to original name
     }
@@ -539,13 +539,13 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!confirmed) return;
 
     try {
-      game.fitgd.api.clock.delete(clockId);
-      await game.fitgd.saveImmediate();
+      game.fitgd!.api.clock.delete(clockId);
+      await game.fitgd!.saveImmediate();
       this.render(false);
-      ui.notifications.info('Clock deleted');
+      ui.notifications!.info('Clock deleted');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications!.error(`Error: ${errorMessage}`);
       console.error('FitGD | Clock delete error:', error);
     }
   }
@@ -571,7 +571,7 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!characterId) return;
 
     // Get trait name for confirmation
-    const character = game.fitgd.api.character.getCharacter(characterId);
+    const character = game.fitgd!.api.character.getCharacter(characterId);
     const trait = character?.traits.find(t => t.id === traitId);
     const traitName = trait?.name || 'Unknown Trait';
 
@@ -588,13 +588,13 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!confirmed) return;
 
     try {
-      game.fitgd.api.character.removeTrait({ characterId, traitId });
-      await game.fitgd.saveImmediate();
+      game.fitgd!.api.character.removeTrait({ characterId, traitId });
+      await game.fitgd!.saveImmediate();
       this.render(false);
-      ui.notifications.info(`Trait "${traitName}" deleted`);
+      ui.notifications!.info(`Trait "${traitName}" deleted`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications!.error(`Error: ${errorMessage}`);
       console.error('FitGD | Trait delete error:', error);
     }
   }
@@ -615,19 +615,19 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!characterId) return;
 
     // Get original name to check if it changed
-    const character = game.fitgd.api.character.getCharacter(characterId);
+    const character = game.fitgd!.api.character.getCharacter(characterId);
     const trait = character?.traits.find((t) => t.id === traitId);
     const originalName = trait?.name;
 
     if (newName === originalName) return; // No change
 
     try {
-      game.fitgd.api.character.updateTraitName({ characterId, traitId, name: newName });
-      await game.fitgd.saveImmediate();
-      ui.notifications.info(`Trait renamed to "${newName}"`);
+      game.fitgd!.api.character.updateTraitName({ characterId, traitId, name: newName });
+      await game.fitgd!.saveImmediate();
+      ui.notifications!.info(`Trait renamed to "${newName}"`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications!.error(`Error: ${errorMessage}`);
       console.error('FitGD | Trait rename error:', error);
       this.render(false); // Reset to original name
     }
@@ -644,18 +644,18 @@ class FitGDCharacterSheet extends ActorSheet {
 
     try {
       // Use Bridge API with correct Redux action
-      await game.fitgd.bridge.execute(
+      await game.fitgd!.bridge.execute(
         {
           type: isChecked ? 'characters/resetRally' : 'characters/useRally',
           payload: { characterId }
         },
-        { affectedReduxIds: [characterId] }
+        { affectedReduxIds: [asReduxId(characterId)] }
       );
 
-      ui.notifications.info(`Rally ${isChecked ? 'enabled' : 'disabled'}`);
+      ui.notifications!.info(`Rally ${isChecked ? 'enabled' : 'disabled'}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications!.error(`Error: ${errorMessage}`);
       console.error('FitGD | Rally change error:', error);
       // Revert checkbox on error
       input.checked = !isChecked;
@@ -671,7 +671,7 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!characterId) return;
 
     // Players can only browse accessible items
-    const tierFilter = game.user.isGM ? null : 'accessible';
+    const tierFilter = game.user!.isGM ? null : 'accessible';
 
     new EquipmentBrowserDialog(characterId, { tierFilter }).render(true);
   }
@@ -686,11 +686,11 @@ class FitGDCharacterSheet extends ActorSheet {
     const characterId = this._getReduxId();
     if (!characterId) return;
 
-    const character = game.fitgd.api.character.getCharacter(characterId);
+    const character = game.fitgd!.api.character.getCharacter(characterId);
     const equipment = character?.equipment?.find((e) => e.id === equipmentId);
 
     if (!equipment) {
-      ui.notifications.error('Equipment not found');
+      ui.notifications!.error('Equipment not found');
       return;
     }
 
@@ -707,11 +707,11 @@ class FitGDCharacterSheet extends ActorSheet {
     const characterId = this._getReduxId();
     if (!characterId) return;
 
-    const character = game.fitgd.api.character.getCharacter(characterId);
+    const character = game.fitgd!.api.character.getCharacter(characterId);
     const equipment = character?.equipment?.find((e) => e.id === equipmentId);
 
     if (!equipment) {
-      ui.notifications.error('Equipment not found');
+      ui.notifications!.error('Equipment not found');
       return;
     }
 
@@ -722,12 +722,12 @@ class FitGDCharacterSheet extends ActorSheet {
 
     if (!confirmed) return;
 
-    await game.fitgd.bridge.execute({
+    await game.fitgd!.bridge.execute({
       type: 'characters/removeEquipment',
       payload: { characterId, equipmentId },
     });
 
-    ui.notifications.info(`Removed ${equipment.name}`);
+    ui.notifications!.info(`Removed ${equipment.name}`);
   }
 
   /**
@@ -741,13 +741,13 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!characterId) return;
 
     try {
-      await game.fitgd.bridge.execute({
+      await game.fitgd!.bridge.execute({
         type: 'characters/toggleEquipped',
         payload: { characterId, equipmentId, equipped },
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications!.error(`Error: ${errorMessage}`);
       console.error('FitGD | Toggle equipped error:', error);
       // Revert checkbox on error
       target.checked = !equipped;

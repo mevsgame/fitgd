@@ -78,11 +78,11 @@ interface SocketCommandData {
  * Foundry types only include "core" namespace, but we use custom namespace
  */
 function getSetting<T>(key: string): T {
-  return (game.settings as any).get('forged-in-the-grimdark', key) as T;
+  return (game.settings! as any).get('forged-in-the-grimdark', key) as T;
 }
 
 function setSetting<T>(key: string, value: T): Promise<T> {
-  return (game.settings as any).set('forged-in-the-grimdark', key, value) as Promise<T>;
+  return (game.settings! as any).set('forged-in-the-grimdark', key, value) as Promise<T>;
 }
 
 /* -------------------------------------------- */
@@ -254,7 +254,7 @@ Hooks.once('init', async function() {
       game.fitgd!.saveImmediate
     );
     console.log('FitGD | Foundry-Redux Bridge created successfully');
-    console.log('FitGD | Bridge API available at game.fitgd.bridge');
+    console.log('FitGD | Bridge API available at game.fitgd!.bridge');
   } catch (error) {
     console.error('FitGD | Failed to create Foundry-Redux Bridge:', error);
     return;
@@ -289,7 +289,7 @@ Hooks.once('init', async function() {
  */
 Hooks.once('ready', async function() {
   console.log(`FitGD | World ready for user: ${game.user!.name} (isGM: ${game.user!.isGM})`);
-  console.log(`FitGD | game.fitgd initialized: ${!!game.fitgd}, has store: ${!!game.fitgd?.store}, has api: ${!!game.fitgd?.api}`);
+  console.log(`FitGD | game.fitgd! initialized: ${!!game.fitgd}, has store: ${!!game.fitgd?.store}, has api: ${!!game.fitgd?.api}`);
 
   // Check for state snapshot first (used after history pruning)
   const stateSnapshot = getSetting<StateSnapshot | undefined>('stateSnapshot');

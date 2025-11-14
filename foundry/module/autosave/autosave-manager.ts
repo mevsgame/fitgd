@@ -277,8 +277,8 @@ export function refreshAffectedSheets(commands: CommandHistory, clockEntityIds: 
       if (entityId && affectedEntityIds.has(entityId)) {
         try {
           const actor = (app as any).actor;
-          const permission = actor?.testUserPermission(game.user, 'OBSERVER') ? 'observer+' :
-                           actor?.testUserPermission(game.user, 'OWNER') ? 'owner' : 'limited';
+          const permission = actor?.testUserPermission(game.user!, 'OBSERVER') ? 'observer+' :
+                           actor?.testUserPermission(game.user!, 'OWNER') ? 'owner' : 'limited';
           console.log(`FitGD | Re-rendering ${app.constructor.name} for ${entityId} (user: ${game.user!.name}, permission: ${permission})`);
 
           // Force a full re-render (true = force) to ensure observers see updates
@@ -304,7 +304,7 @@ export async function reloadStateFromSettings(): Promise<void> {
 
     // Load command history from settings
     const defaultHistory: CommandHistory = { characters: [], crews: [], clocks: [] };
-    const history = (game.settings as any).get('forged-in-the-grimdark', 'commandHistory') || defaultHistory;
+    const history = (game.settings! as any).get('forged-in-the-grimdark', 'commandHistory') || defaultHistory;
 
     // Ensure history has the correct structure
     const validHistory: CommandHistory = {
@@ -374,7 +374,7 @@ export async function saveCommandHistoryImmediate(): Promise<void> {
       };
 
       console.log(`FitGD | Broadcasting ${newCommandCount} commands via socketlib:`, socketData);
-      console.log(`FitGD | game.fitgd.socket exists?`, !!game.fitgd!.socket);
+      console.log(`FitGD | game.fitgd!.socket exists?`, !!game.fitgd!.socket);
 
       try {
         // Use socketlib to broadcast to OTHER clients (not self)
@@ -390,7 +390,7 @@ export async function saveCommandHistoryImmediate(): Promise<void> {
     // Save to Foundry settings (only if user has permission - typically GM)
     if (game.user!.isGM) {
       const history = game.fitgd!.foundry.exportHistory();
-      await (game.settings as any).set('forged-in-the-grimdark', 'commandHistory', history);
+      await (game.settings! as any).set('forged-in-the-grimdark', 'commandHistory', history);
       const total = history.characters.length + history.crews.length + history.clocks.length;
       console.log(`FitGD | Saved ${total} commands to world settings (GM only)`);
     } else {
@@ -406,7 +406,7 @@ export function saveCommandHistory(): void {
   // Debounced auto-save for non-critical updates
   if (autoSaveTimer) clearTimeout(autoSaveTimer);
 
-  const interval = (game.settings as any).get('forged-in-the-grimdark', 'autoSaveInterval') as number;
+  const interval = (game.settings! as any).get('forged-in-the-grimdark', 'autoSaveInterval') as number;
   if (interval === 0) return;
 
   autoSaveTimer = setTimeout(async () => {

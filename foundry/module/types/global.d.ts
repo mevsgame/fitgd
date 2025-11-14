@@ -1,7 +1,7 @@
 /**
  * Global type declarations for Foundry VTT integration
  *
- * Extends Foundry VTT types with custom game.fitgd namespace
+ * Extends Foundry VTT types with custom game.fitgd! namespace
  */
 
 /// <reference types="@league-of-foundry-developers/foundry-vtt-types" />
@@ -25,7 +25,7 @@ export interface FitGDSocket {
 }
 
 /**
- * Global game.fitgd namespace
+ * Global game.fitgd! namespace
  */
 export interface FitGDGame {
   /** Redux store instance */

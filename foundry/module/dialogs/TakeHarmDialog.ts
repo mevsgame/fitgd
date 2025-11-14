@@ -4,12 +4,12 @@
  * Dialog for taking harm and creating harm clocks
  */
 
-import type { Position } from '@/types/action';
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.mjs';
+import type { Position } from '@/types/playerRoundState';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.js';
 
 type Effect = 'limited' | 'standard' | 'great';
 
-interface TakeHarmOptions extends Partial<DialogOptions> {
+interface TakeHarmOptions extends Partial<Dialog.Options> {
   defaultPosition?: Position;
   defaultSegments?: number;
 }
@@ -106,7 +106,7 @@ export class TakeHarmDialog extends Dialog {
     try {
       // Apply consequences (generates Momentum AND applies harm)
       // Using 'failure' as default result since taking harm implies a consequence
-      const consequence = game.fitgd.api.action.applyConsequences({
+      const consequence = game.fitgd!.api.action.applyConsequences({
         crewId,
         characterId,
         position,
@@ -116,18 +116,18 @@ export class TakeHarmDialog extends Dialog {
       });
 
       // Save immediately (critical state change)
-      await game.fitgd.saveImmediate();
+      await game.fitgd!.saveImmediate();
 
       // Notify
       const harmInfo = consequence.harmApplied;
       if (harmInfo) {
-        ui.notifications.info(`Took ${harmInfo.segmentsAdded} segments of ${harmType}. Gained ${consequence.momentumGenerated} Momentum.`);
+        ui.notifications!.info(`Took ${harmInfo.segmentsAdded} segments of ${harmType}. Gained ${consequence.momentumGenerated} Momentum.`);
 
         if (harmInfo.isDying) {
-          ui.notifications.error(`Character is DYING! (6/6 harm clock)`);
+          ui.notifications!.error(`Character is DYING! (6/6 harm clock)`);
         }
       } else {
-        ui.notifications.info(`Gained ${consequence.momentumGenerated} Momentum.`);
+        ui.notifications!.info(`Gained ${consequence.momentumGenerated} Momentum.`);
       }
 
       // Force re-render affected sheets
@@ -135,7 +135,7 @@ export class TakeHarmDialog extends Dialog {
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications!.error(`Error: ${errorMessage}`);
       console.error('FitGD | Take Harm error:', error);
     }
   }

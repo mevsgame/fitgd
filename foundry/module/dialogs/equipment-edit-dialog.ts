@@ -6,6 +6,7 @@
  */
 
 import type { Equipment } from '@/types/character';
+import { asReduxId } from '../types/ids.js';
 
 interface EquipmentEditData {
   equipment: Equipment;
@@ -16,12 +17,12 @@ interface EquipmentEditData {
 export class EquipmentEditDialog extends FormApplication<Equipment> {
   private characterId: string;
 
-  constructor(characterId: string, equipment: Equipment, options: Partial<FormApplicationOptions> = {}) {
+  constructor(characterId: string, equipment: Equipment, options: Partial<FormApplication.Options> = {}) {
     super(equipment, options);
     this.characterId = characterId;
   }
 
-  static override get defaultOptions(): FormApplicationOptions {
+  static override get defaultOptions(): FormApplication.Options {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ['fitgd', 'dialog', 'equipment-edit'],
       template: 'systems/forged-in-the-grimdark/templates/dialogs/equipment-edit.html',
@@ -50,15 +51,15 @@ export class EquipmentEditDialog extends FormApplication<Equipment> {
       img: formData.img as string,
     };
 
-    await game.fitgd.bridge.execute({
+    await game.fitgd!.bridge.execute({
       type: 'characters/updateEquipment',
       payload: {
-        characterId: this.characterId,
+        characterId: asReduxId(this.characterId),
         equipmentId: this.object.id,
         changes,
       },
     });
 
-    ui.notifications.info(`Updated ${changes.name}`);
+    ui.notifications!.info(`Updated ${changes.name}`);
   }
 }

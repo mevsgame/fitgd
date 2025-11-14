@@ -89,7 +89,7 @@ export class BaseSelectionDialog extends Application {
   }
 
   /** @override */
-  static override get defaultOptions(): ApplicationOptions {
+  static override get defaultOptions(): Application.Options {
     return foundry.utils.mergeObject(super.defaultOptions, {
       template: 'systems/forged-in-the-grimdark/templates/dialogs/base-selection-dialog.html',
       classes: ['fitgd-selection-dialog', 'dialog'],

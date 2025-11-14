@@ -12,7 +12,8 @@
 
 import type { Character } from '@/types/character';
 import type { Crew } from '@/types/crew';
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.mjs';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.js';
+import { asReduxId } from '../types/ids.js';
 
 interface LeanIntoTraitData {
   character: Character;
@@ -39,16 +40,16 @@ export class LeanIntoTraitDialog extends Application {
    * @param crewId - Redux ID of the character's crew
    * @param options - Additional options passed to Application constructor
    */
-  constructor(characterId: string, crewId: string, options: Partial<ApplicationOptions> = {}) {
+  constructor(characterId: string, crewId: string, options: Partial<Application.Options> = {}) {
     super(options);
 
     this.characterId = characterId;
     this.crewId = crewId;
-    this.character = game.fitgd.api.character.getCharacter(characterId);
-    this.crew = game.fitgd.api.crew.getCrew(crewId);
+    this.character = game.fitgd!.api.character.getCharacter(characterId);
+    this.crew = game.fitgd!.api.crew.getCrew(crewId);
   }
 
-  static override get defaultOptions(): ApplicationOptions {
+  static override get defaultOptions(): Application.Options {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ['fitgd', 'lean-into-trait-dialog'],
       template: 'systems/forged-in-the-grimdark/templates/dialogs/lean-into-trait-dialog.html',
@@ -63,7 +64,7 @@ export class LeanIntoTraitDialog extends Application {
     return `lean-into-trait-dialog-${this.characterId}`;
   }
 
-  override async getData(options: Partial<ApplicationOptions> = {}): Promise<LeanIntoTraitData> {
+  override async getData(options: Partial<Application.Options> = {}): Promise<LeanIntoTraitData> {
     const data = await super.getData(options);
 
     // Get traits that are NOT disabled (available to lean into)
@@ -117,14 +118,14 @@ export class LeanIntoTraitDialog extends Application {
     event.preventDefault();
 
     if (!this.selectedTraitId) {
-      ui.notifications.warn('Please select a trait to lean into');
+      ui.notifications!.warn('Please select a trait to lean into');
       return;
     }
 
     try {
       const trait = this.character.traits.find(t => t.id === this.selectedTraitId);
       if (!trait) {
-        ui.notifications.error('Selected trait not found');
+        ui.notifications!.error('Selected trait not found');
         return;
       }
 
@@ -137,13 +138,13 @@ export class LeanIntoTraitDialog extends Application {
       const actualGain = newMomentum - currentMomentum;
 
       // Batch both Redux actions together
-      await game.fitgd.bridge.executeBatch(
+      await game.fitgd!.bridge.executeBatch(
         [
           // Disable the trait
           {
             type: 'characters/disableTrait',
             payload: {
-              characterId: this.characterId,
+              characterId: asReduxId(this.characterId),
               traitId: this.selectedTraitId,
             },
           },
@@ -151,12 +152,12 @@ export class LeanIntoTraitDialog extends Application {
           {
             type: 'crews/setMomentum',
             payload: {
-              crewId: this.crewId,
+              crewId: asReduxId(this.crewId),
               amount: newMomentum,
             },
           },
         ],
-        { affectedReduxIds: [this.characterId, this.crewId] }
+        { affectedReduxIds: [asReduxId(this.characterId), asReduxId(this.crewId)] }
       );
 
       // User feedback
@@ -168,13 +169,13 @@ export class LeanIntoTraitDialog extends Application {
         message += `\nComplication: ${complication}`;
       }
 
-      ui.notifications.info(message);
+      ui.notifications!.info(message);
 
       // Close dialog
       this.close();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications!.error(`Error: ${errorMessage}`);
       console.error('FitGD | Lean Into Trait error:', error);
     }
   }

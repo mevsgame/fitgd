@@ -24,7 +24,7 @@ export class CharacterSelectionDialog extends BaseSelectionDialog {
     currentCharacterId: string,
     onSelect: (characterId: string) => void | Promise<void>
   ) {
-    const state: RootState = game.fitgd.store.getState();
+    const state: RootState = game.fitgd!.store.getState();
     const crew = state.crews.byId[crewId];
 
     if (!crew) {

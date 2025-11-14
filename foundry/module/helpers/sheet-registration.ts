@@ -5,11 +5,11 @@
  */
 
 // @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { FitGDCharacterSheet } from '../sheets/character-sheet.mjs';
+import { FitGDCharacterSheet } from '../sheets/character-sheet.js';
 // @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { FitGDCrewSheet } from '../sheets/crew-sheet.mjs';
+import { FitGDCrewSheet } from '../sheets/crew-sheet.js';
 // @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { FitGDTraitSheet, FitGDEquipmentSheet } from '../sheets/item-sheets.mjs';
+import { FitGDTraitSheet, FitGDEquipmentSheet } from '../sheets/item-sheets.js';
 
 /* -------------------------------------------- */
 /*  Sheet Registration                          */

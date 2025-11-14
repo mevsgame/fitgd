@@ -25,7 +25,7 @@ export class ClockSelectionDialog extends BaseSelectionDialog {
     clockType: 'harm' | 'crew',
     onSelect: (clockId: string) => void | Promise<void>
   ) {
-    const state: RootState = game.fitgd.store.getState();
+    const state: RootState = game.fitgd!.store.getState();
 
     // Get clocks for entity
     const allClocks = Object.values(state.clocks.byId);

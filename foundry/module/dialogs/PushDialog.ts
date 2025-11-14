@@ -4,12 +4,12 @@
  * Dialog for pushing yourself (spending Momentum)
  */
 
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.mjs';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.js';
 
 type PushType = 'extra-die' | 'improved-effect' | 'improved-position';
 
 export class PushDialog extends Dialog {
-  private crewId: string;
+  private crewId!: string;
 
   /**
    * Create a new Push Yourself Dialog
@@ -17,12 +17,12 @@ export class PushDialog extends Dialog {
    * @param crewId - Redux ID of the crew
    * @param options - Additional options passed to Dialog constructor
    */
-  constructor(crewId: string, options: Partial<DialogOptions> = {}) {
-    const crew = game.fitgd.api.crew.getCrew(crewId);
+  constructor(crewId: string, options: Partial<Dialog.Options> = {}) {
+    const crew = game.fitgd!.api.crew.getCrew(crewId);
     const momentum = crew?.currentMomentum || 0;
 
     if (momentum < 1) {
-      ui.notifications.warn('Not enough Momentum to push (need 1)');
+      ui.notifications!.warn('Not enough Momentum to push (need 1)');
       // @ts-expect-error - Returning from constructor to prevent dialog creation
       return;
     }
@@ -70,13 +70,13 @@ export class PushDialog extends Dialog {
     const pushType = (form.elements.namedItem('pushType') as HTMLSelectElement).value as PushType;
 
     try {
-      const result = game.fitgd.api.action.push({
+      const result = game.fitgd!.api.action.push({
         crewId,
         type: pushType
       });
 
       // Save immediately (critical state change)
-      await game.fitgd.saveImmediate();
+      await game.fitgd!.saveImmediate();
 
       const typeLabel: Record<PushType, string> = {
         'extra-die': '+1d to roll',
@@ -84,14 +84,14 @@ export class PushDialog extends Dialog {
         'improved-position': 'Position +1'
       };
 
-      ui.notifications.info(`Pushed! ${typeLabel[pushType]}. Momentum: ${result.newMomentum}/10`);
+      ui.notifications!.info(`Pushed! ${typeLabel[pushType]}. Momentum: ${result.newMomentum}/10`);
 
       // Re-render crew sheet
       refreshSheetsByReduxId([crewId], false);
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications!.error(`Error: ${errorMessage}`);
       console.error('FitGD | Push error:', error);
     }
   }
