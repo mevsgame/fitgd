@@ -33,7 +33,7 @@ import { registerActorHooks } from './hooks/actor-hooks';
 import { registerHotbarHooks } from './hooks/hotbar-hooks';
 
 // Socket and autosave modules
-import { receiveCommandsFromSocket } from './socket/socket-handler';
+import { receiveCommandsFromSocket, handleTakeAction } from './socket/socket-handler';
 import { saveCommandHistory, trackInitialCommandsAsApplied, getNewCommandsSinceLastBroadcast, checkCircuitBreaker } from './autosave/autosave-manager';
 
 // Developer commands
@@ -146,8 +146,9 @@ Hooks.once('init', async function() {
     // Register socket handlers
     // Note: Handler function must be defined before registration
     game.fitgd!.socket.register('syncCommands', receiveCommandsFromSocket);
-    console.log('FitGD | Socket handlers registered for "syncCommands"');
-    console.log('FitGD | Handler function:', receiveCommandsFromSocket);
+    game.fitgd!.socket.register('takeAction', handleTakeAction);
+    console.log('FitGD | Socket handlers registered for "syncCommands" and "takeAction"');
+    console.log('FitGD | Handler functions:', receiveCommandsFromSocket, handleTakeAction);
   } catch (error) {
     console.error('FitGD | Failed to initialize socketlib:', error);
     console.error('FitGD | Make sure socketlib module is installed and enabled');
