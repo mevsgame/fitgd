@@ -1,5 +1,6 @@
-import type { Clock, ClockType } from '../types';
+import type { Clock, ClockSize, ClockType } from '../types';
 import { DEFAULT_CONFIG } from '../config/gameConfig';
+import { EquipmentRarity, EquipmentTier } from '@/types/equipment';
 
 /**
  * Clock Validator
@@ -57,9 +58,9 @@ export function validateSegmentRange(
  */
 export function getMaxSegments(
   clockType: ClockType,
-  rarity?: 'common' | 'uncommon' | 'rare',
-  customSize?: number
-): number {
+  rarity?: EquipmentRarity,
+  customSize?: ClockSize
+): ClockSize {
   switch (clockType) {
     case 'harm':
       return DEFAULT_CONFIG.clocks.harm.segments; // 6
@@ -142,8 +143,8 @@ export function isClockFrozen(clock: Clock): boolean {
  * Validate consumable clock metadata
  */
 export function validateConsumableMetadata(
-  rarity?: 'common' | 'uncommon' | 'rare',
-  tier?: 'accessible' | 'inaccessible'
+  rarity?: EquipmentRarity,
+  tier?: EquipmentTier
 ): void {
   if (!rarity) {
     throw new Error('Consumable clocks require a rarity (common, uncommon, rare)');

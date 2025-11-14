@@ -30,7 +30,7 @@ export const DEFAULT_CONFIG: GameConfig = {
       segments: {
         common: 8,
         uncommon: 6,
-        rare: 4,
+        epic: 4,
       },
     },
     addiction: {

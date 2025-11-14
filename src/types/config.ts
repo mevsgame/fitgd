@@ -5,6 +5,8 @@
  * Can be overridden per campaign for playtesting adjustments.
  */
 
+import { ClockSize } from "./clock";
+
 export interface GameConfig {
   character: {
     startingTraitCount: number;
@@ -23,17 +25,17 @@ export interface GameConfig {
   clocks: {
     harm: {
       maxClocks: number;
-      segments: number;
+      segments: ClockSize;
     };
     consumable: {
       segments: {
-        common: number;
-        uncommon: number;
-        rare: number;
+        common: ClockSize;
+        uncommon: ClockSize;
+        epic: ClockSize;
       };
     };
     addiction: {
-      segments: number;
+      segments: ClockSize;
       resetReduction: number;
     };
     progress: {

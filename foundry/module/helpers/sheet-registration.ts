@@ -3,10 +3,10 @@
  *
  * Registers Foundry sheet classes for Actors and Items
  */
-
-import { FitGDCharacterSheet } from '../sheets/character-sheet';
-import { FitGDCrewSheet } from '../sheets/crew-sheet';
-import { FitGDTraitSheet, FitGDEquipmentSheet } from '../sheets/item-sheets';
+ 
+import { FitGDCharacterSheet } from '../sheets/character-sheet.ts'; 
+import { FitGDCrewSheet } from '../sheets/crew-sheet.ts'; 
+import { FitGDTraitSheet, FitGDEquipmentSheet } from '../sheets/item-sheets.ts';
 
 /* -------------------------------------------- */
 /*  Sheet Registration                          */

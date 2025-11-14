@@ -4,6 +4,8 @@
  * Low-change entity stored with full snapshot + command history.
  */
 
+import { EquipmentTier } from "./equipment";
+
 export interface Character {
   id: string;
   name: string;
@@ -46,7 +48,7 @@ export interface Equipment {
 
   // Core equipment data (copied from template at creation, fully editable)
   name: string;
-  tier: 'accessible' | 'inaccessible' | 'epic';
+  tier: EquipmentTier;
   category: string; // e.g., 'weapon', 'armor', 'tool'
   description: string;
   img?: string; // Optional: image path

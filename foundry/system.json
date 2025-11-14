@@ -26,7 +26,7 @@
     ]
   },
   "esmodules": [
-    "module-dist/fitgd.mjs"
+    "dist/fitgd.mjs"
   ],
   "styles": [
     "templates/styles/fitgd-sheets.css"

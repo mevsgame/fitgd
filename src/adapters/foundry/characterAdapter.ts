@@ -131,6 +131,8 @@ export function importCharacterFromFoundry(
         tier: equipData.tier,
         category: equipData.category,
         description: equipData.description,
+        equipped: false,
+        acquiredAt: Date.now()
       };
     });
 

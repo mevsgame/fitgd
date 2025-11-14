@@ -5,6 +5,9 @@
  * NOTE: FitGD uses different mechanics than standard Blades in the Dark!
  */
 
+import { ClockSize } from "@/types";
+import { EquipmentRarity, EquipmentTier } from "@/types/equipment";
+
 /**
  * Base Foundry Actor data structure
  */
@@ -119,9 +122,9 @@ export interface ConsumableClockData {
   id: string;
   type: string; // e.g., "frag_grenades", "stims"
   segments: number;
-  maxSegments: number; // 4, 6, or 8 based on rarity
-  rarity: 'common' | 'uncommon' | 'rare';
-  tier: 'accessible' | 'inaccessible';
+  maxSegments: ClockSize;  
+  rarity: EquipmentRarity;
+  tier: EquipmentTier;
   frozen: boolean;
   color: ClockColor; // green
 }
@@ -165,7 +168,7 @@ export interface FoundryTraitData {
  * Equipment item data
  */
 export interface FoundryEquipmentData {
-  tier: 'accessible' | 'inaccessible' | 'epic';
+  tier: EquipmentTier | 'epic';
   category: string; // 'weapon', 'armor', 'tool', etc.
   description?: string;
 }

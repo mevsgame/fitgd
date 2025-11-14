@@ -8,6 +8,8 @@ import {
   changeSubtype,
 } from '../../slices/clockSlice';
 import { isClockFilled } from '../../validators/clockValidator';
+import { ClockSize } from '@/types/clock';
+
 
 /**
  * Clock API Implementation
@@ -22,7 +24,7 @@ export function createClockAPI(store: Store) {
     createProgress(params: {
       entityId: string;
       name: string;
-      segments: 4 | 6 | 8 | 12;
+      maxSegments: ClockSize;
       category?:
         | 'long-term-project'
         | 'threat'
@@ -32,7 +34,7 @@ export function createClockAPI(store: Store) {
       isCountdown?: boolean;
       description?: string;
     }): string {
-      const { entityId, name, segments, category, isCountdown, description } =
+      const { entityId, name, maxSegments, category, isCountdown, description } =
         params;
 
       store.dispatch(
@@ -40,7 +42,7 @@ export function createClockAPI(store: Store) {
           entityId,
           clockType: 'progress',
           subtype: name,
-          maxSegments: segments,
+          maxSegments: maxSegments,
           category,
           isCountdown,
           description,

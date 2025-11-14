@@ -5,6 +5,10 @@
  * High-change entity with separate store and full command history.
  */
 
+import { EquipmentRarity, EquipmentTier } from "./equipment";
+
+
+export type ClockSize = 4 | 6 | 8 | 12;
 export type ClockType = 'harm' | 'consumable' | 'addiction' | 'progress';
 
 export interface Clock {
@@ -23,7 +27,7 @@ export interface Clock {
   segments: number;
 
   /** Maximum segments (6 for harm, 8 for addiction, 4/6/8 for consumables, 4/6/8/12 for progress) */
-  maxSegments: number;
+  maxSegments: ClockSize;
 
   /** Flexible metadata for type-specific data */
   metadata?: ClockMetadata;
@@ -34,8 +38,8 @@ export interface Clock {
 
 export interface ClockMetadata {
   /** For consumable clocks */
-  rarity?: 'common' | 'uncommon' | 'rare';
-  tier?: 'accessible' | 'inaccessible';
+  rarity?: EquipmentRarity;
+  tier?: EquipmentTier;
   frozen?: boolean;
 
   /** For progress clocks */
