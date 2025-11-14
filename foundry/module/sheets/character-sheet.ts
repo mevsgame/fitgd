@@ -385,8 +385,22 @@ class FitGDCharacterSheet extends ActorSheet {
     const characterId = this._getReduxId();
     if (!characterId) return;
 
-    // Call the API helper function
-    await game.fitgd.api.action.takeAction(characterId);
+    // Import PlayerActionWidget dynamically to avoid circular dependencies
+    const { PlayerActionWidget } = await import('../widgets/player-action-widget');
+
+    // Check if widget already exists for this character
+    const existingWidget = Object.values(ui.windows).find(
+      (app) => app instanceof PlayerActionWidget && (app as any).characterId === characterId
+    );
+
+    if (existingWidget) {
+      console.log(`FitGD | Refreshing existing Player Action Widget for character ${characterId}`);
+      existingWidget.render(true); // Just refresh existing widget
+    } else {
+      console.log(`FitGD | Creating new Player Action Widget for character ${characterId}`);
+      const widget = new PlayerActionWidget(characterId);
+      widget.render(true);
+    }
   }
 
   /**
