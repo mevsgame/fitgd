@@ -17,7 +17,7 @@
 
 import type { Character } from '@/types/character';
 import type { Crew } from '@/types/crew';
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.mjs';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 
 type SocialAction = 'command' | 'consort' | 'sway';
 type RallyOutcome = 'critical' | 'success' | 'partial' | 'fail';

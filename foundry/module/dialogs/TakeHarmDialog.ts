@@ -5,7 +5,7 @@
  */
 
 import type { Position } from '@/types/action';
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.mjs';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 
 type Effect = 'limited' | 'standard' | 'great';
 

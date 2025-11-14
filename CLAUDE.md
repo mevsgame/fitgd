@@ -1215,6 +1215,84 @@ const reduxId = actor.getFlag('forged-in-the-grimdark', 'reduxId');
 
 ---
 
+### Package Manager: Use pnpm, Not npm ✅
+
+**Date:** 2025-11-14
+**Status:** ✅ **CRITICAL** - Always use pnpm for this project
+
+#### The Problem
+
+Running `npm install` fails with cryptic errors about electron dependency downloads (403 Forbidden):
+
+```bash
+npm error npm error code 1
+npm error npm error path /root/.npm/_cacache/tmp/git-cloneXXX/node_modules/electron
+npm error npm error command failed
+npm error npm error command sh -c node install.js
+npm error npm error HTTPError: Response code 403 (Forbidden)
+```
+
+**Root Cause:** The project uses `pnpm` as its package manager (specified in `package.json`):
+
+```json
+{
+  "packageManager": "pnpm@10.19.0"
+}
+```
+
+The `pnpm-lock.yaml` lockfile exists, but `npm` tries to install dependencies using its own resolution algorithm, which conflicts with pnpm's setup.
+
+#### The Solution
+
+**✅ ALWAYS use pnpm for this project:**
+
+```bash
+# Install dependencies
+pnpm install
+
+# Build
+pnpm run build:foundry
+
+# Test
+pnpm test
+
+# Type check
+pnpm run type-check:all
+```
+
+**❌ NEVER use npm:**
+
+```bash
+# ❌ WRONG - Will fail with 403 errors
+npm install
+npm run build:foundry
+```
+
+#### Why This Matters
+
+1. **Lockfile compatibility** - `pnpm-lock.yaml` is not compatible with `npm`
+2. **Dependency resolution** - pnpm uses hard links and a different store structure
+3. **Build consistency** - All contributors and CI must use the same package manager
+
+#### Quick Check
+
+If you see `pnpm-lock.yaml` in the project root, use pnpm:
+
+```bash
+# Check for pnpm lockfile
+ls -la | grep pnpm-lock.yaml
+
+# If it exists, install pnpm globally (if not already installed)
+npm install -g pnpm@10.19.0
+
+# Then use pnpm for all operations
+pnpm install
+```
+
+**Lesson:** Always check `package.json` for `packageManager` field and use the specified package manager. Lockfiles are not interchangeable between package managers.
+
+---
+
 ### Command Broadcast Loop Prevention
 
 **Issue:** Commands received via socket were being re-broadcast, creating infinite loops and duplicate clocks.

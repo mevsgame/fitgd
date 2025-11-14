@@ -45,7 +45,7 @@ export class AddClockDialog {
    */
   async render(force?: boolean): Promise<Application> {
     // Dynamically import to avoid circular dependency
-    const { ClockCreationDialog } = await import('./ClockCreationDialog.mjs');
+    const { ClockCreationDialog } = await import('./ClockCreationDialog');
 
     const dialog = new ClockCreationDialog(
       this.crewId,

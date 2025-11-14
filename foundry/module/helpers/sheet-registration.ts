@@ -4,12 +4,9 @@
  * Registers Foundry sheet classes for Actors and Items
  */
 
-// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { FitGDCharacterSheet } from '../sheets/character-sheet.mjs';
-// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { FitGDCrewSheet } from '../sheets/crew-sheet.mjs';
-// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { FitGDTraitSheet, FitGDEquipmentSheet } from '../sheets/item-sheets.mjs';
+import { FitGDCharacterSheet } from '../sheets/character-sheet';
+import { FitGDCrewSheet } from '../sheets/crew-sheet';
+import { FitGDTraitSheet, FitGDEquipmentSheet } from '../sheets/item-sheets';
 
 /* -------------------------------------------- */
 /*  Sheet Registration                          */

@@ -4,7 +4,7 @@
  * Dialog for initiating flashbacks
  */
 
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.mjs';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 
 export class FlashbackDialog extends Dialog {
   private characterId: string;

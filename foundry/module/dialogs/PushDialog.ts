@@ -4,7 +4,7 @@
  * Dialog for pushing yourself (spending Momentum)
  */
 
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.mjs';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 
 type PushType = 'extra-die' | 'improved-effect' | 'improved-position';
 

@@ -6,7 +6,7 @@
 
 import type { Character, Trait } from '@/types/character';
 import type { Crew } from '@/types/crew';
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.mjs';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 
 type FlashbackMode = 'use-existing' | 'create-new' | 'consolidate';
 

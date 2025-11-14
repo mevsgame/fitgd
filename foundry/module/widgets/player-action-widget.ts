@@ -23,9 +23,9 @@ import {
   selectHarmClocksWithStatus,
   selectIsDying,
 } from '../../dist/fitgd-core.es.js';
-import { FlashbackTraitsDialog } from '../dialogs/FlashbackTraitsDialog.mjs';
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.mjs';
-import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog, RallyDialog } from '../dialogs/index.mjs';
+import { FlashbackTraitsDialog } from '../dialogs/FlashbackTraitsDialog';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
+import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog, RallyDialog } from '../dialogs/index';
 
 /* -------------------------------------------- */
 /*  Types                                       */
