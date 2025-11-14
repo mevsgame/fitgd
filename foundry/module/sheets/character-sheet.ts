@@ -4,16 +4,11 @@
  * Foundry VTT Actor Sheet for character entities
  */
 
-import type { Character } from '@/types/character';
-import type { Trait } from '@/types/character';
-import type { ActionRating } from '@/types/action';
-import type { Equipment } from '@/types/equipment';
+import type { Character, Trait, Equipment } from '@/types/character';
 import type { Clock } from '@/types/clock';
 
 import {
-  ActionRollDialog,
-  AddTraitDialog,
-  AddClockDialog
+  AddTraitDialog
 } from '../dialogs';
 
 import {
@@ -21,7 +16,6 @@ import {
   EquipmentBrowserDialog,
   EquipmentEditDialog
 } from '../dialogs/index';
-import { PlayerActionWidget } from '../widgets/player-action-widget';
 
 interface CharacterSheetData extends ActorSheet.Data {
   editMode: boolean;
@@ -80,8 +74,14 @@ class FitGDCharacterSheet extends ActorSheet {
     const context = super.getData() as CharacterSheetData;
     context.editMode = this.editMode;
 
+    // Null safety checks
+    if (!game.fitgd) {
+      console.error('FitGD | FitGD not initialized');
+      return context;
+    }
+
     // Override editable to be GM-only for clock editing
-    context.editable = game.user.isGM;
+    context.editable = game.user?.isGM || false;
 
     // Unified IDs: Foundry Actor ID === Redux ID
     const reduxId = this.actor.id;
@@ -253,7 +253,7 @@ class FitGDCharacterSheet extends ActorSheet {
 
     // Only allow editing in edit mode
     if (!this.editMode) {
-      ui.notifications.warn('Click Edit to allocate action dots');
+      ui.notifications?.warn('Click Edit to allocate action dots');
       return;
     }
 
@@ -322,7 +322,7 @@ class FitGDCharacterSheet extends ActorSheet {
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Set action dots error:', error);
     }
   }
@@ -352,7 +352,7 @@ class FitGDCharacterSheet extends ActorSheet {
       console.log('FitGD | Attempting to save, unallocated dots:', character.unallocatedActionDots);
 
       if (character.unallocatedActionDots > 0) {
-        ui.notifications.warn(`You must allocate all ${character.unallocatedActionDots} remaining action dots before saving`);
+        ui.notifications?.warn(`You must allocate all ${character.unallocatedActionDots} remaining action dots before saving`);
         return;
       }
 
@@ -363,12 +363,12 @@ class FitGDCharacterSheet extends ActorSheet {
       // Save and broadcast final dot allocation to other clients
       await game.fitgd.saveImmediate();
 
-      ui.notifications.info('Action dots saved');
+      ui.notifications?.info('Action dots saved');
     } else {
       // Enter edit mode
       this.editMode = true;
       console.log('FitGD | Entering edit mode');
-      ui.notifications.info('Edit mode: Click dots to allocate action ratings');
+      ui.notifications?.info('Edit mode: Click dots to allocate action ratings');
     }
 
     // Re-render to update button text and dot states
@@ -423,11 +423,11 @@ class FitGDCharacterSheet extends ActorSheet {
             { affectedReduxIds: [characterId], force: true }
           );
 
-          ui.notifications.info(`Harm clock "${clockData.name}" created`);
+          ui.notifications?.info(`Harm clock "${clockData.name}" created`);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           console.error('FitGD | Error creating harm clock:', error);
-          ui.notifications.error(`Error creating harm clock: ${errorMessage}`);
+          ui.notifications?.error(`Error creating harm clock: ${errorMessage}`);
         }
       },
       {
@@ -443,7 +443,7 @@ class FitGDCharacterSheet extends ActorSheet {
    * Cycles through clock segments
    */
   private async _onClickClockSVG(event: JQuery.ClickEvent): Promise<void> {
-    if (!game.user.isGM) return;
+    if (!game.user?.isGM) return;
 
     event.preventDefault();
     const img = event.currentTarget as HTMLElement;
@@ -462,7 +462,7 @@ class FitGDCharacterSheet extends ActorSheet {
       this.render(false);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Clock SVG click error:', error);
     }
   }
@@ -472,7 +472,7 @@ class FitGDCharacterSheet extends ActorSheet {
    * Directly sets clock segments
    */
   private async _onChangeClockValue(event: JQuery.ChangeEvent): Promise<void> {
-    if (!game.user.isGM) return;
+    if (!game.user?.isGM) return;
 
     event.preventDefault();
     const input = event.currentTarget as HTMLInputElement;
@@ -487,7 +487,7 @@ class FitGDCharacterSheet extends ActorSheet {
       this.render(false);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Clock value change error:', error);
     }
   }
@@ -497,7 +497,7 @@ class FitGDCharacterSheet extends ActorSheet {
    * Renames clock when contenteditable loses focus
    */
   private async _onRenameClockBlur(event: JQuery.BlurEvent): Promise<void> {
-    if (!game.user.isGM) return;
+    if (!game.user?.isGM) return;
 
     const element = event.currentTarget as HTMLElement;
     const clockId = element.dataset.clockId;
@@ -508,10 +508,10 @@ class FitGDCharacterSheet extends ActorSheet {
     try {
       game.fitgd.api.clock.rename({ clockId, name: newName });
       await game.fitgd.saveImmediate();
-      ui.notifications.info(`Clock renamed to "${newName}"`);
+      ui.notifications?.info(`Clock renamed to "${newName}"`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Clock rename error:', error);
       this.render(false); // Reset to original name
     }
@@ -521,7 +521,7 @@ class FitGDCharacterSheet extends ActorSheet {
    * Handle delete clock button (GM-only)
    */
   private async _onDeleteClock(event: JQuery.ClickEvent): Promise<void> {
-    if (!game.user.isGM) return;
+    if (!game.user?.isGM) return;
 
     event.preventDefault();
     const target = event.currentTarget as HTMLElement;
@@ -542,10 +542,10 @@ class FitGDCharacterSheet extends ActorSheet {
       game.fitgd.api.clock.delete(clockId);
       await game.fitgd.saveImmediate();
       this.render(false);
-      ui.notifications.info('Clock deleted');
+      ui.notifications?.info('Clock deleted');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Clock delete error:', error);
     }
   }
@@ -559,7 +559,7 @@ class FitGDCharacterSheet extends ActorSheet {
   }
 
   private async _onDeleteTrait(event: JQuery.ClickEvent): Promise<void> {
-    if (!game.user.isGM) return;
+    if (!game.user?.isGM) return;
 
     event.preventDefault();
     const target = event.currentTarget as HTMLElement;
@@ -591,16 +591,16 @@ class FitGDCharacterSheet extends ActorSheet {
       game.fitgd.api.character.removeTrait({ characterId, traitId });
       await game.fitgd.saveImmediate();
       this.render(false);
-      ui.notifications.info(`Trait "${traitName}" deleted`);
+      ui.notifications?.info(`Trait "${traitName}" deleted`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Trait delete error:', error);
     }
   }
 
   private async _onRenameTraitBlur(event: JQuery.BlurEvent): Promise<void> {
-    if (!game.user.isGM) return;
+    if (!game.user?.isGM) return;
 
     const element = event.currentTarget as HTMLElement;
     const traitId = element.dataset.traitId;
@@ -624,17 +624,17 @@ class FitGDCharacterSheet extends ActorSheet {
     try {
       game.fitgd.api.character.updateTraitName({ characterId, traitId, name: newName });
       await game.fitgd.saveImmediate();
-      ui.notifications.info(`Trait renamed to "${newName}"`);
+      ui.notifications?.info(`Trait renamed to "${newName}"`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Trait rename error:', error);
       this.render(false); // Reset to original name
     }
   }
 
   private async _onRallyChange(event: JQuery.ChangeEvent): Promise<void> {
-    if (!game.user.isGM) return;
+    if (!game.user?.isGM) return;
 
     const characterId = this._getReduxId();
     if (!characterId) return;
@@ -652,10 +652,10 @@ class FitGDCharacterSheet extends ActorSheet {
         { affectedReduxIds: [characterId] }
       );
 
-      ui.notifications.info(`Rally ${isChecked ? 'enabled' : 'disabled'}`);
+      ui.notifications?.info(`Rally ${isChecked ? 'enabled' : 'disabled'}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Rally change error:', error);
       // Revert checkbox on error
       input.checked = !isChecked;
@@ -671,7 +671,7 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!characterId) return;
 
     // Players can only browse accessible items
-    const tierFilter = game.user.isGM ? null : 'accessible';
+    const tierFilter = game.user?.isGM ? null : 'accessible';
 
     new EquipmentBrowserDialog(characterId, { tierFilter }).render(true);
   }
@@ -690,7 +690,7 @@ class FitGDCharacterSheet extends ActorSheet {
     const equipment = character?.equipment?.find((e) => e.id === equipmentId);
 
     if (!equipment) {
-      ui.notifications.error('Equipment not found');
+      ui.notifications?.error('Equipment not found');
       return;
     }
 
@@ -711,7 +711,7 @@ class FitGDCharacterSheet extends ActorSheet {
     const equipment = character?.equipment?.find((e) => e.id === equipmentId);
 
     if (!equipment) {
-      ui.notifications.error('Equipment not found');
+      ui.notifications?.error('Equipment not found');
       return;
     }
 
@@ -727,7 +727,7 @@ class FitGDCharacterSheet extends ActorSheet {
       payload: { characterId, equipmentId },
     });
 
-    ui.notifications.info(`Removed ${equipment.name}`);
+    ui.notifications?.info(`Removed ${equipment.name}`);
   }
 
   /**
@@ -747,7 +747,7 @@ class FitGDCharacterSheet extends ActorSheet {
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Toggle equipped error:', error);
       // Revert checkbox on error
       target.checked = !equipped;
