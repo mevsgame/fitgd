@@ -4,8 +4,8 @@
  * Types for position, effect, and roll resolution.
  */
 
-export type Position = 'controlled' | 'risky' | 'desperate';
-export type Effect = 'limited' | 'standard' | 'great';
+export type Position = 'controlled' | 'risky' | 'desperate' | 'impossible';
+export type Effect = 'limited' | 'standard' | 'great' | 'spectacular';
 export type Result = 'failure' | 'partial' | 'success' | 'critical';
 
 export interface RollResult {
