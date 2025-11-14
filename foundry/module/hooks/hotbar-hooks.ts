@@ -71,7 +71,7 @@ if (!crewId) {
 }
 
 // Open action roll dialog
-const { ActionRollDialog } = await import('./systems/forged-in-the-grimdark/module/dialogs.mjs');
+const { ActionRollDialog } = await import('./systems/forged-in-the-grimdark/module-dist/dialogs/index.mjs');
 const dialog = new ActionRollDialog(characterId, crewId);
 dialog.render(true);
 

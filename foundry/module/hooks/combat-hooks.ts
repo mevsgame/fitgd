@@ -4,8 +4,7 @@
  * Handles combat tracker events for player round state management
  */
 
-// @ts-expect-error - Gradual migration: .mjs files don't have type declarations yet
-import { PlayerActionWidget } from "../widgets/player-action-widget.mjs";
+import { PlayerActionWidget } from "../widgets/player-action-widget";
 
 /**
  * Register all combat-related hooks

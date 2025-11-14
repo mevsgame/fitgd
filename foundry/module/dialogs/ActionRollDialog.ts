@@ -7,7 +7,7 @@
 import type { Character } from '@/types/character';
 import type { Crew } from '@/types/crew';
 import type { Position } from '@/types/action';
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.mjs';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 
 type RollOutcome = 'critical' | 'success' | 'partial' | 'failure';
 
@@ -320,7 +320,7 @@ export class ActionRollDialog extends Dialog {
       ui.notifications.warn(`Failure! Taking ${harmSegments[position]} harm (${position} position).`);
 
       // Auto-open harm dialog
-      const { TakeHarmDialog } = await import('./TakeHarmDialog.mjs');
+      const { TakeHarmDialog } = await import('./TakeHarmDialog');
       new TakeHarmDialog(characterId, crewId, {
         defaultPosition: position,
         defaultSegments: harmSegments[position]
