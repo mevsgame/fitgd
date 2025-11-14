@@ -153,6 +153,21 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
         // Track that this character's state changed
         changedCharacterIds.push(characterId);
 
+        // Check if this is a fresh/reset state (IDLE_WAITING or DECISION_PHASE with minimal data)
+        // Reset state has no roll data, no transaction data
+        if ((receivedPlayerState.state === 'IDLE_WAITING' || receivedPlayerState.state === 'DECISION_PHASE') &&
+            !receivedPlayerState.selectedAction &&
+            !receivedPlayerState.rollResult &&
+            !receivedPlayerState.traitTransaction &&
+            !receivedPlayerState.consequenceTransaction) {
+          console.log(`  Received state appears to be reset (${receivedPlayerState.state}) - dispatching resetPlayerState`);
+          game.fitgd!.store.dispatch({
+            type: 'playerRoundState/resetPlayerState',
+            payload: { characterId }
+          });
+          continue; // Skip field-by-field updates
+        }
+
         // Dispatch individual property updates
         if (receivedPlayerState.position && receivedPlayerState.position !== currentPlayerState?.position) {
           game.fitgd!.store.dispatch({
