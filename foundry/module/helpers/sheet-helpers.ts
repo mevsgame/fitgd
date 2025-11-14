@@ -64,17 +64,14 @@ export async function takeAction(characterId: string): Promise<void> {
 
   console.log(`FitGD | Taking action for character: ${character.name} (${characterId})`);
 
-  // Initialize player state if not already initialized
-  const existingPlayerState = state.playerRoundState.byCharacterId[characterId];
-  if (!existingPlayerState) {
-    await game.fitgd!.bridge.execute(
-      {
-        type: 'playerRoundState/initializePlayerState',
-        payload: { characterId },
-      },
-      { affectedReduxIds: [characterId], silent: true }
-    );
-  }
+  // Reset player state to fresh start (clears any previous turn data)
+  await game.fitgd!.bridge.execute(
+    {
+      type: 'playerRoundState/resetPlayerState',
+      payload: { characterId },
+    },
+    { affectedReduxIds: [characterId], silent: true }
+  );
 
   // Set as active player
   await game.fitgd!.bridge.execute(
