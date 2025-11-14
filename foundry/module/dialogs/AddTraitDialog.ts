@@ -5,6 +5,7 @@
  */
 
 import type { Trait } from '@/types/character';
+import { asReduxId } from '../types/ids';
 
 export class AddTraitDialog extends Dialog {
   private characterId: string;
@@ -62,13 +63,19 @@ export class AddTraitDialog extends Dialog {
   }
 
   private async _onApply(html: JQuery, characterId: string): Promise<void> {
+    // Null safety checks
+    if (!game.fitgd) {
+      console.error('FitGD | FitGD not initialized');
+      return;
+    }
+
     const form = html.find('form')[0] as HTMLFormElement;
     const traitName = (form.elements.namedItem('traitName') as HTMLInputElement).value.trim();
     const category = (form.elements.namedItem('category') as HTMLSelectElement).value as Trait['category'];
     const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value.trim();
 
     if (!traitName) {
-      ui.notifications.warn('Please enter a trait name');
+      ui.notifications?.warn('Please enter a trait name');
       return;
     }
 
@@ -92,13 +99,13 @@ export class AddTraitDialog extends Dialog {
             trait
           }
         },
-        { affectedReduxIds: [characterId], force: true }
+        { affectedReduxIds: [asReduxId(characterId)], force: true }
       );
 
-      ui.notifications.info(`Trait "${traitName}" added`);
+      ui.notifications?.info(`Trait "${traitName}" added`);
 
     } catch (error) {
-      ui.notifications.error(`Error: ${(error as Error).message}`);
+      ui.notifications?.error(`Error: ${(error as Error).message}`);
       console.error('FitGD | Add Trait error:', error);
     }
   }

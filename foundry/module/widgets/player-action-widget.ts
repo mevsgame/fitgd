@@ -5,15 +5,14 @@
  * Drives the action resolution flow through the state machine.
  */
 
-import type { Character } from '@/types/character';
+import type { Character, Trait } from '@/types/character';
 import type { Crew } from '@/types/crew';
 import type { Clock } from '@/types/clock';
-import type { Trait } from '@/types/trait';
 import type { RootState } from '@/store';
 import type { PlayerRoundState, Position, Effect } from '@/types/playerRoundState';
 import type { TraitTransaction, ConsequenceTransaction } from '@/types/playerRoundState';
-import type { ActionDots } from '@/types/character';
 
+// @ts-expect-error - Dynamic import from compiled output
 import {
   selectDicePool,
   selectConsequenceSeverity,
@@ -24,8 +23,8 @@ import {
   selectIsDying,
 } from '../../dist/fitgd-core.es.js';
 import { FlashbackTraitsDialog } from '../dialogs/FlashbackTraitsDialog';
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog, RallyDialog } from '../dialogs/index';
+import { asReduxId } from '../types/ids';
 
 /* -------------------------------------------- */
 /*  Types                                       */
@@ -154,14 +153,20 @@ export class PlayerActionWidget extends Application {
    * @param characterId - Redux ID of the character taking their turn
    * @param options - Additional options passed to Application constructor
    */
-  constructor(characterId: string, options: Partial<ApplicationOptions> = {}) {
+  constructor(characterId: string, options: any = {}) {
     super(options);
 
     this.characterId = characterId;
   }
 
-  override async _render(force: boolean, options: RenderOptions): Promise<void> {
+  override async _render(force: boolean, options: any): Promise<void> {
     await super._render(force, options);
+
+    // Null safety check
+    if (!game.fitgd) {
+      console.error('FitGD | FitGD not initialized');
+      return;
+    }
 
     // Subscribe to Redux store changes for real-time updates
     if (!this.storeUnsubscribe) {
@@ -207,7 +212,7 @@ export class PlayerActionWidget extends Application {
     return super.close(options);
   }
 
-  static override get defaultOptions(): ApplicationOptions {
+  static override get defaultOptions(): any {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ['fitgd', 'player-action-widget'],
       template: 'systems/forged-in-the-grimdark/templates/widgets/player-action-widget.html',
@@ -234,13 +239,19 @@ export class PlayerActionWidget extends Application {
    * @param options - Render options
    * @returns Template data with character, crew, playerState, and UI flags
    */
-  override async getData(options: Partial<ApplicationOptions> = {}): Promise<PlayerActionWidgetData> {
+  override async getData(options: any = {}): Promise<PlayerActionWidgetData> {
     const data = await super.getData(options) as Partial<PlayerActionWidgetData>;
+
+    // Null safety checks
+    if (!game.fitgd) {
+      console.error('FitGD | FitGD not initialized');
+      return data as PlayerActionWidgetData;
+    }
 
     // Get character from Redux store
     this.character = game.fitgd.api.character.getCharacter(this.characterId);
     if (!this.character) {
-      ui.notifications.error('Character not found');
+      ui.notifications?.error('Character not found');
       return data as PlayerActionWidgetData;
     }
 
@@ -437,7 +448,7 @@ export class PlayerActionWidget extends Application {
     // Execute all trait changes as a batch (single broadcast, prevents render race)
     if (actions.length > 0) {
       await game.fitgd.bridge.executeBatch(actions, {
-        affectedReduxIds: [this.characterId],
+        affectedReduxIds: [asReduxId(this.characterId)],
         force: true, // Force full re-render to show new traits
       });
     }
@@ -702,7 +713,7 @@ export class PlayerActionWidget extends Application {
           effect: this.playerState?.effect || 'standard',
         },
       },
-      { affectedReduxIds: [this.characterId], silent: true } // Silent: subscription handles render
+      { affectedReduxIds: [asReduxId(this.characterId)], silent: true } // Silent: subscription handles render
     );
 
     // Post chat message
@@ -728,7 +739,7 @@ export class PlayerActionWidget extends Application {
           position,
         },
       },
-      { affectedReduxIds: [this.characterId], silent: true } // Silent: subscription handles render
+      { affectedReduxIds: [asReduxId(this.characterId)], silent: true } // Silent: subscription handles render
     );
 
     // Post chat message
@@ -753,7 +764,7 @@ export class PlayerActionWidget extends Application {
           effect,
         },
       },
-      { affectedReduxIds: [this.characterId], silent: true } // Silent: subscription handles render
+      { affectedReduxIds: [asReduxId(this.characterId)], silent: true } // Silent: subscription handles render
     );
 
     // Post chat message
@@ -782,7 +793,7 @@ export class PlayerActionWidget extends Application {
           approved: newApprovalState,
         },
       },
-      { affectedReduxIds: [this.characterId], silent: true } // Silent: subscription handles render
+      { affectedReduxIds: [asReduxId(this.characterId)], silent: true } // Silent: subscription handles render
     );
 
     // Post chat message
@@ -806,7 +817,7 @@ export class PlayerActionWidget extends Application {
     event.preventDefault();
 
     if (!this.crewId) {
-      ui.notifications.warn('Character must be in a crew to rally');
+      ui.notifications?.warn('Character must be in a crew to rally');
       return;
     }
 
@@ -814,7 +825,7 @@ export class PlayerActionWidget extends Application {
     const state = game.fitgd.store.getState();
     const teammates = this.crew!.characters.filter(id => id !== this.characterId);
     if (teammates.length === 0) {
-      ui.notifications.warn('No other teammates in crew to rally');
+      ui.notifications?.warn('No other teammates in crew to rally');
       return;
     }
 
@@ -830,14 +841,14 @@ export class PlayerActionWidget extends Application {
     event.preventDefault();
 
     if (!this.crewId) {
-      ui.notifications.warn('Character must be in a crew to lean into trait');
+      ui.notifications?.warn('Character must be in a crew to lean into trait');
       return;
     }
 
     // Check if character has any available (non-disabled) traits
     const availableTraits = this.character!.traits.filter(t => !t.disabled);
     if (availableTraits.length === 0) {
-      ui.notifications.warn('No available traits - all traits are currently disabled');
+      ui.notifications?.warn('No available traits - all traits are currently disabled');
       return;
     }
 
@@ -853,7 +864,7 @@ export class PlayerActionWidget extends Application {
     event.preventDefault();
 
     if (!this.crewId) {
-      ui.notifications.warn('Character must be in a crew to use trait');
+      ui.notifications?.warn('Character must be in a crew to use trait');
       return;
     }
 
@@ -864,16 +875,16 @@ export class PlayerActionWidget extends Application {
           type: 'playerRoundState/clearTraitTransaction',
           payload: { characterId: this.characterId }
         },
-        { affectedReduxIds: [this.characterId], force: false }
+        { affectedReduxIds: [asReduxId(this.characterId)], force: false }
       );
 
-      ui.notifications.info('Trait flashback canceled');
+      ui.notifications?.info('Trait flashback canceled');
       return;
     }
 
     // Check if position is already controlled (can't improve further)
     if (this.playerState?.position === 'controlled') {
-      ui.notifications.warn('Position is already Controlled - cannot improve further');
+      ui.notifications?.warn('Position is already Controlled - cannot improve further');
       return;
     }
 
@@ -888,7 +899,7 @@ export class PlayerActionWidget extends Application {
   private _onEquipment(event: JQuery.ClickEvent): void {
     event.preventDefault();
     // TODO: Open Equipment dialog
-    ui.notifications.info('Equipment dialog - to be implemented');
+    ui.notifications?.info('Equipment dialog - to be implemented');
   }
 
   /**
@@ -909,7 +920,7 @@ export class PlayerActionWidget extends Application {
           pushType: !currentlyPushedDie ? 'extra-die' : undefined,
         },
       },
-      { affectedReduxIds: [this.characterId], force: false }
+      { affectedReduxIds: [asReduxId(this.characterId)], force: false }
     );
   }
 
@@ -931,7 +942,7 @@ export class PlayerActionWidget extends Application {
           pushType: !currentlyPushedEffect ? 'improved-effect' : undefined,
         },
       },
-      { affectedReduxIds: [this.characterId], force: false }
+      { affectedReduxIds: [asReduxId(this.characterId)], force: false }
     );
   }
 
@@ -944,7 +955,7 @@ export class PlayerActionWidget extends Application {
 
     // Validate action is selected
     if (!this.playerState?.selectedAction) {
-      ui.notifications.warn('Please select an action first');
+      ui.notifications?.warn('Please select an action first');
       return;
     }
 
@@ -959,7 +970,7 @@ export class PlayerActionWidget extends Application {
     if (this.crewId && momentumCost > 0) {
       const crew = game.fitgd.api.crew.getCrew(this.crewId);
       if (crew.currentMomentum < momentumCost) {
-        ui.notifications.error(`Insufficient Momentum! Need ${momentumCost}, have ${crew.currentMomentum}`);
+        ui.notifications?.error(`Insufficient Momentum! Need ${momentumCost}, have ${crew.currentMomentum}`);
         return;
       }
 
@@ -968,7 +979,7 @@ export class PlayerActionWidget extends Application {
         game.fitgd.api.crew.spendMomentum({ crewId: this.crewId, amount: momentumCost });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        ui.notifications.error(`Failed to spend Momentum: ${errorMessage}`);
+        ui.notifications?.error(`Failed to spend Momentum: ${errorMessage}`);
         return;
       }
     }
@@ -986,7 +997,7 @@ export class PlayerActionWidget extends Application {
       } catch (error) {
         console.error('FitGD | Error applying trait transaction:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        ui.notifications.error(`Failed to apply trait changes: ${errorMessage}`);
+        ui.notifications?.error(`Failed to apply trait changes: ${errorMessage}`);
         return;
       }
     }
@@ -1000,7 +1011,7 @@ export class PlayerActionWidget extends Application {
           newState: 'ROLLING',
         },
       },
-      { affectedReduxIds: [this.characterId], silent: true } // Silent: subscription handles render
+      { affectedReduxIds: [asReduxId(this.characterId)], silent: true } // Silent: subscription handles render
     );
 
     // NOTE: Bridge API handles broadcast automatically
@@ -1056,7 +1067,7 @@ export class PlayerActionWidget extends Application {
 
     // Execute all roll outcome actions as a batch (single broadcast)
     await game.fitgd.bridge.executeBatch(rollOutcomeActions, {
-      affectedReduxIds: [this.characterId],
+      affectedReduxIds: [asReduxId(this.characterId)],
       force: false,
     });
 
@@ -1135,7 +1146,7 @@ export class PlayerActionWidget extends Application {
           newState: 'GM_RESOLVING_CONSEQUENCE',
         },
       },
-      { affectedReduxIds: [this.characterId], force: true } // Force re-render
+      { affectedReduxIds: [asReduxId(this.characterId)], force: true } // Force re-render
     );
 
     console.log('FitGD | Transitioned to GM_RESOLVING_CONSEQUENCE');
@@ -1171,7 +1182,7 @@ export class PlayerActionWidget extends Application {
           transaction,
         },
       },
-      { affectedReduxIds: [this.characterId], silent: true }
+      { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
     );
   }
 
@@ -1182,7 +1193,7 @@ export class PlayerActionWidget extends Application {
     event.preventDefault();
 
     if (!this.crewId) {
-      ui.notifications.warn('Character must be in a crew');
+      ui.notifications?.warn('Character must be in a crew');
       return;
     }
 
@@ -1204,7 +1215,7 @@ export class PlayerActionWidget extends Application {
               },
             },
           },
-          { affectedReduxIds: [this.characterId], silent: true }
+          { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
         );
       }
     );
@@ -1222,7 +1233,7 @@ export class PlayerActionWidget extends Application {
     const targetCharacterId = transaction?.harmTargetCharacterId;
 
     if (!targetCharacterId) {
-      ui.notifications.warn('Select target character first');
+      ui.notifications?.warn('Select target character first');
       return;
     }
 
@@ -1244,7 +1255,7 @@ export class PlayerActionWidget extends Application {
                 // Validate IDs before passing to Bridge API
                 if (!targetCharacterId) {
                   console.error('FitGD | Cannot create clock: targetCharacterId is null/undefined');
-                  ui.notifications.error('Internal error: target character ID is missing');
+                  ui.notifications?.error('Internal error: target character ID is missing');
                   return;
                 }
 
@@ -1261,7 +1272,7 @@ export class PlayerActionWidget extends Application {
                       metadata: clockData.description ? { description: clockData.description } : undefined,
                     },
                   },
-                  { affectedReduxIds: [targetCharacterId], silent: true }
+                  { affectedReduxIds: [asReduxId(targetCharacterId)], silent: true }
                 );
 
                 // Update transaction with new clock
@@ -1276,7 +1287,7 @@ export class PlayerActionWidget extends Application {
                       },
                     },
                   },
-                  { affectedReduxIds: [this.characterId], silent: true }
+                  { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
                 );
               }
             );
@@ -1295,13 +1306,13 @@ export class PlayerActionWidget extends Application {
                   },
                 },
               },
-              { affectedReduxIds: [this.characterId], silent: true }
+              { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
             );
           }
         } catch (error) {
           console.error('FitGD | Error in harm clock selection:', error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          ui.notifications.error(`Error creating clock: ${errorMessage}`);
+          ui.notifications?.error(`Error creating clock: ${errorMessage}`);
         }
       }
     );
@@ -1318,7 +1329,7 @@ export class PlayerActionWidget extends Application {
     const crewId = this.crewId;
 
     if (!crewId) {
-      ui.notifications.warn('Character must be in a crew');
+      ui.notifications?.warn('Character must be in a crew');
       return;
     }
 
@@ -1340,7 +1351,7 @@ export class PlayerActionWidget extends Application {
                 // Validate IDs before passing to Bridge API
                 if (!crewId) {
                   console.error('FitGD | Cannot create clock: crewId is null/undefined');
-                  ui.notifications.error('Internal error: crew ID is missing');
+                  ui.notifications?.error('Internal error: crew ID is missing');
                   return;
                 }
 
@@ -1361,7 +1372,7 @@ export class PlayerActionWidget extends Application {
                       },
                     },
                   },
-                  { affectedReduxIds: [crewId], silent: true }
+                  { affectedReduxIds: [asReduxId(crewId)], silent: true }
                 );
 
                 // Update transaction with new clock
@@ -1376,7 +1387,7 @@ export class PlayerActionWidget extends Application {
                       },
                     },
                   },
-                  { affectedReduxIds: [this.characterId], silent: true }
+                  { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
                 );
               }
             );
@@ -1396,13 +1407,13 @@ export class PlayerActionWidget extends Application {
                   },
                 },
               },
-              { affectedReduxIds: [this.characterId], silent: true }
+              { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
             );
           }
         } catch (error) {
           console.error('FitGD | Error in crew clock selection:', error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          ui.notifications.error(`Error creating clock: ${errorMessage}`);
+          ui.notifications?.error(`Error creating clock: ${errorMessage}`);
         }
       }
     );
@@ -1428,7 +1439,7 @@ export class PlayerActionWidget extends Application {
           },
         },
       },
-      { affectedReduxIds: [this.characterId], silent: true }
+      { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
     );
   }
 
@@ -1440,19 +1451,19 @@ export class PlayerActionWidget extends Application {
 
     const transaction = this.playerState?.consequenceTransaction;
     if (!transaction) {
-      ui.notifications.error('No consequence configured');
+      ui.notifications?.error('No consequence configured');
       return;
     }
 
     // Validate transaction is complete
     if (transaction.consequenceType === 'harm') {
       if (!transaction.harmTargetCharacterId || !transaction.harmClockId) {
-        ui.notifications.warn('Please select target character and harm clock');
+        ui.notifications?.warn('Please select target character and harm clock');
         return;
       }
     } else if (transaction.consequenceType === 'crew-clock') {
       if (!transaction.crewClockId || !transaction.crewClockSegments) {
-        ui.notifications.warn('Please select clock and segments');
+        ui.notifications?.warn('Please select clock and segments');
         return;
       }
     }
@@ -1466,7 +1477,7 @@ export class PlayerActionWidget extends Application {
           newState: 'APPLYING_EFFECTS',
         },
       },
-      { affectedReduxIds: [this.characterId], silent: true }
+      { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
     );
 
     // Apply the consequence (harm or clock)
@@ -1495,7 +1506,7 @@ export class PlayerActionWidget extends Application {
         },
       },
     ], {
-      affectedReduxIds: [this.characterId],
+      affectedReduxIds: [asReduxId(this.characterId)],
       silent: true,
     });
 
@@ -1508,7 +1519,7 @@ export class PlayerActionWidget extends Application {
           newState: 'IDLE_WAITING',
         },
       },
-      { affectedReduxIds: [this.characterId], silent: true }
+      { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
     );
 
     // Close widget after brief delay
@@ -1537,7 +1548,7 @@ export class PlayerActionWidget extends Application {
         { affectedReduxIds: [transaction.harmTargetCharacterId!], silent: true }
       );
 
-      ui.notifications.info(`Applied ${segments} harm`);
+      ui.notifications?.info(`Applied ${segments} harm`);
 
     } else if (transaction.consequenceType === 'crew-clock') {
       // Advance crew clock using standardized position-based values
@@ -1555,7 +1566,7 @@ export class PlayerActionWidget extends Application {
         { affectedReduxIds: [this.crewId!], silent: true }
       );
 
-      ui.notifications.info(`Advanced crew clock by ${segments} segments (${effectivePosition})`);
+      ui.notifications?.info(`Advanced crew clock by ${segments} segments (${effectivePosition})`);
     }
   }
 
@@ -1573,13 +1584,13 @@ export class PlayerActionWidget extends Application {
    */
   private async _useStims(): Promise<void> {
     if (!this.crewId) {
-      ui.notifications.error('Character must be in a crew to use stims');
+      ui.notifications?.error('Character must be in a crew to use stims');
       return;
     }
 
     // Check if already used stims this action
     if (this.playerState?.stimsUsedThisAction) {
-      ui.notifications.warn('Stims already used this action - cannot use again!');
+      ui.notifications?.warn('Stims already used this action - cannot use again!');
       return;
     }
 
@@ -1599,7 +1610,7 @@ export class PlayerActionWidget extends Application {
     }
 
     if (teamAddictionLocked) {
-      ui.notifications.error('Stims are LOCKED due to crew addiction! Cannot use stims.');
+      ui.notifications?.error('Stims are LOCKED due to crew addiction! Cannot use stims.');
       // UI should prevent this from being clicked, but catching it here as a safety check
       return;
     }
@@ -1625,10 +1636,10 @@ export class PlayerActionWidget extends Application {
             segments: 0,
           },
         },
-        { affectedReduxIds: [this.characterId], silent: true }
+        { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
       );
 
-      ui.notifications.info('Addiction clock created');
+      ui.notifications?.info('Addiction clock created');
     }
 
     // Roll d6 to determine addiction advance
@@ -1650,7 +1661,7 @@ export class PlayerActionWidget extends Application {
           amount: addictionAmount,
         },
       },
-      { affectedReduxIds: [this.characterId], silent: true }
+      { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
     );
 
     // Get updated clock state
@@ -1658,7 +1669,7 @@ export class PlayerActionWidget extends Application {
     const updatedClock = updatedState.clocks.byId[addictionClockId!];
     const newSegments = updatedClock.segments;
 
-    ui.notifications.warn(`Addiction clock: ${newSegments}/${updatedClock.maxSegments} (+${addictionAmount})`);
+    ui.notifications?.warn(`Addiction clock: ${newSegments}/${updatedClock.maxSegments} (+${addictionAmount})`);
 
     // Check if addiction clock just filled
     if (newSegments >= updatedClock.maxSegments) {
@@ -1680,10 +1691,10 @@ export class PlayerActionWidget extends Application {
             trait: addictTrait,
           },
         },
-        { affectedReduxIds: [this.characterId], force: true }
+        { affectedReduxIds: [asReduxId(this.characterId)], force: true }
       );
 
-      ui.notifications.error(`${this.character!.name} is now an ADDICT! Stims are LOCKED for the crew.`);
+      ui.notifications?.error(`${this.character!.name} is now an ADDICT! Stims are LOCKED for the crew.`);
 
       // Post to chat
       ChatMessage.create({
@@ -1706,7 +1717,7 @@ export class PlayerActionWidget extends Application {
           used: true,
         },
       },
-      { affectedReduxIds: [this.characterId], silent: true }
+      { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
     );
 
     // Clear consequence transaction (if any)
@@ -1716,7 +1727,7 @@ export class PlayerActionWidget extends Application {
           type: 'playerRoundState/clearConsequenceTransaction',
           payload: { characterId: this.characterId },
         },
-        { affectedReduxIds: [this.characterId], silent: true }
+        { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
       );
     }
 
@@ -1729,10 +1740,10 @@ export class PlayerActionWidget extends Application {
           newState: 'STIMS_ROLLING',
         },
       },
-      { affectedReduxIds: [this.characterId], silent: true }
+      { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
     );
 
-    ui.notifications.info('Stims used! Re-rolling with same plan...');
+    ui.notifications?.info('Stims used! Re-rolling with same plan...');
 
     // Post to chat
     ChatMessage.create({
@@ -1755,7 +1766,7 @@ export class PlayerActionWidget extends Application {
             newState: 'ROLLING',
           },
         },
-        { affectedReduxIds: [this.characterId], silent: true }
+        { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
       );
 
       // Get current state to preserve dice pool and plan
@@ -1804,7 +1815,7 @@ export class PlayerActionWidget extends Application {
 
       // Execute all roll outcome actions as a batch
       await game.fitgd.bridge.executeBatch(rollOutcomeActions, {
-        affectedReduxIds: [this.characterId],
+        affectedReduxIds: [asReduxId(this.characterId)],
         force: false,
       });
 
@@ -1842,7 +1853,7 @@ export class PlayerActionWidget extends Application {
         },
       }
     ], {
-      affectedReduxIds: [this.characterId],
+      affectedReduxIds: [asReduxId(this.characterId)],
       silent: true, // Silent: subscription handles render
     });
   }
@@ -1887,7 +1898,7 @@ export class PlayerActionWidget extends Application {
         },
       }
     ], {
-      affectedReduxIds: [this.characterId],
+      affectedReduxIds: [asReduxId(this.characterId)],
       silent: true, // Silent: subscription handles render
     });
 

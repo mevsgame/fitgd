@@ -68,7 +68,7 @@ A **TypeScript + Redux Toolkit** event-sourced state management system for chara
 | Language | TypeScript 5+ | Type safety, excellent tooling |
 | Testing | Jest + ts-jest | Industry standard, great TS support |
 | Build | Vite | Fast, modern, tree-shakeable |
-| Package Manager | npm/pnpm | TBD based on preference |
+| Package Manager | **pnpm** | Required - lockfile incompatible with npm (see Package Manager section below) |
 
 ---
 
@@ -1097,16 +1097,19 @@ fitgd/
 
 ## Open Questions / Decisions Needed
 
-### Before Phase 1:
-1. **Package Manager:** npm, yarn, or pnpm? (Recommendation: **pnpm** for speed)
-2. **Dev Logging:** Log all commands to console in dev mode?
-3. **Selectors:** Use Reselect or RTK's built-in `createSelector`? (Recommendation: **RTK built-in**)
-4. **LocalStorage Adapter:** Include for standalone testing or Foundry-only?
+### Resolved Decisions ✅
+1. ✅ **Package Manager:** **pnpm** (REQUIRED - see Implementation Learnings section)
+2. ✅ **Selectors:** **RTK's built-in `createSelector`** (implemented)
+3. ✅ **Trait Cap:** `GameConfig` parameter (can be adjusted via playtesting)
+4. ✅ **Clock Sizes:** Configurable in `GameConfig`
+
+### Remaining Questions
+1. **Dev Logging:** Log all commands to console in dev mode?
+2. **LocalStorage Adapter:** Include for standalone testing or Foundry-only?
 
 ### Can Defer to Later Phases:
-- **Trait Cap:** Now a `GameConfig` parameter, can be set during playtesting
 - **Command Versioning:** Defer to Phase 7 (Polish)
-- **Clock Sizes:** Now configurable in `GameConfig`
+- **Performance profiling:** Bundle size optimization
 
 ---
 
@@ -2417,15 +2420,77 @@ class FoundryGameActions {
 - Use `game.fitgd.bridge.executeBatch()` for multiple related changes
 - Let Redux subscriptions handle all rendering
 - Test with GM + Player clients before declaring done
+- **Verify TypeScript builds before committing code** (see Development Workflow below)
 
 ### ❌ DO NOT
 - Call `game.fitgd.store.dispatch()` directly (except socket handlers)
 - Call `game.fitgd.saveImmediate()` manually
 - Call `refreshSheetsByReduxId()` manually
 - Touch socket handler bare dispatches (lines 984-1050 in fitgd.mjs)
+- Commit code without running type-check and build verification
 
 ### Exception
 Socket handlers in `receiveCommandsFromSocket()` intentionally use bare dispatch to prevent infinite broadcast loops.
+
+---
+
+## Development Workflow
+
+### Before Committing Code
+
+**ALWAYS run these checks before committing:**
+
+```bash
+# 1. Type check (catches type errors before commit)
+pnpm run type-check:all
+
+# 2. Build verification (ensures code compiles)
+pnpm run build:foundry
+
+# 3. Run tests (if applicable)
+pnpm test
+
+# 4. If all checks pass, commit
+git add .
+git commit -m "your message"
+git push
+```
+
+### Quick Pre-Commit Checklist
+
+- [ ] Code compiles (`pnpm run build:foundry` succeeds)
+- [ ] Type check passes or errors are documented (`pnpm run type-check:all`)
+- [ ] No new TypeScript errors introduced (check diff)
+- [ ] Tested with GM + Player clients (for Foundry changes)
+- [ ] Used Bridge API for state changes (not direct dispatch)
+- [ ] Added `await saveImmediate()` after Bridge API calls
+
+### Type Error Policy
+
+- **242 type errors currently exist** (49% reduction from 476)
+- These are **strictness checks**, not blocking bugs
+- **New code should not introduce new type errors**
+- If you add type errors, document why in commit message
+- Prefer fixing existing errors when touching files
+
+### Common Commands
+
+```bash
+# Install dependencies (ALWAYS use pnpm, never npm)
+pnpm install
+
+# Type check specific file
+pnpm run type-check:foundry | grep "filename.ts"
+
+# Build and watch for changes
+pnpm run build:foundry --watch
+
+# Run core Redux tests
+pnpm test
+
+# Type check core Redux code
+pnpm run type-check:core
+```
 
 ---
 
@@ -2436,13 +2501,14 @@ Socket handlers in `receiveCommandsFromSocket()` intentionally use bare dispatch
 2. **Document socket exception** - Add comments warning against refactoring socket handlers
 
 ### Medium Priority
-1. **Add TypeScript** - Convert one Foundry file as proof-of-concept
-2. **Migrate Game API** - Convert 1-2 usages to Bridge as template pattern
+1. ✅ ~~**Add TypeScript**~~ - **COMPLETE** (All Foundry files converted, 49% error reduction)
+2. **Migrate Game API** - Convert remaining Game API usages to Bridge API pattern (optional optimization)
 
-### Low Priority
-1. **BaseReduxWidget** - Create base class with memoized subscriptions
-2. **Reusable actions** - Create FoundryGameActions helper class
-3. **Separation of concerns** - Extract game logic from widget handlers
+### Low Priority (Optional Improvements)
+1. **Fix remaining TypeScript errors** - 242 errors remain (cosmetic, can fix incrementally)
+2. **BaseReduxWidget** - Create base class with memoized subscriptions
+3. **Reusable actions** - Create FoundryGameActions helper class
+4. **Separation of concerns** - Extract game logic from widget handlers
 
 ---
 
