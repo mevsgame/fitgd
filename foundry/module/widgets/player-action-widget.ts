@@ -465,6 +465,7 @@ export class PlayerActionWidget extends Application {
     const currentPosition = this.playerState.position || 'risky';
 
     // Improve position by one step
+    if (currentPosition === 'impossible') return 'desperate';
     if (currentPosition === 'desperate') return 'risky';
     if (currentPosition === 'risky') return 'controlled';
 
@@ -483,7 +484,8 @@ export class PlayerActionWidget extends Application {
       // Improve effect by one level
       if (baseEffect === 'limited') return 'standard';
       if (baseEffect === 'standard') return 'great';
-      // Already great, can't improve further
+      if (baseEffect === 'great') return 'spectacular';
+      // Already spectacular, can't improve further
       return baseEffect;
     }
 
@@ -500,6 +502,7 @@ export class PlayerActionWidget extends Application {
 
     // Check if trait transaction improves position
     if (this.playerState?.traitTransaction?.positionImprovement) {
+      if (basePosition === 'impossible') return 'desperate';
       if (basePosition === 'desperate') return 'risky';
       if (basePosition === 'risky') return 'controlled';
       // Already controlled
@@ -520,7 +523,8 @@ export class PlayerActionWidget extends Application {
     if (this.playerState?.pushed && this.playerState?.pushType === 'improved-effect') {
       if (baseEffect === 'limited') return 'standard';
       if (baseEffect === 'standard') return 'great';
-      // Already great
+      if (baseEffect === 'great') return 'spectacular';
+      // Already spectacular
       return baseEffect;
     }
 

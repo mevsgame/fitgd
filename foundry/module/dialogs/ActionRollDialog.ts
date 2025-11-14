@@ -68,6 +68,7 @@ export class ActionRollDialog extends Dialog {
             <option value="controlled">Controlled (safer, less harm on failure)</option>
             <option value="risky" selected>Risky (balanced risk/reward)</option>
             <option value="desperate">Desperate (dangerous, severe harm on failure)</option>
+            <option value="impossible">Impossible (extreme danger, instant dying on failure)</option>
           </select>
         </div>
 
@@ -77,6 +78,7 @@ export class ActionRollDialog extends Dialog {
             <option value="limited">Limited (small impact)</option>
             <option value="standard" selected>Standard (normal impact)</option>
             <option value="great">Great (significant impact)</option>
+            <option value="spectacular">Spectacular (exceptional impact)</option>
           </select>
         </div>
 
@@ -324,11 +326,12 @@ export class ActionRollDialog extends Dialog {
     }
 
     if (outcome === 'failure') {
-      // Failure - take harm based on position
+      // Failure - take harm based on position (matches CONSEQUENCE_TABLE)
       const harmSegments: Record<Position, number> = {
         controlled: 1,
-        risky: 2,
-        desperate: 3
+        risky: 3,
+        desperate: 5,
+        impossible: 6
       };
 
       ui.notifications?.warn(`Failure! Taking ${harmSegments[position]} harm (${position} position).`);

@@ -33,13 +33,14 @@ This is a collaborative storytelling game. You describe what your character does
 
 #### **Spending Momentum**
 
-- **Push Yourself (1 Momentum):** Add +1d to a roll OR improve its Effect by one level: Limited to Standard, or Standard to Great (declare before rolling and explain how you're doing it).
+- **Push Yourself (1 Momentum):** Add +1d to a roll OR improve its Effect by one level: Limited to Standard, Standard to Great, or Great to Spectacular (declare before rolling and explain how you're doing it).
 
-- **Flashback (1 Momentum):** Reveal prior preparation that grants a mechanical advantage. This requires a relevant Trait - you can use an existing trait OR establish a new trait through this flashback. The flashback cannot contradict facts already established in the fiction, and must respond to an immediate challenge or situation. Mechanical advantages include: improving Position by one step (Desperate→Risky or Risky→Controlled), improving Effect, enabling new approaches, justifying equipment access, or taking actions that influence rolls. (Narrative use of traits that don't influence Position, Effect, or available actions cost 0 Momentum).
+- **Flashback (1 Momentum):** Reveal prior preparation that grants a mechanical advantage. This requires a relevant Trait - you can use an existing trait OR establish a new trait through this flashback. The flashback cannot contradict facts already established in the fiction, and must respond to an immediate challenge or situation. Mechanical advantages include: improving Position by one step (Impossible→Desperate, Desperate→Risky, or Risky→Controlled), improving Effect, enabling new approaches, justifying equipment access, or taking actions that influence rolls. (Narrative use of traits that don't influence Position, Effect, or available actions cost 0 Momentum).
 
 #### **Generating Momentum**
 
 **From Accepting Consequences:**
+- **Impossible** Consequence: **+6 Momentum**
 - **Desperate** Consequence: **+4 Momentum**
 - **Risky** Consequence: **+2 Momentum**
 - **Controlled** Consequence: **+1 Momentum**
@@ -119,16 +120,16 @@ Roll a number of d6s equal to your Action rating (if zero, roll 2d6 and take the
 | **Sway**     | Persuade, deceive, or manipulate others through charm and lies.             |
 
 **Roll Results:**
-- **1-3 (Failure):** You face consequences based on your Position and gain Momentum (+1 Controlled, +2 Risky, +4 Desperate).
-- **4-5 (Partial Success):** You succeed, but face consequences based on your Position and gain Momentum (+1 Controlled, +2 Risky, +4 Desperate).
+- **1-3 (Failure):** You face consequences based on your Position and gain Momentum (+1 Controlled, +2 Risky, +4 Desperate, +6 Impossible).
+- **4-5 (Partial Success):** You succeed, but face consequences based on your Position and gain Momentum (+1 Controlled, +2 Risky, +4 Desperate, +6 Impossible).
 - **6 (Full Success):** You succeed without complication.
 - **Critical (Two 6s):** You achieve exceptional success--your Effect is increased by one level, and you gain some additional advantage or benefit.
 
 #### **Position & Effect**
 
-- **Position** determines the severity of consequences: **Controlled, Risky, or Desperate**. Risky is the default. Controlled is earned through advantages (good gear, traits, tactical superiority). Desperate is typically a consequence of failure - when things go badly, your Position worsens. Position is determined through conversation between the GM and player, based on your approach and the situation. You can improve it by changing tactics or gaining advantages in the fiction.
+- **Position** determines the severity of consequences: **Controlled, Risky, Desperate, or Impossible**. Risky is the default. Controlled is earned through advantages (good gear, traits, tactical superiority). Desperate is typically a consequence of failure - when things go badly, your Position worsens. Impossible represents the most extreme and dire circumstances, where failure means devastating consequences. Position is determined through conversation between the GM and player, based on your approach and the situation. You can improve it by changing tactics or gaining advantages in the fiction.
 
-- **Effect** determines the impact of success: **Limited, Standard, or Great**. Standard is the default. Effect is determined through conversation between the GM and player, based on factors like the quality and tier of your gear, the scale of your action, relevant traits, and your approach. You can improve Effect by gaining advantages or by Pushing Yourself. **Effect only applies when you succeed** - it determines how much progress you make on success clocks (obstacles, objectives, etc.). It does not modify harm or other consequences from failure or partial success.
+- **Effect** determines the impact of success: **Limited, Standard, Great, or Spectacular**. Standard is the default. Effect is determined through conversation between the GM and player, based on factors like the quality and tier of your gear, the scale of your action, relevant traits, and your approach. You can improve Effect by gaining advantages or by Pushing Yourself. Spectacular Effect represents extraordinary circumstances where your success has exceptional impact. **Effect only applies when you succeed** - it determines how much progress you make on success clocks (obstacles, objectives, etc.). It does not modify harm or other consequences from failure or partial success.
 
 #### **Teamwork**
 
@@ -155,8 +156,9 @@ Characters can have up to three active harm clocks. If you would take a fourth t
 | Controlled | 1        |
 | Risky      | 3        |
 | Desperate  | 5        |
+| Impossible | 6        |
 
-**Note:** Effect modifiers (Limited/Standard/Great) apply only to **success clocks** (progress you make when succeeding), not to harm or other consequence clocks.
+**Note:** Impossible position fills a harm clock completely (6/6), putting the character in a dying state immediately. Effect modifiers (Limited/Standard/Great/Spectacular) apply only to **success clocks** (progress you make when succeeding), not to harm or other consequence clocks.
 
 #### **Dying & Defeat**
 
@@ -185,10 +187,10 @@ Characters can have up to three active harm clocks. If you would take a fourth t
 When you succeed at an action that makes progress toward a goal (picking a lock, hacking a system, convincing a group, building a device), you advance a **success clock**. Unlike harm/consequence clocks, success clocks are affected by both Position and Effect:
 
 **Progress on Success (Position + Effect):**
-- **Base Progress:** Controlled=1, Risky=3, Desperate=5 segments
-- **Effect Modifier:** Limited=-1, Standard=+0, Great=+1
+- **Base Progress:** Controlled=1, Risky=3, Desperate=5, Impossible=6 segments
+- **Effect Modifier:** Limited=-1, Standard=+0, Great=+1, Spectacular=+2
 
-Example: A Risky action with Great Effect would advance 4 segments (3 base + 1 for great effect).
+Example: A Risky action with Great Effect would advance 4 segments (3 base + 1 for great effect). A Desperate action with Spectacular Effect would advance 7 segments (5 base + 2 for spectacular effect).
 
 ---
 
