@@ -5,10 +5,8 @@
  */
 
 import type { Character } from '@/types/character';
-import type { Crew } from '@/types/crew';
 import type { Position } from '@/types/action';
 import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
-import { asReduxId } from '../types/ids';
 
 type RollOutcome = 'critical' | 'success' | 'partial' | 'failure';
 

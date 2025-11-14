@@ -4,8 +4,6 @@
  * Foundry VTT Actor Sheet for crew entities
  */
 
-import type { Crew } from '@/types/crew';
-import type { Character } from '@/types/character';
 import type { Clock } from '@/types/clock';
 import { AddClockDialog } from '../dialogs/index';
 import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
@@ -56,8 +54,14 @@ class FitGDCrewSheet extends ActorSheet {
   override getData(): CrewSheetData {
     const context = super.getData() as CrewSheetData;
 
+    // Null safety checks
+    if (!game.fitgd) {
+      console.error('FitGD | FitGD not initialized');
+      return context;
+    }
+
     // Override editable to be GM-only for clock editing
-    context.editable = game.user.isGM;
+    context.editable = game.user?.isGM || false;
 
     // Unified IDs: Foundry Actor ID === Redux ID
     const reduxId = this.actor.id;
@@ -68,7 +72,7 @@ class FitGDCrewSheet extends ActorSheet {
 
       if (crew) {
         // Resolve character names from Redux IDs
-        const characterDetails = crew.characters.map(charId => {
+        const characterDetails = crew.characters.map((charId: string) => {
           const character = game.fitgd.api.character.getCharacter(charId);
           return {
             id: charId,
@@ -141,7 +145,7 @@ class FitGDCrewSheet extends ActorSheet {
 
     try {
       game.fitgd.api.crew.addMomentum({ crewId, amount });
-      ui.notifications.info(`Added ${amount} Momentum`);
+      ui.notifications?.info(`Added ${amount} Momentum`);
 
       // Save immediately (critical state change)
       await game.fitgd.saveImmediate();
@@ -149,7 +153,7 @@ class FitGDCrewSheet extends ActorSheet {
       this.render(false);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Add Momentum error:', error);
     }
   }
@@ -163,7 +167,7 @@ class FitGDCrewSheet extends ActorSheet {
 
     try {
       game.fitgd.api.crew.spendMomentum({ crewId, amount });
-      ui.notifications.info(`Spent ${amount} Momentum`);
+      ui.notifications?.info(`Spent ${amount} Momentum`);
 
       // Save immediately (critical state change)
       await game.fitgd.saveImmediate();
@@ -171,7 +175,7 @@ class FitGDCrewSheet extends ActorSheet {
       this.render(false);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Spend Momentum error:', error);
     }
   }
@@ -180,8 +184,8 @@ class FitGDCrewSheet extends ActorSheet {
     event.preventDefault();
 
     // GM-only check
-    if (!game.user.isGM) {
-      ui.notifications.warn('Only the GM can perform a Momentum Reset');
+    if (!game.user?.isGM) {
+      ui.notifications?.warn('Only the GM can perform a Momentum Reset');
       return;
     }
 
@@ -191,7 +195,7 @@ class FitGDCrewSheet extends ActorSheet {
     // Get crew and members
     const crew = game.fitgd.api.crew.getCrew(crewId);
     if (!crew) {
-      ui.notifications.error('Crew not found');
+      ui.notifications?.error('Crew not found');
       return;
     }
 
@@ -229,10 +233,10 @@ class FitGDCrewSheet extends ActorSheet {
       const affectedIds = [crewId, ...crew.characters];
       refreshSheetsByReduxId(affectedIds, false);
 
-      ui.notifications.info('Momentum Reset performed successfully');
+      ui.notifications?.info('Momentum Reset performed successfully');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Momentum Reset error:', error);
     }
   }
@@ -263,16 +267,16 @@ class FitGDCrewSheet extends ActorSheet {
         // Reduce to this segment
         const toRemove = currentSegments - segment;
         game.fitgd.api.clock.clearSegments({ clockId, segments: toRemove });
-        ui.notifications.info(`Clock reduced to ${segment} segments`);
+        ui.notifications?.info(`Clock reduced to ${segment} segments`);
       } else if (segment === currentSegments) {
         // Reduce by 1
         game.fitgd.api.clock.clearSegments({ clockId, segments: 1 });
-        ui.notifications.info(`Clock reduced by 1 segment`);
+        ui.notifications?.info(`Clock reduced by 1 segment`);
       } else {
         // Add to this segment
         const toAdd = segment - currentSegments + 1;
         game.fitgd.api.clock.addSegments({ clockId, segments: toAdd });
-        ui.notifications.info(`Clock advanced to ${segment + 1} segments`);
+        ui.notifications?.info(`Clock advanced to ${segment + 1} segments`);
       }
 
       // Save immediately (critical state change)
@@ -281,7 +285,7 @@ class FitGDCrewSheet extends ActorSheet {
       this.render(false);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Clock segment error:', error);
     }
   }
@@ -291,7 +295,7 @@ class FitGDCrewSheet extends ActorSheet {
    * Cycles through clock segments
    */
   private async _onClickClockSVG(event: JQuery.ClickEvent): Promise<void> {
-    if (!game.user.isGM) return;
+    if (!game.user?.isGM) return;
 
     event.preventDefault();
     const img = event.currentTarget as HTMLElement;
@@ -310,7 +314,7 @@ class FitGDCrewSheet extends ActorSheet {
       this.render(false);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Clock SVG click error:', error);
     }
   }
@@ -320,7 +324,7 @@ class FitGDCrewSheet extends ActorSheet {
    * Directly sets clock segments
    */
   private async _onChangeClockValue(event: JQuery.ChangeEvent): Promise<void> {
-    if (!game.user.isGM) return;
+    if (!game.user?.isGM) return;
 
     event.preventDefault();
     const input = event.currentTarget as HTMLInputElement;
@@ -335,7 +339,7 @@ class FitGDCrewSheet extends ActorSheet {
       this.render(false);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Clock value change error:', error);
     }
   }
@@ -345,7 +349,7 @@ class FitGDCrewSheet extends ActorSheet {
    * Renames clock when contenteditable loses focus
    */
   private async _onRenameClockBlur(event: JQuery.BlurEvent): Promise<void> {
-    if (!game.user.isGM) return;
+    if (!game.user?.isGM) return;
 
     const element = event.currentTarget as HTMLElement;
     const clockId = element.dataset.clockId;
@@ -356,10 +360,10 @@ class FitGDCrewSheet extends ActorSheet {
     try {
       game.fitgd.api.clock.rename({ clockId, name: newName });
       await game.fitgd.saveImmediate();
-      ui.notifications.info(`Clock renamed to "${newName}"`);
+      ui.notifications?.info(`Clock renamed to "${newName}"`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Clock rename error:', error);
       this.render(false); // Reset to original name
     }
@@ -369,7 +373,7 @@ class FitGDCrewSheet extends ActorSheet {
    * Handle delete clock button (GM-only)
    */
   private async _onDeleteClock(event: JQuery.ClickEvent): Promise<void> {
-    if (!game.user.isGM) return;
+    if (!game.user?.isGM) return;
 
     event.preventDefault();
     const target = event.currentTarget as HTMLElement;
@@ -390,10 +394,10 @@ class FitGDCrewSheet extends ActorSheet {
       game.fitgd.api.clock.delete(clockId);
       await game.fitgd.saveImmediate();
       this.render(false);
-      ui.notifications.info('Clock deleted');
+      ui.notifications?.info('Clock deleted');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Clock delete error:', error);
     }
   }
@@ -407,7 +411,7 @@ class FitGDCrewSheet extends ActorSheet {
     const characters = game.actors.filter(a => a.type === 'character');
 
     if (characters.length === 0) {
-      ui.notifications.warn('No characters exist. Create a character first.');
+      ui.notifications?.warn('No characters exist. Create a character first.');
       return;
     }
 
@@ -422,7 +426,7 @@ class FitGDCrewSheet extends ActorSheet {
     });
 
     if (availableCharacters.length === 0) {
-      ui.notifications.warn('No available characters. All characters are already in the crew.');
+      ui.notifications?.warn('No available characters. All characters are already in the crew.');
       return;
     }
 
@@ -451,7 +455,7 @@ class FitGDCrewSheet extends ActorSheet {
             if (characterReduxId) {
               try {
                 game.fitgd.api.crew.addCharacter({ crewId, characterId: characterReduxId });
-                ui.notifications.info(`Added ${selectedActor.name} to crew`);
+                ui.notifications?.info(`Added ${selectedActor.name} to crew`);
 
                 // Save immediately (critical state change)
                 await game.fitgd.saveImmediate();
@@ -459,7 +463,7 @@ class FitGDCrewSheet extends ActorSheet {
                 this.render(false);
               } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                ui.notifications.error(`Error: ${errorMessage}`);
+                ui.notifications?.error(`Error: ${errorMessage}`);
               }
             }
           }
@@ -504,7 +508,7 @@ class FitGDCrewSheet extends ActorSheet {
 
     try {
       game.fitgd.api.crew.removeCharacter({ crewId, characterId });
-      ui.notifications.info(`Removed ${characterName} from crew`);
+      ui.notifications?.info(`Removed ${characterName} from crew`);
 
       // Save immediately (critical state change)
       await game.fitgd.saveImmediate();
@@ -512,7 +516,7 @@ class FitGDCrewSheet extends ActorSheet {
       this.render(false);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Remove character error:', error);
     }
   }
