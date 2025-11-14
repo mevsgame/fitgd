@@ -38,3 +38,64 @@ export function refreshSheetsByReduxId(reduxIds: string[], force = true): void {
 
   console.log(`FitGD | Refreshed ${refreshedCount} sheet(s)`);
 }
+
+/**
+ * Open Player Action Widget for a character
+ * This replicates the experience of entering a turn in combat
+ *
+ * Broadcasts the action via socketlib so all clients (GM + owning player) can show the widget
+ *
+ * @param characterId - Character Redux ID (unified with Foundry Actor ID)
+ * @returns Promise that resolves when action is initiated
+ */
+export async function takeAction(characterId: string): Promise<void> {
+  if (!characterId) {
+    ui.notifications!.error('Invalid character ID');
+    return;
+  }
+
+  // Verify character exists in Redux
+  const state = game.fitgd!.store.getState();
+  const character = state.characters.byId[characterId];
+  if (!character) {
+    ui.notifications!.error('Character not found');
+    return;
+  }
+
+  console.log(`FitGD | Taking action for character: ${character.name} (${characterId})`);
+
+  // Initialize player state if not already initialized
+  const existingPlayerState = state.playerRoundState.byCharacterId[characterId];
+  if (!existingPlayerState) {
+    await game.fitgd!.bridge.execute(
+      {
+        type: 'playerRoundState/initializePlayerState',
+        payload: { characterId },
+      },
+      { affectedReduxIds: [characterId], silent: true }
+    );
+  }
+
+  // Set as active player
+  await game.fitgd!.bridge.execute(
+    {
+      type: 'playerRoundState/setActivePlayer',
+      payload: { characterId },
+    },
+    { affectedReduxIds: [characterId], silent: true }
+  );
+
+  // Broadcast "takeAction" event to ALL clients via socketlib
+  // Each client will decide whether to show the widget based on ownership
+  try {
+    await game.fitgd!.socket.executeForEveryone('takeAction', {
+      characterId,
+      userId: game.user!.id,
+      userName: game.user!.name
+    });
+    console.log(`FitGD | Broadcast takeAction for character ${characterId} to all clients`);
+  } catch (error) {
+    console.error('FitGD | Failed to broadcast takeAction:', error);
+    ui.notifications!.error('Failed to open action widget - check console for details');
+  }
+}
