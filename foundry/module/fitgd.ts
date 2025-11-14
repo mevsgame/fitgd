@@ -13,11 +13,12 @@
 import type { Store } from '@reduxjs/toolkit';
 import type { RootState } from '@/store';
 
-// Core Redux modules
-// @ts-expect-error - Built library has no type declarations in dist
-import { configureStore, createGameAPI } from '../dist/fitgd-core.es.js';
-// @ts-expect-error - Built library has no type declarations in dist
-import { createFoundryAdapter } from '../dist/fitgd-core.es.js';
+// foundry/module/fitgd.ts (AFTER)
+
+import { configureStore } from '@/store'; // Example: adjust to your actual file path in src
+import { createGameAPI } from '@/api'; // Example: adjust to your actual file path in src
+import { createFoundryAdapter } from '@/adapters/foundry'; // Example: adjust to your path
+
 import { createFoundryReduxBridge } from './foundry-redux-bridge';
 
 // Helper modules

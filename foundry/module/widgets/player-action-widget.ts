@@ -12,16 +12,10 @@ import type { RootState } from '@/store';
 import type { PlayerRoundState, Position, Effect } from '@/types/playerRoundState';
 import type { TraitTransaction, ConsequenceTransaction } from '@/types/playerRoundState';
 
-// @ts-expect-error - Dynamic import from compiled output
-import {
-  selectDicePool,
-  selectConsequenceSeverity,
-  selectMomentumGain,
-  selectMomentumCost,
-  selectCanUseRally,
-  selectHarmClocksWithStatus,
-  selectIsDying,
-} from '../../dist/fitgd-core.es.js';
+import { selectCanUseRally } from '@/selectors/characterSelectors';
+
+import { selectDicePool, selectConsequenceSeverity, selectMomentumGain, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying } from '@/selectors/playerRoundStateSelectors';
+
 import { FlashbackTraitsDialog } from '../dialogs/FlashbackTraitsDialog';
 import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog, RallyDialog } from '../dialogs/index';
 import { asReduxId } from '../types/ids';

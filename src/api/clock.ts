@@ -1,3 +1,4 @@
+import { EquipmentRarity } from '@/types/equipment';
 import type { Clock } from '../types';
 
 /**
@@ -9,7 +10,7 @@ import type { Clock } from '../types';
 export interface ClockAPI {
   // Creation
   createHarmClock(characterId: string, subtype: string): string;
-  createConsumableClock(crewId: string, subtype: string, rarity: 'common' | 'uncommon' | 'rare'): string;
+  createConsumableClock(crewId: string, subtype: string, rarity: EquipmentRarity): string;
   createAddictionClock(crewId: string): string;
 
   // Manipulation

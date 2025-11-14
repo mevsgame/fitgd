@@ -11,8 +11,7 @@
  */
 
 import type { Character } from '@/types/character';
-import type { Crew } from '@/types/crew';
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
+import type { Crew } from '@/types/crew'; 
 
 interface LeanIntoTraitData {
   character: Character;

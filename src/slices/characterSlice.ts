@@ -17,7 +17,8 @@ import type {
   ActionDots,
   Equipment,
   Command,
-} from '../types';
+} from '../types'; 
+import { EquipmentTier } from '@/types/equipment';
 
 /**
  * Character Slice State
@@ -86,7 +87,7 @@ interface SetActionDotsPayload {
 interface CreateEquipmentPayload {
   // Required fields
   name: string;
-  tier: 'accessible' | 'inaccessible' | 'epic';
+  tier: EquipmentTier;
   category: string;
 
   // Optional fields
@@ -109,7 +110,7 @@ interface UpdateEquipmentPayload {
   equipmentId: string;
   changes: {
     name?: string;
-    tier?: 'accessible' | 'inaccessible' | 'epic';
+    tier?: EquipmentTier;
     category?: string;
     description?: string;
     img?: string;

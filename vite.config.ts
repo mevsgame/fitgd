@@ -1,63 +1,58 @@
+// vite.config.ts (The one and only config file)
+
 import { defineConfig } from 'vite';
 import path from 'path';
-import dts from 'vite-plugin-dts';
 
 export default defineConfig({
+  // Keep this for Redux Toolkit
   define: {
     'process.env.NODE_ENV': JSON.stringify('production'),
   },
-  plugins: [
-    dts({
-      // Generate TypeScript declaration files
-      insertTypesEntry: true,
-      rollupTypes: false, // Keep individual .d.ts files
-      outDir: 'foundry/dist',
-      include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.spec.ts'],
-      copyDtsFiles: true,
-    }),
-  ],
+
+  // We are not using any special plugins for this simple bundle
+  plugins: [],
+
   build: {
-    outDir: 'foundry/dist', // Output to foundry/dist for symlink
-    lib: {
-      entry: path.resolve(__dirname, 'src/index.ts'),
-      name: 'FitGD',
-      fileName: (format) => `fitgd-core.${format}.js`,
-      formats: ['es'],
-    },
+    // The final output directory where Foundry will look for the file
+    outDir: 'foundry/dist',
+
+    // Clear the directory before building
+    emptyOutDir: true,
+
+    // Sourcemaps are essential for debugging your TS code in the browser
+    sourcemap: true,
+    
+    // Do not minify, as requested
+    minify: false,
+
     rollupOptions: {
-      // Bundle all dependencies (no externals for Foundry)
+      // THIS IS THE MOST IMPORTANT CHANGE.
+      // We are telling Vite that our application STARTS at fitgd.ts.
+      // Vite will read this file and bundle everything it imports.
+      input: {
+        'fitgd': path.resolve(__dirname, 'foundry/module/fitgd.ts'),
+      },
+
       output: {
-        // Ensure imports/exports work in ES modules
-        inlineDynamicImports: true,
-        // Keep function/variable names for readability
+        // We will output a single .mjs file that Foundry can use.
+        // The name will be 'fitgd.mjs' because the input key is 'fitgd'.
+        entryFileNames: '[name].mjs',
+        format: 'es',
+        
+        // Keep code readable
         compact: false,
-        // Preserve original names in minified output
-        preserveModules: false,
       },
     },
-    // Disable minification to keep code readable
-    // Trade-off: larger bundle (~300kb) but human-readable
-    minify: false,
-    sourcemap: true,
   },
+
+  // This is crucial so your imports work correctly
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-  test: {
-    globals: true,
-    environment: 'node',
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        'tests/',
-        '**/*.test.ts',
-        '**/*.spec.ts',
-      ],
+      // Allows you to use `import ... from '@/...'` in your foundry code
+      '@': path.resolve(__dirname, './src'), 
+      
+      // Allows you to use `import ... from '@foundry/...'`
+      '@foundry': path.resolve(__dirname, './foundry/module'),
     },
   },
 });

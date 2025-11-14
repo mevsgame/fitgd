@@ -338,7 +338,6 @@ pnpm run build:foundry
 - **TypeScript Handbook:** https://www.typescriptlang.org/docs/handbook/2/narrowing.html (null safety)
 - **Foundry Types:** `node_modules/@league-of-foundry-developers/foundry-vtt-types/`
 - **Branded Types Guide:** See `foundry/module/types/ids.ts`
-- **Developer Guide:** `TYPESCRIPT_GUIDE.md`
 
 ---
 

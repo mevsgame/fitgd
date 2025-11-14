@@ -11,7 +11,8 @@ import {
   validateProgressClockSize,
 } from '../validators/clockValidator';
 import { isOrphanedCommand } from '../utils/commandUtils';
-import type { Clock, ClockType, Command } from '../types';
+import type { Clock, ClockSize, ClockType, Command } from '../types';
+import { EquipmentRarity, EquipmentTier } from '@/types/equipment';
 
 /**
  * Clock Slice State
@@ -47,9 +48,9 @@ interface CreateClockPayload {
   entityId: string;
   clockType: ClockType;
   subtype?: string;
-  rarity?: 'common' | 'uncommon' | 'rare';
-  tier?: 'accessible' | 'inaccessible';
-  maxSegments?: number; // For progress clocks (4, 6, 8, or 12)
+  rarity?: EquipmentRarity;
+  tier?: EquipmentTier;
+  maxSegments?: ClockSize; // For progress clocks (4, 6, 8, or 12)
   category?: 'long-term-project' | 'threat' | 'personal-goal' | 'obstacle' | 'faction';
   description?: string;
   isCountdown?: boolean;

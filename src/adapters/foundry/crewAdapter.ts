@@ -8,6 +8,7 @@ import type {
   ClockColor,
 } from './types';
 import { FITGD_CLOCK_COLORS } from './types';
+import { EquipmentRarity, EquipmentTier } from '@/types/equipment';
 
 /**
  * Crew Adapter
@@ -123,8 +124,8 @@ function getCrewConsumableClocks(store: Store, crewId: string): ConsumableClockD
       type: clock.subtype || 'Consumable',
       segments: clock.segments,
       maxSegments: clock.maxSegments,
-      rarity: (metadata.rarity as 'common' | 'uncommon' | 'rare') || 'common',
-      tier: (metadata.tier as 'accessible' | 'inaccessible') || 'accessible',
+      rarity: (metadata.rarity as EquipmentRarity),
+      tier: (metadata.tier as EquipmentTier),
       frozen: (metadata.frozen as boolean) || false,
       color: FITGD_CLOCK_COLORS.consumable,
     };
