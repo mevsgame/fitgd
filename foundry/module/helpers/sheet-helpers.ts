@@ -64,16 +64,8 @@ export async function takeAction(characterId: string): Promise<void> {
 
   console.log(`FitGD | Taking action for character: ${character.name} (${characterId})`);
 
-  // Reset player state to fresh start (clears any previous turn data)
-  await game.fitgd!.bridge.execute(
-    {
-      type: 'playerRoundState/resetPlayerState',
-      payload: { characterId },
-    },
-    { affectedReduxIds: [characterId], silent: true }
-  );
-
-  // Set as active player
+  // Set as active player (this handles state transition to DECISION_PHASE)
+  // Matches combat turn change behavior exactly
   await game.fitgd!.bridge.execute(
     {
       type: 'playerRoundState/setActivePlayer',
