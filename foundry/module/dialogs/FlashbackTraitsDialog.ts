@@ -7,6 +7,7 @@
 import type { Character, Trait } from '@/types/character';
 import type { Crew } from '@/types/crew';
 import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
+import { asReduxId } from '../types/ids';
 
 type FlashbackMode = 'use-existing' | 'create-new' | 'consolidate';
 
@@ -53,6 +54,11 @@ export class FlashbackTraitsDialog extends Application {
    */
   constructor(characterId: string, crewId: string, options: Partial<ApplicationOptions> = {}) {
     super(options);
+
+    // Null safety check
+    if (!game.fitgd) {
+      throw new Error('FitGD not initialized');
+    }
 
     this.characterId = characterId;
     this.crewId = crewId;
@@ -200,7 +206,7 @@ export class FlashbackTraitsDialog extends Application {
       this.close();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Flashback Traits error:', error);
     }
   }
@@ -209,14 +215,20 @@ export class FlashbackTraitsDialog extends Application {
    * Apply use existing trait (costs 1 Momentum for position improvement)
    */
   private async _applyUseExisting(): Promise<void> {
+    // Null safety checks
+    if (!game.fitgd) {
+      console.error('FitGD | FitGD not initialized');
+      return;
+    }
+
     if (!this.selectedTraitId) {
-      ui.notifications.warn('Please select a trait');
+      ui.notifications?.warn('Please select a trait');
       return;
     }
 
     // Check Momentum (costs 1M for position improvement)
     if (this.crew.currentMomentum < 1) {
-      ui.notifications.warn('Not enough Momentum (need 1 for flashback)');
+      ui.notifications?.warn('Not enough Momentum (need 1 for flashback)');
       return;
     }
 
@@ -234,19 +246,25 @@ export class FlashbackTraitsDialog extends Application {
           },
         },
       },
-      { affectedReduxIds: [this.characterId], force: false }
+      { affectedReduxIds: [asReduxId(this.characterId)], force: false }
     );
 
-    ui.notifications.info('Trait selected - will improve position on roll (costs 1M)');
+    ui.notifications?.info('Trait selected - will improve position on roll (costs 1M)');
   }
 
   /**
    * Apply create new trait (flashback)
    */
   private async _applyCreateNew(): Promise<void> {
+    // Null safety checks
+    if (!game.fitgd) {
+      console.error('FitGD | FitGD not initialized');
+      return;
+    }
+
     // Get trait name and description from form
     if (!this.html) {
-      ui.notifications.error('Dialog HTML not found');
+      ui.notifications?.error('Dialog HTML not found');
       return;
     }
 
@@ -254,13 +272,13 @@ export class FlashbackTraitsDialog extends Application {
     const newTraitDescription = (this.html.find('[name="newTraitDescription"]').val() as string)?.trim();
 
     if (!newTraitName) {
-      ui.notifications.warn('Please enter a trait name');
+      ui.notifications?.warn('Please enter a trait name');
       return;
     }
 
     // Check Momentum (costs 1M for flashback)
     if (this.crew.currentMomentum < 1) {
-      ui.notifications.warn('Not enough Momentum (need 1 for flashback)');
+      ui.notifications?.warn('Not enough Momentum (need 1 for flashback)');
       return;
     }
 
@@ -282,24 +300,30 @@ export class FlashbackTraitsDialog extends Application {
           },
         },
       },
-      { affectedReduxIds: [this.characterId], force: false }
+      { affectedReduxIds: [asReduxId(this.characterId)], force: false }
     );
 
-    ui.notifications.info(`New trait "${newTraitName}" will be created on roll (costs 1M)`);
+    ui.notifications?.info(`New trait "${newTraitName}" will be created on roll (costs 1M)`);
   }
 
   /**
    * Apply consolidate traits
    */
   private async _applyConsolidate(): Promise<void> {
+    // Null safety checks
+    if (!game.fitgd) {
+      console.error('FitGD | FitGD not initialized');
+      return;
+    }
+
     if (this.selectedTraitIds.length !== 3) {
-      ui.notifications.warn('Please select exactly 3 traits to consolidate');
+      ui.notifications?.warn('Please select exactly 3 traits to consolidate');
       return;
     }
 
     // Get consolidated trait name and description from form
     if (!this.html) {
-      ui.notifications.error('Dialog HTML not found');
+      ui.notifications?.error('Dialog HTML not found');
       return;
     }
 
@@ -307,13 +331,13 @@ export class FlashbackTraitsDialog extends Application {
     const newTraitDescription = (this.html.find('[name="newTraitDescription"]').val() as string)?.trim();
 
     if (!newTraitName) {
-      ui.notifications.warn('Please enter a name for the consolidated trait');
+      ui.notifications?.warn('Please enter a name for the consolidated trait');
       return;
     }
 
     // Check Momentum (costs 1M for flashback)
     if (this.crew.currentMomentum < 1) {
-      ui.notifications.warn('Not enough Momentum (need 1 for flashback)');
+      ui.notifications?.warn('Not enough Momentum (need 1 for flashback)');
       return;
     }
 
@@ -338,9 +362,9 @@ export class FlashbackTraitsDialog extends Application {
           },
         },
       },
-      { affectedReduxIds: [this.characterId], force: false }
+      { affectedReduxIds: [asReduxId(this.characterId)], force: false }
     );
 
-    ui.notifications.info(`Traits will be consolidated into "${newTraitName}" on roll (costs 1M)`);
+    ui.notifications?.info(`Traits will be consolidated into "${newTraitName}" on roll (costs 1M)`);
   }
 }
