@@ -1073,10 +1073,8 @@ export class PlayerActionWidget extends Application {
     if (outcome === 'critical' || outcome === 'success') {
       this._postSuccessToChat(outcome, rollResult);
 
-      // Auto-close after delay
-      setTimeout(() => {
-        this._endTurn();
-      }, 2000);
+      // Don't auto-close - let widget linger so player can see success
+      // Player can manually close the widget when ready
     }
   }
 
@@ -1821,10 +1819,8 @@ export class PlayerActionWidget extends Application {
       if (outcome === 'critical' || outcome === 'success') {
         this._postSuccessToChat(outcome, rollResult);
 
-        // Auto-close after delay
-        setTimeout(() => {
-          this._endTurn();
-        }, 2000);
+        // Don't auto-close - let widget linger so player can see success
+        // Player can manually close the widget when ready
       }
     }, 500);
   }

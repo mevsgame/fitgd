@@ -386,7 +386,7 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!characterId) return;
 
     // Call the API helper function
-    await game.fitgd.api.action.takeAction(characterId);
+    await (game.fitgd!.api.action as any).takeAction(characterId);
   }
 
   /**

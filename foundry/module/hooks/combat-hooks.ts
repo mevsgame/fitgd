@@ -80,9 +80,10 @@ Hooks.on('updateCombat', async function(combat: Combat, updateData: any, _option
 
   console.log(`FitGD | Active combatant: ${activeCombatant.actor.name}`);
 
-  const characterId = (activeCombatant.actor as any).getFlag('forged-in-the-grimdark', 'reduxId') as string | undefined;
+  // UNIFIED IDs: Redux ID IS the Foundry Actor ID (no flag lookup needed)
+  const characterId = activeCombatant.actor.id;
   if (!characterId) {
-    console.log('FitGD | Active combatant has no Redux characterId');
+    console.log('FitGD | Active combatant has no actor ID');
     return;
   }
 
