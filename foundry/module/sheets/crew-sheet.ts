@@ -7,6 +7,11 @@
 import type { Clock } from '@/types/clock';
 import { AddClockDialog } from '../dialogs/index';
 import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
+import {
+  getClockDataset,
+  getCharacterDataset,
+  getDatasetInt,
+} from '../utils/dataset-helpers';
 
 /* -------------------------------------------- */
 /*  Crew Sheet Class                            */
@@ -141,9 +146,9 @@ class FitGDCrewSheet extends ActorSheet {
     const crewId = this._getReduxId();
     if (!crewId) return;
 
-    const amount = parseInt((event.currentTarget as HTMLElement).dataset.amount || '1');
-
     try {
+      const amount = getDatasetInt(event.currentTarget as HTMLElement, 'amount', 1);
+
       game.fitgd.api.crew.addMomentum({ crewId, amount });
       ui.notifications?.info(`Added ${amount} Momentum`);
 
@@ -163,9 +168,9 @@ class FitGDCrewSheet extends ActorSheet {
     const crewId = this._getReduxId();
     if (!crewId) return;
 
-    const amount = parseInt((event.currentTarget as HTMLElement).dataset.amount || '1');
-
     try {
+      const amount = getDatasetInt(event.currentTarget as HTMLElement, 'amount', 1);
+
       game.fitgd.api.crew.spendMomentum({ crewId, amount });
       ui.notifications?.info(`Spent ${amount} Momentum`);
 
@@ -251,14 +256,13 @@ class FitGDCrewSheet extends ActorSheet {
 
   private async _onClickClockSegment(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
-    const target = event.currentTarget as HTMLElement;
-    const clockId = target.dataset.clockId;
-    const segment = parseInt(target.dataset.segment || '0');
-    const currentSegments = parseInt(target.dataset.currentSegments || '0');
-
-    if (!clockId) return;
 
     try {
+      const target = event.currentTarget as HTMLElement;
+      const { clockId, segment: segmentStr, currentSegments: currentSegmentsStr } = getClockDataset(target);
+      const segment = getDatasetInt(target, 'segment', 0);
+      const currentSegments = getDatasetInt(target, 'currentSegments', 0);
+
       const clock = game.fitgd.api.clock.getClock(clockId);
       if (!clock) return;
 
@@ -298,14 +302,13 @@ class FitGDCrewSheet extends ActorSheet {
     if (!game.user?.isGM) return;
 
     event.preventDefault();
-    const img = event.currentTarget as HTMLElement;
-    const clockId = img.dataset.clockId;
-    const currentValue = parseInt(img.dataset.clockValue || '0');
-    const maxValue = parseInt(img.dataset.clockMax || '0');
-
-    if (!clockId) return;
 
     try {
+      const img = event.currentTarget as HTMLElement;
+      const { clockId } = getClockDataset(img);
+      const currentValue = getDatasetInt(img, 'clockValue', 0);
+      const maxValue = getDatasetInt(img, 'clockMax', 0);
+
       // Cycle: 0 -> max, then back to 0
       const newValue = currentValue >= maxValue ? 0 : currentValue + 1;
 
@@ -327,13 +330,12 @@ class FitGDCrewSheet extends ActorSheet {
     if (!game.user?.isGM) return;
 
     event.preventDefault();
-    const input = event.currentTarget as HTMLInputElement;
-    const clockId = input.dataset.clockId;
-    const newValue = parseInt(input.value);
-
-    if (!clockId) return;
 
     try {
+      const input = event.currentTarget as HTMLInputElement;
+      const { clockId } = getClockDataset(input);
+      const newValue = parseInt(input.value, 10);
+
       game.fitgd.api.clock.setSegments({ clockId, segments: newValue });
       await game.fitgd.saveImmediate();
       this.render(false);
@@ -351,13 +353,16 @@ class FitGDCrewSheet extends ActorSheet {
   private async _onRenameClockBlur(event: JQuery.BlurEvent): Promise<void> {
     if (!game.user?.isGM) return;
 
-    const element = event.currentTarget as HTMLElement;
-    const clockId = element.dataset.clockId;
-    const newName = element.textContent?.trim();
-
-    if (!clockId || !newName) return;
-
     try {
+      const element = event.currentTarget as HTMLElement;
+      const { clockId } = getClockDataset(element);
+      const newName = element.textContent?.trim();
+
+      if (!newName) {
+        this.render(false); // Reset to original name if empty
+        return;
+      }
+
       game.fitgd.api.clock.rename({ clockId, name: newName });
       await game.fitgd.saveImmediate();
       ui.notifications?.info(`Clock renamed to "${newName}"`);
@@ -376,21 +381,20 @@ class FitGDCrewSheet extends ActorSheet {
     if (!game.user?.isGM) return;
 
     event.preventDefault();
-    const target = event.currentTarget as HTMLElement;
-    const clockId = target.dataset.clockId;
-
-    if (!clockId) return;
-
-    const confirmed = await Dialog.confirm({
-      title: 'Delete Clock',
-      content: '<p>Are you sure you want to delete this clock?</p>',
-      yes: () => true,
-      no: () => false
-    });
-
-    if (!confirmed) return;
 
     try {
+      const target = event.currentTarget as HTMLElement;
+      const { clockId } = getClockDataset(target);
+
+      const confirmed = await Dialog.confirm({
+        title: 'Delete Clock',
+        content: '<p>Are you sure you want to delete this clock?</p>',
+        yes: () => true,
+        no: () => false
+      });
+
+      if (!confirmed) return;
+
       game.fitgd.api.clock.delete(clockId);
       await game.fitgd.saveImmediate();
       this.render(false);
@@ -486,27 +490,26 @@ class FitGDCrewSheet extends ActorSheet {
     const crewId = this._getReduxId();
     if (!crewId) return;
 
-    const target = event.currentTarget as HTMLElement;
-    const characterId = target.dataset.characterId;
-    if (!characterId) return;
-
-    // Get character name for confirmation
-    const character = game.fitgd.api.character.getCharacter(characterId);
-    const characterName = character?.name || 'Unknown Character';
-
-    const confirmed = await Dialog.confirm({
-      title: 'Remove Character',
-      content: `<p>Are you sure you want to remove <strong>${characterName}</strong> from the crew?</p>`,
-      yes: () => true,
-      no: () => false,
-      options: {
-        classes: ['dialog', 'fitgd-dialog']
-      }
-    });
-
-    if (!confirmed) return;
-
     try {
+      const target = event.currentTarget as HTMLElement;
+      const { characterId } = getCharacterDataset(target);
+
+      // Get character name for confirmation
+      const character = game.fitgd.api.character.getCharacter(characterId);
+      const characterName = character?.name || 'Unknown Character';
+
+      const confirmed = await Dialog.confirm({
+        title: 'Remove Character',
+        content: `<p>Are you sure you want to remove <strong>${characterName}</strong> from the crew?</p>`,
+        yes: () => true,
+        no: () => false,
+        options: {
+          classes: ['dialog', 'fitgd-dialog']
+        }
+      });
+
+      if (!confirmed) return;
+
       game.fitgd.api.crew.removeCharacter({ crewId, characterId });
       ui.notifications?.info(`Removed ${characterName} from crew`);
 
