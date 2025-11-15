@@ -2436,6 +2436,47 @@ Socket handlers in `receiveCommandsFromSocket()` intentionally use bare dispatch
 
 ## Development Workflow
 
+### ⚠️ FIRST STEP: Install Dependencies on Fresh Branch
+
+**CRITICAL: ALWAYS run `pnpm install` when starting work on a fresh branch or new session!**
+
+This project uses **pnpm** as its package manager. Running `pnpm install` ensures:
+- All dependencies are installed for TypeScript builds
+- Unit tests can run
+- Vite builds work correctly
+- Type checking is available
+
+```bash
+# ALWAYS run this first on a fresh branch
+pnpm install
+
+# Verify installation succeeded by running a build
+pnpm run build
+```
+
+**Why this matters:**
+- Fresh branches may not have `node_modules/` populated
+- TypeScript builds will fail without dependencies
+- Tests cannot run without test dependencies
+- Missing this step wastes time debugging "missing module" errors
+
+**When to run `pnpm install`:**
+- ✅ Starting work on a new branch (e.g., `claude/add-pnpm-install-setup-...`)
+- ✅ After pulling changes that update `package.json` or `pnpm-lock.yaml`
+- ✅ When encountering "Cannot find module" errors
+- ✅ At the start of every new Claude Code session
+
+**Quick validation:**
+```bash
+# If this fails, run pnpm install
+pnpm run type-check:all
+
+# If this fails, run pnpm install
+pnpm test
+```
+
+---
+
 ### Before Committing Code
 
 **ALWAYS run these checks before committing:**
@@ -2445,7 +2486,7 @@ Socket handlers in `receiveCommandsFromSocket()` intentionally use bare dispatch
 pnpm run type-check:all
 
 # 2. Build verification (ensures code compiles)
-pnpm run build:foundry
+pnpm run build
 
 # 3. Run tests (if applicable)
 pnpm test
@@ -2458,7 +2499,8 @@ git push
 
 ### Quick Pre-Commit Checklist
 
-- [ ] Code compiles (`pnpm run build:foundry` succeeds)
+- [ ] **Dependencies installed** (`pnpm install` run on fresh branch/session)
+- [ ] Code compiles (`pnpm run build` succeeds)
 - [ ] Type check passes or errors are documented (`pnpm run type-check:all`)
 - [ ] No new TypeScript errors introduced (check diff)
 - [ ] Tested with GM + Player clients (for Foundry changes)
@@ -2483,7 +2525,7 @@ pnpm install
 pnpm run type-check:foundry | grep "filename.ts"
 
 # Build and watch for changes
-pnpm run build:foundry --watch
+pnpm run build:watch
 
 # Run core Redux tests
 pnpm test
