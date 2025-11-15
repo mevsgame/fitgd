@@ -19,6 +19,8 @@ import { selectDicePool, selectConsequenceSeverity, selectMomentumGain, selectMo
 
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
 
+import { calculateOutcome } from '@/utils/diceRules';
+
 import { FlashbackTraitsDialog } from '../dialogs/FlashbackTraitsDialog';
 import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog, RallyDialog } from '../dialogs/index';
 import { asReduxId } from '../types/ids';
@@ -923,7 +925,7 @@ export class PlayerActionWidget extends Application {
 
     // Roll dice using Foundry dice roller
     const rollResult = await this._rollDice(dicePool);
-    const outcome = this._calculateOutcome(rollResult);
+    const outcome = calculateOutcome(rollResult);
 
     // CRITICAL: Batch all roll outcome state changes together
     // This prevents render race conditions by ensuring single broadcast
@@ -1005,19 +1007,6 @@ export class PlayerActionWidget extends Application {
     });
 
     return results;
-  }
-
-  /**
-   * Calculate outcome from roll results
-   */
-  private _calculateOutcome(rollResult: number[]): 'critical' | 'success' | 'partial' | 'failure' {
-    const sixes = rollResult.filter(d => d === 6).length;
-    const highest = Math.max(...rollResult);
-
-    if (sixes >= 2) return 'critical';
-    if (highest === 6) return 'success';
-    if (highest >= 4) return 'partial';
-    return 'failure';
   }
 
   /**
@@ -1680,7 +1669,7 @@ export class PlayerActionWidget extends Application {
 
       // Roll dice using Foundry dice roller (same as original roll)
       const rollResult = await this._rollDice(dicePool);
-      const outcome = this._calculateOutcome(rollResult);
+      const outcome = calculateOutcome(rollResult);
 
       // Batch roll outcome state changes
       const rollOutcomeActions: Array<{ type: string; payload: any }> = [
