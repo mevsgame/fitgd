@@ -329,3 +329,129 @@ export const selectIsDying = createSelector(
     return harmClocks.some((clock) => clock.isDying);
   }
 );
+
+/* -------------------------------------------- */
+/*  Position/Effect Improvement Utilities       */
+/* -------------------------------------------- */
+
+/**
+ * Improve position by one step (pure function)
+ *
+ * Position ladder: Impossible → Desperate → Risky → Controlled
+ *
+ * @param position - Current position
+ * @returns Improved position (one step better)
+ *
+ * @example
+ * improvePosition('desperate') // → 'risky'
+ * improvePosition('controlled') // → 'controlled' (already at best)
+ */
+export function improvePosition(position: Position): Position {
+  switch (position) {
+    case 'impossible':
+      return 'desperate';
+    case 'desperate':
+      return 'risky';
+    case 'risky':
+      return 'controlled';
+    case 'controlled':
+      return 'controlled'; // Already at best
+    default:
+      return position;
+  }
+}
+
+/**
+ * Improve effect by one level (pure function)
+ *
+ * Effect ladder: Limited → Standard → Great → Spectacular
+ *
+ * @param effect - Current effect
+ * @returns Improved effect (one level better)
+ *
+ * @example
+ * improveEffect('standard') // → 'great'
+ * improveEffect('spectacular') // → 'spectacular' (already at best)
+ */
+export function improveEffect(effect: Effect): Effect {
+  switch (effect) {
+    case 'limited':
+      return 'standard';
+    case 'standard':
+      return 'great';
+    case 'great':
+      return 'spectacular';
+    case 'spectacular':
+      return 'spectacular'; // Already at best
+    default:
+      return effect;
+  }
+}
+
+/**
+ * Calculate effective position for roll (ephemeral - does NOT mutate state)
+ *
+ * Applies trait transaction position improvement if applicable.
+ * The improved position is only used for this roll's calculations and does NOT
+ * modify the base position set by the GM.
+ *
+ * @param state - Redux state
+ * @param characterId - Character ID
+ * @returns Effective position for roll (with trait transaction improvements applied)
+ *
+ * @example
+ * // Base position: desperate, trait transaction improves position
+ * selectEffectivePosition(state, characterId) // → 'risky'
+ *
+ * // Base position: risky, no trait transaction
+ * selectEffectivePosition(state, characterId) // → 'risky'
+ */
+export const selectEffectivePosition = createSelector(
+  [
+    (state: RootState, characterId: string) => selectPlayerState(state, characterId),
+  ],
+  (playerState): Position => {
+    const basePosition = playerState?.position || 'risky';
+
+    // Check if trait transaction improves position
+    if (playerState?.traitTransaction?.positionImprovement) {
+      return improvePosition(basePosition);
+    }
+
+    return basePosition;
+  }
+);
+
+/**
+ * Calculate effective effect for roll (ephemeral - does NOT mutate state)
+ *
+ * Applies push effect improvement if applicable.
+ * The improved effect is only used for this roll's success clock calculations
+ * and does NOT modify the base effect set by the GM.
+ *
+ * @param state - Redux state
+ * @param characterId - Character ID
+ * @returns Effective effect for roll (with push improvements applied)
+ *
+ * @example
+ * // Base effect: standard, pushed for effect
+ * selectEffectiveEffect(state, characterId) // → 'great'
+ *
+ * // Base effect: standard, no push
+ * selectEffectiveEffect(state, characterId) // → 'standard'
+ */
+export const selectEffectiveEffect = createSelector(
+  [
+    (state: RootState, characterId: string) => selectPlayerState(state, characterId),
+  ],
+  (playerState): Effect => {
+    const baseEffect = playerState?.effect || 'standard';
+
+    // Check if Push (Effect) is active
+    if (playerState?.pushed && playerState?.pushType === 'improved-effect') {
+      return improveEffect(baseEffect);
+    }
+
+    return baseEffect;
+  }
+);

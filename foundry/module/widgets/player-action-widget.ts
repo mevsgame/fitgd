@@ -13,8 +13,13 @@ import type { PlayerRoundState, Position, Effect } from '@/types/playerRoundStat
 import type { TraitTransaction, ConsequenceTransaction } from '@/types/playerRoundState';
 
 import { selectCanUseRally } from '@/selectors/characterSelectors';
+import { selectStimsAvailable } from '@/selectors/clockSelectors';
 
-import { selectDicePool, selectConsequenceSeverity, selectMomentumGain, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying } from '@/selectors/playerRoundStateSelectors';
+import { selectDicePool, selectConsequenceSeverity, selectMomentumGain, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect } from '@/selectors/playerRoundStateSelectors';
+
+import { DEFAULT_CONFIG } from '@/config/gameConfig';
+
+import { calculateOutcome } from '@/utils/diceRules';
 
 import { FlashbackTraitsDialog } from '../dialogs/FlashbackTraitsDialog';
 import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog, RallyDialog } from '../dialogs/index';
@@ -293,7 +298,7 @@ export class PlayerActionWidget extends Application {
 
       // Current momentum
       momentum: this.crew?.currentMomentum || 0,
-      maxMomentum: 10,
+      maxMomentum: DEFAULT_CONFIG.crew.maxMomentum,
 
       // Rally availability - using selector
       canRally: this.crewId ? selectCanUseRally(state, this.characterId, this.crewId) : false,
@@ -307,17 +312,17 @@ export class PlayerActionWidget extends Application {
       // Computed improvements preview
       improvements: this._computeImprovements(),
 
-      // Improved position (if trait improves it)
-      improvedPosition: this._computeImprovedPosition(),
+      // Improved position (if trait improves it) - using selector
+      improvedPosition: selectEffectivePosition(state, this.characterId),
 
-      // Improved effect (if Push Effect is active)
-      improvedEffect: this._computeImprovedEffect(),
+      // Improved effect (if Push Effect is active) - using selector
+      improvedEffect: selectEffectiveEffect(state, this.characterId),
 
       // GM controls
       isGM: game.user.isGM,
 
-      // Stims availability
-      stimsLocked: this._areStimsLocked(state),
+      // Stims availability (inverted: selector returns "available", template needs "locked")
+      stimsLocked: !selectStimsAvailable(state, this.crewId || ''),
 
       // Consequence transaction data (for GM_RESOLVING_CONSEQUENCE state)
       ...(this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE' ? this._getConsequenceData(state) : {}),
@@ -449,83 +454,6 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Compute improved position (if trait transaction improves it)
-   */
-  private _computeImprovedPosition(): Position {
-    if (!this.playerState?.traitTransaction?.positionImprovement) {
-      return this.playerState?.position || 'risky';
-    }
-
-    const currentPosition = this.playerState.position || 'risky';
-
-    // Improve position by one step
-    if (currentPosition === 'impossible') return 'desperate';
-    if (currentPosition === 'desperate') return 'risky';
-    if (currentPosition === 'risky') return 'controlled';
-
-    // Already controlled, no improvement
-    return currentPosition;
-  }
-
-  /**
-   * Compute improved effect (if Push Effect is active)
-   */
-  private _computeImprovedEffect(): Effect {
-    const baseEffect = this.playerState?.effect || 'standard';
-
-    // Check if Push (Effect) is active
-    if (this.playerState?.pushed && this.playerState?.pushType === 'improved-effect') {
-      // Improve effect by one level
-      if (baseEffect === 'limited') return 'standard';
-      if (baseEffect === 'standard') return 'great';
-      if (baseEffect === 'great') return 'spectacular';
-      // Already spectacular, can't improve further
-      return baseEffect;
-    }
-
-    // No improvement, return base effect
-    return baseEffect;
-  }
-
-  /**
-   * Compute EFFECTIVE position for roll calculation (ephemeral)
-   * This does NOT change the stored position, only used for dice/consequence calculations
-   */
-  private _getEffectivePosition(): Position {
-    const basePosition = this.playerState?.position || 'risky';
-
-    // Check if trait transaction improves position
-    if (this.playerState?.traitTransaction?.positionImprovement) {
-      if (basePosition === 'impossible') return 'desperate';
-      if (basePosition === 'desperate') return 'risky';
-      if (basePosition === 'risky') return 'controlled';
-      // Already controlled
-      return basePosition;
-    }
-
-    return basePosition;
-  }
-
-  /**
-   * Compute EFFECTIVE effect for consequence calculation (ephemeral)
-   * This does NOT change the stored effect, only used for consequence calculations
-   */
-  private _getEffectiveEffect(): Effect {
-    const baseEffect = this.playerState?.effect || 'standard';
-
-    // Check if Push (Effect) is active
-    if (this.playerState?.pushed && this.playerState?.pushType === 'improved-effect') {
-      if (baseEffect === 'limited') return 'standard';
-      if (baseEffect === 'standard') return 'great';
-      if (baseEffect === 'great') return 'spectacular';
-      // Already spectacular
-      return baseEffect;
-    }
-
-    return baseEffect;
-  }
-
-  /**
    * Compute improvements preview text
    */
   private _computeImprovements(): string[] {
@@ -584,29 +512,6 @@ export class PlayerActionWidget extends Application {
     return improvements;
   }
 
-  /**
-   * Check if stims are locked for this character's crew
-   * @param state - Redux state
-   * @returns True if any character in crew has filled addiction clock
-   */
-  private _areStimsLocked(state: RootState): boolean {
-    if (!this.crewId) return false;
-
-    const crew = state.crews.byId[this.crewId];
-    if (!crew) return false;
-
-    // Check if ANY character in crew has filled addiction clock
-    for (const characterId of crew.characters) {
-      const characterAddictionClock = Object.values(state.clocks.byId).find(
-        clock => clock.entityId === characterId && clock.clockType === 'addiction'
-      );
-      if (characterAddictionClock && characterAddictionClock.segments >= characterAddictionClock.maxSegments) {
-        return true;
-      }
-    }
-
-    return false;
-  }
 
   /**
    * Get consequence transaction data for template
@@ -636,8 +541,8 @@ export class PlayerActionWidget extends Application {
         selectedCrewClock: null,
         calculatedHarmSegments: 0,
         calculatedMomentumGain: 0,
-        effectivePosition: this._getEffectivePosition(),
-        effectiveEffect: this._getEffectiveEffect(),
+        effectivePosition: selectEffectivePosition(state, this.characterId),
+        effectiveEffect: selectEffectiveEffect(state, this.characterId),
         consequenceConfigured: false,
       };
     }
@@ -662,8 +567,8 @@ export class PlayerActionWidget extends Application {
 
     // Calculate harm segments and momentum gain using effective position
     // Note: Effect does NOT apply to consequences - only to success clocks
-    const effectivePosition = this._getEffectivePosition();
-    const effectiveEffect = this._getEffectiveEffect();
+    const effectivePosition = selectEffectivePosition(state, this.characterId);
+    const effectiveEffect = selectEffectiveEffect(state, this.characterId);
     const calculatedHarmSegments = selectConsequenceSeverity(effectivePosition);
     const calculatedMomentumGain = selectMomentumGain(effectivePosition);
 
@@ -1020,7 +925,7 @@ export class PlayerActionWidget extends Application {
 
     // Roll dice using Foundry dice roller
     const rollResult = await this._rollDice(dicePool);
-    const outcome = this._calculateOutcome(rollResult);
+    const outcome = calculateOutcome(rollResult);
 
     // CRITICAL: Batch all roll outcome state changes together
     // This prevents render race conditions by ensuring single broadcast
@@ -1102,19 +1007,6 @@ export class PlayerActionWidget extends Application {
     });
 
     return results;
-  }
-
-  /**
-   * Calculate outcome from roll results
-   */
-  private _calculateOutcome(rollResult: number[]): 'critical' | 'success' | 'partial' | 'failure' {
-    const sixes = rollResult.filter(d => d === 6).length;
-    const highest = Math.max(...rollResult);
-
-    if (sixes >= 2) return 'critical';
-    if (highest === 6) return 'success';
-    if (highest >= 4) return 'partial';
-    return 'failure';
   }
 
   /**
@@ -1480,7 +1372,8 @@ export class PlayerActionWidget extends Application {
     await this._applyConsequenceTransaction(transaction);
 
     // Add momentum gain
-    const effectivePosition = this._getEffectivePosition();
+    const state = game.fitgd.store.getState();
+    const effectivePosition = selectEffectivePosition(state, this.characterId);
     const momentumGain = selectMomentumGain(effectivePosition);
     if (this.crewId && momentumGain > 0) {
       game.fitgd.api.crew.addMomentum({ crewId: this.crewId, amount: momentumGain });
@@ -1527,10 +1420,12 @@ export class PlayerActionWidget extends Application {
    * @param transaction
    */
   private async _applyConsequenceTransaction(transaction: ConsequenceTransaction): Promise<void> {
+    const state = game.fitgd.store.getState();
+
     if (transaction.consequenceType === 'harm') {
       // Apply harm to selected clock
       // Note: Effect does NOT apply to consequences - only position matters
-      const effectivePosition = this._getEffectivePosition();
+      const effectivePosition = selectEffectivePosition(state, this.characterId);
       const segments = selectConsequenceSeverity(effectivePosition);
 
       await game.fitgd.bridge.execute(
@@ -1548,7 +1443,7 @@ export class PlayerActionWidget extends Application {
 
     } else if (transaction.consequenceType === 'crew-clock') {
       // Advance crew clock using standardized position-based values
-      const effectivePosition = this._getEffectivePosition();
+      const effectivePosition = selectEffectivePosition(state, this.characterId);
       const segments = selectConsequenceSeverity(effectivePosition);
 
       await game.fitgd.bridge.execute(
@@ -1628,7 +1523,7 @@ export class PlayerActionWidget extends Application {
             entityId: this.characterId, // Per-character, not per-crew
             clockType: 'addiction',
             subtype: 'Addiction',
-            maxSegments: 8,
+            maxSegments: DEFAULT_CONFIG.clocks.addiction.segments,
             segments: 0,
           },
         },
@@ -1774,7 +1669,7 @@ export class PlayerActionWidget extends Application {
 
       // Roll dice using Foundry dice roller (same as original roll)
       const rollResult = await this._rollDice(dicePool);
-      const outcome = this._calculateOutcome(rollResult);
+      const outcome = calculateOutcome(rollResult);
 
       // Batch roll outcome state changes
       const rollOutcomeActions: Array<{ type: string; payload: any }> = [

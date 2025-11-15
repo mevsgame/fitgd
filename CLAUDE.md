@@ -60,6 +60,443 @@ A **TypeScript + Redux Toolkit** event-sourced state management system for chara
 
 ---
 
+## Code Best Practices & Patterns (Learned from 4-Phase Audit)
+
+**Context:** A comprehensive audit (Nov 2025) extracted all business logic from Foundry widgets to Redux layer, adding 101 tests and establishing clear architectural boundaries. These patterns emerged as critical for maintaining clean separation of concerns.
+
+### 1. Foundry-Redux Separation of Concerns ✅
+
+**GOLDEN RULE:** All business logic belongs in Redux layer, NOT in Foundry widgets.
+
+**Foundry Layer (Presentation Only):**
+- UI rendering and templates
+- Event handling (clicks, drags, etc.)
+- Foundry API integration (dice rolls, chat messages)
+- Bridge API calls to update Redux state
+
+**Redux Layer (Business Logic):**
+- Game rules (dice outcomes, position/effect improvements, etc.)
+- State management (reducers, selectors)
+- Validation logic
+- Pure utility functions
+- Configuration values
+
+**Examples:**
+
+```typescript
+// ❌ WRONG: Business logic in Foundry widget
+class PlayerActionWidget {
+  private _calculateOutcome(rollResult: number[]): DiceOutcome {
+    const sixes = rollResult.filter(d => d === 6).length;
+    if (sixes >= 2) return 'critical';
+    // ... more logic
+  }
+}
+
+// ✅ CORRECT: Business logic in Redux utils, widget uses it
+// src/utils/diceRules.ts
+export function calculateOutcome(rollResult: number[]): DiceOutcome {
+  const sixes = rollResult.filter(d => d === 6).length;
+  if (sixes >= 2) return 'critical';
+  // ... more logic
+}
+
+// foundry/module/widgets/player-action-widget.ts
+import { calculateOutcome } from '@/utils/diceRules';
+
+class PlayerActionWidget {
+  async _onRoll() {
+    const rollResult = await this._rollDice(dicePool);
+    const outcome = calculateOutcome(rollResult); // Use utility
+  }
+}
+```
+
+---
+
+### 2. Always Check for Existing Selectors Before Writing Logic ✅
+
+**BEFORE implementing any state query or derived calculation in Foundry:**
+
+1. **Check if selector already exists:**
+   ```bash
+   # Search by name
+   grep -rn "selectStims" src/selectors/
+
+   # Search by similar logic
+   grep -rn "addiction.*filled" src/
+   ```
+
+2. **Use existing selector if found:**
+   ```typescript
+   // ✅ CORRECT: Reuse existing selector
+   import { selectStimsAvailable } from '@/selectors/clockSelectors';
+
+   const stimsLocked = !selectStimsAvailable(state, this.crewId);
+   ```
+
+3. **If no selector exists, create one in Redux (NOT in widget):**
+   ```typescript
+   // ❌ WRONG: Create method in widget
+   private _areStimsLocked(): boolean { /* logic */ }
+
+   // ✅ CORRECT: Create selector in Redux
+   // src/selectors/clockSelectors.ts
+   export const selectStimsAvailable = createSelector(...);
+   ```
+
+**Why:** Prevents duplication, ensures consistency, maintains single source of truth.
+
+---
+
+### 3. Extract Pure Functions to Utils, Write Tests FIRST ✅
+
+**Pattern:** When you identify game logic that's a pure function (no side effects, deterministic), extract it to Redux utils immediately.
+
+**Workflow:**
+
+```typescript
+// STEP 1: Create utility with signature
+// src/utils/diceRules.ts
+export function calculateOutcome(rollResult: number[]): DiceOutcome {
+  throw new Error('Not implemented');
+}
+
+// STEP 2: Write comprehensive tests FIRST (TDD)
+// tests/unit/diceRules.test.ts
+describe('calculateOutcome', () => {
+  it('should return critical for 2+ sixes', () => {
+    expect(calculateOutcome([6, 6, 3])).toBe('critical');
+  });
+  // ... 40+ more tests
+});
+
+// STEP 3: Implement function to make tests pass
+export function calculateOutcome(rollResult: number[]): DiceOutcome {
+  const sixes = rollResult.filter(d => d === 6).length;
+  if (sixes >= 2) return 'critical';
+  // ... implementation
+}
+
+// STEP 4: Use in Foundry widget
+import { calculateOutcome } from '@/utils/diceRules';
+const outcome = calculateOutcome(rollResult);
+```
+
+**Benefits:**
+- TDD ensures correctness from the start
+- Pure functions trivial to test (no mocking)
+- Reusable across entire codebase
+- Can be used in CLI tools, tests, simulations, etc.
+
+---
+
+### 4. No Magic Numbers - Always Use Centralized Config ✅
+
+**Rule:** NEVER hard-code game values in Foundry code.
+
+```typescript
+// ❌ WRONG: Hard-coded magic numbers
+getData() {
+  return {
+    maxMomentum: 10,      // What if playtesting changes this?
+    maxSegments: 8,       // What if we add difficulty levels?
+  };
+}
+
+// ✅ CORRECT: Use centralized config
+import { DEFAULT_CONFIG } from '@/config/gameConfig';
+
+getData() {
+  return {
+    maxMomentum: DEFAULT_CONFIG.crew.maxMomentum,
+    maxSegments: DEFAULT_CONFIG.clocks.addiction.segments,
+  };
+}
+```
+
+**Benefits:**
+- Playtesting adjustments require changing one file
+- Different campaigns can override config
+- Game balance is data-driven, not code-driven
+
+---
+
+### 5. Export Types Along With Functions ✅
+
+**Pattern:** When creating utilities, export both the function AND related types.
+
+```typescript
+// ❌ INCOMPLETE: Only export function
+export function calculateOutcome(rollResult: number[]): 'critical' | 'success' | 'partial' | 'failure' {
+  // ...
+}
+
+// ✅ COMPLETE: Export function AND type
+export type DiceOutcome = 'critical' | 'success' | 'partial' | 'failure';
+
+export function calculateOutcome(rollResult: number[]): DiceOutcome {
+  // ...
+}
+
+// Now consumers can import the type:
+import { calculateOutcome, type DiceOutcome } from '@/utils/diceRules';
+
+function handleRoll(outcome: DiceOutcome) {
+  // Type-safe, no string literal repetition
+}
+```
+
+**Benefits:**
+- Single source of truth for types
+- Easier refactoring (change type once)
+- Better IDE autocomplete
+- Compile-time safety across all usage sites
+
+---
+
+### 6. Comprehensive Test Coverage for Game Logic ✅
+
+**Standard:** Every pure function and selector should have comprehensive tests covering:
+
+- **Happy paths:** All valid outcomes
+- **Edge cases:** Empty inputs, boundary values, maximum values
+- **Priority rules:** When multiple conditions apply, correct one wins
+- **Real-world scenarios:** Actual gameplay situations (desperate/risky/controlled rolls, pushing, assistance)
+- **Type safety:** Verify TypeScript types work correctly
+
+**Example from dice rules tests (41 tests total):**
+
+```typescript
+describe('calculateOutcome', () => {
+  // Happy paths: 5 tests per outcome type
+  describe('Critical outcomes', () => {
+    it('should return critical for exactly 2 sixes', () => { ... });
+    it('should return critical for 3 sixes', () => { ... });
+    // ... 3 more tests
+  });
+
+  // Edge cases: 4 tests
+  describe('Edge cases', () => {
+    it('should return failure for empty roll array', () => { ... });
+    it('should handle large dice pools correctly', () => { ... });
+    // ... 2 more tests
+  });
+
+  // Real-world scenarios: 6 tests
+  describe('Real-world scenarios', () => {
+    it('should calculate outcome for desperate position roll (1 die)', () => { ... });
+    it('should calculate outcome for risky position roll (2 dice)', () => { ... });
+    // ... 4 more tests
+  });
+});
+```
+
+**ROI:** Time spent writing tests is minimal compared to permanent value (prevents regressions, documents behavior, enables confident refactoring).
+
+---
+
+### 7. Use Selectors for ALL State Queries ✅
+
+**Rule:** Foundry widgets should NEVER directly iterate or filter Redux state. Always use selectors.
+
+```typescript
+// ❌ WRONG: Direct state access in widget
+const crew = state.crews.byId[this.crewId];
+const addictionClock = Object.values(state.clocks.byId).find(
+  clock => clock.entityId === crew.id && clock.clockType === 'addiction'
+);
+
+// ✅ CORRECT: Use existing selector
+import { selectAddictionClockByCrew } from '@/selectors/clockSelectors';
+const addictionClock = selectAddictionClockByCrew(state, this.crewId);
+```
+
+**Why selectors are better:**
+- Memoized (performance optimization)
+- Testable in isolation
+- Reusable across widgets
+- Single place to update query logic
+- Type-safe
+
+---
+
+### 8. Write JSDoc with Examples for All Exported Functions ✅
+
+**Standard:** Every exported function should have comprehensive JSDoc including:
+
+- Description of what it does
+- Parameter descriptions with types
+- Return value description
+- Examples showing usage
+
+```typescript
+/**
+ * Calculate the outcome of a dice roll based on Forged in the Dark rules
+ *
+ * Rules:
+ * - Critical: 2 or more 6s
+ * - Success: At least one 6
+ * - Partial: Highest die is 4 or 5
+ * - Failure: Highest die is 1, 2, or 3
+ *
+ * @param rollResult - Array of dice values (typically d6 results)
+ * @returns The outcome of the roll
+ *
+ * @example
+ * calculateOutcome([6, 6, 3]) // 'critical' - two 6s
+ * calculateOutcome([6, 4, 2]) // 'success' - one 6
+ * calculateOutcome([5, 4, 3]) // 'partial' - highest is 5
+ * calculateOutcome([3, 2, 1]) // 'failure' - highest is 3
+ */
+export function calculateOutcome(rollResult: number[]): DiceOutcome {
+  // ...
+}
+```
+
+**Benefits:**
+- Better IDE autocomplete
+- Self-documenting code
+- Can generate API docs with TypeDoc
+- Easier onboarding for new developers
+
+---
+
+### 9. When Refactoring, Verify Tests Still Pass ✅
+
+**Workflow:** After extracting logic from Foundry to Redux:
+
+```bash
+# 1. Create Redux utility/selector
+# 2. Write comprehensive tests
+pnpm test --run <test-file>
+
+# 3. Refactor Foundry widget to use utility
+# 4. Verify TypeScript compiles
+pnpm run type-check
+
+# 5. Run ALL tests to check for regressions
+pnpm test --run
+
+# 6. If all pass, commit
+git add .
+git commit -m "feat(redux): Extract X to Redux utils"
+```
+
+**Critical:** Always verify tests pass after refactoring. If tests fail, you've broken something.
+
+---
+
+### 10. Architectural Decision Template ✅
+
+**When adding new game logic, ask:**
+
+1. **Is this a pure function?**
+   - Yes → Extract to `src/utils/`
+   - No → Might be a selector or reducer
+
+2. **Is this a state query or derived calculation?**
+   - Yes → Create selector in `src/selectors/`
+   - No → Might be a pure function
+
+3. **Is this a constant game value?**
+   - Yes → Add to `src/config/gameConfig.ts`
+   - No → Might be dynamic state
+
+4. **Is this Foundry-specific UI logic?**
+   - Yes → Can stay in Foundry widget
+   - No → Extract to Redux layer
+
+5. **Can this be reused elsewhere?**
+   - Yes → MUST be in Redux layer
+   - No → Might still benefit from extraction for testing
+
+**Default assumption:** If in doubt, extract to Redux layer. It's easier to test and maintain.
+
+---
+
+## Summary of Audit Learnings
+
+**4-Phase Audit Results (Nov 2025):**
+- ✅ Extracted 107 lines of business logic from Foundry → Redux
+- ✅ Added 101 comprehensive tests (60 selector tests + 41 utility tests)
+- ✅ Eliminated 4 instances of duplicate logic
+- ✅ Replaced 2 magic numbers with centralized config
+- ✅ Established clear architectural boundaries
+
+**Key Principle:** Treat Foundry as a thin presentation layer that consumes Redux business logic. All game rules, validation, and calculations belong in Redux where they can be tested, reused, and maintained independently.
+
+---
+
+### 11. Documentation Cleanup Phase ✅
+
+**Best Practice:** After completing a multi-phase refactoring or audit, clean up temporary documentation to maintain a lean codebase.
+
+**What to Remove:**
+- Detailed phase-by-phase conclusion documents (after extracting learnings to CLAUDE.md)
+- Initial audit/analysis documents (after work is complete)
+- Temporary implementation notes
+- Redundant documentation that duplicates information in CLAUDE.md
+
+**What to Keep:**
+- CLAUDE.md (single source of truth for project patterns and practices)
+- README.md (project overview and setup)
+- API documentation (if applicable)
+- Git history (preserves full context of changes)
+
+**Cleanup Workflow:**
+
+```bash
+# 1. Extract all learnings to CLAUDE.md
+# - Add best practices section
+# - Document key architectural decisions
+# - Include examples and anti-patterns
+
+# 2. Verify git history captures all details
+git log --oneline --decorate
+
+# 3. Remove temporary documentation files
+rm PHASE_*_CONCLUSIONS.md AUDIT_*.md
+
+# 4. Commit cleanup
+git add -A
+git commit -m "docs: Clean up temporary audit documentation
+
+Removed temporary phase conclusion documents after extracting
+all learnings to CLAUDE.md. Git history preserves full details.
+
+Deleted:
+- FOUNDRY_REDUX_AUDIT.md (original audit plan)
+- PHASE_1_CONCLUSIONS.md through PHASE_4_CONCLUSIONS.md
+
+All learnings now consolidated in CLAUDE.md 'Code Best Practices'
+section for easy reference by future Claude Code sessions."
+```
+
+**Why Cleanup Matters:**
+- ✅ Reduces cognitive load (fewer files to navigate)
+- ✅ Prevents documentation drift (single source of truth)
+- ✅ Improves discoverability (CLAUDE.md is the entry point)
+- ✅ Maintains focus on current patterns (not historical analysis)
+
+**Example: This Project (Nov 2025)**
+
+After completing 4-phase Foundry-Redux audit:
+- **Extracted:** All 10 best practices → CLAUDE.md
+- **Removed:** 5 temporary files (~78KB of redundant docs)
+- **Preserved:** Git history contains full commit messages with detailed context
+- **Result:** Lean documentation focused on actionable patterns
+
+**When NOT to Delete:**
+- Active work-in-progress documents
+- Documents referenced by multiple team members
+- External-facing documentation (user guides, API docs)
+- Historical decisions that aren't captured in CLAUDE.md
+
+**Key Principle:** Documentation should serve ongoing development, not preserve historical analysis. Git history is the permanent record; CLAUDE.md is the living guide.
+
+---
+
 ## Technology Stack
 
 | Layer | Technology | Rationale |
