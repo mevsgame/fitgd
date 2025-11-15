@@ -123,6 +123,8 @@ await game.fitgd.bridge.executeBatch([
 
 Before starting work:
 
+- [ ] **Run `pnpm install`** (CRITICAL on fresh branches - see CLAUDE.md "Development Workflow")
+- [ ] **Verify build works** (`pnpm run build` succeeds)
 - [ ] Read required docs (see above)
 - [ ] Understand the task requirements
 - [ ] Check if similar code exists (grep for patterns)
@@ -146,6 +148,9 @@ Before declaring done:
 ---
 
 ## 🔍 Quick Diagnostics
+
+**"Cannot find module" or build/test failures?**
+→ Run `pnpm install` - dependencies not installed on fresh branch
 
 **State not propagating to other clients?**
 → Missing `bridge.execute()` or `bridge.executeBatch()` call
