@@ -5,7 +5,8 @@
  */
 
 import type { Trait, ActionDots, Equipment } from '../types';
-import type { Position, Effect } from '../types/resolution';
+import type { Position, Effect, ActionPushType, Result } from '../types/resolution';
+import type { ProgressClockCategory } from '../types/clock';
 
 /**
  * Character API - Character lifecycle and actions
@@ -66,7 +67,7 @@ export interface CharacterAPI {
 export interface ActionAPI {
   push(params: {
     crewId: string;
-    type: 'extra-die' | 'improved-position' | 'improved-effect';
+    type: ActionPushType;
   }): { momentumSpent: number; newMomentum: number; pushType: string };
 
   flashback(params: {
@@ -80,7 +81,7 @@ export interface ActionAPI {
     characterId: string;
     position: Position;
     effect: Effect;
-    result: 'failure' | 'partial' | 'success' | 'critical';
+    result: Result;
     harmType?: string;
   }): {
     momentumGenerated: number;
@@ -186,12 +187,7 @@ export interface ClockAPI {
     entityId: string;
     name: string;
     segments: 4 | 6 | 8 | 12;
-    category?:
-      | 'long-term-project'
-      | 'threat'
-      | 'personal-goal'
-      | 'obstacle'
-      | 'faction';
+    category?: ProgressClockCategory;
     isCountdown?: boolean;
     description?: string;
   }): string;

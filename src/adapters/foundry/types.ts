@@ -5,8 +5,9 @@
  * NOTE: FitGD uses different mechanics than standard Blades in the Dark!
  */
 
-import { ClockSize } from "@/types";
+import { ClockSize, ProgressClockCategory } from "@/types";
 import { EquipmentRarity, EquipmentTier } from "@/types/equipment";
+import { TraitCategory } from "@/types/character";
 
 /**
  * Base Foundry Actor data structure
@@ -137,7 +138,7 @@ export interface ProgressClockData {
   name: string;
   segments: number;
   maxSegments: number; // 4, 6, 8, or 12
-  category?: 'long-term-project' | 'threat' | 'personal-goal' | 'obstacle' | 'faction';
+  category?: ProgressClockCategory;
   isCountdown?: boolean;
   description?: string;
   color: ClockColor; // blue for progress, red for threats
@@ -158,7 +159,7 @@ export interface FoundryItem {
  * Trait item data
  */
 export interface FoundryTraitData {
-  category: 'role' | 'background' | 'scar' | 'flashback' | 'grouped';
+  category: TraitCategory;
   disabled: boolean; // Leaned into
   description?: string;
   acquiredAt: number;

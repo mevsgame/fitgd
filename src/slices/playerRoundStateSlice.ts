@@ -15,6 +15,7 @@ import {
   ConsequenceType,
   TraitTransaction,
   ConsequenceTransaction,
+  PlayerPushType,
   createInitialPlayerRoundState,
   isValidTransition,
 } from '../types/playerRoundState';
@@ -79,7 +80,7 @@ interface SetImprovementsPayload {
   selectedTraitId?: string;
   equippedForAction?: string[];
   pushed?: boolean;
-  pushType?: 'extra-die' | 'improved-effect';
+  pushType?: PlayerPushType;
   flashbackApplied?: boolean;
 }
 

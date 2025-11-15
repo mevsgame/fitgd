@@ -15,11 +15,10 @@
  * - If the trait was disabled, it gets re-enabled
  */
 
-import type { Character } from '@/types/character';
+import type { Character, SocialAction } from '@/types/character';
 import type { Crew } from '@/types/crew';
 import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 
-type SocialAction = 'command' | 'consort' | 'sway';
 type RallyOutcome = 'critical' | 'success' | 'partial' | 'fail';
 
 interface RallyDialogData {

@@ -46,6 +46,11 @@ export type ConsequenceType = 'harm' | 'crew-clock';
 export type TraitTransactionMode = 'existing' | 'new' | 'consolidate';
 
 /**
+ * Push types for player round state
+ */
+export type PlayerPushType = 'extra-die' | 'improved-effect';
+
+/**
  * Trait transaction (pending changes that happen on roll commit)
  */
 export interface TraitTransaction {
@@ -150,7 +155,7 @@ export interface PlayerRoundState {
   pushed?: boolean;
 
   /** Type of push: 'extra-die' (+1d) or 'improved-effect' (Effect +1) */
-  pushType?: 'extra-die' | 'improved-effect';
+  pushType?: PlayerPushType;
 
   /** Flashback applied flag */
   flashbackApplied?: boolean;

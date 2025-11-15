@@ -1,6 +1,6 @@
 import type { Store } from '@reduxjs/toolkit';
 import type { Trait } from '../../types';
-import type { Position, Effect } from '../../types/resolution';
+import type { Position, Effect, ActionPushType, Result } from '../../types/resolution';
 import { spendMomentum } from '../../slices/crewSlice';
 import { createTraitFromFlashback } from '../../slices/characterSlice';
 import {
@@ -21,7 +21,7 @@ export function createActionAPI(store: Store) {
      */
     push(params: {
       crewId: string;
-      type: 'extra-die' | 'improved-position' | 'improved-effect';
+      type: ActionPushType;
     }): { momentumSpent: number; newMomentum: number; pushType: string } {
       const { crewId, type } = params;
 
@@ -88,7 +88,7 @@ export function createActionAPI(store: Store) {
       characterId: string;
       position: Position;
       effect: Effect;
-      result: 'failure' | 'partial' | 'success' | 'critical';
+      result: Result;
       harmType?: string;
     }): {
       momentumGenerated: number;

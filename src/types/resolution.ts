@@ -7,6 +7,7 @@
 export type Position = 'controlled' | 'risky' | 'desperate' | 'impossible';
 export type Effect = 'limited' | 'standard' | 'great' | 'spectacular';
 export type Result = 'failure' | 'partial' | 'success' | 'critical';
+export type ActionPushType = 'extra-die' | 'improved-position' | 'improved-effect';
 
 export interface RollResult {
   result: Result;

@@ -18,7 +18,7 @@ import type {
   Equipment,
   Command,
 } from '../types'; 
-import { EquipmentTier } from '@/types/equipment';
+import { EquipmentTier, EquipmentAcquisition } from '@/types/equipment';
 
 /**
  * Character Slice State
@@ -94,7 +94,7 @@ interface CreateEquipmentPayload {
   description?: string;
   img?: string;
   equipped?: boolean;
-  acquiredVia?: 'creation' | 'flashback' | 'reward' | 'loot';
+  acquiredVia?: EquipmentAcquisition;
   sourceItemId?: string; // Track template source (optional)
   metadata?: Record<string, unknown>;
 }
