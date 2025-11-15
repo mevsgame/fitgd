@@ -17,6 +17,14 @@ import {
   EquipmentEditDialog
 } from '../dialogs/index';
 
+import {
+  getActionDataset,
+  getClockDataset,
+  getTraitDataset,
+  getEquipmentDataset,
+  getDatasetInt,
+} from '../utils/dataset-helpers';
+
 interface CharacterSheetData extends ActorSheet.Data {
   editMode: boolean;
   system?: {
@@ -265,28 +273,27 @@ class FitGDCharacterSheet extends ActorSheet {
 
     // Try to get data attributes from both target and currentTarget
     // Prefer event.target (the actual clicked element) first, as it has both data-action and data-value
-    // Fall back to currentTarget only if target doesn't have the required attributes
     const targetEl = event.target as HTMLElement;
     const currentTargetEl = event.currentTarget as HTMLElement;
-    const element = (targetEl.dataset?.action && targetEl.dataset?.value)
-      ? targetEl
-      : currentTargetEl;
-    const action = element.dataset?.action;
-    const value = parseInt(element.dataset?.value || '0');
-
-    console.log('FitGD | Element used:', element);
-    console.log('FitGD | Data action:', action);
-    console.log('FitGD | Data value:', value);
-    console.log('FitGD | Parsed action:', action, 'value:', value);
-
-    if (!action || isNaN(value)) {
-      console.error('FitGD | Invalid action or value');
-      console.error('FitGD | Element dataset:', element.dataset);
-      console.error('FitGD | Element:', element);
-      return;
-    }
 
     try {
+      // Try target first, fall back to currentTarget
+      let action: string;
+      let value: number;
+
+      try {
+        const dataset = getActionDataset(targetEl);
+        action = dataset.action;
+        value = parseInt(dataset.value, 10);
+      } catch {
+        // Fall back to currentTarget if target doesn't have required attributes
+        const dataset = getActionDataset(currentTargetEl);
+        action = dataset.action;
+        value = parseInt(dataset.value, 10);
+      }
+
+      console.log('FitGD | Parsed action:', action, 'value:', value);
+
       // Get current character state to check if we should toggle to 0
       const character = game.fitgd.api.character.getCharacter(characterId);
       if (!character) {
@@ -446,14 +453,14 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!game.user?.isGM) return;
 
     event.preventDefault();
-    const img = event.currentTarget as HTMLElement;
-    const clockId = img.dataset.clockId;
-    const currentValue = parseInt(img.dataset.clockValue || '0');
-    const maxValue = parseInt(img.dataset.clockMax || '0');
-
-    if (!clockId) return;
 
     try {
+      const img = event.currentTarget as HTMLElement;
+      const { clockId, clockValue, clockMax } = getClockDataset(img);
+
+      const currentValue = getDatasetInt(img, 'clockValue', 0);
+      const maxValue = getDatasetInt(img, 'clockMax', 0);
+
       // Cycle: 0 -> max, then back to 0
       const newValue = currentValue >= maxValue ? 0 : currentValue + 1;
 
@@ -475,13 +482,12 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!game.user?.isGM) return;
 
     event.preventDefault();
-    const input = event.currentTarget as HTMLInputElement;
-    const clockId = input.dataset.clockId;
-    const newValue = parseInt(input.value);
-
-    if (!clockId) return;
 
     try {
+      const input = event.currentTarget as HTMLInputElement;
+      const { clockId } = getClockDataset(input);
+      const newValue = parseInt(input.value, 10);
+
       game.fitgd.api.clock.setSegments({ clockId, segments: newValue });
       await game.fitgd.saveImmediate();
       this.render(false);
@@ -499,13 +505,16 @@ class FitGDCharacterSheet extends ActorSheet {
   private async _onRenameClockBlur(event: JQuery.BlurEvent): Promise<void> {
     if (!game.user?.isGM) return;
 
-    const element = event.currentTarget as HTMLElement;
-    const clockId = element.dataset.clockId;
-    const newName = element.textContent?.trim();
-
-    if (!clockId || !newName) return;
-
     try {
+      const element = event.currentTarget as HTMLElement;
+      const { clockId } = getClockDataset(element);
+      const newName = element.textContent?.trim();
+
+      if (!newName) {
+        this.render(false); // Reset to original name if empty
+        return;
+      }
+
       game.fitgd.api.clock.rename({ clockId, name: newName });
       await game.fitgd.saveImmediate();
       ui.notifications?.info(`Clock renamed to "${newName}"`);
@@ -524,21 +533,20 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!game.user?.isGM) return;
 
     event.preventDefault();
-    const target = event.currentTarget as HTMLElement;
-    const clockId = target.dataset.clockId;
-
-    if (!clockId) return;
-
-    const confirmed = await Dialog.confirm({
-      title: 'Delete Clock',
-      content: '<p>Are you sure you want to delete this clock?</p>',
-      yes: () => true,
-      no: () => false
-    });
-
-    if (!confirmed) return;
 
     try {
+      const target = event.currentTarget as HTMLElement;
+      const { clockId } = getClockDataset(target);
+
+      const confirmed = await Dialog.confirm({
+        title: 'Delete Clock',
+        content: '<p>Are you sure you want to delete this clock?</p>',
+        yes: () => true,
+        no: () => false
+      });
+
+      if (!confirmed) return;
+
       game.fitgd.api.clock.delete(clockId);
       await game.fitgd.saveImmediate();
       this.render(false);
@@ -562,32 +570,31 @@ class FitGDCharacterSheet extends ActorSheet {
     if (!game.user?.isGM) return;
 
     event.preventDefault();
-    const target = event.currentTarget as HTMLElement;
-    const traitId = target.dataset.traitId;
-
-    if (!traitId) return;
-
-    const characterId = this._getReduxId();
-    if (!characterId) return;
-
-    // Get trait name for confirmation
-    const character = game.fitgd.api.character.getCharacter(characterId);
-    const trait = character?.traits.find(t => t.id === traitId);
-    const traitName = trait?.name || 'Unknown Trait';
-
-    const confirmed = await Dialog.confirm({
-      title: 'Delete Trait',
-      content: `<p>Are you sure you want to delete <strong>${traitName}</strong>?</p>`,
-      yes: () => true,
-      no: () => false,
-      options: {
-        classes: ['dialog', 'fitgd-dialog']
-      }
-    });
-
-    if (!confirmed) return;
 
     try {
+      const target = event.currentTarget as HTMLElement;
+      const { traitId } = getTraitDataset(target);
+
+      const characterId = this._getReduxId();
+      if (!characterId) return;
+
+      // Get trait name for confirmation
+      const character = game.fitgd.api.character.getCharacter(characterId);
+      const trait = character?.traits.find(t => t.id === traitId);
+      const traitName = trait?.name || 'Unknown Trait';
+
+      const confirmed = await Dialog.confirm({
+        title: 'Delete Trait',
+        content: `<p>Are you sure you want to delete <strong>${traitName}</strong>?</p>`,
+        yes: () => true,
+        no: () => false,
+        options: {
+          classes: ['dialog', 'fitgd-dialog']
+        }
+      });
+
+      if (!confirmed) return;
+
       game.fitgd.api.character.removeTrait({ characterId, traitId });
       await game.fitgd.saveImmediate();
       this.render(false);
@@ -602,26 +609,26 @@ class FitGDCharacterSheet extends ActorSheet {
   private async _onRenameTraitBlur(event: JQuery.BlurEvent): Promise<void> {
     if (!game.user?.isGM) return;
 
-    const element = event.currentTarget as HTMLElement;
-    const traitId = element.dataset.traitId;
-    const newName = element.textContent?.trim();
-
-    if (!traitId || !newName) {
-      this.render(false); // Reset to original name if empty
-      return;
-    }
-
-    const characterId = this._getReduxId();
-    if (!characterId) return;
-
-    // Get original name to check if it changed
-    const character = game.fitgd.api.character.getCharacter(characterId);
-    const trait = character?.traits.find((t) => t.id === traitId);
-    const originalName = trait?.name;
-
-    if (newName === originalName) return; // No change
-
     try {
+      const element = event.currentTarget as HTMLElement;
+      const { traitId } = getTraitDataset(element);
+      const newName = element.textContent?.trim();
+
+      if (!newName) {
+        this.render(false); // Reset to original name if empty
+        return;
+      }
+
+      const characterId = this._getReduxId();
+      if (!characterId) return;
+
+      // Get original name to check if it changed
+      const character = game.fitgd.api.character.getCharacter(characterId);
+      const trait = character?.traits.find((t) => t.id === traitId);
+      const originalName = trait?.name;
+
+      if (newName === originalName) return; // No change
+
       game.fitgd.api.character.updateTraitName({ characterId, traitId, name: newName });
       await game.fitgd.saveImmediate();
       ui.notifications?.info(`Trait renamed to "${newName}"`);
@@ -681,20 +688,27 @@ class FitGDCharacterSheet extends ActorSheet {
    */
   private async _onEditEquipment(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
-    const target = event.currentTarget as HTMLElement;
-    const equipmentId = target.dataset.equipmentId;
-    const characterId = this._getReduxId();
-    if (!characterId) return;
 
-    const character = game.fitgd.api.character.getCharacter(characterId);
-    const equipment = character?.equipment?.find((e) => e.id === equipmentId);
+    try {
+      const target = event.currentTarget as HTMLElement;
+      const { equipmentId } = getEquipmentDataset(target);
+      const characterId = this._getReduxId();
+      if (!characterId) return;
 
-    if (!equipment) {
-      ui.notifications?.error('Equipment not found');
-      return;
+      const character = game.fitgd.api.character.getCharacter(characterId);
+      const equipment = character?.equipment?.find((e) => e.id === equipmentId);
+
+      if (!equipment) {
+        ui.notifications?.error('Equipment not found');
+        return;
+      }
+
+      new EquipmentEditDialog(characterId, equipment).render(true);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      ui.notifications?.error(`Error: ${errorMessage}`);
+      console.error('FitGD | Edit equipment error:', error);
     }
-
-    new EquipmentEditDialog(characterId, equipment).render(true);
   }
 
   /**
@@ -702,32 +716,39 @@ class FitGDCharacterSheet extends ActorSheet {
    */
   private async _onDeleteEquipment(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
-    const target = event.currentTarget as HTMLElement;
-    const equipmentId = target.dataset.equipmentId;
-    const characterId = this._getReduxId();
-    if (!characterId) return;
 
-    const character = game.fitgd.api.character.getCharacter(characterId);
-    const equipment = character?.equipment?.find((e) => e.id === equipmentId);
+    try {
+      const target = event.currentTarget as HTMLElement;
+      const { equipmentId } = getEquipmentDataset(target);
+      const characterId = this._getReduxId();
+      if (!characterId) return;
 
-    if (!equipment) {
-      ui.notifications?.error('Equipment not found');
-      return;
+      const character = game.fitgd.api.character.getCharacter(characterId);
+      const equipment = character?.equipment?.find((e) => e.id === equipmentId);
+
+      if (!equipment) {
+        ui.notifications?.error('Equipment not found');
+        return;
+      }
+
+      const confirmed = await Dialog.confirm({
+        title: 'Remove Equipment',
+        content: `<p>Remove <strong>${equipment.name}</strong>?</p>`,
+      });
+
+      if (!confirmed) return;
+
+      await game.fitgd.bridge.execute({
+        type: 'characters/removeEquipment',
+        payload: { characterId, equipmentId },
+      });
+
+      ui.notifications?.info(`Removed ${equipment.name}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      ui.notifications?.error(`Error: ${errorMessage}`);
+      console.error('FitGD | Delete equipment error:', error);
     }
-
-    const confirmed = await Dialog.confirm({
-      title: 'Remove Equipment',
-      content: `<p>Remove <strong>${equipment.name}</strong>?</p>`,
-    });
-
-    if (!confirmed) return;
-
-    await game.fitgd.bridge.execute({
-      type: 'characters/removeEquipment',
-      payload: { characterId, equipmentId },
-    });
-
-    ui.notifications?.info(`Removed ${equipment.name}`);
   }
 
   /**
@@ -735,12 +756,13 @@ class FitGDCharacterSheet extends ActorSheet {
    */
   private async _onToggleEquipped(event: JQuery.ChangeEvent): Promise<void> {
     const target = event.currentTarget as HTMLInputElement;
-    const equipmentId = target.dataset.equipmentId;
     const equipped = target.checked;
-    const characterId = this._getReduxId();
-    if (!characterId) return;
 
     try {
+      const { equipmentId } = getEquipmentDataset(target);
+      const characterId = this._getReduxId();
+      if (!characterId) return;
+
       await game.fitgd.bridge.execute({
         type: 'characters/toggleEquipped',
         payload: { characterId, equipmentId, equipped },
