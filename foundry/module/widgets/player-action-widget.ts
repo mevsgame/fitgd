@@ -16,6 +16,8 @@ import { selectCanUseRally } from '@/selectors/characterSelectors';
 
 import { selectDicePool, selectConsequenceSeverity, selectMomentumGain, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect } from '@/selectors/playerRoundStateSelectors';
 
+import { DEFAULT_CONFIG } from '@/config/gameConfig';
+
 import { FlashbackTraitsDialog } from '../dialogs/FlashbackTraitsDialog';
 import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog, RallyDialog } from '../dialogs/index';
 import { asReduxId } from '../types/ids';
@@ -293,7 +295,7 @@ export class PlayerActionWidget extends Application {
 
       // Current momentum
       momentum: this.crew?.currentMomentum || 0,
-      maxMomentum: 10,
+      maxMomentum: DEFAULT_CONFIG.crew.maxMomentum,
 
       // Rally availability - using selector
       canRally: this.crewId ? selectCanUseRally(state, this.characterId, this.crewId) : false,
@@ -1554,7 +1556,7 @@ export class PlayerActionWidget extends Application {
             entityId: this.characterId, // Per-character, not per-crew
             clockType: 'addiction',
             subtype: 'Addiction',
-            maxSegments: 8,
+            maxSegments: DEFAULT_CONFIG.clocks.addiction.segments,
             segments: 0,
           },
         },
