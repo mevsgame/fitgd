@@ -13,6 +13,7 @@ import type { PlayerRoundState, Position, Effect } from '@/types/playerRoundStat
 import type { TraitTransaction, ConsequenceTransaction } from '@/types/playerRoundState';
 
 import { selectCanUseRally } from '@/selectors/characterSelectors';
+import { selectStimsAvailable } from '@/selectors/clockSelectors';
 
 import { selectDicePool, selectConsequenceSeverity, selectMomentumGain, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect } from '@/selectors/playerRoundStateSelectors';
 
@@ -318,8 +319,8 @@ export class PlayerActionWidget extends Application {
       // GM controls
       isGM: game.user.isGM,
 
-      // Stims availability
-      stimsLocked: this._areStimsLocked(state),
+      // Stims availability (inverted: selector returns "available", template needs "locked")
+      stimsLocked: !selectStimsAvailable(state, this.crewId || ''),
 
       // Consequence transaction data (for GM_RESOLVING_CONSEQUENCE state)
       ...(this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE' ? this._getConsequenceData(state) : {}),
@@ -509,29 +510,6 @@ export class PlayerActionWidget extends Application {
     return improvements;
   }
 
-  /**
-   * Check if stims are locked for this character's crew
-   * @param state - Redux state
-   * @returns True if any character in crew has filled addiction clock
-   */
-  private _areStimsLocked(state: RootState): boolean {
-    if (!this.crewId) return false;
-
-    const crew = state.crews.byId[this.crewId];
-    if (!crew) return false;
-
-    // Check if ANY character in crew has filled addiction clock
-    for (const characterId of crew.characters) {
-      const characterAddictionClock = Object.values(state.clocks.byId).find(
-        clock => clock.entityId === characterId && clock.clockType === 'addiction'
-      );
-      if (characterAddictionClock && characterAddictionClock.segments >= characterAddictionClock.maxSegments) {
-        return true;
-      }
-    }
-
-    return false;
-  }
 
   /**
    * Get consequence transaction data for template
