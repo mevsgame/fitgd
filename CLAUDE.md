@@ -426,7 +426,74 @@ git commit -m "feat(redux): Extract X to Redux utils"
 
 **Key Principle:** Treat Foundry as a thin presentation layer that consumes Redux business logic. All game rules, validation, and calculations belong in Redux where they can be tested, reused, and maintained independently.
 
-**Reference:** See `PHASE_1_CONCLUSIONS.md`, `PHASE_2_CONCLUSIONS.md`, `PHASE_3_CONCLUSIONS.md`, and `PHASE_4_CONCLUSIONS.md` for detailed analysis.
+---
+
+### 11. Documentation Cleanup Phase ✅
+
+**Best Practice:** After completing a multi-phase refactoring or audit, clean up temporary documentation to maintain a lean codebase.
+
+**What to Remove:**
+- Detailed phase-by-phase conclusion documents (after extracting learnings to CLAUDE.md)
+- Initial audit/analysis documents (after work is complete)
+- Temporary implementation notes
+- Redundant documentation that duplicates information in CLAUDE.md
+
+**What to Keep:**
+- CLAUDE.md (single source of truth for project patterns and practices)
+- README.md (project overview and setup)
+- API documentation (if applicable)
+- Git history (preserves full context of changes)
+
+**Cleanup Workflow:**
+
+```bash
+# 1. Extract all learnings to CLAUDE.md
+# - Add best practices section
+# - Document key architectural decisions
+# - Include examples and anti-patterns
+
+# 2. Verify git history captures all details
+git log --oneline --decorate
+
+# 3. Remove temporary documentation files
+rm PHASE_*_CONCLUSIONS.md AUDIT_*.md
+
+# 4. Commit cleanup
+git add -A
+git commit -m "docs: Clean up temporary audit documentation
+
+Removed temporary phase conclusion documents after extracting
+all learnings to CLAUDE.md. Git history preserves full details.
+
+Deleted:
+- FOUNDRY_REDUX_AUDIT.md (original audit plan)
+- PHASE_1_CONCLUSIONS.md through PHASE_4_CONCLUSIONS.md
+
+All learnings now consolidated in CLAUDE.md 'Code Best Practices'
+section for easy reference by future Claude Code sessions."
+```
+
+**Why Cleanup Matters:**
+- ✅ Reduces cognitive load (fewer files to navigate)
+- ✅ Prevents documentation drift (single source of truth)
+- ✅ Improves discoverability (CLAUDE.md is the entry point)
+- ✅ Maintains focus on current patterns (not historical analysis)
+
+**Example: This Project (Nov 2025)**
+
+After completing 4-phase Foundry-Redux audit:
+- **Extracted:** All 10 best practices → CLAUDE.md
+- **Removed:** 5 temporary files (~78KB of redundant docs)
+- **Preserved:** Git history contains full commit messages with detailed context
+- **Result:** Lean documentation focused on actionable patterns
+
+**When NOT to Delete:**
+- Active work-in-progress documents
+- Documents referenced by multiple team members
+- External-facing documentation (user guides, API docs)
+- Historical decisions that aren't captured in CLAUDE.md
+
+**Key Principle:** Documentation should serve ongoing development, not preserve historical analysis. Git history is the permanent record; CLAUDE.md is the living guide.
 
 ---
 
