@@ -14,7 +14,7 @@ import type { TraitTransaction, ConsequenceTransaction } from '@/types/playerRou
 
 import { selectCanUseRally } from '@/selectors/characterSelectors';
 
-import { selectDicePool, selectConsequenceSeverity, selectMomentumGain, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying } from '@/selectors/playerRoundStateSelectors';
+import { selectDicePool, selectConsequenceSeverity, selectMomentumGain, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect } from '@/selectors/playerRoundStateSelectors';
 
 import { FlashbackTraitsDialog } from '../dialogs/FlashbackTraitsDialog';
 import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog, RallyDialog } from '../dialogs/index';
@@ -307,11 +307,11 @@ export class PlayerActionWidget extends Application {
       // Computed improvements preview
       improvements: this._computeImprovements(),
 
-      // Improved position (if trait improves it)
-      improvedPosition: this._computeImprovedPosition(),
+      // Improved position (if trait improves it) - using selector
+      improvedPosition: selectEffectivePosition(state, this.characterId),
 
-      // Improved effect (if Push Effect is active)
-      improvedEffect: this._computeImprovedEffect(),
+      // Improved effect (if Push Effect is active) - using selector
+      improvedEffect: selectEffectiveEffect(state, this.characterId),
 
       // GM controls
       isGM: game.user.isGM,
@@ -449,83 +449,6 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Compute improved position (if trait transaction improves it)
-   */
-  private _computeImprovedPosition(): Position {
-    if (!this.playerState?.traitTransaction?.positionImprovement) {
-      return this.playerState?.position || 'risky';
-    }
-
-    const currentPosition = this.playerState.position || 'risky';
-
-    // Improve position by one step
-    if (currentPosition === 'impossible') return 'desperate';
-    if (currentPosition === 'desperate') return 'risky';
-    if (currentPosition === 'risky') return 'controlled';
-
-    // Already controlled, no improvement
-    return currentPosition;
-  }
-
-  /**
-   * Compute improved effect (if Push Effect is active)
-   */
-  private _computeImprovedEffect(): Effect {
-    const baseEffect = this.playerState?.effect || 'standard';
-
-    // Check if Push (Effect) is active
-    if (this.playerState?.pushed && this.playerState?.pushType === 'improved-effect') {
-      // Improve effect by one level
-      if (baseEffect === 'limited') return 'standard';
-      if (baseEffect === 'standard') return 'great';
-      if (baseEffect === 'great') return 'spectacular';
-      // Already spectacular, can't improve further
-      return baseEffect;
-    }
-
-    // No improvement, return base effect
-    return baseEffect;
-  }
-
-  /**
-   * Compute EFFECTIVE position for roll calculation (ephemeral)
-   * This does NOT change the stored position, only used for dice/consequence calculations
-   */
-  private _getEffectivePosition(): Position {
-    const basePosition = this.playerState?.position || 'risky';
-
-    // Check if trait transaction improves position
-    if (this.playerState?.traitTransaction?.positionImprovement) {
-      if (basePosition === 'impossible') return 'desperate';
-      if (basePosition === 'desperate') return 'risky';
-      if (basePosition === 'risky') return 'controlled';
-      // Already controlled
-      return basePosition;
-    }
-
-    return basePosition;
-  }
-
-  /**
-   * Compute EFFECTIVE effect for consequence calculation (ephemeral)
-   * This does NOT change the stored effect, only used for consequence calculations
-   */
-  private _getEffectiveEffect(): Effect {
-    const baseEffect = this.playerState?.effect || 'standard';
-
-    // Check if Push (Effect) is active
-    if (this.playerState?.pushed && this.playerState?.pushType === 'improved-effect') {
-      if (baseEffect === 'limited') return 'standard';
-      if (baseEffect === 'standard') return 'great';
-      if (baseEffect === 'great') return 'spectacular';
-      // Already spectacular
-      return baseEffect;
-    }
-
-    return baseEffect;
-  }
-
-  /**
    * Compute improvements preview text
    */
   private _computeImprovements(): string[] {
@@ -636,8 +559,8 @@ export class PlayerActionWidget extends Application {
         selectedCrewClock: null,
         calculatedHarmSegments: 0,
         calculatedMomentumGain: 0,
-        effectivePosition: this._getEffectivePosition(),
-        effectiveEffect: this._getEffectiveEffect(),
+        effectivePosition: selectEffectivePosition(state, this.characterId),
+        effectiveEffect: selectEffectiveEffect(state, this.characterId),
         consequenceConfigured: false,
       };
     }
@@ -662,8 +585,8 @@ export class PlayerActionWidget extends Application {
 
     // Calculate harm segments and momentum gain using effective position
     // Note: Effect does NOT apply to consequences - only to success clocks
-    const effectivePosition = this._getEffectivePosition();
-    const effectiveEffect = this._getEffectiveEffect();
+    const effectivePosition = selectEffectivePosition(state, this.characterId);
+    const effectiveEffect = selectEffectiveEffect(state, this.characterId);
     const calculatedHarmSegments = selectConsequenceSeverity(effectivePosition);
     const calculatedMomentumGain = selectMomentumGain(effectivePosition);
 
@@ -1480,7 +1403,8 @@ export class PlayerActionWidget extends Application {
     await this._applyConsequenceTransaction(transaction);
 
     // Add momentum gain
-    const effectivePosition = this._getEffectivePosition();
+    const state = game.fitgd.store.getState();
+    const effectivePosition = selectEffectivePosition(state, this.characterId);
     const momentumGain = selectMomentumGain(effectivePosition);
     if (this.crewId && momentumGain > 0) {
       game.fitgd.api.crew.addMomentum({ crewId: this.crewId, amount: momentumGain });
@@ -1527,10 +1451,12 @@ export class PlayerActionWidget extends Application {
    * @param transaction
    */
   private async _applyConsequenceTransaction(transaction: ConsequenceTransaction): Promise<void> {
+    const state = game.fitgd.store.getState();
+
     if (transaction.consequenceType === 'harm') {
       // Apply harm to selected clock
       // Note: Effect does NOT apply to consequences - only position matters
-      const effectivePosition = this._getEffectivePosition();
+      const effectivePosition = selectEffectivePosition(state, this.characterId);
       const segments = selectConsequenceSeverity(effectivePosition);
 
       await game.fitgd.bridge.execute(
@@ -1548,7 +1474,7 @@ export class PlayerActionWidget extends Application {
 
     } else if (transaction.consequenceType === 'crew-clock') {
       // Advance crew clock using standardized position-based values
-      const effectivePosition = this._getEffectivePosition();
+      const effectivePosition = selectEffectivePosition(state, this.characterId);
       const segments = selectConsequenceSeverity(effectivePosition);
 
       await game.fitgd.bridge.execute(

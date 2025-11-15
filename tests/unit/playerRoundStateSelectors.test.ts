@@ -7,6 +7,7 @@ import playerRoundStateReducer, {
   setActivePlayer,
   setActionPlan,
   setImprovements,
+  setTraitTransaction,
 } from '../../src/slices/playerRoundStateSlice';
 import {
   selectPlayerState,
@@ -23,6 +24,10 @@ import {
   selectIsDying,
   CONSEQUENCE_TABLE,
   MOMENTUM_GAIN_TABLE,
+  improvePosition,
+  improveEffect,
+  selectEffectivePosition,
+  selectEffectiveEffect,
 } from '../../src/selectors/playerRoundStateSelectors';
 
 describe('playerRoundStateSelectors', () => {
@@ -533,6 +538,393 @@ describe('playerRoundStateSelectors', () => {
 
       const result = selectIsDying(store.getState(), characterId);
       expect(result).toBe(true);
+    });
+  });
+
+  /* -------------------------------------------- */
+  /*  Position/Effect Improvement Tests           */
+  /* -------------------------------------------- */
+
+  describe('improvePosition', () => {
+    it('should improve impossible to desperate', () => {
+      expect(improvePosition('impossible')).toBe('desperate');
+    });
+
+    it('should improve desperate to risky', () => {
+      expect(improvePosition('desperate')).toBe('risky');
+    });
+
+    it('should improve risky to controlled', () => {
+      expect(improvePosition('risky')).toBe('controlled');
+    });
+
+    it('should keep controlled at controlled (already at best)', () => {
+      expect(improvePosition('controlled')).toBe('controlled');
+    });
+
+    it('should handle all positions in the ladder', () => {
+      // Full position ladder test
+      const positions: Array<{ from: any; to: any }> = [
+        { from: 'impossible', to: 'desperate' },
+        { from: 'desperate', to: 'risky' },
+        { from: 'risky', to: 'controlled' },
+        { from: 'controlled', to: 'controlled' }, // No improvement at top
+      ];
+
+      positions.forEach(({ from, to }) => {
+        expect(improvePosition(from)).toBe(to);
+      });
+    });
+  });
+
+  describe('improveEffect', () => {
+    it('should improve limited to standard', () => {
+      expect(improveEffect('limited')).toBe('standard');
+    });
+
+    it('should improve standard to great', () => {
+      expect(improveEffect('standard')).toBe('great');
+    });
+
+    it('should improve great to spectacular', () => {
+      expect(improveEffect('great')).toBe('spectacular');
+    });
+
+    it('should keep spectacular at spectacular (already at best)', () => {
+      expect(improveEffect('spectacular')).toBe('spectacular');
+    });
+
+    it('should handle all effects in the ladder', () => {
+      // Full effect ladder test
+      const effects: Array<{ from: any; to: any }> = [
+        { from: 'limited', to: 'standard' },
+        { from: 'standard', to: 'great' },
+        { from: 'great', to: 'spectacular' },
+        { from: 'spectacular', to: 'spectacular' }, // No improvement at top
+      ];
+
+      effects.forEach(({ from, to }) => {
+        expect(improveEffect(from)).toBe(to);
+      });
+    });
+  });
+
+  describe('selectEffectivePosition', () => {
+    beforeEach(() => {
+      store.dispatch(setActivePlayer({ characterId }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          action: 'shoot',
+          position: 'risky',
+          effect: 'standard',
+        })
+      );
+    });
+
+    it('should return base position when no trait transaction', () => {
+      const result = selectEffectivePosition(store.getState(), characterId);
+      expect(result).toBe('risky');
+    });
+
+    it('should return base position when trait transaction has no position improvement', () => {
+      store.dispatch(
+        setTraitTransaction({
+          characterId,
+          transaction: {
+            mode: 'existing',
+            selectedTraitId: 'trait-123',
+            positionImprovement: false, // Explicitly no improvement
+            momentumCost: 1,
+          },
+        })
+      );
+
+      const result = selectEffectivePosition(store.getState(), characterId);
+      expect(result).toBe('risky'); // Base position unchanged
+    });
+
+    it('should improve position when trait transaction has position improvement', () => {
+      store.dispatch(
+        setTraitTransaction({
+          characterId,
+          transaction: {
+            mode: 'existing',
+            selectedTraitId: 'trait-123',
+            positionImprovement: true, // Improve position
+            momentumCost: 1,
+          },
+        })
+      );
+
+      const result = selectEffectivePosition(store.getState(), characterId);
+      expect(result).toBe('controlled'); // risky → controlled
+    });
+
+    it('should improve from desperate to risky', () => {
+      // Change base position to desperate
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          action: 'shoot',
+          position: 'desperate',
+          effect: 'standard',
+        })
+      );
+
+      store.dispatch(
+        setTraitTransaction({
+          characterId,
+          transaction: {
+            mode: 'new',
+            newTrait: {
+              name: 'Flashback Trait',
+              description: 'Created via flashback',
+            },
+            positionImprovement: true,
+            momentumCost: 1,
+          },
+        })
+      );
+
+      const result = selectEffectivePosition(store.getState(), characterId);
+      expect(result).toBe('risky'); // desperate → risky
+    });
+
+    it('should improve from impossible to desperate', () => {
+      // Change base position to impossible
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          action: 'shoot',
+          position: 'impossible',
+          effect: 'standard',
+        })
+      );
+
+      store.dispatch(
+        setTraitTransaction({
+          characterId,
+          transaction: {
+            mode: 'consolidate',
+            consolidation: {
+              traitIdsToRemove: ['trait-1', 'trait-2', 'trait-3'],
+              newTrait: {
+                name: 'Consolidated Trait',
+                description: 'Three traits combined',
+              },
+            },
+            positionImprovement: true,
+            momentumCost: 1,
+          },
+        })
+      );
+
+      const result = selectEffectivePosition(store.getState(), characterId);
+      expect(result).toBe('desperate'); // impossible → desperate
+    });
+
+    it('should not improve beyond controlled', () => {
+      // Already at controlled
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          action: 'shoot',
+          position: 'controlled',
+          effect: 'standard',
+        })
+      );
+
+      store.dispatch(
+        setTraitTransaction({
+          characterId,
+          transaction: {
+            mode: 'existing',
+            selectedTraitId: 'trait-123',
+            positionImprovement: true,
+            momentumCost: 1,
+          },
+        })
+      );
+
+      const result = selectEffectivePosition(store.getState(), characterId);
+      expect(result).toBe('controlled'); // Already at best
+    });
+
+    it('should be ephemeral - does NOT mutate playerState.position', () => {
+      // Set base position to desperate
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          action: 'shoot',
+          position: 'desperate',
+          effect: 'standard',
+        })
+      );
+
+      // Add trait transaction with position improvement
+      store.dispatch(
+        setTraitTransaction({
+          characterId,
+          transaction: {
+            mode: 'existing',
+            selectedTraitId: 'trait-123',
+            positionImprovement: true,
+            momentumCost: 1,
+          },
+        })
+      );
+
+      // Effective position should be improved
+      const effectivePosition = selectEffectivePosition(store.getState(), characterId);
+      expect(effectivePosition).toBe('risky');
+
+      // But base position should remain unchanged
+      const playerState = selectPlayerState(store.getState(), characterId);
+      expect(playerState?.position).toBe('desperate'); // NOT mutated
+    });
+  });
+
+  describe('selectEffectiveEffect', () => {
+    beforeEach(() => {
+      store.dispatch(setActivePlayer({ characterId }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          action: 'shoot',
+          position: 'risky',
+          effect: 'standard',
+        })
+      );
+    });
+
+    it('should return base effect when no push', () => {
+      const result = selectEffectiveEffect(store.getState(), characterId);
+      expect(result).toBe('standard');
+    });
+
+    it('should return base effect when pushed but not for effect', () => {
+      store.dispatch(
+        setImprovements({
+          characterId,
+          pushed: true,
+          pushType: 'extra-die', // Pushed for die, not effect
+        })
+      );
+
+      const result = selectEffectiveEffect(store.getState(), characterId);
+      expect(result).toBe('standard'); // No effect improvement
+    });
+
+    it('should improve effect when pushed for effect', () => {
+      store.dispatch(
+        setImprovements({
+          characterId,
+          pushed: true,
+          pushType: 'improved-effect', // Push for effect
+        })
+      );
+
+      const result = selectEffectiveEffect(store.getState(), characterId);
+      expect(result).toBe('great'); // standard → great
+    });
+
+    it('should improve from limited to standard', () => {
+      // Change base effect to limited
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          action: 'shoot',
+          position: 'risky',
+          effect: 'limited',
+        })
+      );
+
+      store.dispatch(
+        setImprovements({
+          characterId,
+          pushed: true,
+          pushType: 'improved-effect',
+        })
+      );
+
+      const result = selectEffectiveEffect(store.getState(), characterId);
+      expect(result).toBe('standard'); // limited → standard
+    });
+
+    it('should improve from great to spectacular', () => {
+      // Change base effect to great
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          action: 'shoot',
+          position: 'risky',
+          effect: 'great',
+        })
+      );
+
+      store.dispatch(
+        setImprovements({
+          characterId,
+          pushed: true,
+          pushType: 'improved-effect',
+        })
+      );
+
+      const result = selectEffectiveEffect(store.getState(), characterId);
+      expect(result).toBe('spectacular'); // great → spectacular
+    });
+
+    it('should not improve beyond spectacular', () => {
+      // Already at spectacular
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          action: 'shoot',
+          position: 'risky',
+          effect: 'spectacular',
+        })
+      );
+
+      store.dispatch(
+        setImprovements({
+          characterId,
+          pushed: true,
+          pushType: 'improved-effect',
+        })
+      );
+
+      const result = selectEffectiveEffect(store.getState(), characterId);
+      expect(result).toBe('spectacular'); // Already at best
+    });
+
+    it('should be ephemeral - does NOT mutate playerState.effect', () => {
+      // Set base effect to standard
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          action: 'shoot',
+          position: 'risky',
+          effect: 'standard',
+        })
+      );
+
+      // Push for effect improvement
+      store.dispatch(
+        setImprovements({
+          characterId,
+          pushed: true,
+          pushType: 'improved-effect',
+        })
+      );
+
+      // Effective effect should be improved
+      const effectiveEffect = selectEffectiveEffect(store.getState(), characterId);
+      expect(effectiveEffect).toBe('great');
+
+      // But base effect should remain unchanged
+      const playerState = selectPlayerState(store.getState(), characterId);
+      expect(playerState?.effect).toBe('standard'); // NOT mutated
     });
   });
 });
