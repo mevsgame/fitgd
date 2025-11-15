@@ -11,8 +11,9 @@ import {
   validateProgressClockSize,
 } from '../validators/clockValidator';
 import { isOrphanedCommand } from '../utils/commandUtils';
-import type { Clock, ClockSize, ClockType, Command, ProgressClockCategory } from '../types';
+import type { Clock, ClockSize, ClockType, Command, ProgressClockCategory, ClockCategory } from '../types';
 import { EquipmentRarity, EquipmentTier } from '@/types/equipment';
+import type { ClockInteraction, InteractionContext } from '@/types/clockInteraction';
 
 /**
  * Clock Slice State
@@ -89,6 +90,12 @@ interface UpdateMetadataPayload {
 interface ChangeSubtypePayload {
   clockId: string;
   newSubtype: string;
+  userId?: string;
+}
+
+interface ApplyInteractionPayload {
+  interaction: ClockInteraction;
+  context?: InteractionContext;  // Optional: for logging/audit trail
   userId?: string;
 }
 
@@ -514,6 +521,106 @@ const clockSlice = createSlice({
     },
 
     /**
+     * Apply clock interaction (context-based)
+     *
+     * GM-selected interaction: advance or reduce exactly ONE clock.
+     * Auto-deletes clocks that reach 0 segments.
+     *
+     * @param interaction - Clock interaction (clockId, direction, amount)
+     * @param context - Optional roll context for logging
+     */
+    applyInteraction: {
+      reducer: (state, action: PayloadAction<ApplyInteractionPayload>) => {
+        const { interaction, context } = action.payload;
+        const { clockId, direction, amount } = interaction;
+
+        const clock = state.byId[clockId];
+        validateClockExists(clock, clockId);
+        validateSegmentAmount(amount);
+
+        const oldSegments = clock.segments;
+
+        if (direction === 'advance') {
+          // Add segments, cap at maxSegments
+          const newSegments = clock.segments + amount;
+          clock.segments = Math.min(newSegments, clock.maxSegments);
+
+          // Log if capped
+          if (newSegments > clock.maxSegments) {
+            console.log(
+              `FitGD | Clock ${clockId} capped at max: ` +
+              `tried to add ${amount} to ${oldSegments}/${clock.maxSegments}, ` +
+              `capped to ${clock.segments}/${clock.maxSegments}`
+            );
+          }
+
+          // Special handling for consumable clocks when filled
+          if (
+            clock.clockType === 'consumable' &&
+            oldSegments < clock.maxSegments &&
+            isClockFilled(clock)
+          ) {
+            // Freeze this clock
+            if (clock.metadata) {
+              clock.metadata.frozen = true;
+
+              // Downgrade tier
+              if (clock.metadata.tier === 'accessible') {
+                clock.metadata.tier = 'inaccessible';
+              }
+            }
+
+            // Freeze all other clocks of same subtype
+            if (clock.subtype) {
+              const relatedClocks = getClocksByTypeAndSubtype(
+                state,
+                'consumable',
+                clock.subtype
+              );
+
+              relatedClocks.forEach((relatedClock) => {
+                if (relatedClock.id !== clock.id && relatedClock.metadata) {
+                  relatedClock.metadata.frozen = true;
+                  relatedClock.updatedAt = Date.now();
+                }
+              });
+            }
+          }
+        } else {
+          // Reduce segments, min 0
+          clock.segments = Math.max(0, clock.segments - amount);
+
+          // Auto-delete if emptied
+          if (clock.segments === 0) {
+            console.log(`FitGD | Clock ${clockId} emptied and deleted`);
+
+            // Remove from indexes
+            removeFromIndexes(state, clock);
+
+            // Remove from store
+            delete state.byId[clockId];
+            state.allIds = state.allIds.filter((id) => id !== clockId);
+          }
+        }
+
+        clock.updatedAt = Date.now();
+
+        // Log command to history
+        state.history.push({
+          type: 'clocks/applyInteraction',
+          payload: action.payload,
+          timestamp: clock.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: action.payload.userId,
+        });
+      },
+      prepare: (payload: ApplyInteractionPayload) => {
+        return { payload };
+      },
+    },
+
+    /**
      * Prune command history
      *
      * Clears all command history, keeping only the current state snapshot.
@@ -582,6 +689,7 @@ export const {
   deleteClock,
   updateMetadata,
   changeSubtype,
+  applyInteraction,
   pruneHistory: pruneClockHistory,
   pruneOrphanedHistory: pruneOrphanedClockHistory,
   hydrateClocks,
