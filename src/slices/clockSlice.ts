@@ -11,7 +11,7 @@ import {
   validateProgressClockSize,
 } from '../validators/clockValidator';
 import { isOrphanedCommand } from '../utils/commandUtils';
-import type { Clock, ClockSize, ClockType, Command } from '../types';
+import type { Clock, ClockSize, ClockType, Command, ProgressClockCategory } from '../types';
 import { EquipmentRarity, EquipmentTier } from '@/types/equipment';
 
 /**
@@ -51,7 +51,7 @@ interface CreateClockPayload {
   rarity?: EquipmentRarity;
   tier?: EquipmentTier;
   maxSegments?: ClockSize; // For progress clocks (4, 6, 8, or 12)
-  category?: 'long-term-project' | 'threat' | 'personal-goal' | 'obstacle' | 'faction';
+  category?: ProgressClockCategory;
   description?: string;
   isCountdown?: boolean;
   userId?: string;

@@ -10,6 +10,7 @@ import { EquipmentRarity, EquipmentTier } from "./equipment";
 
 export type ClockSize = 4 | 6 | 8 | 12;
 export type ClockType = 'harm' | 'consumable' | 'addiction' | 'progress';
+export type ProgressClockCategory = 'long-term-project' | 'threat' | 'personal-goal' | 'obstacle' | 'faction';
 
 export interface Clock {
   id: string;
@@ -43,7 +44,7 @@ export interface ClockMetadata {
   frozen?: boolean;
 
   /** For progress clocks */
-  category?: 'long-term-project' | 'threat' | 'personal-goal' | 'obstacle' | 'faction';
+  category?: ProgressClockCategory;
   isCountdown?: boolean; // True if clock represents threat/danger increasing
   description?: string; // Detailed description of what the clock represents
 

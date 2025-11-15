@@ -4,10 +4,8 @@
  * Dialog for taking harm and creating harm clocks
  */
 
-import type { Position } from '@/types/action';
+import type { Position, Effect } from '@/types/resolution';
 import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
-
-type Effect = 'limited' | 'standard' | 'great' | 'spectacular';
 
 interface TakeHarmOptions extends Partial<DialogOptions> {
   defaultPosition?: Position;

@@ -4,7 +4,17 @@
  * Low-change entity stored with full snapshot + command history.
  */
 
-import { EquipmentTier } from "./equipment";
+import { EquipmentTier, EquipmentAcquisition } from "./equipment";
+
+/**
+ * Trait category types
+ */
+export type TraitCategory = 'role' | 'background' | 'scar' | 'flashback' | 'grouped';
+
+/**
+ * Social action types (subset of ActionDots for Rally)
+ */
+export type SocialAction = 'command' | 'consort' | 'sway';
 
 export interface Character {
   id: string;
@@ -21,7 +31,7 @@ export interface Character {
 export interface Trait {
   id: string;
   name: string;
-  category: 'role' | 'background' | 'scar' | 'flashback' | 'grouped';
+  category: TraitCategory;
   disabled: boolean; // true when leaning into trait
   description?: string;
   acquiredAt: number;
@@ -58,7 +68,7 @@ export interface Equipment {
 
   // Provenance (event sourcing metadata)
   acquiredAt: number; // Timestamp when acquired
-  acquiredVia?: 'creation' | 'flashback' | 'reward' | 'loot';
+  acquiredVia?: EquipmentAcquisition;
   sourceItemId?: string; // Optional: Original template ID (for reference only)
 
   // Flexible metadata
