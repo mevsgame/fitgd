@@ -5,8 +5,8 @@
  * - Reset momentum to 5
  * - Reset rally for all crew members
  * - Re-enable all disabled traits
- * - Reduce addiction clock by 2 segments
  * - Recover all 6/6 harm clocks to 5/6
+ * - Recover per-character addiction clocks
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

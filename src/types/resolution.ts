@@ -32,8 +32,7 @@ export interface ConsequenceResult {
 export interface HarmConsequenceParams {
   characterId: string;
   position: Position;
-  effect: Effect;
-  harmType: string; // e.g., "Physical Harm", "Shaken Morale"
+  harmType: string; 
 }
 
 export interface HarmConsequenceResult {

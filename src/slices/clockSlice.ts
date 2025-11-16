@@ -180,6 +180,17 @@ function getClocksByTypeAndSubtype(
 }
 
 /**
+ * Helper: Get all clocks of a specific type
+ */
+function getClocksByType(
+  state: ClockState,
+  clockType: ClockType
+): Clock[] {
+  const typeClocks = state.byType[clockType] || [];
+  return typeClocks.map((id) => state.byId[id]);
+}
+
+/**
  * Clock Slice
  */
 const clockSlice = createSlice({
@@ -276,6 +287,10 @@ const clockSlice = createSlice({
             tier: payload.tier,
             frozen: false,
           };
+        } else if (payload.clockType === 'addiction') {
+          metadata = {
+            frozen: false,
+          };
         } else if (payload.clockType === 'progress') {
           metadata = {
             category: payload.category,
@@ -357,6 +372,27 @@ const clockSlice = createSlice({
               }
             });
           }
+        }
+
+        // Special handling for addiction clocks when filled
+        if (
+          clock.clockType === 'addiction' &&
+          !wasFilled &&
+          isClockFilled(clock)
+        ) {
+          // Freeze this clock
+          if (clock.metadata) {
+            clock.metadata.frozen = true;
+          }
+
+          // Freeze all other addiction clocks crew-wide for this crew
+          const crewAddictionClocks = getClocksByType(state, 'addiction');
+          crewAddictionClocks.forEach((addictionClock) => {
+            if (addictionClock.id !== clock.id && addictionClock.metadata) {
+              addictionClock.metadata.frozen = true;
+              addictionClock.updatedAt = Date.now();
+            }
+          });
         }
 
         // Log command to history

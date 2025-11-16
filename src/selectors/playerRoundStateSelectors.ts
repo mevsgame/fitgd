@@ -8,6 +8,7 @@
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
 import type { PlayerRoundState, Position, Effect } from '../types/playerRoundState';
+import { DEFAULT_CONFIG } from '../config/gameConfig';
 
 /**
  * Select player state by character ID
@@ -95,21 +96,15 @@ export const selectDicePool = createSelector(
  *
  * This is a house rule deviation from Blades in the Dark.
  */
-export const CONSEQUENCE_TABLE: Record<Position, number> = {
-  controlled: 1,
-  risky: 3,
-  desperate: 5,
-  impossible: 6,
-};
-
 /**
  * Get consequence severity (clock segments) based on position only
  * Effect does NOT apply to consequences - only to success clocks
+ * Uses harm segments from game config
  */
 export const selectConsequenceSeverity = (
   position: Position
 ): number => {
-  return CONSEQUENCE_TABLE[position] ?? 0;
+  return DEFAULT_CONFIG.resolution.harmSegments[position] ?? 0;
 };
 
 /**

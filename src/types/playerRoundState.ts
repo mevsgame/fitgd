@@ -109,11 +109,8 @@ export interface ConsequenceTransaction {
 
   // ===== CREW CLOCK OPTIONS =====
 
-  /** Selected crew clock ID */
+  /** Selected crew clock ID (segments calculated automatically from position) */
   crewClockId?: string;
-
-  /** Segments to add */
-  crewClockSegments?: number;
 
   // ===== CALCULATED VALUES (read-only) =====
 

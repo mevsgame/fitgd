@@ -10,12 +10,11 @@ import {
 } from '../slices/clockSlice';
 import {
   selectConsumableClockBySubtype,
-  selectAddictionClockByCrew,
+  selectAddictionClockByCharacter,
   selectStimsAvailable,
   selectConsumableAvailable,
 } from '../selectors/clockSelectors';
 import { isClockFilled } from '../validators/clockValidator';
-import { DEFAULT_CONFIG } from '../config';
 import { generateId } from '../utils/uuid';
 
 /**
@@ -161,7 +160,7 @@ export function useStim(
   store: Store,
   params: UseStimParams
 ): UseStimResult {
-  const { crewId, characterId, addictionRoll, userId } = params;
+  const { characterId, addictionRoll, userId } = params;
 
   // Validate addiction roll
   if (addictionRoll < 1 || addictionRoll > 6) {
@@ -170,20 +169,20 @@ export function useStim(
 
   const state = store.getState();
 
-  // Check if stims are available (addiction clock not filled)
-  const stimsAvailable = selectStimsAvailable(state, crewId);
+  // Check if stims are available (no addiction clocks frozen)
+  const stimsAvailable = selectStimsAvailable(state);
   if (!stimsAvailable) {
     throw new Error('Stims are locked due to addiction');
   }
 
-  // Get or create addiction clock
-  let addictionClock = selectAddictionClockByCrew(state, crewId);
+  // Get or create addiction clock for this character
+  let addictionClock = selectAddictionClockByCharacter(state, characterId);
 
   if (!addictionClock) {
-    // Create addiction clock
+    // Create addiction clock (per-character)
     store.dispatch(
       createClock({
-        entityId: crewId,
+        entityId: characterId,
         clockType: 'addiction',
         userId,
       })
@@ -191,7 +190,7 @@ export function useStim(
 
     // Refresh state
     const newState = store.getState();
-    addictionClock = selectAddictionClockByCrew(newState, crewId);
+    addictionClock = selectAddictionClockByCharacter(newState, characterId);
 
     if (!addictionClock) {
       throw new Error('Failed to create addiction clock');
@@ -251,45 +250,6 @@ export function useStim(
   };
 }
 
-/**
- * Reduce addiction clock by 2 segments (called during Momentum Reset)
- *
- * @param store - Redux store
- * @param crewId - Crew ID
- * @param userId - Optional user ID for audit trail
- * @returns New segment count, or null if no addiction clock exists
- */
-export function reduceAddiction(
-  store: Store,
-  crewId: string,
-  userId?: string
-): number | null {
-  const state = store.getState();
-  const addictionClock = selectAddictionClockByCrew(state, crewId);
-
-  if (!addictionClock) {
-    return null; // No addiction clock to reduce
-  }
-
-  const reductionAmount = DEFAULT_CONFIG.clocks.addiction.resetReduction; // 2
-  const amountToReduce = Math.min(addictionClock.segments, reductionAmount);
-
-  if (amountToReduce > 0) {
-    store.dispatch(
-      clearSegments({
-        clockId: addictionClock.id,
-        amount: amountToReduce,
-        userId,
-      })
-    );
-  }
-
-  const updatedState = store.getState();
-  const updatedClock = updatedState.clocks.byId[addictionClock.id];
-
-  return updatedClock.segments;
-}
-
 export interface PerformMomentumResetParams {
   crewId: string;
   userId?: string;
@@ -298,7 +258,6 @@ export interface PerformMomentumResetParams {
 export interface MomentumResetResult {
   crewId: string;
   newMomentum: number;
-  addictionReduced: number | null; // Crew-level addiction clock segments after reduction (null if no clock)
   charactersReset: {
     characterId: string;
     rallyReset: boolean;
@@ -317,7 +276,6 @@ export interface MomentumResetResult {
  * 3. All disabled traits re-enabled for all characters
  * 4. All harm clocks recovered (full: -1 segment, partial: -2 segments, 0: deleted)
  * 5. All addiction clocks (per-character) recovered (full: -1 segment, partial: -2 segments, 0: deleted)
- * 6. Crew-level addiction clock reduced by 2 segments
  *
  * @param store - Redux store
  * @param params - Reset parameters
@@ -466,16 +424,12 @@ export function performMomentumReset(
     };
   });
 
-  // 6. Reduce crew-level addiction clock by 2 segments
-  const addictionReduced = reduceAddiction(store, crewId, userId);
-
   const updatedState = store.getState();
   const updatedCrew = updatedState.crews.byId[crewId];
 
   return {
     crewId,
     newMomentum: updatedCrew.currentMomentum,
-    addictionReduced,
     charactersReset: characterResults,
   };
 }

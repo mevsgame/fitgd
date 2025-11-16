@@ -154,8 +154,8 @@ Characters can have up to three active harm clocks. If you would take a fourth t
 | Position   | Segments |
 | ---------- | -------- |
 | Controlled | 1        |
-| Risky      | 3        |
-| Desperate  | 5        |
+| Risky      | 2        |
+| Desperate  | 4        |
 | Impossible | 6        |
 
 **Note:** Impossible position fills a harm clock completely (6/6), putting the character in a dying state immediately. Effect modifiers (Limited/Standard/Great/Spectacular) apply only to **success clocks** (progress you make when succeeding), not to harm or other consequence clocks.

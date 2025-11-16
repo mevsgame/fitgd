@@ -362,7 +362,6 @@ export class PlayerActionWidget extends Application {
     html.find('[data-action="select-harm-target"]').click(this._onSelectHarmTarget.bind(this));
     html.find('[data-action="select-harm-clock"]').click(this._onSelectHarmClock.bind(this));
     html.find('[data-action="select-crew-clock"]').click(this._onSelectCrewClock.bind(this));
-    html.find('[name="crew-clock-segments"]').change(this._onCrewClockSegmentsChange.bind(this));
     html.find('[data-action="approve-consequence"]').click(this._onApproveConsequence.bind(this));
 
     // Player stims button (from GM phase)
@@ -578,8 +577,8 @@ export class PlayerActionWidget extends Application {
       // Harm is configured if: target selected AND clock selected
       consequenceConfigured = Boolean(transaction.harmTargetCharacterId && transaction.harmClockId);
     } else if (transaction.consequenceType === 'crew-clock') {
-      // Crew clock is configured if: clock selected AND segments > 0
-      consequenceConfigured = Boolean(transaction.crewClockId && transaction.crewClockSegments > 0);
+      // Crew clock is configured if: clock selected (segments calculated automatically from position)
+      consequenceConfigured = Boolean(transaction.crewClockId);
     }
 
     return {
@@ -1271,7 +1270,6 @@ export class PlayerActionWidget extends Application {
                       characterId: this.characterId,
                       updates: {
                         crewClockId: newClockId,
-                        crewClockSegments: 1, // Default to 1 segment
                       },
                     },
                   },
@@ -1291,7 +1289,6 @@ export class PlayerActionWidget extends Application {
                   characterId: this.characterId,
                   updates: {
                     crewClockId: clockId,
-                    crewClockSegments: 1, // Default to 1 segment
                   },
                 },
               },
@@ -1307,28 +1304,6 @@ export class PlayerActionWidget extends Application {
     );
 
     dialog.render(true);
-  }
-
-  /**
-   * Handle crew clock segments input change
-   */
-  private async _onCrewClockSegmentsChange(event: JQuery.ChangeEvent): Promise<void> {
-    event.preventDefault();
-    const segments = parseInt((event.currentTarget as HTMLInputElement).value, 10) || 1;
-
-    // Update transaction with new segment count
-    await game.fitgd.bridge.execute(
-      {
-        type: 'playerRoundState/updateConsequenceTransaction',
-        payload: {
-          characterId: this.characterId,
-          updates: {
-            crewClockSegments: segments,
-          },
-        },
-      },
-      { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
-    );
   }
 
   /**
@@ -1350,8 +1325,8 @@ export class PlayerActionWidget extends Application {
         return;
       }
     } else if (transaction.consequenceType === 'crew-clock') {
-      if (!transaction.crewClockId || !transaction.crewClockSegments) {
-        ui.notifications?.warn('Please select clock and segments');
+      if (!transaction.crewClockId) {
+        ui.notifications?.warn('Please select a crew clock');
         return;
       }
     }

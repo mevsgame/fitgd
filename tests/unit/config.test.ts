@@ -16,7 +16,7 @@ describe('Config', () => {
   it('should have valid clock configurations', () => {
     expect(DEFAULT_CONFIG.clocks.consumable.segments.common).toBe(8);
     expect(DEFAULT_CONFIG.clocks.consumable.segments.uncommon).toBe(6);
-    expect(DEFAULT_CONFIG.clocks.consumable.segments.rare).toBe(4);
+    expect(DEFAULT_CONFIG.clocks.consumable.segments.epic).toBe(4);
     expect(DEFAULT_CONFIG.clocks.addiction.segments).toBe(8);
     expect(DEFAULT_CONFIG.clocks.addiction.resetReduction).toBe(2);
   });

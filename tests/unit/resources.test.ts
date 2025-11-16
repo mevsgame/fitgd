@@ -8,12 +8,11 @@ import { createCrew } from '../../src/slices/crewSlice';
 import {
   useConsumable,
   useStim,
-  reduceAddiction,
   performMomentumReset,
 } from '../../src/resources';
 import {
   selectConsumableClockBySubtype,
-  selectAddictionClockByCrew,
+  selectAddictionClockByCharacter,
   selectStimsAvailable,
   selectConsumableAvailable,
 } from '../../src/selectors/clockSelectors';
@@ -283,7 +282,7 @@ describe('Resource Management', () => {
 
       // Verify clock was created
       const state = store.getState() as RootState;
-      const clock = selectAddictionClockByCrew(state, crewId);
+      const clock = selectAddictionClockByCharacter(state, characterId);
       expect(clock).toBeDefined();
       expect(clock?.segments).toBe(3);
       expect(clock?.maxSegments).toBe(8);
@@ -383,7 +382,7 @@ describe('Resource Management', () => {
     it('should check availability with selector', () => {
       // Available initially
       let state = store.getState() as RootState;
-      expect(selectStimsAvailable(state, crewId)).toBe(true);
+      expect(selectStimsAvailable(state)).toBe(true);
 
       // Fill clock (8 segments)
       useStim(store, {
@@ -399,7 +398,7 @@ describe('Resource Management', () => {
 
       // Not available after addiction
       state = store.getState() as RootState;
-      expect(selectStimsAvailable(state, crewId)).toBe(false);
+      expect(selectStimsAvailable(state)).toBe(false);
     });
 
     it('should prevent entire crew from using stims when addicted', () => {
@@ -463,54 +462,9 @@ describe('Resource Management', () => {
         })
       ).toThrow('locked due to addiction');
     });
-  });
 
-  describe('reduceAddiction', () => {
-    it('should reduce addiction clock by 2 segments', () => {
-      // Create addiction clock with 6 segments
-      useStim(store, {
-        crewId,
-        characterId,
-        addictionRoll: 6,
-      });
-
-      // Reduce addiction
-      const newSegments = reduceAddiction(store, crewId);
-
-      expect(newSegments).toBe(4); // 6 - 2 = 4
-
-      // Verify clock was updated
-      const state = store.getState() as RootState;
-      const clock = selectAddictionClockByCrew(state, crewId);
-      expect(clock?.segments).toBe(4);
-    });
-
-    it('should not reduce below 0 segments', () => {
-      // Create addiction clock with 1 segment
-      useStim(store, {
-        crewId,
-        characterId,
-        addictionRoll: 1,
-      });
-
-      // Reduce addiction
-      const newSegments = reduceAddiction(store, crewId);
-
-      expect(newSegments).toBe(0); // Should stop at 0, not -1
-
-      // Verify clock
-      const state = store.getState() as RootState;
-      const clock = selectAddictionClockByCrew(state, crewId);
-      expect(clock?.segments).toBe(0);
-    });
-
-    it('should return null if no addiction clock exists', () => {
-      const result = reduceAddiction(store, crewId);
-      expect(result).toBeNull();
-    });
-
-    it('should unlock stims if addiction clock was filled', () => {
-      // Fill addiction clock (8 segments)
+    it('should set frozen metadata when addiction clock fills', () => {
+      // Use stim to fill addiction clock
       useStim(store, {
         crewId,
         characterId,
@@ -522,20 +476,78 @@ describe('Resource Management', () => {
         addictionRoll: 4, // 4 + 4 = 8 (filled)
       });
 
-      // Verify stims are locked at 8/8
-      let state = store.getState() as RootState;
-      expect(selectStimsAvailable(state, crewId)).toBe(false);
+      // Verify frozen metadata is set
+      const state = store.getState() as RootState;
+      const clock = selectAddictionClockByCharacter(state, characterId);
+      expect(clock?.metadata?.frozen).toBe(true);
+    });
 
-      // Reduce addiction (8 - 2 = 6, no longer filled)
-      reduceAddiction(store, crewId);
+    it('should freeze crew-wide addiction clocks when any fills', () => {
+      // Create second character
+      store.dispatch(
+        createCharacter({
+          name: 'Test Character 2',
+          traits: [
+            {
+              id: 'trait-2a',
+              name: 'Test Role',
+              category: 'role',
+              disabled: false,
+              acquiredAt: Date.now(),
+            },
+            {
+              id: 'trait-2b',
+              name: 'Test Background',
+              category: 'background',
+              disabled: false,
+              acquiredAt: Date.now(),
+            },
+          ],
+          actionDots: {
+            shoot: 2,
+            skirmish: 1,
+            skulk: 1,
+            wreck: 1,
+            finesse: 1,
+            survey: 1,
+            study: 1,
+            tech: 1,
+            attune: 0,
+            command: 2,
+            consort: 1,
+            sway: 0,
+          },
+        })
+      );
 
-      // Now unlocked at 6/8 (not filled anymore)
-      state = store.getState() as RootState;
-      expect(selectStimsAvailable(state, crewId)).toBe(true);
+      const character2Id = store.getState().characters.allIds[1];
 
-      // Verify clock is at 6 segments
-      const clock = selectAddictionClockByCrew(state, crewId);
-      expect(clock?.segments).toBe(6);
+      // Create addiction clocks for both characters
+      useStim(store, {
+        crewId,
+        characterId,
+        addictionRoll: 2,
+      });
+      useStim(store, {
+        crewId,
+        characterId: character2Id,
+        addictionRoll: 3,
+      });
+
+      // Fill first character's addiction clock
+      useStim(store, {
+        crewId,
+        characterId,
+        addictionRoll: 6, // 2 + 6 = 8 (filled)
+      });
+
+      // Verify both clocks are now frozen
+      const state = store.getState() as RootState;
+      const clock1 = selectAddictionClockByCharacter(state, characterId);
+      const clock2 = selectAddictionClockByCharacter(state, character2Id);
+
+      expect(clock1?.metadata?.frozen).toBe(true);
+      expect(clock2?.metadata?.frozen).toBe(true);
     });
   });
 
@@ -554,17 +566,18 @@ describe('Resource Management', () => {
       expect(state.crews.byId[crewId].currentMomentum).toBe(5);
     });
 
-    it('should reduce addiction clock by 2 segments', () => {
-      // Create addiction clock with 6 segments
+    it('should recover addiction clock during reset', () => {
+      // Create addiction clock with 6 segments (partial)
       useStim(store, { crewId, characterId, addictionRoll: 6 });
 
       const result = performMomentumReset(store, { crewId });
 
-      expect(result.addictionReduced).toBe(4); // 6 - 2 = 4
+      // Verify addiction was recovered for character
+      expect(result.charactersReset[0].addictionClocksRecovered).toBe(1);
 
-      // Verify in state
+      // Verify in state: partial (6) reduces by 2 to 4
       const state = store.getState() as RootState;
-      const clock = selectAddictionClockByCrew(state, crewId);
+      const clock = selectAddictionClockByCharacter(state, characterId);
       expect(clock?.segments).toBe(4);
     });
 
@@ -634,9 +647,9 @@ describe('Resource Management', () => {
 
       // Verify all changes
       expect(result.newMomentum).toBe(5);
-      expect(result.addictionReduced).toBe(4); // 6 - 2
       expect(result.charactersReset[0].rallyReset).toBe(true);
       expect(result.charactersReset[0].traitsReEnabled).toBe(1);
+      expect(result.charactersReset[0].addictionClocksRecovered).toBe(1); // partial 6 → 4
 
       // Verify in state
       const state = store.getState() as RootState;
@@ -648,7 +661,7 @@ describe('Resource Management', () => {
       );
       expect(trait?.disabled).toBe(false);
 
-      const clock = selectAddictionClockByCrew(state, crewId);
+      const clock = selectAddictionClockByCharacter(state, characterId);
       expect(clock?.segments).toBe(4);
     });
 
@@ -719,10 +732,5 @@ describe('Resource Management', () => {
       expect(state.characters.byId[character2Id].rallyAvailable).toBe(true);
     });
 
-    it('should return null for addiction reduction if no addiction clock exists', () => {
-      const result = performMomentumReset(store, { crewId });
-
-      expect(result.addictionReduced).toBeNull();
-    });
   });
 });

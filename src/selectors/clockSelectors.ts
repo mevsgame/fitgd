@@ -108,7 +108,23 @@ export const selectConsumableClocksByCrew = createSelector(
 );
 
 /**
+ * Get addiction clock for a character
+ */
+export const selectAddictionClockByCharacter = createSelector(
+  [
+    selectClocksState,
+    (_state: RootState, characterId: string) => characterId,
+  ],
+  (clocksState, characterId): Clock | null => {
+    const key = `addiction:${characterId}`;
+    const clockIds = clocksState.byTypeAndEntity[key] || [];
+    return clockIds.length > 0 ? clocksState.byId[clockIds[0]] : null;
+  }
+);
+
+/**
  * Get addiction clock for a crew
+ * @deprecated Use selectAddictionClockByCharacter for per-character addiction clocks
  */
 export const selectAddictionClockByCrew = createSelector(
   [
@@ -160,13 +176,26 @@ export const selectHasDyingClock = createSelector(
 );
 
 /**
- * Check if stims are available (addiction clock not filled)
+ * Check if stims are available (no addiction clocks frozen)
+ *
+ * Addiction is tracked per-character but frozen crew-wide when ANY clock fills.
+ * This checks if ANY addiction clock is frozen.
  */
 export const selectStimsAvailable = createSelector(
-  [selectAddictionClockByCrew],
-  (addictionClock): boolean => {
-    if (!addictionClock) return true; // No addiction clock yet
-    return !isClockFilled(addictionClock);
+  [
+    selectClocksState,
+  ],
+  (clocksState): boolean => {
+    // Find ALL addiction clocks
+    const addictionClocks = clocksState.allIds
+      .map((id) => clocksState.byId[id])
+      .filter((clock) => clock.clockType === 'addiction');
+
+    // If no clocks exist yet, stims available
+    if (addictionClocks.length === 0) return true;
+
+    // If ANY clock is frozen, stims are not available
+    return !addictionClocks.some((clock) => isClockFrozen(clock));
   }
 );
 
