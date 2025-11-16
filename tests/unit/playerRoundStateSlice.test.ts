@@ -401,11 +401,11 @@ describe('playerRoundStateSlice', () => {
 
   describe('state transition validation', () => {
     it('should validate all legal transitions', () => {
-      // Test a few key transitions (ROLL_CONFIRM state removed, DECISION_PHASE goes directly to ROLLING)
+      // Test key transitions
       expect(isValidTransition('IDLE_WAITING', 'DECISION_PHASE')).toBe(true);
       expect(isValidTransition('DECISION_PHASE', 'ROLLING')).toBe(true);
       expect(isValidTransition('ROLLING', 'SUCCESS_COMPLETE')).toBe(true);
-      expect(isValidTransition('ROLLING', 'CONSEQUENCE_CHOICE')).toBe(true);
+      expect(isValidTransition('ROLLING', 'GM_RESOLVING_CONSEQUENCE')).toBe(true);
       expect(isValidTransition('DECISION_PHASE', 'RALLY_ROLLING')).toBe(true);
     });
 
@@ -413,7 +413,7 @@ describe('playerRoundStateSlice', () => {
       expect(isValidTransition('IDLE_WAITING', 'ROLLING')).toBe(false);
       expect(isValidTransition('DECISION_PHASE', 'SUCCESS_COMPLETE')).toBe(false);
       expect(isValidTransition('ROLLING', 'TURN_COMPLETE')).toBe(false);
-      expect(isValidTransition('SUCCESS_COMPLETE', 'CONSEQUENCE_CHOICE')).toBe(false);
+      expect(isValidTransition('SUCCESS_COMPLETE', 'GM_RESOLVING_CONSEQUENCE')).toBe(false);
     });
   });
 
@@ -504,16 +504,16 @@ describe('playerRoundStateSlice', () => {
         })
       );
 
-      // ROLLING -> CONSEQUENCE_CHOICE
+      // ROLLING -> GM_RESOLVING_CONSEQUENCE (GM-driven consequence flow)
       store.dispatch(
         transitionState({
           characterId,
-          newState: 'CONSEQUENCE_CHOICE',
+          newState: 'GM_RESOLVING_CONSEQUENCE',
         })
       );
-      expect(store.getState().playerRoundState.byCharacterId[characterId].state).toBe('CONSEQUENCE_CHOICE');
+      expect(store.getState().playerRoundState.byCharacterId[characterId].state).toBe('GM_RESOLVING_CONSEQUENCE');
 
-      // Choose consequence
+      // Set consequence
       store.dispatch(
         setConsequence({
           characterId,
@@ -523,14 +523,14 @@ describe('playerRoundStateSlice', () => {
         })
       );
 
-      // CONSEQUENCE_CHOICE -> CONSEQUENCE_RESOLUTION
+      // GM_RESOLVING_CONSEQUENCE -> APPLYING_EFFECTS
       store.dispatch(
         transitionState({
           characterId,
-          newState: 'CONSEQUENCE_RESOLUTION',
+          newState: 'APPLYING_EFFECTS',
         })
       );
-      expect(store.getState().playerRoundState.byCharacterId[characterId].state).toBe('CONSEQUENCE_RESOLUTION');
+      expect(store.getState().playerRoundState.byCharacterId[characterId].state).toBe('APPLYING_EFFECTS');
 
       const playerState = store.getState().playerRoundState.byCharacterId[characterId];
       expect(playerState.consequenceType).toBe('harm');
@@ -540,29 +540,12 @@ describe('playerRoundStateSlice', () => {
   });
 
   describe('GM_RESOLVING_CONSEQUENCE state transitions', () => {
-    it('should allow CONSEQUENCE_CHOICE -> GM_RESOLVING_CONSEQUENCE', () => {
-      const characterId = 'char-123';
-
-      // Initialize and set to CONSEQUENCE_CHOICE
-      store.dispatch(initializePlayerState({ characterId }));
-      store.dispatch(transitionState({ characterId, newState: 'DECISION_PHASE' }));
-      store.dispatch(transitionState({ characterId, newState: 'ROLLING' }));
-      store.dispatch(transitionState({ characterId, newState: 'CONSEQUENCE_CHOICE' }));
-
-      // Transition to GM_RESOLVING_CONSEQUENCE
-      store.dispatch(transitionState({ characterId, newState: 'GM_RESOLVING_CONSEQUENCE' }));
-
-      const state = store.getState().playerRoundState.byCharacterId[characterId];
-      expect(state.state).toBe('GM_RESOLVING_CONSEQUENCE');
-    });
-
     it('should allow GM_RESOLVING_CONSEQUENCE -> APPLYING_EFFECTS', () => {
       const characterId = 'char-123';
 
       store.dispatch(initializePlayerState({ characterId }));
       store.dispatch(transitionState({ characterId, newState: 'DECISION_PHASE' }));
       store.dispatch(transitionState({ characterId, newState: 'ROLLING' }));
-      store.dispatch(transitionState({ characterId, newState: 'CONSEQUENCE_CHOICE' }));
       store.dispatch(transitionState({ characterId, newState: 'GM_RESOLVING_CONSEQUENCE' }));
 
       // Transition to APPLYING_EFFECTS
@@ -578,25 +561,9 @@ describe('playerRoundStateSlice', () => {
       store.dispatch(initializePlayerState({ characterId }));
       store.dispatch(transitionState({ characterId, newState: 'DECISION_PHASE' }));
       store.dispatch(transitionState({ characterId, newState: 'ROLLING' }));
-      store.dispatch(transitionState({ characterId, newState: 'CONSEQUENCE_CHOICE' }));
       store.dispatch(transitionState({ characterId, newState: 'GM_RESOLVING_CONSEQUENCE' }));
 
       // Player interrupts with stims
-      store.dispatch(transitionState({ characterId, newState: 'STIMS_ROLLING' }));
-
-      const state = store.getState().playerRoundState.byCharacterId[characterId];
-      expect(state.state).toBe('STIMS_ROLLING');
-    });
-
-    it('should allow CONSEQUENCE_CHOICE -> STIMS_ROLLING', () => {
-      const characterId = 'char-123';
-
-      store.dispatch(initializePlayerState({ characterId }));
-      store.dispatch(transitionState({ characterId, newState: 'DECISION_PHASE' }));
-      store.dispatch(transitionState({ characterId, newState: 'ROLLING' }));
-      store.dispatch(transitionState({ characterId, newState: 'CONSEQUENCE_CHOICE' }));
-
-      // Player uses stims before GM resolves
       store.dispatch(transitionState({ characterId, newState: 'STIMS_ROLLING' }));
 
       const state = store.getState().playerRoundState.byCharacterId[characterId];

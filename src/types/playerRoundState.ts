@@ -16,12 +16,10 @@ export type { Position, Effect };
  */
 export type PlayerRoundStateType =
   | 'IDLE_WAITING'              // Not your turn, watching others
-  | 'DECISION_PHASE'             // Your turn - preparing action (simplified: removed ROLL_CONFIRM)
+  | 'DECISION_PHASE'             // Your turn - preparing action
   | 'ROLLING'                    // Dice rolling
   | 'SUCCESS_COMPLETE'           // Success, no consequences (manual close by GM)
-  | 'CONSEQUENCE_CHOICE'         // Player acknowledges consequences
   | 'GM_RESOLVING_CONSEQUENCE'   // GM configures consequence, player sees preview
-  | 'CONSEQUENCE_RESOLUTION'     // DEPRECATED: Use GM_RESOLVING_CONSEQUENCE instead
   | 'APPLYING_EFFECTS'           // Writing to Redux state
   | 'TURN_COMPLETE'              // Done, advancing turn
   | 'RALLY_ROLLING'              // Rolling Rally action
@@ -210,34 +208,25 @@ export interface PlayerRoundState {
  * Valid state transitions
  * Maps from current state to allowed next states
  *
- * New consequence flow (no extra player button):
+ * Consequence flow (GM-driven):
  * ROLLING → GM_RESOLVING_CONSEQUENCE → APPLYING_EFFECTS → TURN_COMPLETE
  * Player can interrupt with stims: GM_RESOLVING_CONSEQUENCE → STIMS_ROLLING → ROLLING (reroll same plan)
  */
 export const STATE_TRANSITIONS: Record<PlayerRoundStateType, PlayerRoundStateType[]> = {
   IDLE_WAITING: ['DECISION_PHASE', 'ASSIST_ROLLING', 'PROTECT_ACCEPTING'],
   DECISION_PHASE: ['ROLLING', 'RALLY_ROLLING', 'IDLE_WAITING'],
-  ROLLING: ['SUCCESS_COMPLETE', 'GM_RESOLVING_CONSEQUENCE', 'CONSEQUENCE_CHOICE'],  // Direct to GM (CONSEQUENCE_CHOICE deprecated)
+  ROLLING: ['SUCCESS_COMPLETE', 'GM_RESOLVING_CONSEQUENCE'],
   SUCCESS_COMPLETE: ['TURN_COMPLETE'],  // Manual close only (GM clicks "End Turn")
-
-  CONSEQUENCE_CHOICE: [
-    'GM_RESOLVING_CONSEQUENCE',  // DEPRECATED: Old flow, kept for backwards compat
-    'CONSEQUENCE_RESOLUTION',     // DEPRECATED: Backwards compatibility
-    'STIMS_ROLLING'               // DEPRECATED: Old flow
-  ],
-
   GM_RESOLVING_CONSEQUENCE: [
     'APPLYING_EFFECTS',           // GM applies consequence
     'STIMS_ROLLING'               // Player interrupts with stims
   ],
-
-  CONSEQUENCE_RESOLUTION: ['APPLYING_EFFECTS'],  // DEPRECATED
   APPLYING_EFFECTS: ['TURN_COMPLETE'],
   TURN_COMPLETE: ['IDLE_WAITING'],
   RALLY_ROLLING: ['DECISION_PHASE'],
   ASSIST_ROLLING: ['IDLE_WAITING'],
   PROTECT_ACCEPTING: ['IDLE_WAITING'],
-  STIMS_ROLLING: ['ROLLING', 'STIMS_LOCKED'],  // Re-roll with same plan (not DECISION_PHASE!)
+  STIMS_ROLLING: ['ROLLING', 'STIMS_LOCKED'],  // Re-roll with same plan
   STIMS_LOCKED: ['GM_RESOLVING_CONSEQUENCE'],  // Return to consequence state
 };
 

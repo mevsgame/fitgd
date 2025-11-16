@@ -55,12 +55,19 @@ export interface GameConfig {
       desperate: number;
       impossible: number;
     };
-    // Harm segments based on Position and Effect
-    harmSegments: {
+    // Consequence segments based on Position
+    consequenceSegments: {
       controlled: number;
       risky: number;
       desperate: number;
       impossible: number;
     };
+    successSegments:{
+      lesser: number,
+      standard: number,
+      great: number,
+      spectacular: number
+    };
+
   };
 }
