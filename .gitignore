@@ -22,3 +22,4 @@ docs/api/
 .env.local
 package-lock.json
 /foundry/packs
+.claude/settings.local.json

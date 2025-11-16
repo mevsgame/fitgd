@@ -57,30 +57,10 @@ export interface GameConfig {
     };
     // Harm segments based on Position and Effect
     harmSegments: {
-      controlled: {
-        limited: number;
-        standard: number;
-        great: number;
-        spectacular: number;
-      };
-      risky: {
-        limited: number;
-        standard: number;
-        great: number;
-        spectacular: number;
-      };
-      desperate: {
-        limited: number;
-        standard: number;
-        great: number;
-        spectacular: number;
-      };
-      impossible: {
-        limited: number;
-        standard: number;
-        great: number;
-        spectacular: number;
-      };
+      controlled: number;
+      risky: number;
+      desperate: number;
+      impossible: number;
     };
   };
 }

@@ -115,11 +115,11 @@ export function applyHarmConsequence(
   store: Store,
   params: HarmConsequenceParams
 ): HarmConsequenceResult {
-  const { characterId, position, effect, harmType } = params;
+  const { characterId, position, harmType } = params;
 
   // Get harm segments from config
-  const segments = DEFAULT_CONFIG.resolution.harmSegments[position][effect];
-  console.log(`FitGD | applyHarmConsequence: characterId=${characterId}, harmType=${harmType}, position=${position}, effect=${effect}, segments=${segments}`);
+  const segments = DEFAULT_CONFIG.resolution.harmSegments[position];
+  console.log(`FitGD | applyHarmConsequence: characterId=${characterId}, harmType=${harmType}, position=${position}, segments=${segments}`);
 
   // Get existing harm clocks for character
   const state = store.getState() as any;
