@@ -82,4 +82,10 @@ export const DEFAULT_CONFIG: GameConfig = {
       },
     },
   },
+
+  experimental: {
+    // Use new ConsequenceResolutionDialog (typed clocks + context-aware suggestions)
+    // Set to true to enable the new dialog, false to use legacy flow
+    useNewConsequenceDialog: false,
+  },
 };

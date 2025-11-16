@@ -329,77 +329,90 @@
 
     {{#if isGM}}
     <!-- ==================== GM CONSEQUENCE CONFIGURATION ==================== -->
-    <div class="gm-consequence-config">
-      <h4>⚙️ Configure Consequence:</h4>
-
-      <!-- Consequence Type Toggles -->
-      <div class="consequence-type-toggles">
-        <button type="button"
-                data-action="select-consequence-type"
-                data-type="harm"
-                class="consequence-type-btn {{#if (eq consequenceTransaction.consequenceType 'harm')}}active{{/if}}">
-          💔 Harm
-        </button>
-        <button type="button"
-                data-action="select-consequence-type"
-                data-type="crew-clock"
-                class="consequence-type-btn {{#if (eq consequenceTransaction.consequenceType 'crew-clock')}}active{{/if}}">
-          ⏱️ Crew Clock
-        </button>
+    {{#if useNewConsequenceDialog}}
+      <!-- NEW DIALOG FLOW: Single button to open ConsequenceResolutionDialog -->
+      <div class="gm-consequence-config">
+        <div class="actions">
+          <button type="button" data-action="configure-consequence" class="primary-btn">
+            ⚙️ Configure Consequence (Smart Suggestions)
+          </button>
+        </div>
+        <p class="info-note">Opens dialog with context-aware clock suggestions</p>
       </div>
+    {{else}}
+      <!-- LEGACY FLOW: Manual consequence configuration -->
+      <div class="gm-consequence-config">
+        <h4>⚙️ Configure Consequence:</h4>
 
-      <!-- Harm Configuration (shown when harm type selected) -->
-      {{#if (eq consequenceTransaction.consequenceType 'harm')}}
-      <div class="harm-config">
-        <div class="form-group">
-          <label>Target Character:</label>
-          <button type="button" data-action="select-harm-target" class="select-btn">
-            {{#if harmTargetCharacter}}
-              {{harmTargetCharacter.name}} {{#if (eq harmTargetCharacter.id character.id)}}(Acting){{else}}(Protected){{/if}}
-            {{else}}
-              Select Character...
-            {{/if}}
+        <!-- Consequence Type Toggles -->
+        <div class="consequence-type-toggles">
+          <button type="button"
+                  data-action="select-consequence-type"
+                  data-type="harm"
+                  class="consequence-type-btn {{#if (eq consequenceTransaction.consequenceType 'harm')}}active{{/if}}">
+            💔 Harm
+          </button>
+          <button type="button"
+                  data-action="select-consequence-type"
+                  data-type="crew-clock"
+                  class="consequence-type-btn {{#if (eq consequenceTransaction.consequenceType 'crew-clock')}}active{{/if}}">
+            ⏱️ Crew Clock
           </button>
         </div>
 
-        <div class="form-group">
-          <label>Harm Clock:</label>
-          <button type="button" data-action="select-harm-clock" class="select-btn" {{#unless harmTargetCharacter}}disabled{{/unless}}>
-            {{#if selectedHarmClock}}
-              {{selectedHarmClock.subtype}} ({{selectedHarmClock.segments}}/{{selectedHarmClock.maxSegments}})
-            {{else}}
-              {{#if harmTargetCharacter}}Select or Create Clock...{{else}}(Select target first){{/if}}
-            {{/if}}
-          </button>
-        </div>
+        <!-- Harm Configuration (shown when harm type selected) -->
+        {{#if (eq consequenceTransaction.consequenceType 'harm')}}
+        <div class="harm-config">
+          <div class="form-group">
+            <label>Target Character:</label>
+            <button type="button" data-action="select-harm-target" class="select-btn">
+              {{#if harmTargetCharacter}}
+                {{harmTargetCharacter.name}} {{#if (eq harmTargetCharacter.id character.id)}}(Acting){{else}}(Protected){{/if}}
+              {{else}}
+                Select Character...
+              {{/if}}
+            </button>
+          </div>
 
-      </div>
-      {{/if}}
+          <div class="form-group">
+            <label>Harm Clock:</label>
+            <button type="button" data-action="select-harm-clock" class="select-btn" {{#unless harmTargetCharacter}}disabled{{/unless}}>
+              {{#if selectedHarmClock}}
+                {{selectedHarmClock.subtype}} ({{selectedHarmClock.segments}}/{{selectedHarmClock.maxSegments}})
+              {{else}}
+                {{#if harmTargetCharacter}}Select or Create Clock...{{else}}(Select target first){{/if}}
+              {{/if}}
+            </button>
+          </div>
 
-      <!-- Crew Clock Configuration (shown when crew-clock type selected) -->
-      {{#if (eq consequenceTransaction.consequenceType 'crew-clock')}}
-      <div class="crew-clock-config">
-        <div class="form-group">
-          <label>Select Clock:</label>
-          <button type="button" data-action="select-crew-clock" class="select-btn">
-            {{#if selectedCrewClock}}
-              {{selectedCrewClock.subtype}} ({{selectedCrewClock.segments}}/{{selectedCrewClock.maxSegments}})
-            {{else}}
-              Select or Create Clock...
-            {{/if}}
-          </button>
-        </div>
-
-        {{#if selectedCrewClock}}
-        <div class="info-note">
-          Segments to add: <strong>{{calculatedHarmSegments}}</strong>
-          <span class="calculation">({{uppercase effectivePosition}})</span>
         </div>
         {{/if}}
 
+        <!-- Crew Clock Configuration (shown when crew-clock type selected) -->
+        {{#if (eq consequenceTransaction.consequenceType 'crew-clock')}}
+        <div class="crew-clock-config">
+          <div class="form-group">
+            <label>Select Clock:</label>
+            <button type="button" data-action="select-crew-clock" class="select-btn">
+              {{#if selectedCrewClock}}
+                {{selectedCrewClock.subtype}} ({{selectedCrewClock.segments}}/{{selectedCrewClock.maxSegments}})
+              {{else}}
+                Select or Create Clock...
+              {{/if}}
+            </button>
+          </div>
+
+          {{#if selectedCrewClock}}
+          <div class="info-note">
+            Segments to add: <strong>{{calculatedHarmSegments}}</strong>
+            <span class="calculation">({{uppercase effectivePosition}})</span>
+          </div>
+          {{/if}}
+
+        </div>
+        {{/if}}
       </div>
-      {{/if}}
-    </div>
+    {{/if}}
     {{else}}
     <!-- ==================== PLAYER ACTIONS ==================== -->
     <div class="player-consequence-actions">

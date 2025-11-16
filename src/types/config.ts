@@ -83,4 +83,9 @@ export interface GameConfig {
       };
     };
   };
+
+  experimental: {
+    // Use new ConsequenceResolutionDialog with typed clocks and context-aware suggestions
+    useNewConsequenceDialog: boolean;
+  };
 }
