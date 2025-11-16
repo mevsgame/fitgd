@@ -1,0 +1,45 @@
+#!/bin/sh
+
+# Pre-commit hook: Auto-bump minor version on main branch
+# Unless the user explicitly changed the version files
+
+# Source the .husky initialization (required for husky 9+)
+. "$(dirname "$0")/_/husky.sh"
+
+# Exit early if script fails
+set -e
+
+# Only run on main branch
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$BRANCH" != "main" ]; then
+  exit 0
+fi
+
+# Check if version files were explicitly modified by the user
+STAGED_FILES=$(git diff --cached --name-only)
+VERSION_FILES_CHANGED=false
+
+if echo "$STAGED_FILES" | grep -q "package.json"; then
+  if git diff --cached package.json | grep -q '"version"'; then
+    VERSION_FILES_CHANGED=true
+  fi
+fi
+
+if echo "$STAGED_FILES" | grep -q "foundry/system.json"; then
+  if git diff --cached foundry/system.json | grep -q '"version"'; then
+    VERSION_FILES_CHANGED=true
+  fi
+fi
+
+# If user explicitly changed version, don't auto-bump
+if [ "$VERSION_FILES_CHANGED" = true ]; then
+  exit 0
+fi
+
+# Only bump if src/ or foundry/module/ files changed (actual code)
+if ! echo "$STAGED_FILES" | grep -qE "(^src/|^foundry/module/)"; then
+  exit 0
+fi
+
+# Use Node.js script for cross-platform compatibility
+node "$(dirname "$0")/bump-version.cjs"

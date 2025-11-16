@@ -1,0 +1,67 @@
+name: Build and Release Artifacts
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags (v1.0.0, v1.0.1, etc)
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10.19.0
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Type check
+        run: pnpm run type-check:all
+
+      - name: Build Foundry system
+        run: pnpm run build:foundry
+
+      - name: Create release assets
+        run: |
+          mkdir -p release-assets
+          cp foundry/system.json release-assets/system.json
+          cp -r foundry/dist release-assets/dist
+          cp foundry/templates release-assets/templates || true
+          cp foundry/lang release-assets/lang || true
+          cp foundry/packs release-assets/packs || true
+          cd release-assets && zip -r ../forged-in-the-grimdark.zip . && cd ..
+
+      - name: Create GitHub Release with Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            foundry/system.json
+            foundry/dist/**
+            forged-in-the-grimdark.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -16,8 +16,21 @@ A **TypeScript + Redux Toolkit** event-sourced state management system for "Forg
 
 ## Installation
 
+### For Foundry VTT Users
+
+The system is available on [GitHub Releases](https://github.com/mevsgame/fitgd/releases). To install in Foundry:
+
+1. Go to the system installation dialog in Foundry
+2. Paste this manifest URL:
+   ```
+   https://github.com/mevsgame/fitgd/releases/latest/download/system.json
+   ```
+3. Click "Install" and enable the system for your world
+
+For developers:
+
 ```bash
-npm install
+pnpm install
 ```
 
 ## Usage
@@ -147,6 +160,52 @@ npm test              # Run all tests
 npm run test:watch    # Watch mode
 npm run test:coverage # Coverage report
 ```
+
+## Releases & Deployment
+
+This project uses **automated GitHub Actions** to build and release artifacts on version tags.
+
+### Creating a Release
+
+1. **Update version in `package.json` and `foundry/system.json`**:
+   ```bash
+   # Update version in both files
+   # package.json: "version": "0.2.0"
+   # foundry/system.json: "version": "0.2.0"
+   ```
+
+2. **Create and push a version tag**:
+   ```bash
+   git tag v0.2.0
+   git push origin v0.2.0
+   ```
+
+3. **GitHub Actions automatically**:
+   - ✅ Installs dependencies
+   - ✅ Runs type checking
+   - ✅ Builds the Foundry system (`pnpm run build:foundry`)
+   - ✅ Creates release assets:
+     - `system.json` (manifest for Foundry)
+     - Built JavaScript in `dist/` folder
+     - `forged-in-the-grimdark.zip` (complete system package)
+   - ✅ Publishes to [GitHub Releases](https://github.com/mevsgame/fitgd/releases)
+
+### Manifest URLs (Auto-Updated)
+
+The `system.json` in the repo is pre-configured to point to releases:
+
+```json
+{
+  "manifest": "https://github.com/mevsgame/fitgd/releases/latest/download/system.json",
+  "download": "https://github.com/mevsgame/fitgd/releases/latest/download/forged-in-the-grimdark.zip"
+}
+```
+
+These URLs always point to the **latest release**, so Foundry will automatically update when you release a new version.
+
+### Workflow File
+
+See [`.github/workflows/build-on-release.yml`](.github/workflows/build-on-release.yml) for implementation details.
 
 ## Development Status
 
