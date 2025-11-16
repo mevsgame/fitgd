@@ -7,15 +7,11 @@
 
 import type { Clock } from '@/types/clock';
 import type { InteractionContext, ClockWithSuggestion, ClockInteraction } from '@/types/clockInteraction';
-import type { RootState } from '@/store';
 import { suggestClockInteractions } from '@/utils/clockInteractions';
-import { getConsequenceClocks, getSuccessClocks } from '@/utils/clockQueries';
-import { applyInteraction } from '@/slices/clockSlice';
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 
-interface ConsequenceResolutionDialogOptions {
-  context: InteractionContext;
-  onApply?: () => void;
+interface ConsequenceResolutionCallbacks {
+  onApply?: (interaction: ClockInteraction) => void | Promise<void>;
+  onSkip?: () => void | Promise<void>;
 }
 
 /**
@@ -26,20 +22,26 @@ interface ConsequenceResolutionDialogOptions {
  */
 export class ConsequenceResolutionDialog extends Dialog {
   private context: InteractionContext;
+  private availableClocks: Clock[];
+  private callbacks: ConsequenceResolutionCallbacks;
   private suggestions: ClockWithSuggestion[] = [];
   private selectedClockId: string | null = null;
   private overrideAmount: number | null = null;
   private overrideDirection: 'advance' | 'reduce' | null = null;
 
-  constructor(options: ConsequenceResolutionDialogOptions & Partial<DialogOptions>) {
+  constructor(
+    context: InteractionContext,
+    availableClocks: Clock[],
+    callbacks: ConsequenceResolutionCallbacks = {}
+  ) {
     const content = `
       <div class="consequence-resolution-dialog">
         <div class="dialog-header">
           <h2>Resolve Consequence</h2>
           <p class="context-summary">
-            <strong>${options.context.outcome}</strong> at
-            <strong>${options.context.position}/${options.context.effect}</strong>
-            ${options.context.actionType ? `(${options.context.actionType})` : ''}
+            <strong>${context.outcome}</strong> at
+            <strong>${context.position}/${context.effect}</strong>
+            ${context.actionType ? `(${context.actionType})` : ''}
           </p>
         </div>
 
@@ -102,23 +104,19 @@ export class ConsequenceResolutionDialog extends Dialog {
       default: 'apply',
       classes: ['fitgd', 'fitgd-dialog', 'consequence-resolution-dialog'],
       width: 600,
-      height: 'auto',
-      ...options
+      height: 'auto'
     });
 
-    this.context = options.context;
-    this.onApply = options.onApply;
+    this.context = context;
+    this.availableClocks = availableClocks;
+    this.callbacks = callbacks;
   }
 
   override async getData(): Promise<any> {
     const data = await super.getData();
-    const state: RootState = game.fitgd.store.getState();
-
-    // Get all available clocks
-    const allClocks = Object.values(state.clocks.byId);
 
     // Get suggestions based on context
-    this.suggestions = suggestClockInteractions(this.context, allClocks);
+    this.suggestions = suggestClockInteractions(this.context, this.availableClocks);
 
     // Group by type
     const harmSuggestions = this.suggestions.filter(s => s.clock.category === 'harm');
@@ -290,41 +288,16 @@ export class ConsequenceResolutionDialog extends Dialog {
       context: `${this.context.outcome} at ${this.context.position}/${this.context.effect}`
     };
 
-    try {
-      // Dispatch interaction
-      await game.fitgd.bridge.execute({
-        type: 'clocks/applyInteraction',
-        payload: {
-          interaction,
-          context: this.context
-        }
-      });
-
-      // Refresh affected sheets
-      refreshSheetsByReduxId([this.context.characterId, this.context.crewId], true);
-
-      // Success notification
-      const suggestion = this.suggestions.find(s => s.clock.id === this.selectedClockId);
-      const clockName = suggestion?.clock.name || suggestion?.clock.subtype || 'Clock';
-      ui.notifications.info(`${direction === 'advance' ? 'Advanced' : 'Reduced'} ${clockName} by ${amount} segments`);
-
-      // Callback
-      if (this.onApply) {
-        this.onApply();
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
-      console.error('FitGD | Consequence resolution error:', error);
+    // Invoke callback (widget handles Redux dispatch)
+    if (this.callbacks.onApply) {
+      await this.callbacks.onApply(interaction);
     }
   }
 
-  private _onSkip(): void {
-    ui.notifications.info('No consequence applied to clocks');
-    if (this.onApply) {
-      this.onApply();
+  private async _onSkip(): Promise<void> {
+    // Invoke skip callback (widget handles momentum award and state transition)
+    if (this.callbacks.onSkip) {
+      await this.callbacks.onSkip();
     }
   }
-
-  private onApply?: () => void;
 }
