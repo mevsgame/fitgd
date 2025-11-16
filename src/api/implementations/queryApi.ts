@@ -45,9 +45,9 @@ export function createQueryAPI(store: Store) {
     /**
      * Can crew use stims?
      */
-    canUseStim(crewId: string): boolean {
+    canUseStim(_crewId: string): boolean {
       const state = store.getState();
-      return selectStimsAvailable(state, crewId);
+      return selectStimsAvailable(state);
     },
 
     /**
