@@ -99,7 +99,7 @@ export function createActionAPI(store: Store) {
         isDying: boolean;
       };
     } {
-      const { crewId, characterId, position, effect, result, harmType } = params;
+      const { crewId, characterId, position, result, harmType } = params;
 
       // Resolve consequences (automatic Momentum generation)
       const consequenceResult = resolveActionConsequence(store, {
@@ -119,7 +119,6 @@ export function createActionAPI(store: Store) {
         const harmResult = applyHarmConsequence(store, {
           characterId,
           position,
-          effect,
           harmType,
         });
 

@@ -55,13 +55,28 @@ export interface GameConfig {
       desperate: number;
       impossible: number;
     };
-    // Consequence segments based on Position
-    consequenceSegments: {
+    // Consequence segments base (effect modifiers applied elsewhere)
+    consequenceSegmentsBase: {
       controlled: number;
       risky: number;
       desperate: number;
       impossible: number;
     };
+    // Success clock base progress based on Position
+    successClockBase: {
+      controlled: number;
+      risky: number;
+      desperate: number;
+      impossible: number;
+    };
+    // Effect modifier applied to consequences and success clocks
+    effectModifier: {
+      limited: number;
+      standard: number;
+      great: number;
+      spectacular: number;
+    };
+    // Success segments (legacy, may be deprecated)
     successSegments:{
       lesser: number,
       standard: number,

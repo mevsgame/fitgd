@@ -1,6 +1,6 @@
 import type { Store } from '@reduxjs/toolkit';
 import type { Trait } from '../../types';
-import type { Position, Effect } from '../../types/resolution';
+import type { Position } from '../../types/resolution';
 import { applyHarmConsequence } from '../../resolution';
 import { clearSegments, deleteClock } from '../../slices/clockSlice';
 import { addTrait } from '../../slices/characterSlice';
@@ -16,6 +16,8 @@ export function createHarmAPI(store: Store) {
   return {
     /**
      * Take harm (create or add to harm clock)
+     *
+     * @param params - Harm parameters (position determines segments, effect does NOT apply to harm)
      */
     take(params: {
       characterId: string;

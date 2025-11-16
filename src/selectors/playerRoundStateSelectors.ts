@@ -8,7 +8,13 @@
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
 import type { PlayerRoundState, Position, Effect } from '../types/playerRoundState';
-import { DEFAULT_CONFIG } from '../config/gameConfig';
+import {
+  calculateConsequenceSeverity,
+  calculateMomentumGain,
+  calculateSuccessClockProgress,
+  improvePosition,
+  improveEffect,
+} from '../utils/playerRoundRules';
 
 /**
  * Select player state by character ID
@@ -84,68 +90,22 @@ export const selectDicePool = createSelector(
 );
 
 /**
- * Consequence Severity Table
- * Returns clock segments based on POSITION ONLY (not effect)
- *
- * IMPORTANT: Effect modifiers only apply to SUCCESS clocks (progress on success).
- * For consequences (harm/crew clocks), only position matters:
- * - Controlled: 1 segment
- * - Risky: 3 segments
- * - Desperate: 5 segments
- * - Impossible: 6 segments (fills harm clock completely, instant dying)
- *
- * This is a house rule deviation from Blades in the Dark.
- */
-/**
  * Get consequence severity (clock segments) based on position only
- * Effect does NOT apply to consequences - only to success clocks
+ * Returns base value; effect modifiers are applied separately during harm resolution
  * Uses harm segments from game config
+ *
+ * @example
+ * selectConsequenceSeverity('desperate') // → 4 (base, effect modifiers applied elsewhere)
  */
-export const selectConsequenceSeverity = (
-  position: Position
-): number => {
-  return DEFAULT_CONFIG.resolution.consequenceSegments[position] ?? 0;
-};
-
-/**
- * Momentum Gain Table
- * Based on position when accepting consequence
- */
-export const MOMENTUM_GAIN_TABLE: Record<Position, number> = {
-  controlled: 1,
-  risky: 2,
-  desperate: 4,
-  impossible: 6,
-};
+export const selectConsequenceSeverity = calculateConsequenceSeverity;
 
 /**
  * Get momentum gain for accepting a consequence at a given position
+ *
+ * @example
+ * selectMomentumGain('desperate') // → 4
  */
-export const selectMomentumGain = (position: Position): number => {
-  return MOMENTUM_GAIN_TABLE[position] ?? 0;
-};
-
-/**
- * Success Clock Base Progress Table
- * Returns base segments based on POSITION only
- */
-export const SUCCESS_CLOCK_BASE_TABLE: Record<Position, number> = {
-  controlled: 1,
-  risky: 3,
-  desperate: 5,
-  impossible: 6,
-};
-
-/**
- * Effect Modifier Table
- * Modifies success clock progress based on EFFECT level
- */
-export const EFFECT_MODIFIER_TABLE: Record<Effect, number> = {
-  limited: -1,
-  standard: 0,
-  great: 1,
-  spectacular: 2,
-};
+export const selectMomentumGain = calculateMomentumGain;
 
 /**
  * Calculate success clock progress based on position and effect
@@ -155,15 +115,11 @@ export const EFFECT_MODIFIER_TABLE: Record<Effect, number> = {
  * - Risky (3) + Great (+1) = 4 segments
  * - Desperate (5) + Spectacular (+2) = 7 segments
  * - Controlled (1) + Limited (-1) = 0 segments (minimum)
+ *
+ * @example
+ * selectSuccessClockProgress('risky', 'great') // → 4
  */
-export const selectSuccessClockProgress = (
-  position: Position,
-  effect: Effect
-): number => {
-  const baseProgress = SUCCESS_CLOCK_BASE_TABLE[position] ?? 0;
-  const effectModifier = EFFECT_MODIFIER_TABLE[effect] ?? 0;
-  return Math.max(0, baseProgress + effectModifier);
-};
+export const selectSuccessClockProgress = calculateSuccessClockProgress;
 
 /**
  * Calculate momentum cost for an action
@@ -330,58 +286,10 @@ export const selectIsDying = createSelector(
 /* -------------------------------------------- */
 
 /**
- * Improve position by one step (pure function)
- *
- * Position ladder: Impossible → Desperate → Risky → Controlled
- *
- * @param position - Current position
- * @returns Improved position (one step better)
- *
- * @example
- * improvePosition('desperate') // → 'risky'
- * improvePosition('controlled') // → 'controlled' (already at best)
+ * Re-export utilities from playerRoundRules for backward compatibility
+ * See src/utils/playerRoundRules.ts for pure function implementations
  */
-export function improvePosition(position: Position): Position {
-  switch (position) {
-    case 'impossible':
-      return 'desperate';
-    case 'desperate':
-      return 'risky';
-    case 'risky':
-      return 'controlled';
-    case 'controlled':
-      return 'controlled'; // Already at best
-    default:
-      return position;
-  }
-}
-
-/**
- * Improve effect by one level (pure function)
- *
- * Effect ladder: Limited → Standard → Great → Spectacular
- *
- * @param effect - Current effect
- * @returns Improved effect (one level better)
- *
- * @example
- * improveEffect('standard') // → 'great'
- * improveEffect('spectacular') // → 'spectacular' (already at best)
- */
-export function improveEffect(effect: Effect): Effect {
-  switch (effect) {
-    case 'limited':
-      return 'standard';
-    case 'standard':
-      return 'great';
-    case 'great':
-      return 'spectacular';
-    case 'spectacular':
-      return 'spectacular'; // Already at best
-    default:
-      return effect;
-  }
-}
+export { improvePosition, improveEffect } from '../utils/playerRoundRules';
 
 /**
  * Calculate effective position for roll (ephemeral - does NOT mutate state)

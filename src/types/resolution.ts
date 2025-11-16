@@ -32,7 +32,7 @@ export interface ConsequenceResult {
 export interface HarmConsequenceParams {
   characterId: string;
   position: Position;
-  harmType: string; 
+  harmType: string;
 }
 
 export interface HarmConsequenceResult {

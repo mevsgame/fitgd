@@ -55,11 +55,26 @@ export const DEFAULT_CONFIG: GameConfig = {
       impossible: 6,
     },
     // Consequence segments based on Position (rules_primer.md:144-146)
-    consequenceSegments: {
+    // Note: Effect modifiers apply on top of base (will be applied in applyHarmConsequence)
+    consequenceSegmentsBase: {
       controlled: 1,
       risky: 2,
       desperate: 4,
       impossible: 6,
+    },
+    // Success clock base progress based on Position
+    successClockBase: {
+      controlled: 1,
+      risky: 3,
+      desperate: 5,
+      impossible: 6,
+    },
+    // Effect modifier for harm and success clocks
+    effectModifier: {
+      limited: -1,
+      standard: 0,
+      great: 1,
+      spectacular: 2,
     },
     // Sequence segments based on Effect (rules_primer.md:144-146)
     successSegments: {
