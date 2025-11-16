@@ -11,7 +11,6 @@ import type { Clock } from '@/types/clock';
 import type { RootState } from '@/store';
 import type { PlayerRoundState, Position, Effect } from '@/types/playerRoundState';
 import type { TraitTransaction, ConsequenceTransaction } from '@/types/playerRoundState';
-import type { InteractionContext, ClockInteraction } from '@/types/clockInteraction';
 
 import { selectCanUseRally } from '@/selectors/characterSelectors';
 import { selectStimsAvailable } from '@/selectors/clockSelectors';
@@ -21,10 +20,9 @@ import { selectDicePool, selectConsequenceSeverity, selectMomentumGain, selectMo
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
 
 import { calculateOutcome } from '@/utils/diceRules';
-import { suggestClockInteractions } from '@/utils/clockInteractions';
 
 import { FlashbackTraitsDialog } from '../dialogs/FlashbackTraitsDialog';
-import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog, RallyDialog, ConsequenceResolutionDialog } from '../dialogs/index';
+import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog, RallyDialog } from '../dialogs/index';
 import { asReduxId } from '../types/ids';
 
 /* -------------------------------------------- */
@@ -45,9 +43,6 @@ interface PlayerActionWidgetData {
   isSuccess: boolean;
   isConsequenceChoice: boolean;
   isGMResolvingConsequence: boolean;
-
-  // Feature flags
-  useNewConsequenceDialog: boolean;
 
   // Available actions
   actions: string[];
@@ -329,9 +324,6 @@ export class PlayerActionWidget extends Application {
       // Stims availability (inverted: selector returns "available", template needs "locked")
       stimsLocked: !selectStimsAvailable(state, this.crewId || ''),
 
-      // Feature flags
-      useNewConsequenceDialog: DEFAULT_CONFIG.experimental.useNewConsequenceDialog,
-
       // Consequence transaction data (for GM_RESOLVING_CONSEQUENCE state)
       ...(this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE' ? this._getConsequenceData(state) : {}),
     };
@@ -366,7 +358,6 @@ export class PlayerActionWidget extends Application {
     html.find('[data-action="accept-consequences"]').click(this._onAcceptConsequences.bind(this));
 
     // GM consequence configuration buttons
-    html.find('[data-action="configure-consequence"]').click(this._onConfigureConsequence.bind(this)); // New dialog flow
     html.find('[data-action="select-consequence-type"]').click(this._onSelectConsequenceType.bind(this));
     html.find('[data-action="select-harm-target"]').click(this._onSelectHarmTarget.bind(this));
     html.find('[data-action="select-harm-clock"]').click(this._onSelectHarmClock.bind(this));
@@ -1052,98 +1043,6 @@ export class PlayerActionWidget extends Application {
   /* -------------------------------------------- */
   /*  GM Consequence Configuration Handlers       */
   /* -------------------------------------------- */
-
-  /**
-   * Handle Configure Consequence button (New Dialog Flow)
-   * Opens ConsequenceResolutionDialog with context-aware suggestions
-   */
-  private async _onConfigureConsequence(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-
-    const state = game.fitgd.store.getState();
-    const playerState = state.playerRoundState.byCharacterId[this.characterId];
-
-    if (!playerState || !this.crewId) {
-      ui.notifications?.warn('Invalid state for consequence configuration');
-      return;
-    }
-
-    // Build InteractionContext from playerRoundState
-    const context: InteractionContext = {
-      outcome: playerState.outcome || 'failure',
-      position: selectEffectivePosition(state, this.characterId),
-      effect: selectEffectiveEffect(state, this.characterId),
-      actionType: 'normal', // TODO: Detect Rally/medical/defuse from playerState
-      actionDescription: playerState.actionDescription,
-      characterId: this.characterId,
-      crewId: this.crewId,
-      dicePool: playerState.dicePool,
-      rollResult: playerState.rollResult,
-    };
-
-    // Get all available clocks
-    const allClocks = Object.values(state.clocks.byId);
-
-    // Open ConsequenceResolutionDialog
-    const dialog = new ConsequenceResolutionDialog(context, allClocks, {
-      onApply: async (interaction: ClockInteraction) => {
-        // Dispatch applyInteraction action
-        await game.fitgd.bridge.execute(
-          { type: 'clocks/applyInteraction', payload: { interaction, context } },
-          { affectedReduxIds: [asReduxId(this.characterId)] }
-        );
-
-        // Add momentum gain for consequences
-        const momentumGain = selectMomentumGain(state, this.characterId);
-        if (momentumGain > 0 && this.crewId) {
-          await game.fitgd.bridge.execute(
-            {
-              type: 'crews/addMomentum',
-              payload: { crewId: this.crewId, amount: momentumGain },
-            },
-            { affectedReduxIds: [asReduxId(this.crewId)] }
-          );
-        }
-
-        // Transition back to DECISION_PHASE (end of turn)
-        await game.fitgd.bridge.execute(
-          {
-            type: 'playerRoundState/transitionState',
-            payload: { characterId: this.characterId, newState: 'DECISION_PHASE' },
-          },
-          { affectedReduxIds: [asReduxId(this.characterId)] }
-        );
-
-        ui.notifications?.info('Consequence applied');
-      },
-      onSkip: async () => {
-        // Skip consequence, just add momentum and end turn
-        const momentumGain = selectMomentumGain(state, this.characterId);
-        if (momentumGain > 0 && this.crewId) {
-          await game.fitgd.bridge.execute(
-            {
-              type: 'crews/addMomentum',
-              payload: { crewId: this.crewId, amount: momentumGain },
-            },
-            { affectedReduxIds: [asReduxId(this.crewId)] }
-          );
-        }
-
-        // Transition back to DECISION_PHASE
-        await game.fitgd.bridge.execute(
-          {
-            type: 'playerRoundState/transitionState',
-            payload: { characterId: this.characterId, newState: 'DECISION_PHASE' },
-          },
-          { affectedReduxIds: [asReduxId(this.characterId)] }
-        );
-
-        ui.notifications?.info('Consequence skipped');
-      },
-    });
-
-    dialog.render(true);
-  }
 
   /**
    * Handle consequence type selection (harm vs crew-clock)

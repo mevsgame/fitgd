@@ -27,6 +27,3 @@ export { AddClockDialog } from './AddClockDialog';
 // Equipment dialogs (all TypeScript)
 export { EquipmentBrowserDialog } from './equipment-browser-dialog';
 export { EquipmentEditDialog } from './equipment-edit-dialog';
-
-// Clock interaction dialogs
-export { ConsequenceResolutionDialog } from './ConsequenceResolutionDialog';
