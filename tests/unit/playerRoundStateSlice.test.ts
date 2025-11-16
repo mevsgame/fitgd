@@ -702,7 +702,6 @@ describe('playerRoundStateSlice', () => {
       const transaction = {
         consequenceType: 'crew-clock' as const,
         crewClockId: 'clock-999',
-        crewClockSegments: 2,
         calculatedMomentumGain: 2,
       };
 
@@ -711,7 +710,6 @@ describe('playerRoundStateSlice', () => {
       const state = store.getState().playerRoundState.byCharacterId[characterId];
       expect(state.consequenceTransaction?.consequenceType).toBe('crew-clock');
       expect(state.consequenceTransaction?.crewClockId).toBe('clock-999');
-      expect(state.consequenceTransaction?.crewClockSegments).toBe(2);
     });
   });
 
