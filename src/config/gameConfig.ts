@@ -54,12 +54,19 @@ export const DEFAULT_CONFIG: GameConfig = {
       desperate: 4,
       impossible: 6,
     },
-    // Harm segments based on Position and Effect (rules_primer.md:144-146)
-    harmSegments: {
+    // Consequence segments based on Position (rules_primer.md:144-146)
+    consequenceSegments: {
       controlled: 1,
       risky: 2,
       desperate: 4,
       impossible: 6,
+    },
+    // Sequence segments based on Effect (rules_primer.md:144-146)
+    successSegments: {
+      lesser: 1,
+      standard: 2,
+      great: 4,
+      spectacular: 6,
     },
   },
 };

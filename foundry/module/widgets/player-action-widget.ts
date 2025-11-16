@@ -126,10 +126,10 @@ interface ClockData {
  * - Shows roll result and improvements to GM
  * - GM can approve or modify outcome
  *
- * **CONSEQUENCE_CHOICE**: Player must handle consequences
+ * **GM_RESOLVING_CONSEQUENCE**: GM determines consequences
  * - Success: No consequences, turn ends
- * - Failure: Take harm based on position
- * - Severe failure: Additional complications
+ * - Failure: GM applies harm based on position
+ * - Player can interrupt with stims
  *
  * **COMPLETE**: Turn finished, widget closes
  *
@@ -286,7 +286,6 @@ export class PlayerActionWidget extends Application {
       isStimsRolling: this.playerState?.state === 'STIMS_ROLLING',
       isStimsLocked: this.playerState?.state === 'STIMS_LOCKED',
       isSuccess: this.playerState?.state === 'SUCCESS_COMPLETE',
-      isConsequenceChoice: this.playerState?.state === 'CONSEQUENCE_CHOICE',
       isGMResolvingConsequence: this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE',
 
       // Available actions
@@ -957,7 +956,7 @@ export class PlayerActionWidget extends Application {
         },
       });
     } else {
-      // Partial or failure - go directly to GM_RESOLVING_CONSEQUENCE (skip CONSEQUENCE_CHOICE)
+      // Partial or failure - go directly to GM_RESOLVING_CONSEQUENCE
       rollOutcomeActions.push({
         type: 'playerRoundState/transitionState',
         payload: {
@@ -1009,7 +1008,7 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Handle Use Stims button (from CONSEQUENCE_CHOICE state)
+   * Handle Use Stims button (from GM_RESOLVING_CONSEQUENCE state)
    */
   private async _onUseStims(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
@@ -1017,7 +1016,7 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Handle Accept Consequences button (CONSEQUENCE_CHOICE -> GM_RESOLVING_CONSEQUENCE)
+   * Handle Accept Consequences button (GM_RESOLVING_CONSEQUENCE flow)
    */
   private async _onAcceptConsequences(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
@@ -1445,7 +1444,7 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Shared stims logic (can be called from CONSEQUENCE_CHOICE or GM_RESOLVING_CONSEQUENCE)
+   * Shared stims logic (called from GM_RESOLVING_CONSEQUENCE state)
    * Validates addiction status, advances addiction clock, and sets up reroll
    */
   private async _useStims(): Promise<void> {

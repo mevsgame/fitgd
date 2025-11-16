@@ -21,19 +21,17 @@ export function createHarmAPI(store: Store) {
       characterId: string;
       harmType: string;
       position: Position;
-      effect: Effect;
     }): {
       clockId: string;
       segmentsAdded: number;
       newSegments: number;
       isDying: boolean;
     } {
-      const { characterId, harmType, position, effect } = params;
+      const { characterId, harmType, position } = params;
 
       const result = applyHarmConsequence(store, {
         characterId,
         position,
-        effect,
         harmType,
       });
 

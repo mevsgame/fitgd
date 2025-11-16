@@ -104,7 +104,7 @@ export const selectDicePool = createSelector(
 export const selectConsequenceSeverity = (
   position: Position
 ): number => {
-  return DEFAULT_CONFIG.resolution.harmSegments[position] ?? 0;
+  return DEFAULT_CONFIG.resolution.consequenceSegments[position] ?? 0;
 };
 
 /**
@@ -227,7 +227,7 @@ export const selectAvailableActions = createSelector(
         }
         break;
 
-      case 'CONSEQUENCE_CHOICE':
+      case 'GM_RESOLVING_CONSEQUENCE':
         actions.push('accept_consequence', 'use_stims');
         break;
 
