@@ -3,10 +3,6 @@
 # Pre-commit hook: Auto-bump minor version on main branch
 # Unless the user explicitly changed the version files
 
-# Source the .husky initialization (required for husky 9+)
-. "$(dirname "$0")/_/husky.sh"
-
-# Exit early if script fails
 set -e
 
 # Only run on main branch
