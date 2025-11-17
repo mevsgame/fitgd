@@ -17,7 +17,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -42,7 +42,7 @@ jobs:
         run: pnpm install
 
       - name: Build Foundry system
-        run: pnpm run build:foundry
+        run: pnpm run build
 
       - name: Create release assets
         run: |
