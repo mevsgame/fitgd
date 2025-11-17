@@ -5,11 +5,13 @@
  * Matches the grimdark aesthetic and consolidates duplicate logic.
  */
 
+import { ClockSize } from "@/types";
+
 type ClockType = 'harm' | 'progress';
 
 interface ClockData {
   name: string;
-  segments: number;
+  segments: ClockSize;
   description?: string;
   category?: string;
   isCountdown?: boolean;
@@ -126,7 +128,7 @@ export class ClockCreationDialog extends Dialog {
   ): Promise<boolean> {
     const form = html.find('form')[0] as HTMLFormElement;
     const clockName = (form.elements.namedItem('clockName') as HTMLInputElement).value.trim();
-    const segments = parseInt((form.elements.namedItem('segments') as HTMLSelectElement).value, 10);
+    const segments = <ClockSize>parseInt((form.elements.namedItem('segments') as HTMLSelectElement).value, 10);
     const descriptionEl = form.elements.namedItem('description') as HTMLTextAreaElement | null;
     const description = descriptionEl?.value?.trim() || undefined;
     const categoryEl = form.elements.namedItem('category') as HTMLSelectElement | null;

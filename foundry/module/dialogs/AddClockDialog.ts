@@ -4,6 +4,7 @@
  * Dialog for adding progress clocks
  */
 
+import { ClockSize } from '@/types/clock';
 import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 import { ClockCreationDialog } from './ClockCreationDialog';
 
@@ -12,7 +13,7 @@ import { ClockCreationDialog } from './ClockCreationDialog';
  */
 interface ClockData {
   name: string;
-  segments: number;
+  segments: ClockSize;
   category?: string;
   isCountdown?: boolean;
   description?: string;
@@ -53,7 +54,7 @@ export class AddClockDialog {
           game.fitgd!.api.clock.createProgress({
             entityId: this.crewId,
             name: clockData.name,
-            segments: clockData.segments,
+            maxSegments: clockData.segments,
             category: clockData.category as 'long-term-project' | 'threat' | 'personal-goal' | 'obstacle' | 'faction' | undefined,
             isCountdown: clockData.isCountdown,
             description: clockData.description
