@@ -407,7 +407,7 @@ export class PlayerActionWidget extends Application {
       isGM: game.user?.isGM || false,
 
       // Stims availability (inverted: selector returns "available", template needs "locked")
-      stimsLocked: !selectStimsAvailable(state, this.crewId || ''),
+      stimsLocked: !selectStimsAvailable(state),
 
       // Consequence transaction data (for GM_RESOLVING_CONSEQUENCE state)
       ...(this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE' ? this._getConsequenceData(state) : {}),
@@ -844,7 +844,8 @@ export class PlayerActionWidget extends Application {
     } else {
       // Roll Nd6
       roll = await Roll.create(`${dicePool}d6`).evaluate({ async: true });
-      results = roll.dice[0].results.sort((a, b) => b - a);
+      // Extract numeric values from result objects and sort descending
+      results = (roll.dice[0].results as any[]).map((r: any) => r.result).sort((a, b) => b - a);
     }
 
     // Post roll to chat

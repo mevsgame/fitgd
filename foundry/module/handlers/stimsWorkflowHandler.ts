@@ -14,7 +14,7 @@
 import type { RootState } from '@/store';
 import type { PlayerRoundState } from '@/types/playerRoundState';
 import type { Clock } from '@/types/clock';
-import { selectAddictionClockByCrew } from '@/selectors/clockSelectors';
+import { selectAddictionClockByCharacter, selectStimsAvailable } from '@/selectors/clockSelectors';
 import { asReduxId } from '../types/ids';
 
 /**
@@ -101,11 +101,10 @@ export class StimsWorkflowHandler {
       return { isValid: false, reason: 'already-used' };
     }
 
-    // TODO: Check if crew addiction is locked
-    // const isStimsLocked = selectIsStimsLocked(state, this.config.crewId);
-    // if (isStimsLocked) {
-    //   return { isValid: false, reason: 'team-addiction-locked' };
-    // }
+    // Check if stims are locked due to addiction clock being filled
+    if (!selectStimsAvailable(state)) {
+      return { isValid: false, reason: 'team-addiction-locked' };
+    }
 
     return { isValid: true };
   }
@@ -130,14 +129,13 @@ export class StimsWorkflowHandler {
   }
 
   /**
-   * Find or note missing addiction clock
+   * Find character's addiction clock
    *
    * @param state - Redux state
    * @returns Addiction clock if exists, null otherwise
    */
   findAddictionClock(state: RootState): Clock | null {
-    if (!this.config.crewId) return null;
-    return selectAddictionClockByCrew(state, this.config.crewId);
+    return selectAddictionClockByCharacter(state, this.config.characterId);
   }
 
   /**
@@ -152,10 +150,10 @@ export class StimsWorkflowHandler {
     const clockId = this._generateId();
 
     return {
-      type: 'clocks/addClock',
+      type: 'clocks/createClock',
       payload: {
         id: clockId,
-        entityId: this.config.crewId!,
+        entityId: this.config.characterId,
         clockType: 'addiction',
         maxSegments: 8,
         segments: 0,
@@ -187,13 +185,13 @@ export class StimsWorkflowHandler {
     segments: number
   ): {
     type: string;
-    payload: { clockId: string; segments: number };
+    payload: { clockId: string; amount: number };
   } {
     return {
       type: 'clocks/addSegments',
       payload: {
         clockId: addictionClockId,
-        segments,
+        amount: segments,
       },
     };
   }

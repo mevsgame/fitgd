@@ -176,26 +176,55 @@ export const selectHasDyingClock = createSelector(
 );
 
 /**
- * Check if stims are available (no addiction clocks frozen)
+ * Check if stims are available (crew-wide lock)
  *
- * Addiction is tracked per-character but frozen crew-wide when ANY clock fills.
- * This checks if ANY addiction clock is frozen.
+ * Addiction clocks are character-level. Stims are locked crew-wide if ANY character's
+ * addiction clock is filled or frozen. This works like consumables.
+ *
+ * Note: Filters out orphaned clocks (clocks referencing deleted characters).
  */
 export const selectStimsAvailable = createSelector(
   [
     selectClocksState,
+    (state: any) => state.characters?.byId || {},
   ],
-  (clocksState): boolean => {
-    // Find ALL addiction clocks
-    const addictionClocks = clocksState.allIds
-      .map((id) => clocksState.byId[id])
-      .filter((clock) => clock.clockType === 'addiction');
+  (clocksState: ClockState, characterById: any): boolean => {
+    // Find ALL addiction clocks across all characters
+    let addictionClocks: Clock[] = clocksState.allIds
+      .map((id: string) => clocksState.byId[id])
+      .filter((clock: any): clock is Clock => Boolean(clock) && clock.clockType === 'addiction');
+
+    // Filter out orphaned clocks (clocks referencing deleted characters)
+    addictionClocks = addictionClocks.filter((clock: Clock) => {
+      const characterExists = clock.entityId in characterById;
+      if (!characterExists) {
+        console.log(`FitGD | Filtered orphaned addiction clock: ${clock.id} (deleted entity: ${clock.entityId})`);
+      }
+      return characterExists;
+    });
+
+    // Debug: Log addiction clock info
+    if (addictionClocks.length > 0) {
+      console.log('FitGD | Active Addiction Clocks:', addictionClocks.map((c: Clock) => ({
+        id: c.id,
+        entityId: c.entityId,
+        segments: c.segments,
+        maxSegments: c.maxSegments,
+        filled: c.segments >= c.maxSegments,
+        frozen: c.metadata?.frozen === true
+      })));
+    }
 
     // If no clocks exist yet, stims available
-    if (addictionClocks.length === 0) return true;
+    if (addictionClocks.length === 0) {
+      console.log('FitGD | No active addiction clocks - stims AVAILABLE');
+      return true;
+    }
 
-    // If ANY clock is frozen, stims are not available
-    return !addictionClocks.some((clock) => isClockFrozen(clock));
+    // Stims are LOCKED crew-wide if ANY character's addiction clock is filled or frozen
+    const isLocked = addictionClocks.some((clock: Clock) => isClockFilled(clock) || isClockFrozen(clock));
+    console.log('FitGD | Stims available:', !isLocked);
+    return !isLocked;
   }
 );
 
