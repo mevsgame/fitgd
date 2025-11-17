@@ -3,7 +3,8 @@ name: Build and Release Artifacts
 on:
   push:
     tags:
-      - 'v*'  # Trigger on version tags (v1.0.0, v1.0.1, etc)
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -45,20 +46,20 @@ jobs:
 
       - name: Create release assets
         run: |
-          mkdir -p release-assets
+          mkdir -p release-assets/dist
           cp foundry/system.json release-assets/system.json
-          cp -r foundry/dist release-assets/dist
-          cp foundry/templates release-assets/templates || true
-          cp foundry/lang release-assets/lang || true
-          cp foundry/packs release-assets/packs || true
+          cp -r foundry/dist/* release-assets/dist/
+          cp -r foundry/templates release-assets/templates || true
+          cp -r foundry/lang release-assets/lang || true
+          cp -r foundry/packs release-assets/packs || true
           cd release-assets && zip -r ../forged-in-the-grimdark.zip . && cd ..
 
       - name: Create GitHub Release with Assets
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            foundry/system.json
-            foundry/dist/**
+            release-assets/system.json
+            release-assets/dist/**
             forged-in-the-grimdark.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
