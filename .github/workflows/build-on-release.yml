@@ -1,11 +1,14 @@
 name: Build and Release Artifacts
 
+permissions: 
+  contents: write 
+  
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
-
+  
 jobs:
   build:
     runs-on: ubuntu-latest
