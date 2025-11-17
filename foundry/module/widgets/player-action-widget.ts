@@ -1216,11 +1216,6 @@ export class PlayerActionWidget extends Application {
     // Check if addiction clock just filled and character became addict
     const isAddict = this.stimsWorkflowHandler.isAddictionClockFull(newSegments, updatedClock.maxSegments);
     if (isAddict) {
-      await game.fitgd.bridge.execute(
-        this.stimsWorkflowHandler.createAddictTraitAction(),
-        { affectedReduxIds: [asReduxId(this.stimsWorkflowHandler.getAffectedReduxId())], force: true }
-      );
-
       ui.notifications?.error(this.stimsWorkflowHandler.generateAddictionFilledNotification());
 
       const chatMsg = this.stimsWorkflowHandler.generateAddictionFilledChatMessage();
