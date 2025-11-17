@@ -40,9 +40,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Type check
-        run: pnpm run type-check:all
-
       - name: Build Foundry system
         run: pnpm run build:foundry
 

@@ -4,6 +4,8 @@
  * Utilities for managing Foundry sheet lifecycle and rendering
  */
 
+import type { ReduxId } from '@/types/foundry';
+
 /**
  * Refresh sheets for the given entity IDs
  *
@@ -74,7 +76,7 @@ export async function takeAction(characterId: string): Promise<void> {
         type: 'playerRoundState/resetPlayerState',
         payload: { characterId },
       },
-      { affectedReduxIds: [characterId], silent: true }
+      { affectedReduxIds: [characterId as ReduxId], silent: true }
     );
   }
 
@@ -84,7 +86,7 @@ export async function takeAction(characterId: string): Promise<void> {
       type: 'playerRoundState/setActivePlayer',
       payload: { characterId },
     },
-    { affectedReduxIds: [characterId], silent: true }
+    { affectedReduxIds: [characterId as ReduxId], silent: true }
   );
 
   // Broadcast "takeAction" event to ALL clients via socketlib

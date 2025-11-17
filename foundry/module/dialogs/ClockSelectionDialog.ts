@@ -12,25 +12,22 @@ import type { RootState } from '@/store';
  * Dialog for selecting a harm or crew clock
  */
 export class ClockSelectionDialog extends BaseSelectionDialog {
-  private entityId: string;
-  private clockType: 'harm' | 'crew';
-
   /**
-   * @param entityId - Character or crew ID
+   * @param _entityId - Character or crew ID (unused, kept for API compatibility)
    * @param clockType - Clock type to filter
    * @param onSelect - Callback: (clockId) => void
    */
   constructor(
-    entityId: string,
+    _entityId: string,
     clockType: 'harm' | 'crew',
     onSelect: (clockId: string) => void | Promise<void>
   ) {
-    const state: RootState = game.fitgd.store.getState();
+    const state: RootState = game.fitgd!.store.getState();
 
     // Get clocks for entity
     const allClocks = Object.values(state.clocks.byId);
     const entityClocks = allClocks.filter((clock: Clock) => {
-      if (clock.entityId !== entityId) return false;
+      if (clock.entityId !== _entityId) return false;
 
       if (clockType === 'harm') {
         return clock.clockType === 'harm';
@@ -56,9 +53,6 @@ export class ClockSelectionDialog extends BaseSelectionDialog {
       width: 450,
       height: 'auto',
     });
-
-    this.entityId = entityId;
-    this.clockType = clockType;
   }
 
   /**

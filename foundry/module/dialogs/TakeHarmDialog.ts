@@ -13,9 +13,6 @@ interface TakeHarmOptions extends Partial<DialogOptions> {
 }
 
 export class TakeHarmDialog extends Dialog {
-  private characterId: string;
-  private crewId: string;
-
   /**
    * Create a new Take Harm Dialog
    *
@@ -95,9 +92,6 @@ export class TakeHarmDialog extends Dialog {
       classes: ['fitgd', 'fitgd-dialog', 'clock-creation-dialog'],
       ...options
     });
-
-    this.characterId = characterId;
-    this.crewId = crewId;
   }
 
   private async _onApply(html: JQuery, characterId: string, crewId: string): Promise<void> {

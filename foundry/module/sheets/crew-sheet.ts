@@ -229,7 +229,7 @@ class FitGDCrewSheet extends ActorSheet {
 
     try {
       // Perform momentum reset
-      const result = game.fitgd.api.crew.performReset(crewId);
+      game.fitgd.api.crew.performReset(crewId);
 
       // Broadcast changes to all clients
       await game.fitgd.saveImmediate();
@@ -259,7 +259,7 @@ class FitGDCrewSheet extends ActorSheet {
 
     try {
       const target = event.currentTarget as HTMLElement;
-      const { clockId, segment: segmentStr, currentSegments: currentSegmentsStr } = getClockDataset(target);
+      const { clockId } = getClockDataset(target);
       const segment = getDatasetInt(target, 'segment', 0);
       const currentSegments = getDatasetInt(target, 'currentSegments', 0);
 

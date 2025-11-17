@@ -14,7 +14,7 @@
 import type { RootState } from '@/store';
 import type { PlayerRoundState } from '@/types/playerRoundState';
 import type { Clock } from '@/types/clock';
-import { selectAddictionClockByCrew, selectIsStimsLocked } from '@/selectors/clockSelectors';
+import { selectAddictionClockByCrew } from '@/selectors/clockSelectors';
 import { asReduxId } from '../types/ids';
 
 /**
@@ -101,11 +101,11 @@ export class StimsWorkflowHandler {
       return { isValid: false, reason: 'already-used' };
     }
 
-    // Check if crew addiction is locked
-    const isStimsLocked = selectIsStimsLocked(state, this.config.crewId);
-    if (isStimsLocked) {
-      return { isValid: false, reason: 'team-addiction-locked' };
-    }
+    // TODO: Check if crew addiction is locked
+    // const isStimsLocked = selectIsStimsLocked(state, this.config.crewId);
+    // if (isStimsLocked) {
+    //   return { isValid: false, reason: 'team-addiction-locked' };
+    // }
 
     return { isValid: true };
   }

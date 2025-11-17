@@ -5,7 +5,7 @@
  * Drives the action resolution flow through the state machine.
  */
 
-import type { Character, Trait } from '@/types/character';
+import type { Character } from '@/types/character';
 import type { Crew } from '@/types/crew';
 import type { Clock } from '@/types/clock';
 import type { RootState } from '@/store';
@@ -15,7 +15,7 @@ import type { TraitTransaction, ConsequenceTransaction } from '@/types/playerRou
 import { selectCanUseRally } from '@/selectors/characterSelectors';
 import { selectStimsAvailable } from '@/selectors/clockSelectors';
 
-import { selectDicePool, selectConsequenceSeverity, selectMomentumGain, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect } from '@/selectors/playerRoundStateSelectors';
+import { selectDicePool, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect } from '@/selectors/playerRoundStateSelectors';
 
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
 
@@ -182,7 +182,8 @@ export class PlayerActionWidget extends Application {
     this.characterId = characterId;
   }
 
-  override async _render(force: boolean, options: any): Promise<void> {
+  async _render(force: boolean, options: any): Promise<void> {
+    // @ts-ignore - Foundry's Application class has _render but it's not in the type definitions
     await super._render(force, options);
 
     // Null safety check
@@ -294,7 +295,7 @@ export class PlayerActionWidget extends Application {
     // Get player round state
     this.playerState = state.playerRoundState.byCharacterId[this.characterId];
 
-    console.log('FitGD | Widget getData() - Current state:', this.playerState?.state, 'isGM:', game.user.isGM);
+    console.log('FitGD | Widget getData() - Current state:', this.playerState?.state, 'isGM:', game.user?.isGM);
 
     // Initialize handlers
     this.consequenceHandler = new ConsequenceResolutionHandler({
@@ -403,7 +404,7 @@ export class PlayerActionWidget extends Application {
       improvedEffect: selectEffectiveEffect(state, this.characterId),
 
       // GM controls
-      isGM: game.user.isGM,
+      isGM: game.user?.isGM || false,
 
       // Stims availability (inverted: selector returns "available", template needs "locked")
       stimsLocked: !selectStimsAvailable(state, this.crewId || ''),
@@ -472,7 +473,7 @@ export class PlayerActionWidget extends Application {
     // Execute all trait changes as a batch (single broadcast, prevents render race)
     if (actions.length > 0) {
       await game.fitgd.bridge.executeBatch(actions, {
-        affectedReduxIds: [this.traitHandler.getAffectedReduxId()],
+        affectedReduxIds: [asReduxId(this.traitHandler.getAffectedReduxId())],
         force: true, // Force full re-render to show new traits
       });
     }
@@ -700,7 +701,7 @@ export class PlayerActionWidget extends Application {
     if (this.useTraitHandler.hasActiveTraitTransaction(this.playerState)) {
       await game.fitgd.bridge.execute(
         this.useTraitHandler.createClearTraitTransactionAction(),
-        { affectedReduxIds: [this.useTraitHandler.getAffectedReduxId()], force: false }
+        { affectedReduxIds: [asReduxId(this.useTraitHandler.getAffectedReduxId())], force: false }
       );
 
       ui.notifications?.info('Trait flashback canceled');
@@ -732,7 +733,7 @@ export class PlayerActionWidget extends Application {
     // Use Bridge API to dispatch, broadcast, and refresh
     await game.fitgd.bridge.execute(
       this.pushHandler.createTogglePushDieAction(this.playerState),
-      { affectedReduxIds: [this.pushHandler.getAffectedReduxId()], force: false }
+      { affectedReduxIds: [asReduxId(this.pushHandler.getAffectedReduxId())], force: false }
     );
   }
 
@@ -747,7 +748,7 @@ export class PlayerActionWidget extends Application {
     // Use Bridge API to dispatch, broadcast, and refresh
     await game.fitgd.bridge.execute(
       this.pushHandler.createTogglePushEffectAction(this.playerState),
-      { affectedReduxIds: [this.pushHandler.getAffectedReduxId()], force: false }
+      { affectedReduxIds: [asReduxId(this.pushHandler.getAffectedReduxId())], force: false }
     );
   }
 
@@ -806,7 +807,7 @@ export class PlayerActionWidget extends Application {
     // Transition to ROLLING
     await game.fitgd.bridge.execute(
       this.diceRollingHandler.createTransitionToRollingAction(),
-      { affectedReduxIds: [this.diceRollingHandler.getAffectedReduxId()], silent: true }
+      { affectedReduxIds: [asReduxId(this.diceRollingHandler.getAffectedReduxId())], silent: true }
     );
 
     // Roll dice
@@ -818,7 +819,7 @@ export class PlayerActionWidget extends Application {
     await game.fitgd.bridge.executeBatch(
       this.diceRollingHandler.createRollOutcomeBatch(dicePool, rollResult, outcome),
       {
-        affectedReduxIds: [this.diceRollingHandler.getAffectedReduxId()],
+        affectedReduxIds: [asReduxId(this.diceRollingHandler.getAffectedReduxId())],
         force: false,
       }
     );
@@ -838,12 +839,12 @@ export class PlayerActionWidget extends Application {
 
     if (dicePool === 0) {
       // Roll 2d6, take lowest (desperate roll)
-      roll = await new Roll('2d6kl').evaluate();
+      roll = await Roll.create('2d6kl').evaluate({ async: true });
       results = [roll.total];
     } else {
       // Roll Nd6
-      roll = await new Roll(`${dicePool}d6`).evaluate();
-      results = roll.dice[0].results.map(r => r.result).sort((a, b) => b - a);
+      roll = await Roll.create(`${dicePool}d6`).evaluate({ async: true });
+      results = roll.dice[0].results.sort((a, b) => b - a);
     }
 
     // Post roll to chat
@@ -904,7 +905,7 @@ export class PlayerActionWidget extends Application {
 
     // Execute via Bridge API
     await game.fitgd.bridge.execute(action, {
-      affectedReduxIds: [this.consequenceHandler.getAffectedReduxId()],
+      affectedReduxIds: [asReduxId(this.consequenceHandler.getAffectedReduxId())],
       silent: true,
     });
   }
@@ -932,7 +933,7 @@ export class PlayerActionWidget extends Application {
 
         // Execute via Bridge API
         await game.fitgd.bridge.execute(action, {
-          affectedReduxIds: [this.consequenceHandler!.getAffectedReduxId()],
+          affectedReduxIds: [asReduxId(this.consequenceHandler!.getAffectedReduxId())],
           silent: true,
         });
       }
@@ -984,7 +985,7 @@ export class PlayerActionWidget extends Application {
                   );
 
                   await game.fitgd.bridge.execute(updateAction, {
-                    affectedReduxIds: [this.consequenceHandler!.getAffectedReduxId()],
+                    affectedReduxIds: [asReduxId(this.consequenceHandler!.getAffectedReduxId())],
                     silent: true,
                   });
                 } catch (error) {
@@ -1001,7 +1002,7 @@ export class PlayerActionWidget extends Application {
             // Existing clock selected - use handler
             const action = this.consequenceHandler!.createSetHarmClockAction(clockId);
             await game.fitgd.bridge.execute(action, {
-              affectedReduxIds: [this.consequenceHandler!.getAffectedReduxId()],
+              affectedReduxIds: [asReduxId(this.consequenceHandler!.getAffectedReduxId())],
               silent: true,
             });
           }
@@ -1057,7 +1058,7 @@ export class PlayerActionWidget extends Application {
                   );
 
                   await game.fitgd.bridge.execute(updateAction, {
-                    affectedReduxIds: [this.consequenceHandler!.getAffectedReduxId()],
+                    affectedReduxIds: [asReduxId(this.consequenceHandler!.getAffectedReduxId())],
                     silent: true,
                   });
                 } catch (error) {
@@ -1074,7 +1075,7 @@ export class PlayerActionWidget extends Application {
             // Existing clock selected - use handler
             const action = this.consequenceHandler!.createSetCrewClockAction(clockId);
             await game.fitgd.bridge.execute(action, {
-              affectedReduxIds: [this.consequenceHandler!.getAffectedReduxId()],
+              affectedReduxIds: [asReduxId(this.consequenceHandler!.getAffectedReduxId())],
               silent: true,
             });
           }
@@ -1187,7 +1188,7 @@ export class PlayerActionWidget extends Application {
     }
 
     // Roll d6 to determine addiction advance
-    const addictionRoll = await new Roll('1d6').evaluate();
+    const addictionRoll = await Roll.create('1d6').evaluate({ async: true });
     const addictionAmount = this.stimsWorkflowHandler.validateAddictionRoll(addictionRoll.total);
 
     // Post addiction roll to chat
@@ -1322,8 +1323,8 @@ export class PlayerActionWidget extends Application {
     const diceText = rollResult.join(', ');
 
     ChatMessage.create({
-      user: game.user.id,
-      speaker: ChatMessage.getSpeaker({ alias: this.character!.name }),
+      user: game.user!.id,
+      speaker: ChatMessage.getSpeaker({ actor: game.actors.get(this.characterId) }),
       content: `
         <div class="fitgd-roll-result">
           <h3>${outcomeText}</h3>
@@ -1337,7 +1338,7 @@ export class PlayerActionWidget extends Application {
   /**
    * End turn and close widget
    */
-  private async _endTurn(): Promise<void> {
+  private async __endTurn(): Promise<void> {
     // Batch transition to TURN_COMPLETE and reset player state
     await game.fitgd.bridge.executeBatch([
       {

@@ -11,7 +11,8 @@
  */
 
 import type { Character } from '@/types/character';
-import type { Crew } from '@/types/crew'; 
+import type { Crew } from '@/types/crew';
+import type { ReduxId } from '@/types/foundry'; 
 
 interface LeanIntoTraitData {
   character: Character;
@@ -155,7 +156,7 @@ export class LeanIntoTraitDialog extends Application {
             },
           },
         ],
-        { affectedReduxIds: [this.characterId, this.crewId] }
+        { affectedReduxIds: [this.characterId as ReduxId, this.crewId as ReduxId] }
       );
 
       // User feedback

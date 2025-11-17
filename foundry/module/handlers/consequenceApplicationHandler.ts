@@ -14,7 +14,6 @@
 import type { RootState } from '@/store';
 import type { ConsequenceTransaction } from '@/types/playerRoundState';
 import { selectEffectivePosition, selectConsequenceSeverity, selectMomentumGain } from '@/selectors/playerRoundStateSelectors';
-import { asReduxId } from '../types/ids';
 
 /**
  * Configuration for consequence application
@@ -245,10 +244,9 @@ export class ConsequenceApplicationHandler {
    * Generate notification message for consequence application
    *
    * @param transaction - Consequence transaction
-   * @param segments - Segments applied
    * @returns Human-readable notification message
    */
-  generateNotificationMessage(transaction: ConsequenceTransaction | null, segments: number): string {
+  generateNotificationMessage(transaction: ConsequenceTransaction | null, _segments: number): string {
     if (!transaction) return 'Consequence applied';
 
     const severityText = selectConsequenceSeverity(

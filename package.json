@@ -1,6 +1,6 @@
 {
   "name": "@fitgd/core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Event-sourced Redux state management for Forged in the Grimdark RPG system",
   "type": "module",
   "main": "./src/index.ts",

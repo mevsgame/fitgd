@@ -8,8 +8,6 @@ import type { Trait } from '@/types/character';
 import { asReduxId } from '../types/ids';
 
 export class AddTraitDialog extends Dialog {
-  private characterId: string;
-
   /**
    * Create a new Add Trait Dialog
    *
@@ -43,7 +41,7 @@ export class AddTraitDialog extends Dialog {
       add: {
         icon: '<i class="fas fa-plus"></i>',
         label: "Add Trait",
-        callback: (html: JQuery) => this._onApply(html, characterId)
+        callback: (html?: JQuery) => this._onApply(html!, characterId)
       },
       cancel: {
         icon: '<i class="fas fa-times"></i>',
@@ -58,13 +56,11 @@ export class AddTraitDialog extends Dialog {
       default: "add",
       ...options
     });
-
-    this.characterId = characterId;
   }
 
   private async _onApply(html: JQuery, characterId: string): Promise<void> {
     // Null safety checks
-    if (!game.fitgd) {
+    if (!game.fitgd!) {
       console.error('FitGD | FitGD not initialized');
       return;
     }
@@ -75,7 +71,7 @@ export class AddTraitDialog extends Dialog {
     const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value.trim();
 
     if (!traitName) {
-      ui.notifications?.warn('Please enter a trait name');
+      ui.notifications!.warn('Please enter a trait name');
       return;
     }
 
@@ -91,7 +87,7 @@ export class AddTraitDialog extends Dialog {
       };
 
       // Use Bridge API to dispatch, broadcast, and refresh automatically
-      await game.fitgd.bridge.execute(
+      await game.fitgd!.bridge.execute(
         {
           type: 'characters/addTrait',
           payload: {
@@ -102,10 +98,10 @@ export class AddTraitDialog extends Dialog {
         { affectedReduxIds: [asReduxId(characterId)], force: true }
       );
 
-      ui.notifications?.info(`Trait "${traitName}" added`);
+      ui.notifications!.info(`Trait "${traitName}" added`);
 
     } catch (error) {
-      ui.notifications?.error(`Error: ${(error as Error).message}`);
+      ui.notifications!.error(`Error: ${(error as Error).message}`);
       console.error('FitGD | Add Trait error:', error);
     }
   }

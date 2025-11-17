@@ -17,6 +17,7 @@
 
 import type { Character, SocialAction } from '@/types/character';
 import type { Crew } from '@/types/crew';
+import type { ReduxId } from '@/types/foundry';
 import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 
 type RallyOutcome = 'critical' | 'success' | 'partial' | 'fail';
@@ -250,7 +251,7 @@ export class RallyDialog extends Application {
 
     // Show roll result in chat
     await roll.toMessage({
-      speaker: ChatMessage.getSpeaker({ alias: this.character.name }),
+      speaker: ChatMessage.getSpeaker({ actor: this.character.name }),
       flavor: `<strong>Rally: ${this.selectedAction}</strong> (Controlled)`,
     });
 
@@ -304,7 +305,7 @@ export class RallyDialog extends Application {
       // Execute all actions together
       await game.fitgd.bridge.executeBatch(
         actions,
-        { affectedReduxIds: [this.characterId, this.selectedTargetId, this.crewId] }
+        { affectedReduxIds: [this.characterId as ReduxId, this.selectedTargetId as ReduxId, this.crewId as ReduxId] }
       );
 
       // Create chat message summary
@@ -337,7 +338,7 @@ export class RallyDialog extends Application {
       chatContent += `</div>`;
 
       await ChatMessage.create({
-        speaker: ChatMessage.getSpeaker({ alias: this.character.name }),
+        speaker: ChatMessage.getSpeaker({ actor: this.character.name }),
         content: chatContent,
       });
 

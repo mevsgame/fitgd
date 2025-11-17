@@ -4,12 +4,12 @@
  * Dialog for pushing yourself (spending Momentum)
  */
 
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.ts';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 
 type PushType = 'extra-die' | 'improved-effect' | 'improved-position';
 
 export class PushDialog extends Dialog {
-  private crewId: string;
+  private crewId!: string;
 
   /**
    * Create a new Push Yourself Dialog
@@ -23,7 +23,6 @@ export class PushDialog extends Dialog {
 
     if (momentum < 1) {
       ui.notifications.warn('Not enough Momentum to push (need 1)');
-      // @ts-expect-error - Returning from constructor to prevent dialog creation
       return;
     }
 

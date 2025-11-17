@@ -4,11 +4,9 @@
  * Dialog for initiating flashbacks
  */
 
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers.ts';
+import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 
 export class FlashbackDialog extends Dialog {
-  private characterId: string;
-  private crewId: string;
 
   /**
    * Create a new Flashback Dialog
@@ -18,13 +16,12 @@ export class FlashbackDialog extends Dialog {
    * @param options - Additional options passed to Dialog constructor
    */
   constructor(characterId: string, crewId: string, options: Partial<DialogOptions> = {}) {
-    const crew = game.fitgd.api.crew.getCrew(crewId);
+    const crew = game.fitgd!.api.crew.getCrew(crewId);
     const momentum = crew?.currentMomentum || 0;
 
     if (momentum < 1) {
-      ui.notifications.warn('Not enough Momentum for flashback (need 1)');
-      // @ts-expect-error - Returning from constructor to prevent dialog creation
-      return;
+      ui.notifications!.warn('Not enough Momentum for flashback (need 1)');
+      throw new Error('Not enough Momentum for flashback');
     }
 
     const content = `
@@ -47,7 +44,7 @@ export class FlashbackDialog extends Dialog {
       flashback: {
         icon: '<i class="fas fa-history"></i>',
         label: "Flashback",
-        callback: (html: JQuery) => this._onApply(html, characterId, crewId)
+        callback: (html?: JQuery) => this._onApply(html!, characterId, crewId)
       },
       cancel: {
         icon: '<i class="fas fa-times"></i>',
@@ -62,9 +59,6 @@ export class FlashbackDialog extends Dialog {
       default: "flashback",
       ...options
     });
-
-    this.characterId = characterId;
-    this.crewId = crewId;
   }
 
   private async _onApply(html: JQuery, characterId: string, crewId: string): Promise<void> {
@@ -73,12 +67,12 @@ export class FlashbackDialog extends Dialog {
     const traitDescription = (form.elements.namedItem('traitDescription') as HTMLTextAreaElement).value.trim();
 
     if (!traitName) {
-      ui.notifications.warn('Please enter a trait name');
+      ui.notifications!.warn('Please enter a trait name');
       return;
     }
 
     try {
-      const result = game.fitgd.api.action.flashback({
+      const result = game.fitgd!.api.action.flashback({
         crewId,
         characterId,
         trait: {
@@ -89,16 +83,16 @@ export class FlashbackDialog extends Dialog {
       });
 
       // Save immediately (critical state change)
-      await game.fitgd.saveImmediate();
+      await game.fitgd!.saveImmediate();
 
-      ui.notifications.info(`Flashback! New trait "${traitName}" added. Momentum: ${result.newMomentum}/10`);
+      ui.notifications!.info(`Flashback! New trait "${traitName}" added. Momentum: ${result.newMomentum}/10`);
 
       // Re-render sheets (force = true to ensure new trait appears)
       refreshSheetsByReduxId([characterId, crewId], true);
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error: ${errorMessage}`);
+      ui.notifications!.error(`Error: ${errorMessage}`);
       console.error('FitGD | Flashback error:', error);
     }
   }

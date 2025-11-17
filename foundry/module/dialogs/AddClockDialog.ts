@@ -4,7 +4,6 @@
  * Dialog for adding progress clocks
  */
 
-import { ClockSize } from '@/types/clock';
 import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 import { ClockCreationDialog } from './ClockCreationDialog';
 
@@ -13,7 +12,7 @@ import { ClockCreationDialog } from './ClockCreationDialog';
  */
 interface ClockData {
   name: string;
-  segments: ClockSize;
+  segments: number;
   category?: string;
   isCountdown?: boolean;
   description?: string;
@@ -22,7 +21,6 @@ interface ClockData {
 export class AddClockDialog {
   private crewId: string;
   private options: any;
-  private _dialogPromise: Promise<Application> | null;
 
   /**
    * Create a new Add Clock Dialog
@@ -36,7 +34,6 @@ export class AddClockDialog {
   constructor(crewId: string, options: any = {}) {
     this.crewId = crewId;
     this.options = options;
-    this._dialogPromise = null;
   }
 
   /**
@@ -53,22 +50,22 @@ export class AddClockDialog {
       'progress',
       async (clockData: ClockData) => {
         try {
-          const clockId = game.fitgd?.api.clock.createProgress({
+          game.fitgd!.api.clock.createProgress({
             entityId: this.crewId,
             name: clockData.name,
             segments: clockData.segments,
-            category: clockData.category,
+            category: clockData.category as 'long-term-project' | 'threat' | 'personal-goal' | 'obstacle' | 'faction' | undefined,
             isCountdown: clockData.isCountdown,
             description: clockData.description
           });
 
           // Save immediately (critical state change)
-          await game.fitgd?.saveImmediate();
+          await game.fitgd!.saveImmediate();
 
           // Re-render sheet (force = true to ensure new clock appears)
           refreshSheetsByReduxId([this.crewId], true);
         } catch (error) {
-          ui.notifications?.error(`Error: ${(error as Error).message}`);
+          ui.notifications!.error(`Error: ${(error as Error).message}`);
           console.error('FitGD | Add Clock error:', error);
           throw error; // Re-throw so dialog can handle it
         }
@@ -76,6 +73,6 @@ export class AddClockDialog {
       this.options
     );
 
-    return dialog.render(force);
+    return (dialog as any).render(force);
   }
 }

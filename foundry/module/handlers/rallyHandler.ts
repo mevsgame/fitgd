@@ -10,9 +10,7 @@
  * This handler encapsulates the 24-line rally event logic from PlayerActionWidget.
  */
 
-import type { RootState } from '@/store';
 import type { Crew } from '@/types/crew';
-import { selectCanUseRally, selectMomentumCost } from '@/selectors/characterSelectors';
 import { asReduxId } from '../types/ids';
 
 /**

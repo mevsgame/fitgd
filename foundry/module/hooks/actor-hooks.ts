@@ -55,9 +55,9 @@ Hooks.on('createActor', async function(actor: Actor, _options: object, userId: s
       await game.fitgd!.saveImmediate();
 
       // Force re-render the sheet if it's already open
-      if (actor.sheet?.rendered) {
+      if ((actor.sheet as any)?.rendered) {
         console.log('FitGD | Re-rendering character sheet with Redux data');
-        actor.sheet.render(false);
+        (actor.sheet as any).render(false);
       }
     } catch (error) {
       console.error('FitGD | Failed to create character in Redux:', error);
@@ -75,9 +75,9 @@ Hooks.on('createActor', async function(actor: Actor, _options: object, userId: s
       await game.fitgd!.saveImmediate();
 
       // Force re-render the sheet if it's already open
-      if (actor.sheet?.rendered) {
+      if ((actor.sheet as any)?.rendered) {
         console.log('FitGD | Re-rendering crew sheet with Redux data');
-        actor.sheet.render(false);
+        (actor.sheet as any).render(false);
       }
     } catch (error) {
       console.error('FitGD | Failed to create crew in Redux:', error);

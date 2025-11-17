@@ -30,8 +30,8 @@ export async function promptForText(
         ok: {
           icon: '<i class="fas fa-check"></i>',
           label: 'OK',
-          callback: (html: JQuery) => {
-            const value = html.find('[name="input-text"]').val() as string;
+          callback: (html?: JQuery) => {
+            const value = html!.find('[name="input-text"]').val() as string;
             resolve(value?.trim() || null);
           },
         },

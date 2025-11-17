@@ -4,7 +4,7 @@
  * Foundry VTT Actor Sheet for character entities
  */
 
-import type { Character, Trait, Equipment } from '@/types/character';
+import type { Trait, Equipment, ActionDots } from '@/types/character';
 import type { Clock } from '@/types/clock';
 
 import {
@@ -301,7 +301,7 @@ class FitGDCharacterSheet extends ActorSheet {
         return;
       }
 
-      const currentDots = character.actionDots[action as ActionRating];
+      const currentDots = character.actionDots[action as keyof ActionDots];
       let newDots = value;
 
       // Feature: If clicking on a single filled dot (current dots is 1 and clicking dot 1), set to 0
@@ -456,7 +456,7 @@ class FitGDCharacterSheet extends ActorSheet {
 
     try {
       const img = event.currentTarget as HTMLElement;
-      const { clockId, clockValue, clockMax } = getClockDataset(img);
+      const { clockId } = getClockDataset(img);
 
       const currentValue = getDatasetInt(img, 'clockValue', 0);
       const maxValue = getDatasetInt(img, 'clockMax', 0);

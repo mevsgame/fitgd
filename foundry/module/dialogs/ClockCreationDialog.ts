@@ -25,19 +25,17 @@ interface ClockData {
  * - Grimdark UI styling
  */
 export class ClockCreationDialog extends Dialog {
-  private entityId: string;
-  private clockType: ClockType;
 
   /**
    * Create a new Clock Creation Dialog
    *
-   * @param entityId - Character or crew ID
+   * @param _entityId - Character or crew ID (unused, kept for API compatibility)
    * @param clockType - 'harm' or 'progress' (crew clock)
    * @param onCreate - Callback: (clockData) => Promise<void>
    * @param options - Additional dialog options
    */
   constructor(
-    entityId: string,
+    _entityId: string,
     clockType: ClockType,
     onCreate: (clockData: ClockData) => void | Promise<void>,
     options: Partial<DialogOptions> = {}
@@ -99,7 +97,7 @@ export class ClockCreationDialog extends Dialog {
       create: {
         icon: '<i class="fas fa-clock"></i>',
         label: 'Create Clock',
-        callback: (html: JQuery) => this._onApply(html, onCreate, clockType)
+        callback: (html?: JQuery) => this._onApply(html!, onCreate, clockType)
       },
       cancel: {
         icon: '<i class="fas fa-times"></i>',
@@ -116,9 +114,6 @@ export class ClockCreationDialog extends Dialog {
       width: 450,
       ...options
     });
-
-    this.entityId = entityId;
-    this.clockType = clockType;
   }
 
   /**
@@ -139,12 +134,12 @@ export class ClockCreationDialog extends Dialog {
 
     // Validation
     if (!clockName) {
-      ui.notifications.warn('Please enter a clock name');
+      ui.notifications!.warn('Please enter a clock name');
       return false; // Prevent dialog from closing
     }
 
     if (!segments || segments < 4 || segments > 12) {
-      ui.notifications.error('Invalid segment count');
+      ui.notifications!.error('Invalid segment count');
       return false;
     }
 
@@ -164,11 +159,11 @@ export class ClockCreationDialog extends Dialog {
     try {
       // Call the onCreate callback with the clock data
       await onCreate(clockData);
-      ui.notifications.info(`Clock "${clockName}" created`);
+      ui.notifications!.info(`Clock "${clockName}" created`);
     } catch (error) {
       console.error('FitGD | Clock creation error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications.error(`Error creating clock: ${errorMessage}`);
+      ui.notifications!.error(`Error creating clock: ${errorMessage}`);
       return false; // Prevent dialog from closing on error
     }
 

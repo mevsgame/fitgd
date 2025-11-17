@@ -4,8 +4,8 @@
  * Dialog for initiating action rolls
  */
 
-import type { Character } from '@/types/character'; 
-import type { Position } from '@/types/action';
+import type { Character } from '@/types/character';
+import type { Position } from '@/types/resolution';
 import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 import { TakeHarmDialog } from './TakeHarmDialog';
 
@@ -34,13 +34,12 @@ export class ActionRollDialog extends Dialog {
    * @param options - Additional options passed to Dialog constructor
    */
   constructor(characterId: string, crewId: string, options: Partial<DialogOptions> = {}) {
-    const character = game.fitgd.api.character.getCharacter(characterId);
-    const crew = game.fitgd.api.crew.getCrew(crewId);
+    const character = game.fitgd!.api.character.getCharacter(characterId);
+    const crew = game.fitgd!.api.crew.getCrew(crewId);
 
     if (!character) {
-      ui.notifications.error('Character not found');
-      // @ts-expect-error - Returning from constructor to prevent dialog creation
-      return;
+      ui.notifications!.error('Character not found');
+      throw new Error('Character not found');
     }
 
     // Build action options
@@ -109,7 +108,7 @@ export class ActionRollDialog extends Dialog {
       roll: {
         icon: '<i class="fas fa-dice-d6"></i>',
         label: "Roll",
-        callback: (html: JQuery) => this._onRoll(html, characterId, crewId)
+        callback: (html?: JQuery) => this._onRoll(html!, characterId, crewId)
       },
       cancel: {
         icon: '<i class="fas fa-times"></i>',
@@ -134,7 +133,7 @@ export class ActionRollDialog extends Dialog {
    * action, push, devil's bargain, or bonus dice changes.
    */
   private _onRender(html: JQuery, characterId: string): void {
-    const character = game.fitgd.api.character.getCharacter(characterId);
+    const character = game.fitgd!.api.character.getCharacter(characterId);
     const actionSelect = html.find('[name="action"]');
     const pushCheckbox = html.find('[name="push"]');
     const devilsCheckbox = html.find('[name="devilsBargain"]');
@@ -175,8 +174,8 @@ export class ActionRollDialog extends Dialog {
    * consequences.
    */
   private async _onRoll(html: JQuery, characterId: string, crewId: string): Promise<void> {
-    const character = game.fitgd.api.character.getCharacter(characterId);
-    const crew = game.fitgd.api.crew.getCrew(crewId);
+    const character = game.fitgd!.api.character.getCharacter(characterId);
+    const crew = game.fitgd!.api.crew.getCrew(crewId);
 
     const action = html.find('[name="action"]').val() as string;
     const position = html.find('[name="position"]').val() as Position;
@@ -191,15 +190,15 @@ export class ActionRollDialog extends Dialog {
 
     if (push) {
       if (crew.currentMomentum < 1) {
-        ui.notifications.warn('Insufficient Momentum to push');
+        ui.notifications!.warn('Insufficient Momentum to push');
         return;
       }
       dicePool += 1;
       // Spend Momentum
-      game.fitgd.api.crew.spendMomentum({ crewId, amount: 1 });
+      game.fitgd!.api.crew.spendMomentum({ crewId, amount: 1 });
 
       // Save immediately (critical state change)
-      await game.fitgd.saveImmediate();
+      await game.fitgd!.saveImmediate();
     }
 
     if (devilsBargain) {
@@ -211,12 +210,12 @@ export class ActionRollDialog extends Dialog {
     const rollFormula = hasZeroDots ? '2d6kl' : `${dicePool}d6kh`;
 
     // Roll the dice
-    const roll = await new Roll(rollFormula).evaluate();
+    const roll = await Roll.create(rollFormula).evaluate({ async: true }) as Roll;
 
     // Determine outcome
-    const dice = roll.dice[0].results.map(r => r.result);
+    const dice = roll.dice[0].results.map((r: any) => r.result);
     const highest = Math.max(...dice);
-    const sixes = dice.filter(d => d === 6).length;
+    const sixes = dice.filter((d: number) => d === 6).length;
 
     let outcome: RollOutcome;
     let outcomeText: string;
@@ -255,9 +254,9 @@ export class ActionRollDialog extends Dialog {
     `;
 
     await roll.toMessage({
-      speaker: ChatMessage.getSpeaker({ actor: game.actors.get(characterId) }),
+      speaker: ChatMessage!.getSpeaker({ actor: game.actors!.get(characterId) }),
       flavor: messageContent,
-      rollMode: game.settings.get('core', 'rollMode')
+      rollMode: game.settings!.get('core', 'rollMode') as string
     });
 
     // Handle consequences
@@ -284,7 +283,7 @@ export class ActionRollDialog extends Dialog {
   ): Promise<void> {
     if (outcome === 'critical' || outcome === 'success') {
       // Full success - no consequences
-      ui.notifications.info('Success! No consequences.');
+      ui.notifications!.info('Success! No consequences.');
       return;
     }
 
@@ -306,7 +305,7 @@ export class ActionRollDialog extends Dialog {
       });
 
       if (choice) {
-        ui.notifications.info('Partial success consequence applied by GM.');
+        ui.notifications!.info('Partial success consequence applied by GM.');
       }
       return;
     }
@@ -320,17 +319,17 @@ export class ActionRollDialog extends Dialog {
         impossible: 6
       };
 
-      ui.notifications.warn(`Failure! Taking ${harmSegments[position]} harm (${position} position).`);
+      ui.notifications!.warn(`Failure! Taking ${harmSegments[position]} harm (${position} position).`);
 
       // Auto-open harm dialog
-      new TakeHarmDialog(characterId, crewId, {
+      (new TakeHarmDialog(characterId, crewId, {
         defaultPosition: position,
         defaultSegments: harmSegments[position]
-      }).render(true);
+      }) as any).render(true);
     }
 
     if (devilsBargain) {
-      ui.notifications.info('Devil\'s Bargain: GM adds a complication.');
+      ui.notifications!.info('Devil\'s Bargain: GM adds a complication.');
     }
   }
 }

@@ -11,7 +11,7 @@
  * previously in PlayerActionWidget._applyTraitTransaction.
  */
 
-import type { Trait, TraitConsolidation } from '@/types/character';
+import type { Trait } from '@/types/character';
 import type { TraitTransaction } from '@/types/playerRoundState';
 import { asReduxId } from '../types/ids';
 

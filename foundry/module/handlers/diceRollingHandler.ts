@@ -80,7 +80,7 @@ export class DiceRollingHandler {
    * }
    */
   validateRoll(
-    state: RootState,
+    _state: RootState,
     playerState: PlayerRoundState | null | undefined,
     crew: any | null
   ): RollValidationResult {

@@ -5,7 +5,8 @@
  */
 
 import type { Character, Trait } from '@/types/character';
-import type { Crew } from '@/types/crew'; 
+import type { Crew } from '@/types/crew';
+import type { ReduxId } from '@/types/foundry'; 
 
 type FlashbackMode = 'use-existing' | 'create-new' | 'consolidate';
 
@@ -25,7 +26,6 @@ interface FlashbackTraitsData {
 
 export class FlashbackTraitsDialog extends Application {
   private characterId: string;
-  private crewId: string;
   private character: Character;
   private crew: Crew;
 
@@ -54,9 +54,8 @@ export class FlashbackTraitsDialog extends Application {
     super(options);
 
     this.characterId = characterId;
-    this.crewId = crewId;
-    this.character = game.fitgd.api.character.getCharacter(characterId);
-    this.crew = game.fitgd.api.crew.getCrew(crewId);
+    this.character = game.fitgd!.api.character.getCharacter(characterId);
+    this.crew = game.fitgd!.api.crew.getCrew(crewId);
 
     // Determine if player is eligible for editable mode (fewest traits)
     this.isEditable = this._checkTraitEligibility();
@@ -233,7 +232,7 @@ export class FlashbackTraitsDialog extends Application {
           },
         },
       },
-      { affectedReduxIds: [this.characterId], force: false }
+      { affectedReduxIds: [this.characterId as ReduxId], force: false }
     );
 
     ui.notifications.info('Trait selected - will improve position on roll (costs 1M)');
@@ -281,7 +280,7 @@ export class FlashbackTraitsDialog extends Application {
           },
         },
       },
-      { affectedReduxIds: [this.characterId], force: false }
+      { affectedReduxIds: [this.characterId as ReduxId], force: false }
     );
 
     ui.notifications.info(`New trait "${newTraitName}" will be created on roll (costs 1M)`);
@@ -337,7 +336,7 @@ export class FlashbackTraitsDialog extends Application {
           },
         },
       },
-      { affectedReduxIds: [this.characterId], force: false }
+      { affectedReduxIds: [this.characterId as ReduxId], force: false }
     );
 
     ui.notifications.info(`Traits will be consolidated into "${newTraitName}" on roll (costs 1M)`);

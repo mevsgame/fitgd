@@ -209,6 +209,13 @@ export interface ClockAPI {
   };
 
   delete(clockId: string): void;
+
+  // Additional methods used by Foundry widgets
+  getClock(clockId: string): unknown;
+  addSegments(params: { clockId: string; segments: number }): void;
+  clearSegments(params: { clockId: string; segments: number }): void;
+  setSegments(params: { clockId: string; segments: number }): void;
+  rename(params: { clockId: string; name: string }): void;
 }
 
 /**

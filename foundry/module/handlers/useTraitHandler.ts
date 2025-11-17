@@ -9,7 +9,6 @@
  * This handler encapsulates the 31-line event handling from PlayerActionWidget._onUseTrait.
  */
 
-import type { RootState } from '@/store';
 import type { PlayerRoundState } from '@/types/playerRoundState';
 import { asReduxId } from '../types/ids';
 

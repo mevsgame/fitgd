@@ -13,14 +13,11 @@
 
 import type { RootState } from '@/store';
 import type { ConsequenceTransaction, Position } from '@/types/playerRoundState';
-import type { Clock } from '@/types/clock';
-import type { Character } from '@/types/character';
 import {
   selectEffectivePosition,
   selectConsequenceSeverity,
   selectMomentumGain,
 } from '@/selectors/playerRoundStateSelectors';
-import { asReduxId } from '../types/ids';
 
 /**
  * Clock data for clock creation dialogs
@@ -528,10 +525,9 @@ export class ConsequenceResolutionHandler {
   /**
    * Create batch action for consequence application and cleanup
    *
-   * @param transaction - The consequence transaction
    * @returns Array of Redux actions to execute as batch
    */
-  createConsequenceApplicationBatch(transaction: ConsequenceTransaction): Array<{
+  createConsequenceApplicationBatch(_transaction: ConsequenceTransaction): Array<{
     type: string;
     payload: any;
   }> {
