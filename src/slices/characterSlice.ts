@@ -17,7 +17,7 @@ import type {
   ActionDots,
   Equipment,
   Command,
-} from '../types'; 
+} from '../types';
 import { EquipmentTier, EquipmentAcquisition } from '@/types/equipment';
 
 /**
@@ -1007,6 +1007,38 @@ const characterSlice = createSlice({
       },
     },
 
+
+
+    /**
+     * Cleanup orphaned characters
+     * 
+     * Removes characters that no longer exist in the Foundry world.
+     */
+    cleanupOrphanedCharacters: (state, action: PayloadAction<{ validIds: string[] }>) => {
+      const { validIds } = action.payload;
+      const validIdSet = new Set(validIds);
+      const charsToRemove: string[] = [];
+
+      // Find orphaned characters
+      for (const charId of state.allIds) {
+        if (!validIdSet.has(charId)) {
+          charsToRemove.push(charId);
+        }
+      }
+
+      // Remove them
+      for (const charId of charsToRemove) {
+        delete state.byId[charId];
+      }
+
+      // Update allIds
+      state.allIds = state.allIds.filter(id => !charsToRemove.includes(id));
+
+      if (charsToRemove.length > 0) {
+        console.log(`FitGD | Cleaned up ${charsToRemove.length} orphaned characters`);
+      }
+    },
+
     /**
      * Prune command history
      *
@@ -1076,8 +1108,9 @@ export const {
   groupTraits,
   createTraitFromFlashback,
   advanceActionDots,
-  pruneHistory,
-  pruneOrphanedHistory,
+  pruneHistory: pruneCharacterHistory,
+  pruneOrphanedHistory: pruneOrphanedCharacterHistory,
+  cleanupOrphanedCharacters,
   hydrateCharacters,
 } = characterSlice.actions;
 

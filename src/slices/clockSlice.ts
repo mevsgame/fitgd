@@ -576,11 +576,69 @@ const clockSlice = createSlice({
      * // After: [deleteClock]  // Only deletion command kept for audit
      * ```
      */
-    pruneOrphanedHistory: (state) => {
-      const currentClockIds = new Set(state.allIds);
+    /**
+     * Cleanup orphaned clocks
+     * 
+     * Removes clocks that reference entities that no longer exist.
+     * This cleans the actual state, not just the history.
+     */
+    cleanupOrphanedClocks: (state, action: PayloadAction<{ validEntityIds: string[] }>) => {
+      const { validEntityIds } = action.payload;
+      const validIdSet = new Set(validEntityIds);
+      const clocksToRemove: string[] = [];
+
+      // Find orphaned clocks
+      for (const clockId of state.allIds) {
+        const clock = state.byId[clockId];
+        if (clock && !validIdSet.has(clock.entityId)) {
+          clocksToRemove.push(clockId);
+        }
+      }
+
+      // Remove them
+      for (const clockId of clocksToRemove) {
+        const clock = state.byId[clockId];
+        if (clock) {
+          // Remove from indexes
+          removeFromIndexes(state, clock);
+
+          // Remove from store
+          delete state.byId[clockId];
+        }
+      }
+
+      // Update allIds
+      state.allIds = state.allIds.filter(id => !clocksToRemove.includes(id));
+
+      if (clocksToRemove.length > 0) {
+        console.log(`FitGD | Cleaned up ${clocksToRemove.length} orphaned clocks`);
+      }
+    },
+
+    /**
+     * Prune orphaned command history
+     *
+     * Removes commands that reference clocks that no longer exist in the current state.
+     * This is useful for automatic cleanup after clock deletion while preserving:
+     * 1. Commands for clocks that still exist
+     * 2. Deletion commands themselves (for audit trail)
+     *
+     * Used by auto-prune feature to reduce storage without losing current state or audit trail.
+     *
+     * @example
+     * ```typescript
+     * // Clock was created, modified, then deleted
+     * // Before: [createClock, addSegments, deleteClock]
+     * // After: [deleteClock]  // Only deletion command kept for audit
+     * ```
+     */
+    pruneOrphanedHistory: (state, action: PayloadAction<{ validIds: Set<string> }>) => {
+      const { validIds } = action.payload;
 
       state.history = state.history.filter((command) => {
-        return !isOrphanedCommand(command, currentClockIds);
+        // The isOrphanedCommand function remains the same,
+        // but it now receives the definitive list of valid IDs from the action's payload.
+        return !isOrphanedCommand(command, validIds);
       });
     },
 
@@ -620,6 +678,7 @@ export const {
   changeSubtype,
   pruneHistory: pruneClockHistory,
   pruneOrphanedHistory: pruneOrphanedClockHistory,
+  cleanupOrphanedClocks,
   hydrateClocks,
 } = clockSlice.actions;
 

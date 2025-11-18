@@ -316,6 +316,36 @@ const crewSlice = createSlice({
      * // After: [deleteCrew]  // Only deletion command kept for audit
      * ```
      */
+    /**
+     * Cleanup orphaned crews
+     * 
+     * Removes crews that no longer exist in the Foundry world.
+     */
+    cleanupOrphanedCrews: (state, action: PayloadAction<{ validIds: string[] }>) => {
+      const { validIds } = action.payload;
+      const validIdSet = new Set(validIds);
+      const crewsToRemove: string[] = [];
+
+      // Find orphaned crews
+      for (const crewId of state.allIds) {
+        if (!validIdSet.has(crewId)) {
+          crewsToRemove.push(crewId);
+        }
+      }
+
+      // Remove them
+      for (const crewId of crewsToRemove) {
+        delete state.byId[crewId];
+      }
+
+      // Update allIds
+      state.allIds = state.allIds.filter(id => !crewsToRemove.includes(id));
+
+      if (crewsToRemove.length > 0) {
+        console.log(`FitGD | Cleaned up ${crewsToRemove.length} orphaned crews`);
+      }
+    },
+
     pruneOrphanedHistory: (state) => {
       const currentCrewIds = new Set(state.allIds);
 
@@ -350,6 +380,7 @@ export const {
   resetMomentum,
   pruneHistory: pruneCrewHistory,
   pruneOrphanedHistory: pruneOrphanedCrewHistory,
+  cleanupOrphanedCrews,
   hydrateCrews,
 } = crewSlice.actions;
 
