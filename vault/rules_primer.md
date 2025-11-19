@@ -11,7 +11,9 @@ This is a collaborative storytelling game. You describe what your character does
   1. One **Role** Trait (e.g., Served with Elite Infantry Regiment, Fled Imprisonment as Rogue Psyker).
   2. One **Background** Trait (e.g., Survived City Underbelly Gang Wars, Washout from Military Academy).
 
-- **Actions:** You have 12 total dots to distribute across the 12 Actions, with a maximum of 3 dots in any single Action at character creation. You can have 0 dots in some Actions.
+- **Approaches:** You have **5 dots** to distribute across the four Approaches (**Force, Guile, Focus, Spirit**).
+  - The maximum rating in any Approach is **2** at character creation.
+  - You may have 0 dots in an Approach.
 
 - **Equipment:** Choose your starting equipment based on your Traits.
 
@@ -100,24 +102,29 @@ A last-resort measure for desperate situations. Once per action, you may use Sti
 
 ## CORE MECHANICS
 
-#### **Actions & Rolls**
+#### **Approaches & Rolls**
 
-Roll a number of d6s equal to your Action rating (if zero, roll 2d6 and take the lowest).
+Instead of specific skills, characters rely on four core **Approaches**. When you face a challenge, describe your goal and choose the Approach that best fits your method.
 
-| ACTION       | DESCRIPTION                                                                 |
-| ------------ | --------------------------------------------------------------------------- |
-| **Shoot**    | Attack at a distance with ranged weapons.                                   |
-| **Skirmish** | Engage in close-quarters combat, both armed and unarmed.                    |
-| **Skulk**    | Move unseen, unheard, or follow a target without being noticed.             |
-| **Wreck**    | Apply brute force to destroy an obstacle or create chaos.                   |
-| **Finesse**  | Use careful, precise movements, like picking a lock or disarming a trap.    |
-| **Survey**   | Observe your surroundings to spot details or understand a situation.        |
-| **Study**    | Scrutinize details, research lore, or analyze a person or object.           |
-| **Tech**     | Interact with, repair, or bypass technology and machine spirits.            |
-| **Attune**   | Sense the unnatural energies of the immaterium, corruption, or psychic phenomena. |
-| **Command**  | Compel obedience or inspire action through authority and intimidation.      |
-| **Consort**  | Socialize, build relationships, and navigate social situations.             |
-| **Sway**     | Persuade, deceive, or manipulate others through charm and lies.             |
+**The Dice Pool:**
+The dice you roll depend on whether you are using a specific tool for the job.
+
+- **With Equipment:** Roll **[Approach Rating] + 1d**.
+  *(Requirement: You must have a relevant item in an Inventory Slot to gain this bonus).*
+
+- **Empty-Handed (Synergy):** Roll **[Primary Approach] + [Secondary Approach]**.
+  *(Use this when you have no gear or choose to rely solely on innate ability. GM approval required for the combination).*
+
+- **Zero Floor:** If your total pool is 0 dice, roll **2d6 and take the lowest**.
+
+**The Four Approaches:**
+
+| APPROACH | DESCRIPTION |
+| :--- | :--- |
+| **FORCE** | **Overpowering.** Violence, athletics, intimidation, heavy lifting. |
+| **GUILE** | **Indirect.** Stealth, speed, deception, dexterity. |
+| **FOCUS** | **Calculated.** Precision, technology, observation, medicine, shooting. |
+| **SPIRIT** | **Internal.** Willpower, command, charm, psychic attunement. |
 
 **Roll Results:**
 - **1-3 (Failure):** You face consequences based on your Position and gain Momentum (+1 Controlled, +2 Risky, +4 Desperate, +6 Impossible).
