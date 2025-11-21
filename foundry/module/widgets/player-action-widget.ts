@@ -554,7 +554,7 @@ export class PlayerActionWidget extends Application {
         type: 'playerRoundState/setActionPlan',
         payload: {
           characterId: this.characterId,
-          selectedApproach: approach, // Fixed: was 'action', should be 'selectedApproach'
+          approach,
           position: this.playerState?.position || 'risky',
           effect: this.playerState?.effect || 'standard',
         },
@@ -605,7 +605,10 @@ export class PlayerActionWidget extends Application {
         type: 'playerRoundState/setActionPlan',
         payload: {
           characterId: this.characterId,
+          approach: this.playerState?.selectedApproach || 'force',
           secondaryApproach: secondaryApproach || undefined,
+          position: this.playerState?.position || 'risky',
+          effect: this.playerState?.effect || 'standard',
         },
       },
       { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
