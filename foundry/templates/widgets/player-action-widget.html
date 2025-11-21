@@ -13,7 +13,7 @@
     <div class="player-controls">
       <!-- Approach Selection -->
       <div class="form-group">
-        <label>Approach:</label>
+        <label>Primary Approach:</label>
         <select name="approach" class="approach-select">
           <option value="">-- Select Approach --</option>
           {{#each approaches}}
@@ -23,6 +23,39 @@
           {{/each}}
         </select>
       </div>
+
+      <!-- Synergy Mode Section -->
+      {{#if playerState.selectedApproach}}
+      <div class="synergy-section">
+        <label>Mode:</label>
+        <div class="mode-buttons">
+          <button type="button" data-action="set-mode" data-mode="standard" class="{{#if (eq playerState.rollMode 'standard')}}active{{/if}}">
+            Standard
+          </button>
+          <button type="button" data-action="set-mode" data-mode="synergy" class="{{#if (eq playerState.rollMode 'synergy')}}active{{/if}}">
+            Synergy
+          </button>
+          <button type="button" data-action="set-mode" data-mode="equipment" class="{{#if (eq playerState.rollMode 'equipment')}}active{{/if}}">
+            Equipment
+          </button>
+        </div>
+
+        <!-- Secondary Approach (only in Synergy mode) -->
+        {{#if (eq playerState.rollMode 'synergy')}}
+        <div class="form-group secondary-approach-group">
+          <label>Secondary Approach:</label>
+          <select name="secondary-approach" class="secondary-approach-select">
+            <option value="">-- Select Secondary --</option>
+            {{#each approaches}}
+            <option value="{{this}}" {{#if (eq ../playerState.secondaryApproach this)}}selected{{/if}}>
+              {{capitalize this}} ({{lookup ../character.approaches this}}d)
+            </option>
+            {{/each}}
+          </select>
+        </div>
+        {{/if}}
+      </div>
+      {{/if}}
 
       <!-- Position & Effect Display (Read-Only for Player) -->
       <div class="position-effect-display">
@@ -82,9 +115,11 @@
             (and (eq playerState.position "controlled" ) (lt momentum 1))}}disabled{{/if}}>
             Use Trait
           </button>
+          {{#unless (eq playerState.rollMode 'synergy')}}
           <button type="button" data-action="equipment">
             Equipment
           </button>
+          {{/unless}}
           <button type="button" data-action="push-die"
             class="{{#if (and playerState.pushed (eq playerState.pushType 'extra-die'))}}active{{/if}}" {{#if (lt
             momentum 1)}}disabled{{/if}}>
@@ -132,8 +167,15 @@
     <div class="action-plan-preview">
       <h4>📋 Current Plan:</h4>
       <div class="plan-box">
+        {{#if (eq playerState.rollMode 'synergy')}}
+        <div class="plan-line synergy-info">
+          <strong>Mode: Synergy</strong><br>
+          {{capitalize playerState.selectedApproach}} ({{lookup character.approaches playerState.selectedApproach}}d) + {{capitalize playerState.secondaryApproach}} ({{lookup character.approaches playerState.secondaryApproach}}d)
+        </div>
+        {{else}}
         <div class="plan-line">Approach: {{capitalize playerState.selectedApproach}} ({{lookup character.approaches
           playerState.selectedApproach}}d)</div>
+        {{/if}}
         <div class="plan-line">Position: {{uppercase (default playerState.position "risky")}} → <span
             class="{{#if playerState.traitTransaction}}improved{{/if}}">{{uppercase improvedPosition}}</span></div>
         <div class="plan-line">Effect: {{uppercase (default playerState.effect "standard")}} → <span

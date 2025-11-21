@@ -559,7 +559,7 @@ export class PlayerActionWidget extends Application {
           effect: this.playerState?.effect || 'standard',
         },
       },
-      { affectedReduxIds: [asReduxId(this.characterId)], silent: true } // Silent: subscription handles render
+      { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients including GM
     );
 
     // Post chat message
@@ -575,11 +575,11 @@ export class PlayerActionWidget extends Application {
    */
   private async _onRollModeChange(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
-    const mode = event.currentTarget.dataset.mode as 'synergy' | 'equipment';
+    const mode = event.currentTarget.dataset.mode as 'synergy' | 'equipment' | 'standard';
 
     let newMode = mode;
     if (this.playerState?.rollMode === mode) {
-      newMode = 'standard' as any; // Cast to satisfy type if needed, though 'standard' is valid
+      newMode = 'standard'; // Toggle off by selecting standard mode
     }
 
     await game.fitgd.bridge.execute(
@@ -587,10 +587,13 @@ export class PlayerActionWidget extends Application {
         type: 'playerRoundState/setActionPlan',
         payload: {
           characterId: this.characterId,
+          approach: this.playerState?.selectedApproach || 'force',
           rollMode: newMode,
+          position: this.playerState?.position || 'risky',
+          effect: this.playerState?.effect || 'standard',
         },
       },
-      { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
+      { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
     );
   }
 
@@ -611,7 +614,7 @@ export class PlayerActionWidget extends Application {
           effect: this.playerState?.effect || 'standard',
         },
       },
-      { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
+      { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
     );
   }
 
