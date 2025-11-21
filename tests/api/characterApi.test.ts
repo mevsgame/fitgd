@@ -7,10 +7,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { configureStore } from '../../src/store';
 import { createGameAPI } from '../../src/api';
+import type { EnhancedStore } from '@reduxjs/toolkit';
+import type { RootState } from '../../src/store';
+import type { GameAPI } from '../../src/api';
+import type { Trait } from '../../src/types';
 
 describe('CharacterAPI', () => {
-  let store;
-  let api;
+  let store: EnhancedStore<RootState>;
+  let api: GameAPI;
 
   beforeEach(() => {
     store = configureStore();
@@ -25,20 +29,7 @@ describe('CharacterAPI', () => {
           { name: 'Elite Infantry', category: 'role', disabled: false },
           { name: 'Hive Gang Survivor', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 3,
-          command: 2,
-          skirmish: 1,
-          skulk: 0,
-          wreck: 0,
-          finesse: 0,
-          survey: 2,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 2,
-        },
+        approaches: { force: 2, guile: 1, focus: 1, spirit: 0 },
       });
 
       expect(characterId).toBeDefined();
@@ -46,11 +37,11 @@ describe('CharacterAPI', () => {
       const character = api.character.getCharacter(characterId);
       expect(character.name).toBe('Sergeant Kane');
       expect(character.traits).toHaveLength(2);
-      expect(character.actionDots.shoot).toBe(3);
+      expect(character.approaches.force).toBe(2);
       expect(character.rallyAvailable).toBe(true);
     });
 
-    it('should reject more than 12 starting action dots', () => {
+    it('should reject more than 5 starting approach dots', () => {
       expect(() => {
         api.character.create({
           name: 'Invalid Character',
@@ -58,25 +49,12 @@ describe('CharacterAPI', () => {
             { name: 'Role', category: 'role', disabled: false },
             { name: 'Background', category: 'background', disabled: false },
           ],
-          actionDots: {
-            shoot: 4,
-            command: 4,
-            skirmish: 4,
-            skulk: 4, // Total = 16 > 12
-            wreck: 0,
-            finesse: 0,
-            survey: 0,
-            study: 0,
-            tech: 0,
-            attune: 0,
-            consort: 0,
-            sway: 0,
-          },
+          approaches: { force: 3, guile: 3, focus: 0, spirit: 0 }, // Total 6 > 5
         });
-      }).toThrow('Character cannot have more than 12 action dots at creation');
+      }).toThrow('Character cannot have more than 5 approach dots at creation');
     });
 
-    it('should reject more than 3 dots in single action at creation', () => {
+    it('should reject more than 2 dots in single approach at creation', () => {
       expect(() => {
         api.character.create({
           name: 'Invalid Character',
@@ -84,22 +62,9 @@ describe('CharacterAPI', () => {
             { name: 'Role', category: 'role', disabled: false },
             { name: 'Background', category: 'background', disabled: false },
           ],
-          actionDots: {
-            shoot: 4, // > 3 at creation
-            command: 2,
-            skirmish: 2,
-            skulk: 2,
-            wreck: 2,
-            finesse: 0,
-            survey: 0,
-            study: 0,
-            tech: 0,
-            attune: 0,
-            consort: 0,
-            sway: 0,
-          },
+          approaches: { force: 3, guile: 0, focus: 0, spirit: 0 }, // Force 3 > 2
         });
-      }).toThrow("cannot have more than 3 dots at character creation");
+      }).toThrow("Approach 'force' cannot have more than 2 dots at character creation");
     });
 
     it('should require exactly 2 starting traits', () => {
@@ -107,20 +72,7 @@ describe('CharacterAPI', () => {
         api.character.create({
           name: 'Invalid Character',
           traits: [{ name: 'Role', category: 'role', disabled: false }], // Only 1
-          actionDots: {
-            shoot: 3,
-            command: 2,
-            skirmish: 1,
-            skulk: 0,
-            wreck: 0,
-            finesse: 0,
-            survey: 2,
-            study: 1,
-            tech: 0,
-            attune: 0,
-            consort: 1,
-            sway: 2,
-          },
+          approaches: { force: 2, guile: 1, focus: 1, spirit: 0 },
         });
       }).toThrow('Character must start with exactly 2 traits');
     });
@@ -134,43 +86,27 @@ describe('CharacterAPI', () => {
           { name: 'Role', category: 'role', disabled: false },
           { name: 'Background', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 3,
-          command: 2,
-          skirmish: 1,
-          skulk: 0,
-          wreck: 0,
-          finesse: 0,
-          survey: 2,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 2,
-        },
+        approaches: { force: 2, guile: 1, focus: 1, spirit: 0 },
       });
 
-      const traitId = api.character.addTrait({
-        characterId,
-        trait: {
-          name: 'Survived Ambush',
-          category: 'scar',
-          disabled: false,
-          description: 'Lived through a brutal ambush',
-        },
+      const traitId = api.character.addTrait(characterId, {
+        name: 'Survived Ambush',
+        category: 'scar',
+        disabled: false,
+        description: 'Lived through a brutal ambush',
       });
 
       expect(traitId).toBeDefined();
 
       const character = api.character.getCharacter(characterId);
       expect(character.traits).toHaveLength(3);
-      expect(character.traits.find((t) => t.id === traitId).name).toBe(
+      expect(character.traits.find((t: Trait) => t.id === traitId)?.name).toBe(
         'Survived Ambush'
       );
     });
   });
 
-  describe('setActionDots()', () => {
+  describe('setApproach()', () => {
     let characterId: string;
 
     beforeEach(() => {
@@ -180,71 +116,58 @@ describe('CharacterAPI', () => {
           { name: 'Role', category: 'role', disabled: false },
           { name: 'Background', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 3,
-          command: 2,
-          skirmish: 1,
-          skulk: 0,
-          wreck: 0,
-          finesse: 0,
-          survey: 2,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 2,
-        },
+        approaches: { force: 2, guile: 1, focus: 1, spirit: 0 },
       });
     });
 
     it('should set action dots to specific value', () => {
-      // Character starts with shoot: 3, needs 1 more to reach 4
+      // Character starts with force: 2, needs 2 more to reach 4
       // Grant 1 unallocated dot first
       api.character.addUnallocatedDots({
         characterId,
         amount: 1,
       });
 
-      api.character.setActionDots({
+      api.character.setApproach({
         characterId,
-        action: 'shoot',
+        approach: 'force',
         dots: 4,
       });
 
       const character = api.character.getCharacter(characterId);
-      expect(character.actionDots.shoot).toBe(4);
-      expect(character.unallocatedActionDots).toBe(0); // All used up
+      expect(character.approaches.force).toBe(4);
+      expect(character.unallocatedApproachDots).toBe(0); // All used up
     });
 
     it('should set action dots to 0', () => {
-      api.character.setActionDots({
+      api.character.setApproach({
         characterId,
-        action: 'skulk',
+        approach: 'guile',
         dots: 0,
       });
 
       const character = api.character.getCharacter(characterId);
-      expect(character.actionDots.skulk).toBe(0);
+      expect(character.approaches.guile).toBe(0); // Set to 0
     });
 
     it('should reject dots less than 0', () => {
       expect(() => {
-        api.character.setActionDots({
+        api.character.setApproach({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           dots: -1,
         });
-      }).toThrow('Action dots must be between 0 and 4');
+      }).toThrow('Approach dots cannot be negative');
     });
 
     it('should reject dots greater than 4', () => {
       expect(() => {
-        api.character.setActionDots({
+        api.character.setApproach({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           dots: 5,
         });
-      }).toThrow('Action dots must be between 0 and 4');
+      }).toThrow('Approach dots cannot exceed 4');
     });
   });
 
@@ -261,20 +184,7 @@ describe('CharacterAPI', () => {
           { name: 'Elite Infantry', category: 'role', disabled: false },
           { name: 'Hive Gang Survivor', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 3,
-          command: 2,
-          skirmish: 1,
-          skulk: 0,
-          wreck: 0,
-          finesse: 0,
-          survey: 2,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 2,
-        },
+        approaches: { force: 2, guile: 1, focus: 1, spirit: 0 },
       });
       api.crew.addCharacter({ crewId, characterId });
 
@@ -294,7 +204,7 @@ describe('CharacterAPI', () => {
       expect(result.newMomentum).toBe(7); // Started at 5
 
       const character = api.character.getCharacter(characterId);
-      expect(character.traits.find((t) => t.id === traitId).disabled).toBe(true);
+      expect(character.traits.find((t: Trait) => t.id === traitId)?.disabled).toBe(true);
     });
 
     it('should increase crew Momentum by 2', () => {
@@ -305,7 +215,7 @@ describe('CharacterAPI', () => {
     });
   });
 
-  describe('advanceActionDots()', () => {
+  describe('advanceApproach()', () => {
     it('should increase action dots by 1', () => {
       const characterId = api.character.create({
         name: 'Test Character',
@@ -313,29 +223,16 @@ describe('CharacterAPI', () => {
           { name: 'Role', category: 'role', disabled: false },
           { name: 'Background', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 3,
-          command: 2,
-          skirmish: 1,
-          skulk: 0,
-          wreck: 0,
-          finesse: 0,
-          survey: 2,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 2,
-        },
+        approaches: { force: 2, guile: 1, focus: 1, spirit: 0 },
       });
 
-      api.character.advanceActionDots({
+      api.character.advanceApproach({
         characterId,
-        action: 'shoot',
+        approach: 'force',
       });
 
       const character = api.character.getCharacter(characterId);
-      expect(character.actionDots.shoot).toBe(4);
+      expect(character.approaches.force).toBe(3); // 2 + 1 = 3
     });
   });
 
@@ -348,20 +245,7 @@ describe('CharacterAPI', () => {
           { name: 'Trait 1', category: 'role', disabled: false },
           { name: 'Trait 2', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 3,
-          command: 2,
-          skirmish: 1,
-          skulk: 0,
-          wreck: 0,
-          finesse: 0,
-          survey: 2,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 2,
-        },
+        approaches: { force: 2, guile: 1, focus: 1, spirit: 0 },
       });
       api.crew.addCharacter({ crewId, characterId });
 
@@ -391,20 +275,7 @@ describe('CharacterAPI', () => {
           { name: 'Role', category: 'role', disabled: false },
           { name: 'Background', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 2,
-          command: 2,
-          skirmish: 1,
-          skulk: 1,
-          wreck: 1,
-          finesse: 1,
-          survey: 1,
-          study: 1,
-          tech: 1,
-          attune: 0,
-          consort: 1,
-          sway: 0,
-        },
+        approaches: { force: 2, guile: 1, focus: 1, spirit: 0 },
       });
       api.crew.addCharacter({ crewId, characterId });
 
@@ -432,7 +303,7 @@ describe('CharacterAPI', () => {
 
       const character = api.character.getCharacter(characterId);
       expect(character.rallyAvailable).toBe(false);
-      expect(character.traits.find((t) => t.id === traitId).disabled).toBe(false);
+      expect(character.traits.find((t: Trait) => t.id === traitId)?.disabled).toBe(false);
     });
 
     it('should reject Rally when Momentum is above 3', () => {
@@ -471,7 +342,7 @@ describe('CharacterAPI', () => {
           crewId,
           momentumToSpend: 1,
         });
-      }).toThrow('Rally already used this reset');
+      }).toThrow('Rally already used for character');
     });
 
     it('should allow Rally without re-enabling a trait', () => {
@@ -491,3 +362,8 @@ describe('CharacterAPI', () => {
     });
   });
 });
+
+
+
+
+

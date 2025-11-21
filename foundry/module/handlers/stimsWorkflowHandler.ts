@@ -81,7 +81,7 @@ export interface StimsWorkflowPhase {
  * });
  */
 export class StimsWorkflowHandler {
-  constructor(private config: StimsWorkflowHandlerConfig) {}
+  constructor(private config: StimsWorkflowHandlerConfig) { }
 
   /**
    * Validate that stims can be used
@@ -322,6 +322,36 @@ export class StimsWorkflowHandler {
         newState: 'ROLLING',
       },
     };
+  }
+
+  /**
+   * Create transition to STIMS_LOCKED state
+   *
+   * @returns Redux action
+   */
+  createStimsLockoutAction(): {
+    type: string;
+    payload: { characterId: string; newState: 'STIMS_LOCKED' };
+  } {
+    return {
+      type: 'playerRoundState/transitionState',
+      payload: {
+        characterId: this.config.characterId,
+        newState: 'STIMS_LOCKED',
+      },
+    };
+  }
+
+  /**
+   * Create transition back to ROLLING state (alias for createTransitionToRollingAction)
+   *
+   * @returns Redux action
+   */
+  createReturnToRollingAction(): {
+    type: string;
+    payload: { characterId: string; newState: 'ROLLING' };
+  } {
+    return this.createTransitionToRollingAction();
   }
 
   /**

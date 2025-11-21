@@ -56,10 +56,8 @@ describe('Momentum Reset Mechanic', () => {
           { name: 'Role Trait', category: 'role', disabled: false },
           { name: 'Background Trait', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 2, command: 2, skirmish: 2, skulk: 2,
-          wreck: 1, finesse: 1, survey: 1, study: 1,
-          tech: 0, attune: 0, consort: 0, sway: 0,
+        approaches: {
+          force: 2, guile: 1, focus: 1, spirit: 1,
         },
       });
 
@@ -69,7 +67,7 @@ describe('Momentum Reset Mechanic', () => {
       api.crew.setMomentum({ crewId, amount: 3 });
 
       // Use rally
-      api.character.useRally({ characterId, crewId });
+      api.character.useRally({ characterId, crewId, momentumToSpend: 0 });
       expect(api.query.canUseRally({ characterId, crewId })).toBe(false);
 
       // Perform reset
@@ -95,20 +93,18 @@ describe('Momentum Reset Mechanic', () => {
           { name: 'Role Trait', category: 'role', disabled: false },
           { name: 'Background Trait', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 2, command: 2, skirmish: 2, skulk: 2,
-          wreck: 1, finesse: 1, survey: 1, study: 1,
-          tech: 0, attune: 0, consort: 0, sway: 0,
+        approaches: {
+          force: 2, guile: 1, focus: 1, spirit: 1,
         },
       });
 
       api.crew.addCharacter({ crewId, characterId });
 
       // Add a scar trait after creation
-      api.character.addTrait({
+      api.character.addTrait(
         characterId,
-        trait: { name: 'Battle Scar', category: 'scar', disabled: false },
-      });
+        { name: 'Battle Scar', category: 'scar', disabled: false }
+      );
 
       // Lean into traits (disable them)
       const character = api.character.getCharacter(characterId);
@@ -140,10 +136,8 @@ describe('Momentum Reset Mechanic', () => {
           { name: 'Role Trait', category: 'role', disabled: false },
           { name: 'Background Trait', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 2, command: 2, skirmish: 2, skulk: 2,
-          wreck: 1, finesse: 1, survey: 1, study: 1,
-          tech: 0, attune: 0, consort: 0, sway: 0,
+        approaches: {
+          force: 2, guile: 1, focus: 1, spirit: 1,
         },
       });
 
@@ -175,10 +169,8 @@ describe('Momentum Reset Mechanic', () => {
           { name: 'Role Trait', category: 'role', disabled: false },
           { name: 'Background Trait', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 2, command: 2, skirmish: 2, skulk: 2,
-          wreck: 1, finesse: 1, survey: 1, study: 1,
-          tech: 0, attune: 0, consort: 0, sway: 0,
+        approaches: {
+          force: 2, guile: 1, focus: 1, spirit: 1,
         },
       });
 
@@ -210,10 +202,8 @@ describe('Momentum Reset Mechanic', () => {
           { name: 'Role Trait', category: 'role', disabled: false },
           { name: 'Background Trait', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 2, command: 2, skirmish: 2, skulk: 2,
-          wreck: 1, finesse: 1, survey: 1, study: 1,
-          tech: 0, attune: 0, consort: 0, sway: 0,
+        approaches: {
+          force: 2, guile: 1, focus: 1, spirit: 1,
         },
       });
 
@@ -237,10 +227,8 @@ describe('Momentum Reset Mechanic', () => {
           { name: 'Role Trait', category: 'role', disabled: false },
           { name: 'Background Trait', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 2, command: 2, skirmish: 2, skulk: 2,
-          wreck: 1, finesse: 1, survey: 1, study: 1,
-          tech: 0, attune: 0, consort: 0, sway: 0,
+        approaches: {
+          force: 2, guile: 1, focus: 1, spirit: 1,
         },
       });
 
@@ -299,10 +287,8 @@ describe('Momentum Reset Mechanic', () => {
           { name: 'Role Trait', category: 'role', disabled: false },
           { name: 'Background Trait', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 2, command: 2, skirmish: 2, skulk: 2,
-          wreck: 1, finesse: 1, survey: 1, study: 1,
-          tech: 0, attune: 0, consort: 0, sway: 0,
+        approaches: {
+          force: 2, guile: 1, focus: 1, spirit: 1,
         },
       });
 
@@ -350,10 +336,8 @@ describe('Momentum Reset Mechanic', () => {
           { name: 'Role Trait', category: 'role', disabled: false },
           { name: 'Background Trait', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 2, command: 2, skirmish: 2, skulk: 2,
-          wreck: 1, finesse: 1, survey: 1, study: 1,
-          tech: 0, attune: 0, consort: 0, sway: 0,
+        approaches: {
+          force: 2, guile: 1, focus: 1, spirit: 1,
         },
       });
 
@@ -405,10 +389,8 @@ describe('Momentum Reset Mechanic', () => {
           { name: 'Role Trait', category: 'role', disabled: false },
           { name: 'Background Trait', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 2, command: 2, skirmish: 2, skulk: 2,
-          wreck: 1, finesse: 1, survey: 1, study: 1,
-          tech: 0, attune: 0, consort: 0, sway: 0,
+        approaches: {
+          force: 2, guile: 1, focus: 1, spirit: 1,
         },
       });
 
@@ -472,10 +454,8 @@ describe('Momentum Reset Mechanic', () => {
           { name: 'Role Trait', category: 'role', disabled: false },
           { name: 'Background Trait', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 2, command: 2, skirmish: 2, skulk: 2,
-          wreck: 1, finesse: 1, survey: 1, study: 1,
-          tech: 0, attune: 0, consort: 0, sway: 0,
+        approaches: {
+          force: 2, guile: 1, focus: 1, spirit: 1,
         },
       });
 
@@ -513,10 +493,8 @@ describe('Momentum Reset Mechanic', () => {
           { name: 'Elite Infantry', category: 'role', disabled: false },
           { name: 'Hive Gang Survivor', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 3, command: 2, skirmish: 2, skulk: 1,
-          wreck: 1, finesse: 1, survey: 1, study: 1,
-          tech: 0, attune: 0, consort: 0, sway: 0,
+        approaches: {
+          force: 2, guile: 2, focus: 1, spirit: 0,
         },
       });
 
@@ -526,10 +504,8 @@ describe('Momentum Reset Mechanic', () => {
           { name: 'Tech Priest', category: 'role', disabled: false },
           { name: 'Forge World', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 1, command: 1, skirmish: 1, skulk: 1,
-          wreck: 2, finesse: 2, survey: 2, study: 1,
-          tech: 1, attune: 0, consort: 0, sway: 0,
+        approaches: {
+          force: 1, guile: 1, focus: 2, spirit: 1,
         },
       });
 
@@ -537,17 +513,17 @@ describe('Momentum Reset Mechanic', () => {
       api.crew.addCharacter({ crewId, characterId: char2Id });
 
       // Add a scar trait to char1 after creation
-      api.character.addTrait({
-        characterId: char1Id,
-        trait: { name: 'Battle Scar', category: 'scar', disabled: false },
-      });
+      api.character.addTrait(
+        char1Id,
+        { name: 'Battle Scar', category: 'scar', disabled: false }
+      );
 
       // Set momentum to 3 so rally can be used
       api.crew.setMomentum({ crewId, amount: 3 });
 
       // Both use rally
-      api.character.useRally({ characterId: char1Id, crewId });
-      api.character.useRally({ characterId: char2Id, crewId });
+      api.character.useRally({ characterId: char1Id, crewId, momentumToSpend: 0 });
+      api.character.useRally({ characterId: char2Id, crewId, momentumToSpend: 0 });
 
       // Set momentum to 10 for rest of test
       api.crew.setMomentum({ crewId, amount: 10 });
@@ -631,3 +607,6 @@ describe('Momentum Reset Mechanic', () => {
     });
   });
 });
+
+
+

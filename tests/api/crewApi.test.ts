@@ -7,10 +7,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { configureStore } from '../../src/store';
 import { createGameAPI } from '../../src/api';
+import type { EnhancedStore } from '@reduxjs/toolkit';
+import type { RootState } from '../../src/store';
+import type { GameAPI } from '../../src/api';
 
 describe('CrewAPI', () => {
-  let store;
-  let api;
+  let store: EnhancedStore<RootState>;
+  let api: GameAPI;
 
   beforeEach(() => {
     store = configureStore();
@@ -24,9 +27,9 @@ describe('CrewAPI', () => {
       expect(crewId).toBeDefined();
 
       const crew = api.crew.getCrew(crewId);
-      expect(crew.name).toBe('Strike Team Alpha');
-      expect(crew.currentMomentum).toBe(5);
-      expect(crew.characters).toEqual([]);
+      expect(crew?.name).toBe('Strike Team Alpha');
+      expect(crew?.currentMomentum).toBe(5);
+      expect(crew?.characters).toEqual([]);
     });
   });
 
@@ -36,30 +39,22 @@ describe('CrewAPI', () => {
       const characterId = api.character.create({
         name: 'Sergeant Kane',
         traits: [
-          { name: 'Role', category: 'role', disabled: false },
-          { name: 'Background', category: 'background', disabled: false },
+          { id: 't1', name: 'Role', category: 'role', disabled: false, acquiredAt: Date.now() },
+          { id: 't2', name: 'Background', category: 'background', disabled: false, acquiredAt: Date.now() },
         ],
-        actionDots: {
-          shoot: 3,
-          command: 2,
-          skirmish: 1,
-          skulk: 0,
-          wreck: 0,
-          finesse: 0,
-          survey: 2,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 2,
+        approaches: {
+          force: 2,
+          guile: 1,
+          focus: 1,
+          spirit: 0,
         },
       });
 
       api.crew.addCharacter({ crewId, characterId });
 
       const crew = api.crew.getCrew(crewId);
-      expect(crew.characters).toContain(characterId);
-      expect(crew.characters).toHaveLength(1);
+      expect(crew?.characters).toContain(characterId);
+      expect(crew?.characters).toHaveLength(1);
     });
 
     it('should add multiple characters to crew', () => {
@@ -67,43 +62,27 @@ describe('CrewAPI', () => {
       const char1Id = api.character.create({
         name: 'Character 1',
         traits: [
-          { name: 'Role', category: 'role', disabled: false },
-          { name: 'Background', category: 'background', disabled: false },
+          { id: 't1', name: 'Role', category: 'role', disabled: false, acquiredAt: Date.now() },
+          { id: 't2', name: 'Background', category: 'background', disabled: false, acquiredAt: Date.now() },
         ],
-        actionDots: {
-          shoot: 3,
-          command: 2,
-          skirmish: 1,
-          skulk: 0,
-          wreck: 0,
-          finesse: 0,
-          survey: 2,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 2,
+        approaches: {
+          force: 2,
+          guile: 1,
+          focus: 1,
+          spirit: 0,
         },
       });
       const char2Id = api.character.create({
         name: 'Character 2',
         traits: [
-          { name: 'Role', category: 'role', disabled: false },
-          { name: 'Background', category: 'background', disabled: false },
+          { id: 't3', name: 'Role', category: 'role', disabled: false, acquiredAt: Date.now() },
+          { id: 't4', name: 'Background', category: 'background', disabled: false, acquiredAt: Date.now() },
         ],
-        actionDots: {
-          shoot: 2,
-          command: 3,
-          skirmish: 2,
-          skulk: 1,
-          wreck: 0,
-          finesse: 0,
-          survey: 1,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 1,
+        approaches: {
+          force: 1,
+          guile: 2,
+          focus: 0,
+          spirit: 1,
         },
       });
 
@@ -111,9 +90,9 @@ describe('CrewAPI', () => {
       api.crew.addCharacter({ crewId, characterId: char2Id });
 
       const crew = api.crew.getCrew(crewId);
-      expect(crew.characters).toHaveLength(2);
-      expect(crew.characters).toContain(char1Id);
-      expect(crew.characters).toContain(char2Id);
+      expect(crew?.characters).toHaveLength(2);
+      expect(crew?.characters).toContain(char1Id);
+      expect(crew?.characters).toContain(char2Id);
     });
   });
 
@@ -123,33 +102,25 @@ describe('CrewAPI', () => {
       const characterId = api.character.create({
         name: 'Test',
         traits: [
-          { name: 'Role', category: 'role', disabled: false },
-          { name: 'Background', category: 'background', disabled: false },
+          { id: 't1', name: 'Role', category: 'role', disabled: false, acquiredAt: Date.now() },
+          { id: 't2', name: 'Background', category: 'background', disabled: false, acquiredAt: Date.now() },
         ],
-        actionDots: {
-          shoot: 3,
-          command: 2,
-          skirmish: 1,
-          skulk: 0,
-          wreck: 0,
-          finesse: 0,
-          survey: 2,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 2,
+        approaches: {
+          force: 2,
+          guile: 1,
+          focus: 1,
+          spirit: 0,
         },
       });
 
       api.crew.addCharacter({ crewId, characterId });
-      expect(api.crew.getCrew(crewId).characters).toHaveLength(1);
+      expect(api.crew.getCrew(crewId)?.characters).toHaveLength(1);
 
       api.crew.removeCharacter({ crewId, characterId });
 
       const crew = api.crew.getCrew(crewId);
-      expect(crew.characters).not.toContain(characterId);
-      expect(crew.characters).toHaveLength(0);
+      expect(crew?.characters).not.toContain(characterId);
+      expect(crew?.characters).toHaveLength(0);
     });
   });
 
@@ -224,27 +195,20 @@ describe('CrewAPI', () => {
       characterId = api.character.create({
         name: 'Test Character',
         traits: [
-          { name: 'Role', category: 'role', disabled: false },
-          { name: 'Background', category: 'background', disabled: false },
+          { id: 't1', name: 'Role', category: 'role', disabled: false, acquiredAt: Date.now() },
+          { id: 't2', name: 'Background', category: 'background', disabled: false, acquiredAt: Date.now() },
         ],
-        actionDots: {
-          shoot: 3,
-          command: 2,
-          skirmish: 1,
-          skulk: 0,
-          wreck: 0,
-          finesse: 0,
-          survey: 2,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 2,
+        approaches: {
+          force: 2,
+          guile: 1,
+          focus: 1,
+          spirit: 0,
         },
       });
       api.crew.addCharacter({ crewId, characterId });
 
       const character = api.character.getCharacter(characterId);
+      if (!character) throw new Error('Character not found');
       traitId = character.traits[0].id;
     });
 
@@ -278,7 +242,7 @@ describe('CrewAPI', () => {
 
       // Rally flag should be reset (but can't use Rally yet because Momentum is 5, not 0-3)
       const resetCharacter = api.character.getCharacter(characterId);
-      expect(resetCharacter.rallyAvailable).toBe(true);
+      expect(resetCharacter?.rallyAvailable).toBe(true);
     });
 
     it('should return reset summary', () => {

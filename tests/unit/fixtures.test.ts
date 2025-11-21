@@ -17,12 +17,12 @@ describe('Test Fixtures', () => {
       expect(mockCharacter_SergeantKane.rallyAvailable).toBe(true);
     });
 
-    it('should have valid action dots (total 12)', () => {
-      const total = Object.values(mockCharacter_SergeantKane.actionDots).reduce(
+    it('should have valid approach dots (total 5)', () => {
+      const total = Object.values(mockCharacter_SergeantKane.approaches).reduce(
         (sum, dots) => sum + dots,
         0
       );
-      expect(total).toBe(12);
+      expect(total).toBe(5);
     });
 
     it('should have valid Rookie Davis fixture', () => {
@@ -63,3 +63,6 @@ describe('Test Fixtures', () => {
     });
   });
 });
+
+
+

@@ -29,6 +29,14 @@ export interface ActionDataset {
 }
 
 /**
+ * Approach rating data attributes
+ */
+export interface ApproachDataset {
+  approach: string;
+  value: string;
+}
+
+/**
  * Trait-related data attributes
  */
 export interface TraitDataset {
@@ -103,6 +111,27 @@ export function getActionDataset(element: HTMLElement): ActionDataset {
   }
 
   return { action, value };
+}
+
+/**
+ * Safely extract approach rating data attributes
+ * @param element - HTML element with data attributes
+ * @returns Typed approach dataset
+ * @throws If required approach or value attributes are missing
+ */
+export function getApproachDataset(element: HTMLElement): ApproachDataset {
+  const approach = element.dataset.approach;
+  const value = element.dataset.value;
+
+  if (!approach) {
+    throw new Error('Required data-approach attribute is missing');
+  }
+
+  if (!value) {
+    throw new Error('Required data-value attribute is missing');
+  }
+
+  return { approach, value };
 }
 
 /**
@@ -244,7 +273,7 @@ export function getDatasetEnum<T extends string>(
   if (!allowedValues.includes(value as T)) {
     throw new Error(
       `data-${key}="${value}" is not a valid value. ` +
-        `Expected one of: ${allowedValues.join(', ')}`
+      `Expected one of: ${allowedValues.join(', ')}`
     );
   }
 

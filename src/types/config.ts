@@ -11,9 +11,10 @@ export interface GameConfig {
   character: {
     startingTraitCount: number;
     maxTraitCount?: number; // Optional cap, TBD via playtesting
-    startingActionDots: number;
-    maxActionDotsPerAction: number;
-    maxActionDotsAtCreation: number;
+    startingApproachDots: number;
+    maxDotsPerApproach: number;
+    maxDotsAtCreation: number;
+    maxLoad: number;
   };
 
   crew: {
@@ -77,7 +78,7 @@ export interface GameConfig {
       spectacular: number;
     };
     // Success segments (legacy, may be deprecated)
-    successSegments:{
+    successSegments: {
       lesser: number,
       standard: number,
       great: number,

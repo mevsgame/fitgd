@@ -4,24 +4,26 @@
  * Low-change entity stored with full snapshot + command history.
  */
 
-import { EquipmentTier, EquipmentAcquisition } from "./equipment";
+import { EquipmentTier, EquipmentAcquisition, EquipmentRarity } from "./equipment";
 
 /**
  * Trait category types
  */
 export type TraitCategory = 'role' | 'background' | 'scar' | 'flashback' | 'grouped';
 
-/**
- * Social action types (subset of ActionDots for Rally)
- */
-export type SocialAction = 'command' | 'consort' | 'sway';
+export interface Approaches {
+  force: number;
+  guile: number;
+  focus: number;
+  spirit: number;
+}
 
 export interface Character {
   id: string;
   name: string;
   traits: Trait[];
-  actionDots: ActionDots;
-  unallocatedActionDots: number; // Dots not yet allocated (for milestones/rewards)
+  approaches: Approaches;
+  unallocatedApproachDots: number; // Dots not yet allocated (for milestones/rewards)
   equipment: Equipment[];
   rallyAvailable: boolean;
   createdAt: number;
@@ -37,21 +39,6 @@ export interface Trait {
   acquiredAt: number;
 }
 
-export interface ActionDots {
-  shoot: number;      // 0-4
-  skirmish: number;
-  skulk: number;
-  wreck: number;
-  finesse: number;
-  survey: number;
-  study: number;
-  tech: number;
-  attune: number;
-  command: number;
-  consort: number;
-  sway: number;
-}
-
 export interface Equipment {
   // Instance identity
   id: string;
@@ -59,9 +46,11 @@ export interface Equipment {
   // Core equipment data (copied from template at creation, fully editable)
   name: string;
   tier: EquipmentTier;
+  rarity: EquipmentRarity;
   category: string; // e.g., 'weapon', 'armor', 'tool'
   description: string;
   img?: string; // Optional: image path
+  tags: string[];
 
   // Instance state
   equipped: boolean; // Is currently equipped?

@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach } from 'vitest';
 import { configureStore } from '../../src/store';
 import {
   createCharacter,
@@ -19,7 +20,7 @@ import {
   selectOrphanedCommands,
   selectOrphanedCommandCount,
 } from '../../src/selectors/historySelectors';
-import type { ActionDots } from '../../src/types';
+import type { Approaches } from '../../src/types';
 
 describe('Auto-Prune History', () => {
   describe('Clock slice - pruneOrphanedHistory', () => {
@@ -48,7 +49,7 @@ describe('Auto-Prune History', () => {
       expect(stateBefore.clocks.history.length).toBe(3); // create, addSegments, delete
 
       // Prune orphaned commands
-      store.dispatch(pruneOrphanedClockHistory());
+      store.dispatch(pruneOrphanedClockHistory({ validIds: new Set(store.getState().clocks.allIds) }));
 
       // Verify history after prune
       const stateAfter = store.getState();
@@ -85,7 +86,7 @@ describe('Auto-Prune History', () => {
       expect(store.getState().clocks.history.length).toBe(3);
 
       // Prune
-      store.dispatch(pruneOrphanedClockHistory());
+      store.dispatch(pruneOrphanedClockHistory({ validIds: new Set(store.getState().clocks.allIds) }));
 
       const finalState = store.getState();
 
@@ -156,7 +157,7 @@ describe('Auto-Prune History', () => {
       expect(store.getState().clocks.history.length).toBe(8);
 
       // Prune
-      store.dispatch(pruneOrphanedClockHistory());
+      store.dispatch(pruneOrphanedClockHistory({ validIds: new Set(store.getState().clocks.allIds) }));
 
       const finalState = store.getState();
 
@@ -264,20 +265,12 @@ describe('Auto-Prune History', () => {
               acquiredAt: Date.now(),
             },
           ],
-          actionDots: {
-            shoot: 2,
-            skirmish: 1,
-            skulk: 0,
-            wreck: 0,
-            finesse: 0,
-            survey: 1,
-            study: 0,
-            tech: 0,
-            attune: 0,
-            command: 2,
-            consort: 0,
-            sway: 0,
-          } as ActionDots,
+          approaches: {
+            force: 2,
+            guile: 1,
+            focus: 1,
+            spirit: 0,
+          } as Approaches,
         })
       );
 
@@ -381,20 +374,12 @@ describe('Auto-Prune History', () => {
               acquiredAt: Date.now(),
             },
           ],
-          actionDots: {
-            shoot: 2,
-            skirmish: 1,
-            skulk: 0,
-            wreck: 0,
-            finesse: 0,
-            survey: 1,
-            study: 0,
-            tech: 0,
-            attune: 0,
-            command: 2,
-            consort: 0,
-            sway: 0,
-          } as ActionDots,
+          approaches: {
+            force: 2,
+            guile: 1,
+            focus: 1,
+            spirit: 0,
+          } as Approaches,
         })
       );
 
@@ -416,7 +401,7 @@ describe('Auto-Prune History', () => {
       // Prune all slices
       store.dispatch(pruneOrphanedCharacterHistory());
       store.dispatch(pruneOrphanedCrewHistory());
-      store.dispatch(pruneOrphanedClockHistory());
+      store.dispatch(pruneOrphanedClockHistory({ validIds: new Set(store.getState().clocks.allIds) }));
 
       // History should be unchanged (no orphaned commands)
       expect(store.getState().characters.history.length).toBe(characterHistoryBefore);
@@ -446,7 +431,7 @@ describe('Auto-Prune History', () => {
       }
 
       // Prune
-      store.dispatch(pruneOrphanedClockHistory());
+      store.dispatch(pruneOrphanedClockHistory({ validIds: new Set(store.getState().clocks.allIds) }));
 
       const finalState = store.getState();
 
@@ -462,3 +447,7 @@ describe('Auto-Prune History', () => {
     });
   });
 });
+
+
+
+

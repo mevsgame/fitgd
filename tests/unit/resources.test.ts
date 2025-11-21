@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore } from '../../src/store';
 import characterReducer from '../../src/slices/characterSlice';
 import crewReducer from '../../src/slices/crewSlice';
 import clockReducer from '../../src/slices/clockSlice';
@@ -16,7 +16,7 @@ import {
   selectStimsAvailable,
   selectConsumableAvailable,
 } from '../../src/selectors/clockSelectors';
-import type { RootState } from '../../src/types';
+import type { RootState } from '../../src/store';
 
 /**
  * Resource Management Tests
@@ -31,13 +31,7 @@ describe('Resource Management', () => {
 
   beforeEach(() => {
     // Create store with all reducers
-    store = configureStore({
-      reducer: {
-        characters: characterReducer,
-        crews: crewReducer,
-        clocks: clockReducer,
-      },
-    });
+    store = configureStore();
 
     // Create test character
     store.dispatch(
@@ -59,19 +53,11 @@ describe('Resource Management', () => {
             acquiredAt: Date.now(),
           },
         ],
-        actionDots: {
-          shoot: 2,
-          skirmish: 1,
-          skulk: 1,
-          wreck: 1,
-          finesse: 1,
-          survey: 1,
-          study: 1,
-          tech: 1,
-          attune: 0,
-          command: 2,
-          consort: 1,
-          sway: 0,
+        approaches: {
+          force: 2,
+          guile: 1,
+          focus: 1,
+          spirit: 0,
         },
       })
     );
@@ -422,19 +408,11 @@ describe('Resource Management', () => {
               acquiredAt: Date.now(),
             },
           ],
-          actionDots: {
-            shoot: 2,
-            skirmish: 1,
-            skulk: 1,
-            wreck: 1,
-            finesse: 1,
-            survey: 1,
-            study: 1,
-            tech: 1,
-            attune: 0,
-            command: 2,
-            consort: 1,
-            sway: 0,
+          approaches: {
+            force: 2,
+            guile: 1,
+            focus: 1,
+            spirit: 0,
           },
         })
       );
@@ -503,19 +481,11 @@ describe('Resource Management', () => {
               acquiredAt: Date.now(),
             },
           ],
-          actionDots: {
-            shoot: 2,
-            skirmish: 1,
-            skulk: 1,
-            wreck: 1,
-            finesse: 1,
-            survey: 1,
-            study: 1,
-            tech: 1,
-            attune: 0,
-            command: 2,
-            consort: 1,
-            sway: 0,
+          approaches: {
+            force: 2,
+            guile: 1,
+            focus: 1,
+            spirit: 0,
           },
         })
       );
@@ -686,19 +656,11 @@ describe('Resource Management', () => {
               acquiredAt: Date.now(),
             },
           ],
-          actionDots: {
-            shoot: 2,
-            skirmish: 1,
-            skulk: 1,
-            wreck: 1,
-            finesse: 1,
-            survey: 1,
-            study: 1,
-            tech: 1,
-            attune: 0,
-            command: 2,
-            consort: 1,
-            sway: 0,
+          approaches: {
+            force: 2,
+            guile: 1,
+            focus: 1,
+            spirit: 0,
           },
         })
       );
@@ -734,3 +696,6 @@ describe('Resource Management', () => {
 
   });
 });
+
+
+

@@ -19,7 +19,7 @@ import {
   createInitialPlayerRoundState,
   isValidTransition,
 } from '../types/playerRoundState';
-import type { ActionDots } from '../types/character';
+import type { Approaches } from '../types/character';
 
 /**
  * Player Round State Slice State
@@ -55,7 +55,9 @@ interface SetActivePlayerPayload {
 
 interface SetActionPlanPayload {
   characterId: string;
-  action: keyof ActionDots;
+  approach: keyof Approaches;
+  secondaryApproach?: keyof Approaches;
+  rollMode?: 'standard' | 'synergy' | 'equipment';
   position: Position;
   effect: Effect;
 }
@@ -230,7 +232,14 @@ const playerRoundStateSlice = createSlice({
      * Set action plan (action, position, effect)
      */
     setActionPlan: (state, action: PayloadAction<SetActionPlanPayload>) => {
-      const { characterId, action: selectedAction, position, effect } = action.payload;
+      const {
+        characterId,
+        approach: selectedApproach,
+        secondaryApproach,
+        rollMode,
+        position,
+        effect
+      } = action.payload;
       const currentState = state.byCharacterId[characterId];
 
       if (!currentState) {
@@ -239,7 +248,9 @@ const playerRoundStateSlice = createSlice({
 
       state.byCharacterId[characterId] = {
         ...currentState,
-        selectedAction,
+        selectedApproach,
+        secondaryApproach,
+        rollMode,
         position,
         effect,
       };

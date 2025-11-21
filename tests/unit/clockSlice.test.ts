@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore } from '../../src/store';
 import clockReducer, {
   createClock,
   addSegments,
@@ -14,11 +14,7 @@ describe('clockSlice', () => {
   let store: ReturnType<typeof configureStore>;
 
   beforeEach(() => {
-    store = configureStore({
-      reducer: {
-        clocks: clockReducer,
-      },
-    });
+    store = configureStore();
   });
 
   describe('createClock - harm clocks', () => {
@@ -217,13 +213,13 @@ describe('clockSlice', () => {
       expect(clock.maxSegments).toBe(DEFAULT_CONFIG.clocks.consumable.segments.uncommon); // 6
     });
 
-    it('should create a rare consumable clock with 4 max segments', () => {
+    it('should create an epic consumable clock with 4 max segments', () => {
       store.dispatch(
         createClock({
           entityId: 'crew-456',
           clockType: 'consumable',
           subtype: 'plasma_cells',
-          rarity: 'rare',
+          rarity: 'epic',
           tier: 'accessible',
         })
       );
@@ -232,7 +228,7 @@ describe('clockSlice', () => {
       const clockId = state.allIds[0];
       const clock = state.byId[clockId];
 
-      expect(clock.maxSegments).toBe(DEFAULT_CONFIG.clocks.consumable.segments.rare); // 4
+      expect(clock.maxSegments).toBe(DEFAULT_CONFIG.clocks.consumable.segments.epic); // 4
     });
 
     it('should freeze consumable clock when filled', () => {
@@ -694,7 +690,7 @@ describe('clockSlice', () => {
             entityId: 'crew-456',
             clockType: 'progress',
             subtype: 'Invalid Clock',
-            maxSegments: 5, // Not in [4, 6, 8, 12]
+            maxSegments: 5 as any, // Not in [4, 6, 8, 12]
           })
         );
       }).toThrow();
@@ -780,3 +776,6 @@ describe('clockSlice', () => {
     });
   });
 });
+
+
+

@@ -1,68 +1,63 @@
 /**
- * API Type Definitions
+ * API Types
  *
  * Type interfaces for the high-level game API
  */
 
-import type { Trait, ActionDots, Equipment } from '../types';
+import type { Trait, Approaches, Equipment } from '../types';
 import type { Position, Effect, ActionPushType, Result } from '../types/resolution';
 import type { ProgressClockCategory } from '../types/clock';
 
 /**
- * Character API - Character lifecycle and actions
+ * Character API Interface
  */
 export interface CharacterAPI {
-  create(params: {
-    name: string;
-    traits: Omit<Trait, 'id' | 'acquiredAt'>[];
-    actionDots: ActionDots;
-  }): string;
-
+  create(params: { name: string; traits: Trait[]; approaches: Approaches }): string;
+  addTrait(characterId: string, trait: Trait): void;
+  removeTrait(characterId: string, traitId: string): void;
+  updateTraitName(characterId: string, traitId: string, name: string): void;
+  disableTrait(characterId: string, traitId: string): void;
+  enableTrait(characterId: string, traitId: string): void;
+  groupTraits(characterId: string, traitIds: string[], newTrait: Partial<Trait>): Promise<void>;
+  setApproach(params: { characterId: string; approach: keyof Approaches; dots: number }): void;
+  advanceApproach(params: { characterId: string; approach: keyof Approaches }): void;
+  addUnallocatedDots(params: { characterId: string; amount: number }): Promise<void>;
+  addEquipment(characterId: string, equipment: Equipment): void;
+  removeEquipment(characterId: string, equipmentId: string): void;
   leanIntoTrait(params: {
     characterId: string;
     traitId: string;
     crewId: string;
   }): { traitDisabled: boolean; momentumGained: number; newMomentum: number };
-
   useRally(params: {
     characterId: string;
     crewId: string;
-    traitId?: string;
+    traitId: string;
     momentumToSpend: number;
-  }): {
-    rallyUsed: boolean;
-    traitReEnabled: boolean;
-    momentumSpent: number;
-    newMomentum: number;
-  };
-
-  advanceActionDots(params: {
-    characterId: string;
-    action: keyof ActionDots;
-  }): number;
-
-  groupTraits(params: {
-    characterId: string;
-    traitIds: [string, string, string];
-    newTrait: Omit<Trait, 'id' | 'acquiredAt'>;
-  }): string;
-
-  addEquipment(params: {
-    characterId: string;
-    equipment: Omit<Equipment, 'id'>;
-  }): string;
-
-  removeEquipment(params: {
-    characterId: string;
-    equipmentId: string;
-  }): void;
-
-  getCharacter(characterId: string): any;
+  }): { rallyUsed: boolean; traitReEnabled: boolean; momentumSpent: number; newMomentum: number };
+  resetRally(characterId: string): Promise<void>;
+  getCharacter(characterId: string): any; // Returns Character state
   getAvailableTraits(characterId: string): Trait[];
+  canUseRally(characterId: string): boolean;
 }
 
 /**
- * Action API - Making rolls and spending Momentum
+ * Crew API Interface
+ */
+export interface CrewAPI {
+  create(params: { name: string }): string;
+  addCharacter(crewId: string, characterId: string): void;
+  removeCharacter(crewId: string, characterId: string): void;
+  setMomentum(crewId: string, amount: number): void;
+  addMomentum(crewId: string, amount: number): void;
+  spendMomentum(crewId: string, amount: number): void;
+  resetMomentum(crewId: string): void;
+  getCrew(crewId: string): any; // Returns Crew state
+  getCurrentMomentum(crewId: string): number;
+}
+
+/**
+ * Action API Interface
  */
 export interface ActionAPI {
   push(params: {
@@ -95,66 +90,13 @@ export interface ActionAPI {
 }
 
 /**
- * Resource API - Consumables and stims
- */
-export interface ResourceAPI {
-  useConsumable(params: {
-    crewId: string;
-    characterId: string;
-    consumableType: string;
-    depletionRoll: number;
-  }): {
-    clockId: string;
-    segmentsAdded: number;
-    newSegments: number;
-    isFrozen: boolean;
-    tierDowngraded: boolean;
-  };
-
-  useStim(params: {
-    crewId: string;
-    characterId: string;
-    addictionRoll: number;
-  }): {
-    clockId: string;
-    segmentsAdded: number;
-    newSegments: number;
-    isAddicted: boolean;
-    addictTraitId?: string;
-  };
-}
-
-/**
- * Crew API - Crew management and Momentum
- */
-export interface CrewAPI {
-  create(name: string): string;
-  addCharacter(params: { crewId: string; characterId: string }): void;
-  removeCharacter(params: { crewId: string; characterId: string }): void;
-  setMomentum(params: { crewId: string; amount: number }): number;
-  addMomentum(params: { crewId: string; amount: number }): number;
-  performReset(crewId: string): {
-    newMomentum: number;
-    addictionReduced: number | null;
-    charactersReset: {
-      characterId: string;
-      rallyReset: boolean;
-      traitsReEnabled: number;
-    }[];
-  };
-  getCrew(crewId: string): any;
-  getMomentum(crewId: string): number;
-}
-
-/**
- * Harm API - Taking and recovering from harm
+ * Harm API Interface
  */
 export interface HarmAPI {
   take(params: {
     characterId: string;
     harmType: string;
     position: Position;
-    effect: Effect;
   }): {
     clockId: string;
     segmentsAdded: number;
@@ -180,46 +122,43 @@ export interface HarmAPI {
 }
 
 /**
- * Clock API - Managing progress/threat clocks
+ * Clock API Interface
  */
 export interface ClockAPI {
-  createProgress(params: {
+  create(params: {
     entityId: string;
-    name: string;
-    segments: 4 | 6 | 8 | 12;
-    category?: ProgressClockCategory;
-    isCountdown?: boolean;
-    description?: string;
+    type: ProgressClockCategory;
+    subtype?: string;
+    name?: string;
+    segments: number;
   }): string;
 
-  advance(params: {
-    clockId: string;
-    segments: number;
-  }): {
-    newSegments: number;
-    isFilled: boolean;
-  };
-
-  reduce(params: {
-    clockId: string;
-    segments: number;
-  }): {
-    newSegments: number;
-    isCleared: boolean;
-  };
-
+  addSegments(clockId: string, amount: number): void;
+  clearSegments(clockId: string, amount: number): void;
   delete(clockId: string): void;
-
-  // Additional methods used by Foundry widgets
-  getClock(clockId: string): unknown;
-  addSegments(params: { clockId: string; segments: number }): void;
-  clearSegments(params: { clockId: string; segments: number }): void;
-  setSegments(params: { clockId: string; segments: number }): void;
-  rename(params: { clockId: string; name: string }): void;
+  getClock(clockId: string): any; // Returns Clock state
+  getClocksForEntity(entityId: string): any[];
 }
 
 /**
- * Query API - Game state queries
+ * Resource API Interface
+ */
+export interface ResourceAPI {
+  useConsumable(params: {
+    crewId: string;
+    characterId: string;
+    consumableType: string;
+    depletionRoll: number;
+  }): any; // Returns UseConsumableResult
+  useStim(params: {
+    crewId: string;
+    characterId: string;
+    addictionRoll: number;
+  }): any; // Returns UseStimResult
+}
+
+/**
+ * Query API Interface
  */
 export interface QueryAPI {
   canUseRally(params: { characterId: string; crewId: string }): boolean;
@@ -228,18 +167,21 @@ export interface QueryAPI {
   isDying(characterId: string): boolean;
   getMomentum(crewId: string): number;
   getAvailableTraits(characterId: string): Trait[];
-  getHarmClocks(characterId: string): Array<{
-    id: string;
-    harmType: string;
-    segments: number;
-    maxSegments: number;
-  }>;
-  getProgressClocks(entityId: string): Array<{
-    id: string;
-    name: string;
-    segments: number;
-    maxSegments: number;
-    category?: string;
-    isCountdown?: boolean;
-  }>;
+  getHarmClocks(characterId: string): any[];
+  getProgressClocks(entityId: string): any[];
+  getAddictionClock(crewId: string): any;
+  getConsumableClocks(crewId: string): any[];
+}
+
+/**
+ * Game API Interface (Main Entry Point)
+ */
+export interface GameAPI {
+  character: CharacterAPI;
+  crews: CrewAPI;
+  actions: ActionAPI;
+  harm: HarmAPI;
+  resource: ResourceAPI;
+  clocks: ClockAPI;
+  query: QueryAPI;
 }

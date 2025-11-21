@@ -61,7 +61,7 @@ export interface RollValidationResult {
  * );
  */
 export class DiceRollingHandler {
-  constructor(private config: DiceRollingHandlerConfig) {}
+  constructor(private config: DiceRollingHandlerConfig) { }
 
   /**
    * Validate that a roll can be executed
@@ -85,7 +85,7 @@ export class DiceRollingHandler {
     crew: any | null
   ): RollValidationResult {
     // Check action is selected
-    if (!playerState?.selectedAction) {
+    if (!playerState?.selectedApproach) {
       return {
         isValid: false,
         reason: 'no-action-selected',

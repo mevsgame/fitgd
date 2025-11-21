@@ -1,5 +1,6 @@
+import { describe, it, expect } from 'vitest';
 import { configureStore } from '../../src/store';
-import { createCharacter, pruneHistory as pruneCharacterHistory } from '../../src/slices/characterSlice';
+import { createCharacter, pruneCharacterHistory } from '../../src/slices/characterSlice';
 import { createCrew, pruneCrewHistory } from '../../src/slices/crewSlice';
 import { createClock, pruneClockHistory } from '../../src/slices/clockSlice';
 import {
@@ -9,7 +10,7 @@ import {
   selectIsHistoryEmpty,
 } from '../../src/selectors/historySelectors';
 import { createFoundryAdapter } from '../../src/adapters/foundry';
-import type { ActionDots } from '../../src/types';
+import type { Approaches } from '../../src/types';
 
 describe('History Pruning', () => {
   describe('Slice-level pruning', () => {
@@ -24,20 +25,12 @@ describe('History Pruning', () => {
             { id: 'trait-1', name: 'Soldier', category: 'role', disabled: false, acquiredAt: Date.now() },
             { id: 'trait-2', name: 'Veteran', category: 'background', disabled: false, acquiredAt: Date.now() },
           ],
-          actionDots: {
-            shoot: 2,
-            skirmish: 1,
-            skulk: 0,
-            wreck: 0,
-            finesse: 0,
-            survey: 1,
-            study: 0,
-            tech: 0,
-            attune: 0,
-            command: 2,
-            consort: 0,
-            sway: 0,
-          } as ActionDots,
+          approaches: {
+            force: 2,
+            guile: 1,
+            focus: 1,
+            spirit: 0,
+          } as Approaches,
         })
       );
 
@@ -117,20 +110,12 @@ describe('History Pruning', () => {
             { id: 'trait-1', name: 'Soldier', category: 'role', disabled: false, acquiredAt: Date.now() },
             { id: 'trait-2', name: 'Veteran', category: 'background', disabled: false, acquiredAt: Date.now() },
           ],
-          actionDots: {
-            shoot: 2,
-            skirmish: 1,
-            skulk: 0,
-            wreck: 0,
-            finesse: 0,
-            survey: 1,
-            study: 0,
-            tech: 0,
-            attune: 0,
-            command: 2,
-            consort: 0,
-            sway: 0,
-          } as ActionDots,
+          approaches: {
+            force: 2,
+            guile: 1,
+            focus: 1,
+            spirit: 0,
+          } as Approaches,
         })
       );
 
@@ -182,20 +167,12 @@ describe('History Pruning', () => {
               { id: `trait-${i}-1`, name: 'Soldier', category: 'role', disabled: false, acquiredAt: Date.now() },
               { id: `trait-${i}-2`, name: 'Veteran', category: 'background', disabled: false, acquiredAt: Date.now() },
             ],
-            actionDots: {
-              shoot: 2,
-              skirmish: 1,
-              skulk: 0,
-              wreck: 0,
-              finesse: 0,
-              survey: 1,
-              study: 0,
-              tech: 0,
-              attune: 0,
-              command: 2,
-              consort: 0,
-              sway: 0,
-            } as ActionDots,
+            approaches: {
+              force: 2,
+              guile: 1,
+              focus: 1,
+              spirit: 0,
+            } as Approaches,
           })
         );
       }
@@ -222,20 +199,12 @@ describe('History Pruning', () => {
             { id: 'trait-1', name: 'Soldier', category: 'role', disabled: false, acquiredAt: Date.now() },
             { id: 'trait-2', name: 'Veteran', category: 'background', disabled: false, acquiredAt: Date.now() },
           ],
-          actionDots: {
-            shoot: 2,
-            skirmish: 1,
-            skulk: 0,
-            wreck: 0,
-            finesse: 0,
-            survey: 1,
-            study: 0,
-            tech: 0,
-            attune: 0,
-            command: 2,
-            consort: 0,
-            sway: 0,
-          } as ActionDots,
+          approaches: {
+            force: 2,
+            guile: 1,
+            focus: 1,
+            spirit: 0,
+          } as Approaches,
         })
       );
 
@@ -288,20 +257,12 @@ describe('History Pruning', () => {
             { id: 'trait-1', name: 'Soldier', category: 'role', disabled: false, acquiredAt: Date.now() },
             { id: 'trait-2', name: 'Veteran', category: 'background', disabled: false, acquiredAt: Date.now() },
           ],
-          actionDots: {
-            shoot: 2,
-            skirmish: 1,
-            skulk: 0,
-            wreck: 0,
-            finesse: 0,
-            survey: 1,
-            study: 0,
-            tech: 0,
-            attune: 0,
-            command: 2,
-            consort: 0,
-            sway: 0,
-          } as ActionDots,
+          approaches: {
+            force: 2,
+            guile: 1,
+            focus: 1,
+            spirit: 0,
+          } as Approaches,
         })
       );
 
@@ -344,20 +305,12 @@ describe('History Pruning', () => {
               { id: `trait-${i}-1`, name: 'Soldier', category: 'role', disabled: false, acquiredAt: Date.now() },
               { id: `trait-${i}-2`, name: 'Veteran', category: 'background', disabled: false, acquiredAt: Date.now() },
             ],
-            actionDots: {
-              shoot: 2,
-              skirmish: 1,
-              skulk: 0,
-              wreck: 0,
-              finesse: 0,
-              survey: 1,
-              study: 0,
-              tech: 0,
-              attune: 0,
-              command: 2,
-              consort: 0,
-              sway: 0,
-            } as ActionDots,
+            approaches: {
+              force: 2,
+              guile: 1,
+              focus: 1,
+              spirit: 0,
+            } as Approaches,
           })
         );
       }
@@ -396,20 +349,12 @@ describe('History Pruning', () => {
             { id: 'trait-1', name: 'Soldier', category: 'role', disabled: false, acquiredAt: Date.now() },
             { id: 'trait-2', name: 'Veteran', category: 'background', disabled: false, acquiredAt: Date.now() },
           ],
-          actionDots: {
-            shoot: 2,
-            skirmish: 1,
-            skulk: 0,
-            wreck: 0,
-            finesse: 0,
-            survey: 1,
-            study: 0,
-            tech: 0,
-            attune: 0,
-            command: 2,
-            consort: 0,
-            sway: 0,
-          } as ActionDots,
+          approaches: {
+            force: 2,
+            guile: 1,
+            focus: 1,
+            spirit: 0,
+          } as Approaches,
         })
       );
 
@@ -457,20 +402,12 @@ describe('History Pruning', () => {
               { id: `trait-${i}-1`, name: 'Soldier', category: 'role', disabled: false, acquiredAt: Date.now() },
               { id: `trait-${i}-2`, name: 'Veteran', category: 'background', disabled: false, acquiredAt: Date.now() },
             ],
-            actionDots: {
-              shoot: 2,
-              skirmish: 1,
-              skulk: 0,
-              wreck: 0,
-              finesse: 0,
-              survey: 1,
-              study: 0,
-              tech: 0,
-              attune: 0,
-              command: 2,
-              consort: 0,
-              sway: 0,
-            } as ActionDots,
+            approaches: {
+              force: 2,
+              guile: 1,
+              focus: 1,
+              spirit: 0,
+            } as Approaches,
           })
         );
       }
@@ -487,3 +424,7 @@ describe('History Pruning', () => {
     });
   });
 });
+
+
+
+

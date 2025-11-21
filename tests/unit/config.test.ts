@@ -6,7 +6,7 @@ describe('Config', () => {
   it('should have valid DEFAULT_CONFIG', () => {
     expect(DEFAULT_CONFIG).toBeDefined();
     expect(DEFAULT_CONFIG.character.startingTraitCount).toBe(2);
-    expect(DEFAULT_CONFIG.character.startingActionDots).toBe(12);
+    expect(DEFAULT_CONFIG.character.startingApproachDots).toBe(5);
     expect(DEFAULT_CONFIG.crew.startingMomentum).toBe(5);
     expect(DEFAULT_CONFIG.crew.maxMomentum).toBe(10);
     expect(DEFAULT_CONFIG.clocks.harm.maxClocks).toBe(3);
@@ -45,3 +45,6 @@ describe('UUID', () => {
     expect(ids.size).toBe(100); // All unique
   });
 });
+
+
+

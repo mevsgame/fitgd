@@ -10,9 +10,10 @@ export const DEFAULT_CONFIG: GameConfig = {
   character: {
     startingTraitCount: 2, // 1 role + 1 background
     // maxTraitCount: undefined, // No cap by default, TBD via playtesting
-    startingActionDots: 12,
-    maxActionDotsPerAction: 4,
-    maxActionDotsAtCreation: 3,
+    startingApproachDots: 5,
+    maxDotsPerApproach: 4,
+    maxDotsAtCreation: 2,
+    maxLoad: 5,
   },
 
   crew: {

@@ -1,22 +1,24 @@
 import type { Store } from '@reduxjs/toolkit';
-import type { Trait, ActionDots, Equipment } from '../../types';
+import type { Trait, Approaches, Equipment } from '../../types';
 import {
   createCharacter,
   addTrait as addTraitAction,
-  disableTrait,
-  enableTrait,
+  disableTrait as disableTraitAction,
+  enableTrait as enableTraitAction,
   removeTrait as removeTraitAction,
   updateTraitName as updateTraitNameAction,
-  groupTraits,
-  setActionDots as setActionDotsAction,
-  advanceActionDots,
+  setApproach as setApproachAction,
+  advanceApproach as advanceApproachAction,
   addEquipment,
   removeEquipment,
+  useRally as useRallyAction,
+  resetRally as resetRallyAction,
   addUnallocatedDots as addUnallocatedDotsAction,
-  useRally,
 } from '../../slices/characterSlice';
-import { addMomentum, spendMomentum } from '../../slices/crewSlice';
-import { DEFAULT_CONFIG } from '../../config';
+import {
+  addMomentum,
+  spendMomentum,
+} from '../../slices/crewSlice';
 import { generateId } from '../../utils/uuid';
 
 /**
@@ -29,301 +31,230 @@ export function createCharacterAPI(store: Store) {
     /**
      * Create a new character
      */
+    /**
+     * Create a new character
+     */
     create(params: {
-      id?: string; // Optional: provide explicit ID (e.g., Foundry Actor ID)
+      id?: string;
       name: string;
-      traits: Omit<Trait, 'id' | 'acquiredAt'>[];
-      actionDots: ActionDots;
+      traits: (Trait | Omit<Trait, 'id' | 'acquiredAt'>)[];
+      approaches: Approaches;
     }): string {
-      const traits: Trait[] = params.traits.map((t) => ({
+      const id = params.id || generateId();
+      const traits = params.traits.map(t => ({
         ...t,
-        id: generateId(),
-        acquiredAt: Date.now(),
-      }));
-
-      const characterId = params.id || generateId();
+        id: 'id' in t ? t.id : generateId(),
+        acquiredAt: 'acquiredAt' in t ? t.acquiredAt : Date.now(),
+      })) as Trait[];
 
       store.dispatch(
         createCharacter({
-          id: characterId,
+          id,
           name: params.name,
           traits,
-          actionDots: params.actionDots,
+          approaches: params.approaches,
         })
       );
-
-      return characterId;
-    },
-
-    /**
-     * Lean into a trait (disable it, gain +2 Momentum)
-     */
-    leanIntoTrait(params: {
-      characterId: string;
-      traitId: string;
-      crewId: string;
-    }): { traitDisabled: boolean; momentumGained: number; newMomentum: number } {
-      const { characterId, traitId, crewId } = params;
-
-      // Disable the trait
-      store.dispatch(disableTrait({ characterId, traitId }));
-
-      // Add 2 Momentum (rules: leaning into trait gives +2)
-      const momentumGained = 2;
-      store.dispatch(addMomentum({ crewId, amount: momentumGained }));
-
-      const state = store.getState();
-      const newMomentum = state.crews.byId[crewId]?.currentMomentum ?? 0;
-
-      return {
-        traitDisabled: true,
-        momentumGained,
-        newMomentum,
-      };
-    },
-
-    /**
-     * Use Rally (spend Momentum when low, re-enable trait)
-     */
-    useRally(params: {
-      characterId: string;
-      crewId: string;
-      traitId?: string;
-      momentumToSpend: number;
-    }): {
-      rallyUsed: boolean;
-      traitReEnabled: boolean;
-      momentumSpent: number;
-      newMomentum: number;
-    } {
-      const { characterId, crewId, traitId, momentumToSpend } = params;
-
-      const state = store.getState();
-      const crew = state.crews.byId[crewId];
-      const character = state.characters.byId[characterId];
-
-      if (!crew) {
-        throw new Error(`Crew ${crewId} not found`);
-      }
-
-      if (!character) {
-        throw new Error(`Character ${characterId} not found`);
-      }
-
-      // Validate Momentum is 0-3
-      const maxMomentumForRally =
-        DEFAULT_CONFIG.rally?.maxMomentumToUse ?? 3;
-      if (crew.currentMomentum > maxMomentumForRally) {
-        throw new Error(
-          `Rally only available at 0-${maxMomentumForRally} Momentum (current: ${crew.currentMomentum})`
-        );
-      }
-
-      // Validate rally is available
-      if (!character.rallyAvailable) {
-        throw new Error('Rally already used this reset');
-      }
-
-      // Spend Momentum
-      store.dispatch(spendMomentum({ crewId, amount: momentumToSpend }));
-
-      // Mark rally as used
-      store.dispatch(useRally({ characterId }));
-
-      // Re-enable trait if provided
-      let traitReEnabled = false;
-      if (traitId) {
-        store.dispatch(enableTrait({ characterId, traitId }));
-        traitReEnabled = true;
-      }
-
-      const updatedState = store.getState();
-      const newMomentum = updatedState.crews.byId[crewId].currentMomentum;
-
-      return {
-        rallyUsed: true,
-        traitReEnabled,
-        momentumSpent: momentumToSpend,
-        newMomentum,
-      };
-    },
-
-    /**
-     * Advance action dots (milestone reward)
-     */
-    advanceActionDots(params: {
-      characterId: string;
-      action: keyof ActionDots;
-    }): number {
-      const { characterId, action } = params;
-
-      store.dispatch(advanceActionDots({ characterId, action }));
-
-      const state = store.getState();
-      const character = state.characters.byId[characterId];
-
-      if (!character) {
-        throw new Error(`Character ${characterId} not found`);
-      }
-
-      return character.actionDots[action];
-    },
-
-    /**
-     * Group three traits into one broader trait
-     */
-    groupTraits(params: {
-      characterId: string;
-      traitIds: [string, string, string];
-      newTrait: Omit<Trait, 'id' | 'acquiredAt'>;
-    }): string {
-      const { characterId, traitIds, newTrait } = params;
-
-      const traitWithId: Trait = {
-        ...newTrait,
-        id: generateId(),
-        category: 'grouped',
-        acquiredAt: Date.now(),
-      };
-
-      store.dispatch(
-        groupTraits({
-          characterId,
-          traitIds,
-          groupedTrait: traitWithId,
-        })
-      );
-
-      return traitWithId.id;
-    },
-
-    /**
-     * Add equipment to character
-     */
-    addEquipment(params: {
-      characterId: string;
-      equipment: Omit<Equipment, 'id'>;
-    }): string {
-      const { characterId, equipment } = params;
-
-      const equipmentWithId: Equipment = {
-        ...equipment,
-        id: generateId(),
-      };
-
-      store.dispatch(addEquipment({ characterId, equipment: equipmentWithId }));
-
-      return equipmentWithId.id;
-    },
-
-    /**
-     * Remove equipment from character
-     */
-    removeEquipment(params: {
-      characterId: string;
-      equipmentId: string;
-    }): void {
-      const { characterId, equipmentId } = params;
-      store.dispatch(removeEquipment({ characterId, equipmentId }));
+      return id;
     },
 
     /**
      * Add a trait to character
      */
-    addTrait(params: {
-      characterId: string;
-      trait: Omit<Trait, 'id' | 'acquiredAt'>;
-    }): string {
-      const { characterId, trait } = params;
-
-      const traitWithId: Trait = {
+    addTrait(characterId: string, trait: Trait | Omit<Trait, 'id' | 'acquiredAt'>): string {
+      const traitWithId = {
         ...trait,
-        id: generateId(),
-        acquiredAt: Date.now(),
-      };
+        id: 'id' in trait ? trait.id : generateId(),
+        acquiredAt: 'acquiredAt' in trait ? trait.acquiredAt : Date.now(),
+      } as Trait;
 
       store.dispatch(addTraitAction({ characterId, trait: traitWithId }));
-
       return traitWithId.id;
     },
 
     /**
      * Remove a trait from character
      */
-    removeTrait(params: {
-      characterId: string;
-      traitId: string;
-    }): void {
-      const { characterId, traitId } = params;
+    removeTrait(characterId: string, traitId: string): void {
       store.dispatch(removeTraitAction({ characterId, traitId }));
     },
 
     /**
      * Update a trait's name
      */
-    updateTraitName(params: {
-      characterId: string;
-      traitId: string;
-      name: string;
-    }): void {
-      const { characterId, traitId, name } = params;
-
-      if (!name || name.trim().length === 0) {
-        throw new Error('Trait name cannot be empty');
-      }
-
+    updateTraitName(characterId: string, traitId: string, name: string): void {
       store.dispatch(updateTraitNameAction({ characterId, traitId, name }));
     },
 
     /**
-     * Set action dots to a specific value
+     * Disable a trait
      */
-    setActionDots(params: {
-      characterId: string;
-      action: keyof ActionDots;
-      dots: number;
-    }): number {
-      const { characterId, action, dots } = params;
-
-      if (dots < 0 || dots > 4) {
-        throw new Error(`Action dots must be between 0 and 4 (got ${dots})`);
-      }
-
-      store.dispatch(setActionDotsAction({ characterId, action, dots }));
-
-      const state = store.getState();
-      const character = state.characters.byId[characterId];
-
-      if (!character) {
-        throw new Error(`Character ${characterId} not found`);
-      }
-
-      return character.actionDots[action];
+    disableTrait(characterId: string, traitId: string): void {
+      store.dispatch(disableTraitAction({ characterId, traitId }));
     },
 
     /**
-     * Add unallocated action dots (for GM rewards/milestones)
+     * Enable a trait
      */
-    addUnallocatedDots(params: {
+    enableTrait(characterId: string, traitId: string): void {
+      store.dispatch(enableTraitAction({ characterId, traitId }));
+    },
+
+    /**
+     * Lean into a trait (disable it to gain momentum)
+     */
+    leanIntoTrait(params: {
       characterId: string;
-      amount: number;
-    }): number {
-      const { characterId, amount } = params;
+      traitId: string;
+      crewId: string;
+    }) {
+      const { characterId, traitId, crewId } = params;
 
-      if (amount < 1) {
-        throw new Error('Amount must be at least 1');
-      }
+      // Disable trait
+      store.dispatch(disableTraitAction({ characterId, traitId }));
 
-      store.dispatch(addUnallocatedDotsAction({ characterId, amount }));
+      // Gain momentum (standard +2 for leaning into trait)
+      const momentumGained = 2;
+      store.dispatch(addMomentum({ crewId, amount: momentumGained }));
 
       const state = store.getState();
-      const character = state.characters.byId[characterId];
+      const crew = state.crews.byId[crewId];
 
-      if (!character) {
-        throw new Error(`Character ${characterId} not found`);
+      return {
+        traitDisabled: true,
+        momentumGained,
+        newMomentum: crew.currentMomentum,
+      };
+    },
+
+    /**
+     * Group traits
+     */
+    groupTraits(params: {
+      characterId: string;
+      traitIds: string[];
+      newTrait: Partial<Trait>;
+    }): void {
+      const { characterId, traitIds, newTrait } = params;
+
+      // Remove old traits
+      traitIds.forEach(traitId => {
+        store.dispatch(removeTraitAction({ characterId, traitId }));
+      });
+
+      // Add new grouped trait
+      const traitToAdd: Trait = {
+        id: generateId(),
+        name: newTrait.name || 'Grouped Trait',
+        category: 'grouped',
+        disabled: false,
+        description: newTrait.description || '',
+        acquiredAt: Date.now(),
+        ...newTrait
+      };
+
+      store.dispatch(addTraitAction({ characterId, trait: traitToAdd }));
+    },
+
+    /**
+     * Set approach dots
+     */
+    setApproach(params: {
+      characterId: string;
+      approach: keyof Approaches;
+      dots: number;
+    }): void {
+      const { characterId, approach, dots } = params;
+      // Validation happens in reducer
+      store.dispatch(setApproachAction({ characterId, approach, dots }));
+    },
+
+    /**
+     * Advance approach
+     */
+    advanceApproach(params: {
+      characterId: string;
+      approach: keyof Approaches;
+    }): void {
+      store.dispatch(advanceApproachAction(params));
+    },
+
+    /**
+     * Add unallocated dots
+     */
+    addUnallocatedDots(params: { characterId: string; amount: number }): Promise<void> {
+      store.dispatch(addUnallocatedDotsAction(params));
+      return Promise.resolve();
+    },
+
+    /**
+     * Add equipment
+     */
+    addEquipment(characterId: string, equipment: Equipment): void {
+      store.dispatch(addEquipment({ characterId, equipment }));
+    },
+
+    /**
+     * Remove equipment
+     */
+    removeEquipment(characterId: string, equipmentId: string): void {
+      store.dispatch(removeEquipment({ characterId, equipmentId }));
+    },
+
+    /**
+     * Use Rally
+     */
+    useRally(params: {
+      characterId: string;
+      crewId: string;
+      traitId?: string;
+      momentumToSpend: number;
+    }) {
+      const { characterId, crewId, traitId, momentumToSpend } = params;
+      const state = store.getState();
+      const character = state.characters.byId[characterId];
+      const crew = state.crews.byId[crewId];
+
+      if (!character) throw new Error(`Character ${characterId} not found`);
+      if (!crew) throw new Error(`Crew ${crewId} not found`);
+
+      if (!character.rallyAvailable) {
+        throw new Error(`Rally already used for character ${characterId}`);
       }
 
-      return character.unallocatedActionDots;
+      if (crew.currentMomentum > 3) {
+        throw new Error('Rally only available at 0-3 Momentum');
+      }
+
+      // Spend momentum
+      store.dispatch(spendMomentum({ crewId, amount: momentumToSpend }));
+
+      // Re-enable trait if provided
+      if (traitId) {
+        store.dispatch(enableTraitAction({ characterId, traitId, userId: 'system' }));
+      }
+
+      // Mark rally used
+      store.dispatch(useRallyAction({ characterId }));
+
+      // Re-fetch state to get updated momentum
+      const updatedState = store.getState();
+      const updatedCrew = updatedState.crews.byId[crewId];
+
+      return {
+        rallyUsed: true,
+        traitReEnabled: !!traitId,
+        momentumSpent: momentumToSpend,
+        newMomentum: updatedCrew.currentMomentum,
+      };
+    },
+
+    /**
+     * Reset Rally
+     */
+    resetRally(characterId: string): Promise<void> {
+      store.dispatch(resetRallyAction({ characterId }));
+      return Promise.resolve();
     },
 
     /**
@@ -346,6 +277,15 @@ export function createCharacterAPI(store: Store) {
       }
 
       return character.traits.filter((t: Trait) => !t.disabled);
+    },
+
+    /**
+     * Can use rally?
+     */
+    canUseRally(characterId: string): boolean {
+      const state = store.getState();
+      const character = state.characters.byId[characterId];
+      return character?.rallyAvailable ?? false;
     },
   };
 }

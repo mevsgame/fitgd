@@ -1,24 +1,19 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
-import characterReducer, {
+import { configureStore } from '../../src/store';
+import {
   createCharacter,
   addTrait,
   groupTraits,
   createTraitFromFlashback,
-  advanceActionDots,
+  advanceApproach,
 } from '../../src/slices/characterSlice';
-import { DEFAULT_CONFIG } from '../../src/config';
-import type { Trait, ActionDots } from '../../src/types';
+import type { Trait, Approaches } from '../../src/types';
 
 describe('characterSlice - Advanced Features', () => {
   let store: ReturnType<typeof configureStore>;
 
   beforeEach(() => {
-    store = configureStore({
-      reducer: {
-        characters: characterReducer,
-      },
-    });
+    store = configureStore();
   });
 
   describe('groupTraits', () => {
@@ -43,26 +38,18 @@ describe('characterSlice - Advanced Features', () => {
         },
       ];
 
-      const actionDots: ActionDots = {
-        shoot: 3,
-        skirmish: 2,
-        skulk: 1,
-        wreck: 1,
-        finesse: 1,
-        survey: 1,
-        study: 1,
-        tech: 0,
-        attune: 0,
-        command: 1,
-        consort: 1,
-        sway: 0,
+      const approaches: Approaches = {
+        force: 2,
+        guile: 1,
+        focus: 1,
+        spirit: 0,
       };
 
       store.dispatch(
         createCharacter({
           name: 'Test Character',
           traits,
-          actionDots,
+          approaches,
         })
       );
 
@@ -244,26 +231,18 @@ describe('characterSlice - Advanced Features', () => {
         },
       ];
 
-      const actionDots: ActionDots = {
-        shoot: 3,
-        skirmish: 2,
-        skulk: 1,
-        wreck: 1,
-        finesse: 1,
-        survey: 1,
-        study: 1,
-        tech: 0,
-        attune: 0,
-        command: 1,
-        consort: 1,
-        sway: 0,
+      const approaches: Approaches = {
+        force: 2,
+        guile: 1,
+        focus: 1,
+        spirit: 0,
       };
 
       store.dispatch(
         createCharacter({
           name: 'Test Character',
           traits,
-          actionDots,
+          approaches,
         })
       );
 
@@ -354,7 +333,7 @@ describe('characterSlice - Advanced Features', () => {
     });
   });
 
-  describe('advanceActionDots', () => {
+  describe('advanceApproach', () => {
     let characterId: string;
 
     beforeEach(() => {
@@ -375,26 +354,18 @@ describe('characterSlice - Advanced Features', () => {
         },
       ];
 
-      const actionDots: ActionDots = {
-        shoot: 3,
-        skirmish: 2,
-        skulk: 1,
-        wreck: 1,
-        finesse: 1,
-        survey: 1,
-        study: 1,
-        tech: 0,
-        attune: 0,
-        command: 1,
-        consort: 1,
-        sway: 0,
+      const approaches: Approaches = {
+        force: 2,
+        guile: 1,
+        focus: 1,
+        spirit: 0,
       };
 
       store.dispatch(
         createCharacter({
           name: 'Test Character',
           traits,
-          actionDots,
+          approaches,
         })
       );
 
@@ -403,30 +374,38 @@ describe('characterSlice - Advanced Features', () => {
 
     it('should advance action dots by 1 at milestone', () => {
       store.dispatch(
-        advanceActionDots({
+        advanceApproach({
           characterId,
-          action: 'shoot',
+          approach: 'force',
         })
       );
 
       const character = store.getState().characters.byId[characterId];
-      expect(character.actionDots.shoot).toBe(4); // Was 3, now 4
+      expect(character.approaches.force).toBe(3); // Was 2, now 3
     });
 
     it('should not exceed maximum of 4 dots', () => {
+      // Advance to 3
       store.dispatch(
-        advanceActionDots({
+        advanceApproach({
           characterId,
-          action: 'shoot', // Already at 3
+          approach: 'force',
+        })
+      );
+      // Advance to 4
+      store.dispatch(
+        advanceApproach({
+          characterId,
+          approach: 'force',
         })
       );
 
       // Try to advance again (would be 5)
       expect(() => {
         store.dispatch(
-          advanceActionDots({
+          advanceApproach({
             characterId,
-            action: 'shoot',
+            approach: 'force',
           })
         );
       }).toThrow();
@@ -434,42 +413,45 @@ describe('characterSlice - Advanced Features', () => {
 
     it('should advance from 0 to 1', () => {
       store.dispatch(
-        advanceActionDots({
+        advanceApproach({
           characterId,
-          action: 'tech', // Currently 0
+          approach: 'spirit', // Currently 0
         })
       );
 
       const character = store.getState().characters.byId[characterId];
-      expect(character.actionDots.tech).toBe(1);
+      expect(character.approaches.spirit).toBe(1);
     });
 
     it('should allow advancing different actions over time', () => {
       store.dispatch(
-        advanceActionDots({
+        advanceApproach({
           characterId,
-          action: 'shoot',
+          approach: 'force',
         })
       );
 
       store.dispatch(
-        advanceActionDots({
+        advanceApproach({
           characterId,
-          action: 'command',
+          approach: 'focus',
         })
       );
 
       store.dispatch(
-        advanceActionDots({
+        advanceApproach({
           characterId,
-          action: 'skulk',
+          approach: 'guile',
         })
       );
 
       const character = store.getState().characters.byId[characterId];
-      expect(character.actionDots.shoot).toBe(4);
-      expect(character.actionDots.command).toBe(2);
-      expect(character.actionDots.skulk).toBe(2);
+      expect(character.approaches.force).toBe(3); // 2->3
+      expect(character.approaches.focus).toBe(2); // 1->2
+      expect(character.approaches.guile).toBe(2); // 1->2
     });
   });
 });
+
+
+

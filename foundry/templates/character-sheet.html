@@ -2,19 +2,20 @@
 
   {{!-- Sheet Header --}}
   <header class="sheet-header">
-    <img class="profile-img" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" height="100" width="100"/>
+    <img class="profile-img" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" height="100" width="100" />
     <div class="header-fields">
-      <h1 class="charname"><input name="name" type="text" value="{{actor.name}}" placeholder="Name"/></h1>
+      <h1 class="charname"><input name="name" type="text" value="{{actor.name}}" placeholder="Name" /></h1>
       <div class="resource">
         <label class="allocation-label">Rally Available</label>
-        <input type="checkbox" name="system.rallyAvailable" {{checked system.rallyAvailable}} {{#unless editable}}disabled{{/unless}}/>
+        <input type="checkbox" name="system.rallyAvailable" {{checked system.rallyAvailable}} {{#unless
+          editable}}disabled{{/unless}} />
       </div>
     </div>
   </header>
 
   {{!-- Sheet Tab Navigation --}}
   <nav class="sheet-tabs tabs" data-group="primary">
-    <a class="item" data-tab="actions">Actions</a>
+    <a class="item" data-tab="approaches">Approaches</a>
     <a class="item" data-tab="traits">Traits</a>
     <a class="item" data-tab="harm">Harm</a>
     <a class="item" data-tab="equipment">Equipment</a>
@@ -23,23 +24,20 @@
   {{!-- Sheet Body --}}
   <section class="sheet-body">
 
-    {{!-- Actions Tab --}}
-    <div class="tab actions" data-group="primary" data-tab="actions">
-      <div class="actions-header">
-        <h2>Action Ratings</h2>
+    {{!-- Approaches Tab --}}
+    <div class="tab approaches" data-group="primary" data-tab="approaches">
+      <div class="approaches-header">
+        <h2>Approaches</h2>
         <div class="header-buttons">
-          <button class="take-action-btn draggable"
-                  type="button"
-                  draggable="true"
-                  data-action-type="take-action"
-                  title="Take an action (drag to hotbar to create macro)">
+          <button class="take-action-btn draggable" type="button" draggable="true" data-action-type="take-action"
+            title="Take an action (drag to hotbar to create macro)">
             <i class="fas fa-cube"></i> Take Action
           </button>
           <button class="toggle-edit-btn" type="button">
             {{#if editMode}}
-              <i class="fas fa-save"></i> Save
+            <i class="fas fa-save"></i> Save
             {{else}}
-              <i class="fas fa-edit"></i> Edit
+            <i class="fas fa-edit"></i> Edit
             {{/if}}
           </button>
         </div>
@@ -49,47 +47,45 @@
       <div class="dot-allocation-display">
         <div class="allocation-track">
           <span class="allocation-label">Dots:</span>
-          {{#times system.totalActionDots}}
-            <span class="allocation-dot {{#if (lt this ../system.allocatedActionDots)}}filled{{/if}}"></span>
+          {{#times system.totalApproachDots}}
+          <span class="allocation-dot {{#if (lt this ../system.allocatedApproachDots)}}filled{{/if}}"></span>
           {{/times}}
           <span class="allocation-text">
-            {{system.allocatedActionDots}}/{{system.totalActionDots}}
-            {{#if (eq system.unallocatedActionDots 0)}}
-              <i class="fas fa-check-circle allocation-complete"></i>
+            {{system.allocatedApproachDots}}/{{system.totalApproachDots}}
+            {{#if (eq system.unallocatedApproachDots 0)}}
+            <i class="fas fa-check-circle allocation-complete"></i>
             {{else}}
-              ({{system.unallocatedActionDots}} to allocate)
+            ({{system.unallocatedApproachDots}} to allocate)
             {{/if}}
           </span>
         </div>
       </div>
 
       {{#if editMode}}
-        <p class="help-text edit-mode-active">
-          <i class="fas fa-edit"></i> Edit Mode Active: Click dots to allocate. Click Save when done.
-        </p>
+      <p class="help-text edit-mode-active">
+        <i class="fas fa-edit"></i> Edit Mode Active: Click dots to allocate. Click Save when done.
+      </p>
       {{else}}
-        <p class="help-text">Click Edit to allocate action dots. Maximum: 4 dots per action.</p>
+      <p class="help-text">Click Edit to allocate approach dots. Maximum: 4 dots per approach.</p>
       {{/if}}
 
-      <div class="actions-grid">
-        {{#each system.actionDots}}
-        <div class="action-row">
-          <label class="action-label">
-            {{action}}
+      <div class="approaches-grid">
+        {{#each system.approaches}}
+        <div class="approach-row">
+          <label class="approach-label">
+            {{approach}}
           </label>
-          <div class="action-dots" data-action="{{action}}">
+          <div class="approach-dots" data-approach="{{approach}}">
             {{#times 4}}
-              <span class="dot {{#if (lt this ../dots)}}filled{{/if}}"
-                    data-action="{{../action}}"
-                    data-value="{{add this 1}}"
-                    title="Set {{../action}} to {{add this 1}} dots"></span>
+            <span class="dot {{#if (lt this ../dots)}}filled{{/if}}" data-approach="{{../approach}}"
+              data-value="{{add this 1}}" title="Set {{../approach}} to {{add this 1}} dots"></span>
             {{/times}}
           </div>
-          <span class="action-value">{{dots}}</span>
+          <span class="approach-value">{{dots}}</span>
         </div>
         {{/each}}
       </div>
- 
+
     </div>
 
     {{!-- Traits Tab --}}
@@ -107,22 +103,20 @@
         {{#each system.traits as |trait|}}
         <div class="trait-item {{#if trait.disabled}}disabled{{/if}}">
           <div class="trait-header">
-            <h4 class="trait-name {{#if @root.editable}}editable{{/if}}"
-                data-trait-id="{{trait.id}}"
-                contenteditable="{{@root.editable}}"
-                spellcheck="false">{{trait.name}}</h4>
+            <h4 class="trait-name {{#if @root.editable}}editable{{/if}}" data-trait-id="{{trait.id}}"
+              contenteditable="{{@root.editable}}" spellcheck="false">{{trait.name}}</h4>
             <div class="trait-header-right">
               <span class="trait-category">{{trait.category}}</span>
             </div>
-            
-              {{#if @root.editable}}
+
+            {{#if @root.editable}}
             <div class="trait-header-right">
               <button class="delete-trait-btn" type="button" data-trait-id="{{trait.id}}" title="Delete Trait">
                 <i class="fas fa-trash"></i>
               </button>
-              
+
             </div>
-              {{/if}}
+            {{/if}}
           </div>
           {{#if trait.description}}
           <p class="trait-description">{{trait.description}}</p>
@@ -145,9 +139,8 @@
         {{#each system.harmClocks as |clock|}}
         <div class="clock-item harm-clock" data-clock-id="{{clock.id}}">
           <div class="clock-header">
-            <h4 class="clock-name {{#if @root.editable}}editable{{/if}}"
-                data-clock-id="{{clock.id}}"
-                contenteditable="{{@root.editable}}">{{clock.subtype}}</h4>
+            <h4 class="clock-name {{#if @root.editable}}editable{{/if}}" data-clock-id="{{clock.id}}"
+              contenteditable="{{@root.editable}}">{{clock.subtype}}</h4>
             {{#if @root.editable}}
             <button class="delete-clock-btn" type="button" data-clock-id="{{clock.id}}" title="Delete Clock">
               <i class="fas fa-trash"></i>
@@ -159,12 +152,8 @@
           </div>
           <div class="clock-controls">
             {{#if @root.editable}}
-            <input type="number" class="clock-value-input"
-                   data-clock-id="{{clock.id}}"
-                   value="{{clock.segments}}"
-                   min="0"
-                   max="{{clock.maxSegments}}"
-                   title="Click to edit value directly"/>
+            <input type="number" class="clock-value-input" data-clock-id="{{clock.id}}" value="{{clock.segments}}"
+              min="0" max="{{clock.maxSegments}}" title="Click to edit value directly" />
             {{else}}
             <span class="clock-value">{{clock.segments}}/{{clock.maxSegments}}</span>
             {{/if}}
@@ -187,12 +176,9 @@
           </div>
           <div class="clock-controls">
             {{#if @root.editable}}
-            <input type="number" class="clock-value-input"
-                   data-clock-id="{{system.addictionClock.id}}"
-                   value="{{system.addictionClock.segments}}"
-                   min="0"
-                   max="{{system.addictionClock.maxSegments}}"
-                   title="Click to edit value directly"/>
+            <input type="number" class="clock-value-input" data-clock-id="{{system.addictionClock.id}}"
+              value="{{system.addictionClock.segments}}" min="0" max="{{system.addictionClock.maxSegments}}"
+              title="Click to edit value directly" />
             {{else}}
             <span class="clock-value">{{system.addictionClock.segments}}/{{system.addictionClock.maxSegments}}</span>
             {{/if}}
@@ -222,10 +208,8 @@
         <div class="equipment-item tier-{{item.tier}} {{#if item.equipped}}equipped{{/if}}">
           <div class="equipment-item-row">
             <label class="equipped-checkbox-label">
-              <input type="checkbox"
-                     class="equipped-checkbox"
-                     data-equipment-id="{{item.id}}"
-                     {{checked item.equipped}}/>
+              <input type="checkbox" class="equipped-checkbox" data-equipment-id="{{item.id}}" {{checked
+                item.equipped}} />
               <span class="equipped-indicator">
                 {{#if item.equipped}}⚔{{else}}○{{/if}}
               </span>

@@ -8,6 +8,7 @@
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
 import type { PlayerRoundState, Position, Effect } from '../types/playerRoundState';
+import { DEFAULT_CONFIG } from '../config/gameConfig';
 import {
   calculateConsequenceSeverity,
   calculateMomentumGain,
@@ -58,29 +59,52 @@ export const selectDicePool = createSelector(
     (state: RootState, characterId: string) => selectPlayerState(state, characterId),
   ],
   (character, playerState) => {
-    if (!character || !playerState?.selectedAction) {
+    if (!character || !playerState?.selectedApproach) {
       return 0;
     }
 
-    // Base: action dots for selected action
-    let pool = character.actionDots[playerState.selectedAction] || 0;
+    // 1. Start with Primary Approach
+    let pool = character.approaches[playerState.selectedApproach] || 0;
 
-    // +1d if using a trait
+    // 2. Add Secondary Source (Synergy OR Equipment)
+    // Note: rollMode defaults to 'equipment' if undefined for backward compatibility,
+    // or we can default to 'standard'. Let's assume 'equipment' is the default flow if not specified,
+    // but strictly checking the mode is safer.
+    const mode = playerState.rollMode || 'equipment';
+
+    if (mode === 'synergy' && playerState.secondaryApproach) {
+      // Synergy: Add Secondary Approach Rating
+      pool += character.approaches[playerState.secondaryApproach] || 0;
+    } else if (mode === 'equipment') {
+      // Equipment: Add +1d ONLY if equipped item has 'bonus' tag
+      // We check all items in equippedForAction. If ANY has 'bonus', we add +1d (max +1d from equipment).
+      // The rules say "Equipment (+1d)". Usually implies one bonus die from gear.
+      if (playerState.equippedForAction && playerState.equippedForAction.length > 0) {
+        // We need to look up the actual equipment objects to check tags
+        // Since we don't have the equipment list in the arguments of this selector,
+        // we rely on the character object which is already selected.
+        const hasBonusItem = playerState.equippedForAction.some(id => {
+          const item = character.equipment.find(e => e.id === id);
+          return item && item.equipped && item.tags.includes('bonus');
+        });
+
+        if (hasBonusItem) {
+          pool += 1;
+        }
+      }
+    }
+
+    // 3. Add Trait (+1d)
     if (playerState.selectedTraitId) {
       pool += 1;
     }
 
-    // +1d if using equipment (any equipment counts)
-    if (playerState.equippedForAction && playerState.equippedForAction.length > 0) {
+    // 4. Add Push (+1d)
+    if (playerState.pushed && playerState.pushType === 'extra-die') {
       pool += 1;
     }
 
-    // +1d if pushed
-    if (playerState.pushed) {
-      pool += 1;
-    }
-
-    // +1d if flashback applied
+    // 5. Add Flashback (+1d)
     if (playerState.flashbackApplied) {
       pool += 1;
     }
@@ -178,7 +202,7 @@ export const selectAvailableActions = createSelector(
     switch (playerState.state) {
       case 'DECISION_PHASE':
         actions.push('select_action', 'toggle_push', 'toggle_trait', 'toggle_equipment');
-        if (playerState.selectedAction) {
+        if (playerState.selectedApproach) {
           actions.push('commit_roll');
         }
         break;
@@ -358,3 +382,9 @@ export const selectEffectiveEffect = createSelector(
     return baseEffect;
   }
 );
+
+/**
+ * Export tables for testing and UI
+ */
+export const CONSEQUENCE_TABLE = DEFAULT_CONFIG.resolution.consequenceSegmentsBase;
+export const MOMENTUM_GAIN_TABLE = DEFAULT_CONFIG.resolution.momentumOnConsequence;

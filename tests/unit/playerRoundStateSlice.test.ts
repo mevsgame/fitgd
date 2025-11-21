@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore } from '../../src/store';
 import playerRoundStateReducer, {
   initializePlayerState,
   transitionState,
@@ -24,11 +24,7 @@ describe('playerRoundStateSlice', () => {
   let store: ReturnType<typeof configureStore>;
 
   beforeEach(() => {
-    store = configureStore({
-      reducer: {
-        playerRoundState: playerRoundStateReducer,
-      },
-    });
+    store = configureStore();
   });
 
   describe('initializePlayerState', () => {
@@ -43,7 +39,7 @@ describe('playerRoundStateSlice', () => {
       expect(playerState).toBeDefined();
       expect(playerState.characterId).toBe(characterId);
       expect(playerState.state).toBe('IDLE_WAITING');
-      expect(playerState.selectedAction).toBeUndefined();
+      expect(playerState.selectedApproach).toBeUndefined();
       expect(playerState.position).toBeUndefined();
       expect(playerState.effect).toBeUndefined();
       expect(playerState.pushed).toBeUndefined();
@@ -62,7 +58,7 @@ describe('playerRoundStateSlice', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'desperate',
           effect: 'great',
         })
@@ -76,7 +72,7 @@ describe('playerRoundStateSlice', () => {
 
       // Should be reset to initial state
       expect(playerState.state).toBe('IDLE_WAITING');
-      expect(playerState.selectedAction).toBeUndefined();
+      expect(playerState.selectedApproach).toBeUndefined();
       expect(playerState.position).toBeUndefined();
       expect(playerState.effect).toBeUndefined();
     });
@@ -187,7 +183,7 @@ describe('playerRoundStateSlice', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'skirmish',
+          approach: 'force',
           position: 'desperate',
           effect: 'standard',
         })
@@ -195,7 +191,7 @@ describe('playerRoundStateSlice', () => {
 
       const playerState = store.getState().playerRoundState.byCharacterId[characterId];
 
-      expect(playerState.selectedAction).toBe('skirmish');
+      expect(playerState.selectedApproach).toBe('force');
       expect(playerState.position).toBe('desperate');
       expect(playerState.effect).toBe('standard');
       // Should NOT auto-transition - still in DECISION_PHASE
@@ -236,7 +232,7 @@ describe('playerRoundStateSlice', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'risky',
           effect: 'standard',
         })
@@ -281,26 +277,7 @@ describe('playerRoundStateSlice', () => {
       expect(playerState.momentumGain).toBe(2);
     });
 
-    it('should handle effect consequence', () => {
-      const characterId = 'char-ghi';
 
-      store.dispatch(setActivePlayer({ characterId }));
-
-      store.dispatch(
-        setConsequence({
-          characterId,
-          consequenceType: 'effect',
-          consequenceValue: 1,
-          momentumGain: 1,
-        })
-      );
-
-      const playerState = store.getState().playerRoundState.byCharacterId[characterId];
-
-      expect(playerState.consequenceType).toBe('effect');
-      expect(playerState.consequenceValue).toBe(1);
-      expect(playerState.momentumGain).toBe(1);
-    });
   });
 
   describe('undoState', () => {
@@ -345,7 +322,7 @@ describe('playerRoundStateSlice', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'desperate',
           effect: 'great',
         })
@@ -371,7 +348,7 @@ describe('playerRoundStateSlice', () => {
       const playerState = store.getState().playerRoundState.byCharacterId[characterId];
 
       expect(playerState.state).toBe('IDLE_WAITING');
-      expect(playerState.selectedAction).toBeUndefined();
+      expect(playerState.selectedApproach).toBeUndefined();
       expect(playerState.pushed).toBeUndefined();
       expect(playerState.rollResult).toBeUndefined();
       expect(playerState.outcome).toBeUndefined();
@@ -429,7 +406,7 @@ describe('playerRoundStateSlice', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'risky',
           effect: 'standard',
         })
@@ -482,7 +459,7 @@ describe('playerRoundStateSlice', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'skulk',
+          approach: 'guile',
           position: 'desperate',
           effect: 'standard',
         })
@@ -731,3 +708,6 @@ describe('playerRoundStateSlice', () => {
     });
   });
 });
+
+
+

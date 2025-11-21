@@ -13,14 +13,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { StimsHandler, type StimsHandlerConfig } from '../../foundry/module/handlers/stimsHandler';
 import type { RootState } from '../../src/store';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore } from '../../src/store';
 import playerRoundStateReducer, {
   initializePlayerState,
   setStimsUsed,
 } from '../../src/slices/playerRoundStateSlice';
 import characterReducer, { createCharacter } from '../../src/slices/characterSlice';
-import crewReducer, { createCrew } from '../../src/slices/crewSlice';
-import clockReducer, { createClock } from '../../src/slices/clockSlice';
+import crewReducer, { createCrew, addCharacterToCrew, setMomentum } from '../../src/slices/crewSlice';
+import clockReducer, { createClock, setSegments } from '../../src/slices/clockSlice';
 import type { Trait } from '../../src/types/character';
 
 describe('StimsHandler', () => {
@@ -31,14 +31,7 @@ describe('StimsHandler', () => {
 
   beforeEach(() => {
     // Setup store with all reducers
-    store = configureStore({
-      reducer: {
-        playerRoundState: playerRoundStateReducer,
-        characters: characterReducer,
-        crews: crewReducer,
-        clocks: clockReducer,
-      },
-    });
+    store = configureStore();
 
     config = {
       characterId: 'char-123',
@@ -111,11 +104,10 @@ describe('StimsHandler', () => {
       store.dispatch(createCrew({
         id: 'crew-456',
         name: 'Test Crew',
-        characters: ['char-123', 'char-999'],
-        currentMomentum: 5,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
       }));
+      store.dispatch(addCharacterToCrew({ crewId: 'crew-456', characterId: 'char-123' }));
+      store.dispatch(addCharacterToCrew({ crewId: 'crew-456', characterId: 'char-999' }));
+      store.dispatch(setMomentum({ crewId: 'crew-456', amount: 5 }));
 
       // Add partially filled addiction clock for another character
       store.dispatch(
@@ -125,11 +117,10 @@ describe('StimsHandler', () => {
           clockType: 'addiction',
           subtype: 'Addiction',
           maxSegments: 8,
-          segments: 3, // Not filled
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
         })
       );
+      store.dispatch(setSegments({ clockId: 'addiction-clock-999', segments: 3 }));
+
 
       state = store.getState() as RootState;
       const playerState = state.playerRoundState.byCharacterId['char-123'];
@@ -191,11 +182,10 @@ describe('StimsHandler', () => {
           clockType: 'addiction',
           subtype: 'Addiction',
           maxSegments: 8,
-          segments: 2,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
         })
       );
+      store.dispatch(setSegments({ clockId: 'addiction-clock-999', segments: 2 }));
+
 
       state = store.getState() as RootState;
       const result = handler.findAddictionClock(state);
@@ -496,9 +486,10 @@ describe('StimsHandler', () => {
           clockType: 'addiction',
           subtype: 'Addiction',
           maxSegments: 8,
-          segments: 5,
         })
       );
+      store.dispatch(setSegments({ clockId: 'addiction-clock-123', segments: 5 }));
+
 
       state = store.getState() as RootState;
 
@@ -548,3 +539,6 @@ describe('StimsHandler', () => {
     });
   });
 });
+
+
+

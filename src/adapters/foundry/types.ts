@@ -29,20 +29,12 @@ export interface FoundryActor {
  * Character Actor system data (FitGD rules, NOT Blades!)
  */
 export interface FoundryCharacterData {
-  // Action Dots (12 starting, 0-4 per action)
-  actions: {
-    shoot: ActionRating;
-    skirmish: ActionRating;
-    skulk: ActionRating;
-    wreck: ActionRating;
-    finesse: ActionRating;
-    survey: ActionRating;
-    study: ActionRating;
-    tech: ActionRating;
-    attune: ActionRating;
-    command: ActionRating;
-    consort: ActionRating;
-    sway: ActionRating;
+  // Approaches (5 starting dots, 0-2 per approach at creation)
+  approaches: {
+    force: ActionRating;
+    guile: ActionRating;
+    focus: ActionRating;
+    spirit: ActionRating;
   };
 
   // Unallocated action dots (for character creation and GM rewards)
@@ -123,7 +115,7 @@ export interface ConsumableClockData {
   id: string;
   type: string; // e.g., "frag_grenades", "stims"
   segments: number;
-  maxSegments: ClockSize;  
+  maxSegments: ClockSize;
   rarity: EquipmentRarity;
   tier: EquipmentTier;
   frozen: boolean;
@@ -172,6 +164,8 @@ export interface FoundryEquipmentData {
   tier: EquipmentTier | 'epic';
   category: string; // 'weapon', 'armor', 'tool', etc.
   description?: string;
+  rarity: EquipmentRarity;
+  tags: string[];
 }
 
 /**

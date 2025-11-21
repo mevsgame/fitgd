@@ -10,7 +10,7 @@
  * (_onTogglePushDie and _onTogglePushEffect methods).
  */
 
-import type { PlayerRoundState, PushType } from '@/types/playerRoundState';
+import type { PlayerRoundState, PlayerPushType } from '@/types/playerRoundState';
 import { asReduxId } from '../types/ids';
 
 /**
@@ -40,7 +40,7 @@ export interface PushHandlerConfig {
  * await game.fitgd.bridge.execute(action);
  */
 export class PushHandler {
-  constructor(private config: PushHandlerConfig) {}
+  constructor(private config: PushHandlerConfig) { }
 
   /**
    * Check if push die is currently active
@@ -89,7 +89,7 @@ export class PushHandler {
     payload: {
       characterId: string;
       pushed: boolean;
-      pushType: PushType | undefined;
+      pushType: PlayerPushType | undefined;
     };
   } {
     const currentlyPushedDie = this.isPushDieActive(playerState);
@@ -121,7 +121,7 @@ export class PushHandler {
     payload: {
       characterId: string;
       pushed: boolean;
-      pushType: PushType | undefined;
+      pushType: PlayerPushType | undefined;
     };
   } {
     const currentlyPushedEffect = this.isPushEffectActive(playerState);

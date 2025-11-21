@@ -18,6 +18,8 @@ describe('TraitHandler', () => {
       const transaction: TraitTransaction = {
         mode: 'existing',
         selectedTraitId: 'trait-456',
+        positionImprovement: false,
+        momentumCost: 0,
       };
 
       const actions = handler.createTraitActions(transaction);
@@ -31,7 +33,10 @@ describe('TraitHandler', () => {
         newTrait: {
           name: 'Daring',
           description: 'You are bold and fearless',
+          category: 'flashback',
         },
+        positionImprovement: false,
+        momentumCost: 0,
       };
 
       const actions = handler.createTraitActions(transaction, () => 'test-trait-id');
@@ -50,7 +55,10 @@ describe('TraitHandler', () => {
         newTrait: {
           name: 'Daring',
           description: 'You are bold and fearless',
+          category: 'flashback',
         },
+        positionImprovement: false,
+        momentumCost: 0,
       };
 
       const before = Date.now();
@@ -69,8 +77,11 @@ describe('TraitHandler', () => {
           newTrait: {
             name: 'Hardened',
             description: 'You have overcome many challenges',
+            category: 'grouped',
           },
         },
+        positionImprovement: false,
+        momentumCost: 0,
       };
 
       const actions = handler.createTraitActions(transaction, () => 'consolidated-id');
@@ -91,8 +102,11 @@ describe('TraitHandler', () => {
           newTrait: {
             name: 'Hardened',
             description: 'You have overcome many challenges',
+            category: 'grouped',
           },
         },
+        positionImprovement: false,
+        momentumCost: 0,
       };
 
       const actions = handler.createTraitActions(transaction, () => 'consolidated-id');
@@ -108,7 +122,10 @@ describe('TraitHandler', () => {
         newTrait: {
           name: 'Bold',
           description: 'Fearless in action',
+          category: 'flashback',
         },
+        positionImprovement: false,
+        momentumCost: 0,
       };
 
       const mockIdGenerator = () => 'custom-id-123';
@@ -126,8 +143,11 @@ describe('TraitHandler', () => {
           newTrait: {
             name: 'Combined',
             description: 'Combined trait',
+            category: 'grouped',
           },
         },
+        positionImprovement: false,
+        momentumCost: 0,
       };
 
       const actions = handler.createTraitActions(transaction, () => 'combined-id');
@@ -145,6 +165,8 @@ describe('TraitHandler', () => {
       const transaction: TraitTransaction = {
         mode: 'existing',
         selectedTraitId: 'trait-123',
+        positionImprovement: false,
+        momentumCost: 0,
       };
 
       expect(handler.willMakeChanges(transaction)).toBe(false);
@@ -156,7 +178,10 @@ describe('TraitHandler', () => {
         newTrait: {
           name: 'Bold',
           description: 'Fearless',
+          category: 'flashback',
         },
+        positionImprovement: false,
+        momentumCost: 0,
       };
 
       expect(handler.willMakeChanges(transaction)).toBe(true);
@@ -170,8 +195,11 @@ describe('TraitHandler', () => {
           newTrait: {
             name: 'Combined',
             description: 'Combined trait',
+            category: 'grouped',
           },
         },
+        positionImprovement: false,
+        momentumCost: 0,
       };
 
       expect(handler.willMakeChanges(transaction)).toBe(true);
@@ -205,6 +233,8 @@ describe('TraitHandler', () => {
       const transaction: TraitTransaction = {
         mode: 'existing',
         selectedTraitId: 'trait-123',
+        positionImprovement: false,
+        momentumCost: 0,
       };
 
       const description = handler.getTransactionDescription(transaction);
@@ -219,7 +249,10 @@ describe('TraitHandler', () => {
         newTrait: {
           name: 'Daring',
           description: 'Bold and fearless',
+          category: 'flashback',
         },
+        positionImprovement: false,
+        momentumCost: 0,
       };
 
       const description = handler.getTransactionDescription(transaction);
@@ -236,8 +269,11 @@ describe('TraitHandler', () => {
           newTrait: {
             name: 'Hardened',
             description: 'Combined trait',
+            category: 'grouped',
           },
         },
+        positionImprovement: false,
+        momentumCost: 0,
       };
 
       const description = handler.getTransactionDescription(transaction);
@@ -254,7 +290,10 @@ describe('TraitHandler', () => {
         newTrait: {
           name: 'Daring',
           description: 'Bold and fearless',
+          category: 'flashback',
         },
+        positionImprovement: false,
+        momentumCost: 0,
       };
 
       // Check if changes will be made
@@ -281,8 +320,11 @@ describe('TraitHandler', () => {
           newTrait: {
             name: 'Resilient',
             description: 'Hardened by experience',
+            category: 'grouped',
           },
         },
+        positionImprovement: false,
+        momentumCost: 0,
       };
 
       // Check if changes will be made
@@ -304,6 +346,8 @@ describe('TraitHandler', () => {
       const transaction: TraitTransaction = {
         mode: 'existing',
         selectedTraitId: 'existing-trait-id',
+        positionImprovement: false,
+        momentumCost: 0,
       };
 
       // Check if changes will be made
@@ -320,3 +364,6 @@ describe('TraitHandler', () => {
     });
   });
 });
+
+
+

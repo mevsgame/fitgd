@@ -75,7 +75,7 @@ All active clocks (Harm, Addiction, and Consumable) automatically recover during
 
 #### **Rally**
 
-A character can initiate a **flashback** where they reference a teammate's Trait to inspire the group. The referenced teammate must be present. This social action is **always in a Controlled position.**
+A character can initiate a **flashback** where they reference a teammate's Trait to inspire the group. The referenced teammate must be present. This social action uses **Spirit + Guile** and is **always in a Controlled position.**
 
 - **Momentum Gain:** **1-4 Momentum**, based on your roll result (1-3: 1 Momentum, 4-5: 2 Momentum, 6: 3 Momentum, Critical: 4 Momentum). Consequences from Rally are reduced effect (gaining less Momentum) rather than harm or complications.
 
@@ -247,13 +247,3 @@ Limited-use items are tracked with **depletion clocks**.
 
 - **When Any Clock Fills:** That item's **availability drops one tier** for the entire team. Accessible items become Inaccessible, requiring a 1 Momentum flashback + Trait per use. Everyone else's clock for that item freezes at its current count. The filled clock remains filled--no further degradation occurs. Availability is restored only through the story.
 
----
-
-## PLAYTEST QUESTIONS
-
-These design questions need observation during actual play:
-
-- **Trait Cap:** What's a reasonable maximum number of Traits per character to prevent bloat?
-- **Momentum Homeostasis:** Does the system naturally oscillate around 5 Momentum as designed?
-- **Rally Frequency:** How often do teams actually drop to 0-3 Momentum and use Rally?
-- **Reset Cadence:** Which reset frequency (frequent/moderate/rare) creates the best tension and pacing?

@@ -147,16 +147,16 @@ export function validateConsumableMetadata(
   tier?: EquipmentTier
 ): void {
   if (!rarity) {
-    throw new Error('Consumable clocks require a rarity (common, uncommon, rare)');
+    throw new Error('Consumable clocks require a rarity (common, uncommon, epic)');
   }
 
   if (!tier) {
     throw new Error('Consumable clocks require a tier (accessible, inaccessible)');
   }
 
-  const validRarities = ['common', 'uncommon', 'rare'];
+  const validRarities = ['common', 'uncommon', 'epic'];
   if (!validRarities.includes(rarity)) {
-    throw new Error(`Invalid rarity: ${rarity}. Must be common, uncommon, or rare.`);
+    throw new Error(`Invalid rarity: ${rarity}. Must be common, uncommon, or epic.`);
   }
 
   const validTiers = ['accessible', 'inaccessible'];

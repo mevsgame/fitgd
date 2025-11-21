@@ -115,7 +115,7 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
         createCharacter({
           name: character.name,
           traits: character.traits,
-          actionDots: character.actionDots,
+          approaches: character.approaches,
         })
       );
 

@@ -18,7 +18,7 @@ describe('DiceRollingHandler', () => {
     it('should pass validation when action is selected and momentum is sufficient', () => {
       const state = {} as RootState;
       const playerState: Partial<PlayerRoundState> = {
-        selectedAction: 'assault',
+        selectedApproach: 'force',
         position: 'controlled',
         effect: 'standard',
       };
@@ -32,7 +32,7 @@ describe('DiceRollingHandler', () => {
     it('should fail when no action is selected', () => {
       const state = {} as RootState;
       const playerState: Partial<PlayerRoundState> = {
-        selectedAction: undefined,
+        selectedApproach: undefined,
       };
       const crew = null;
 
@@ -45,7 +45,7 @@ describe('DiceRollingHandler', () => {
     it('should skip momentum validation if crew is null', () => {
       const state = {} as RootState;
       const playerState: Partial<PlayerRoundState> = {
-        selectedAction: 'assault',
+        selectedApproach: 'force',
       };
 
       const result = handler.validateRoll(state, playerState as PlayerRoundState, null);
@@ -57,7 +57,7 @@ describe('DiceRollingHandler', () => {
     it('should pass when crew is null (no momentum cost)', () => {
       const state = {} as RootState;
       const playerState: Partial<PlayerRoundState> = {
-        selectedAction: 'assault',
+        selectedApproach: 'force',
       };
 
       const result = handler.validateRoll(state, playerState as PlayerRoundState, null);
@@ -74,7 +74,7 @@ describe('DiceRollingHandler', () => {
 
     it('should return cost from selector', () => {
       const playerState: Partial<PlayerRoundState> = {
-        selectedAction: 'assault',
+        selectedApproach: 'force',
         position: 'desperate',
         effect: 'standard',
       };
@@ -101,7 +101,7 @@ describe('DiceRollingHandler', () => {
             'char-123': {
               characterId: 'char-123',
               state: 'DECISION_PHASE',
-              selectedAction: 'assault',
+              selectedApproach: 'force',
               position: 'controlled',
               effect: 'standard',
             },
@@ -231,7 +231,7 @@ describe('DiceRollingHandler', () => {
       // Start: validate roll
       const state = {} as RootState;
       const playerState: Partial<PlayerRoundState> = {
-        selectedAction: 'assault',
+        selectedApproach: 'force',
         position: 'controlled',
         effect: 'standard',
       };
@@ -258,3 +258,6 @@ describe('DiceRollingHandler', () => {
     });
   });
 });
+
+
+

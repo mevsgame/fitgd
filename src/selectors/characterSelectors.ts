@@ -75,14 +75,14 @@ export const selectCanUseRally = createSelector(
 );
 
 /**
- * Get total action dots for a character
+ * Get total approach dots for a character
  */
-export const selectTotalActionDots = createSelector(
+export const selectTotalApproachDots = createSelector(
   [selectCharacterById],
   (character): number => {
     if (!character) return 0;
-    return Object.values(character.actionDots).reduce(
-      (sum, dots) => sum + dots,
+    return Object.values(character.approaches).reduce(
+      (sum: number, dots: number) => sum + dots,
       0
     );
   }

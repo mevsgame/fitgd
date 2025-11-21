@@ -91,8 +91,8 @@ export function validatePositionEffect(
     errors.push(`Cannot set position/effect in ${playerState.state} state`);
   }
 
-  if (!playerState.selectedAction) {
-    errors.push('Must select action before setting position/effect');
+  if (!playerState.selectedApproach) {
+    errors.push('Must select approach before setting position/effect');
   }
 
   const validPositions: Position[] = ['controlled', 'risky', 'desperate', 'impossible'];
@@ -144,8 +144,8 @@ export function validateRollEligibility(
     errors.push(`Cannot roll in ${playerState.state} state`);
   }
 
-  if (!playerState.selectedAction) {
-    errors.push('Must select action before rolling');
+  if (!playerState.selectedApproach) {
+    errors.push('Must select approach before rolling');
   }
 
   if (!playerState.position) {
@@ -350,14 +350,14 @@ export function validateStateConsistency(
   }
 
   // If have position/effect, should have action selected
-  if ((playerState.position || playerState.effect) && !playerState.selectedAction) {
-    errors.push('Have position/effect but no action selected');
+  if ((playerState.position || playerState.effect) && !playerState.selectedApproach) {
+    errors.push('Have position/effect but no approach selected');
   }
 
   // If have roll result, should have action/position/effect
   if (playerState.rollResult) {
-    if (!playerState.selectedAction) {
-      errors.push('Have roll result but no action selected');
+    if (!playerState.selectedApproach) {
+      errors.push('Have roll result but no approach selected');
     }
     if (!playerState.position) {
       errors.push('Have roll result but no position set');

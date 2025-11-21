@@ -1,4 +1,4 @@
-import type { Character, Trait, ActionDots, Equipment } from '../../src/types';
+import type { Character, Trait, Approaches, Equipment } from '../../src/types';
 
 /**
  * Test Fixtures - Characters
@@ -24,57 +24,58 @@ export const mockTrait_Background: Trait = {
   acquiredAt: Date.now(),
 };
 
-export const mockActionDots_Balanced: ActionDots = {
-  shoot: 2,
-  skirmish: 2,
-  skulk: 1,
-  wreck: 1,
-  finesse: 1,
-  survey: 1,
-  study: 1,
-  tech: 1,
-  attune: 0,
-  command: 1,
-  consort: 1,
-  sway: 0,
+export const mockApproaches_Balanced: Approaches = {
+  force: 2,
+  guile: 1,
+  focus: 1,
+  spirit: 1,
 };
 
-export const mockActionDots_Specialist: ActionDots = {
-  shoot: 3,
-  skirmish: 3,
-  skulk: 2,
-  wreck: 0,
-  finesse: 1,
-  survey: 1,
-  study: 0,
-  tech: 0,
-  attune: 0,
-  command: 2,
-  consort: 0,
-  sway: 0,
+export const mockApproaches_Specialist: Approaches = {
+  force: 2,
+  guile: 0,
+  focus: 2,
+  spirit: 1,
 };
 
 export const mockEquipment_LasRifle: Equipment = {
   id: 'equip-1',
   name: 'Las Rifle',
   tier: 'accessible',
+  rarity: 'common',
   category: 'weapon',
   description: 'Standard issue energy weapon',
+  img: undefined,
+  tags: ['ranged', 'energy'],
+  equipped: false,
+  acquiredAt: Date.now(),
+  acquiredVia: 'creation' as const,
+  sourceItemId: undefined,
+  metadata: {},
 };
 
 export const mockEquipment_FlakArmor: Equipment = {
   id: 'equip-2',
   name: 'Flak Armor',
   tier: 'accessible',
+  rarity: 'common',
   category: 'armor',
   description: 'Provides basic protection',
+  img: undefined,
+  tags: ['armor', 'protection'],
+  equipped: false,
+  acquiredAt: Date.now(),
+  acquiredVia: 'creation' as const,
+  sourceItemId: undefined,
+  metadata: {},
 };
 
 export const mockCharacter_SergeantKane: Character = {
   id: 'char-1',
   name: 'Sergeant Kane',
   traits: [mockTrait_Role, mockTrait_Background],
-  actionDots: mockActionDots_Balanced,
+  approaches: mockApproaches_Balanced,
+  unallocatedApproachDots: 0,
   equipment: [mockEquipment_LasRifle, mockEquipment_FlakArmor],
   rallyAvailable: true,
   createdAt: Date.now(),
@@ -88,7 +89,8 @@ export const mockCharacter_Rookie: Character = {
     { ...mockTrait_Role, id: 'trait-role-2', name: 'Fresh from Military Academy' },
     { ...mockTrait_Background, id: 'trait-bg-2', name: 'Idealistic Youth' },
   ],
-  actionDots: mockActionDots_Specialist,
+  approaches: mockApproaches_Specialist,
+  unallocatedApproachDots: 0,
   equipment: [mockEquipment_LasRifle],
   rallyAvailable: true,
   createdAt: Date.now(),
