@@ -1,6 +1,6 @@
 import type { Store } from '@reduxjs/toolkit';
-import type { Trait } from '../types';
-import { addTrait, enableTrait, resetRally } from '../slices/characterSlice';
+import type { Trait, Equipment } from '../types';
+import { addTrait, enableTrait, resetRally, unlockAllEquipment, replenishConsumables, autoEquipItems } from '../slices/characterSlice';
 import { resetMomentum } from '../slices/crewSlice';
 import {
   createClock,
@@ -157,6 +157,9 @@ export interface MomentumResetResult {
     traitsReEnabled: number; // Count of traits re-enabled
     harmClocksRecovered: number; // Count of harm clocks recovered
     addictionClocksRecovered: number; // Count of addiction clocks recovered
+    equipmentUnlocked: number; // Count of locked items unlocked
+    consumablesReplenished: number; // Count of consumables replenished
+    itemsAutoEquipped: number; // Count of items with autoEquip flag re-equipped
   }[];
 }
 
@@ -169,6 +172,10 @@ export interface MomentumResetResult {
  * 3. All disabled traits re-enabled for all characters
  * 4. All harm clocks recovered (full: -1 segment, partial: -2 segments, 0: deleted)
  * 5. All addiction clocks (per-character) recovered (full: -1 segment, partial: -2 segments, 0: deleted)
+ * 6. Equipment lifecycle reset for all characters:
+ *    - All locked items unlocked (locked: false)
+ *    - All consumables replenished (depleted: false)
+ *    - All items with autoEquip: true re-equipped (equipped: true, locked: false)
  *
  * @param store - Redux store
  * @param params - Reset parameters
@@ -308,12 +315,44 @@ export function performMomentumReset(
       }
     });
 
+    // Equipment lifecycle reset
+    const lockedItems = character.equipment.filter((e: Equipment) => e.locked);
+    const depletedConsumables = character.equipment.filter((e: Equipment) => e.depleted);
+    const autoEquipItemsList = character.equipment.filter((e: Equipment) => e.autoEquip);
+
+    // Unlock all equipment
+    store.dispatch(
+      unlockAllEquipment({
+        characterId,
+        userId,
+      })
+    );
+
+    // Replenish consumables
+    store.dispatch(
+      replenishConsumables({
+        characterId,
+        userId,
+      })
+    );
+
+    // Auto-equip flagged items
+    store.dispatch(
+      autoEquipItems({
+        characterId,
+        userId,
+      })
+    );
+
     return {
       characterId,
       rallyReset: true,
       traitsReEnabled: disabledTraits.length,
       harmClocksRecovered,
       addictionClocksRecovered,
+      equipmentUnlocked: lockedItems.length,
+      consumablesReplenished: depletedConsumables.length,
+      itemsAutoEquipped: autoEquipItemsList.length,
     };
   });
 

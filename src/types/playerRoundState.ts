@@ -152,6 +152,9 @@ export interface PlayerRoundState {
   /** Equipment IDs being used for this action */
   equippedForAction?: string[];
 
+  /** Augmentation IDs enabled for this roll (GM control only) */
+  enabledAugmentationIds?: string[];
+
   /** Push Yourself flag (costs 1M) */
   pushed?: boolean;
 

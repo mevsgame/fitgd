@@ -4,7 +4,7 @@
  * Low-change entity stored with full snapshot + command history.
  */
 
-import { EquipmentRarity } from "./equipment";
+import { EquipmentTier } from "./equipment";
 
 /**
  * Trait category types
@@ -45,7 +45,8 @@ export interface Equipment {
 
   // Core equipment data (copied from template at creation, fully editable)
   name: string;
-  rarity: EquipmentRarity;
+  type: 'equipment' | 'consumable' | 'augmentation'; // Equipment type determines mechanics
+  tier: EquipmentTier; // 'common' | 'rare' | 'epic' - determines acquisition cost
   category: string; // e.g., 'weapon', 'armor', 'tool' - maps to equipmentCategories in config
   description: string;
   img?: string; // Optional: image path
@@ -53,9 +54,13 @@ export interface Equipment {
 
   // Instance state
   equipped: boolean; // Is currently equipped?
+  locked: boolean; // If true, cannot be unequipped (item has been used in session and is locked until Momentum Reset)
+  depleted: boolean; // If true, consumable has been used (still takes load, visual indicator)
+  autoEquip?: boolean; // If true, automatically re-equip after Momentum Reset (default: false)
 
   // Provenance (event sourcing metadata)
   acquiredAt: number; // Timestamp when acquired
+  acquiredVia?: 'starting' | 'flashback' | 'earned'; // How was this item acquired?
   sourceItemId?: string; // Optional: Original template ID (for reference only)
 
   // Flexible metadata

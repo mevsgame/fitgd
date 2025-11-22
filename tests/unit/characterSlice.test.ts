@@ -364,12 +364,13 @@ describe('characterSlice', () => {
       const equipment: Equipment = {
         id: 'equip-1',
         name: 'Las Rifle',
-        tier: 'accessible',
+        tier: 'common',
         category: 'weapon',
-        rarity: 'common',
         description: 'Standard issue laser rifle',
-        tags: ['ranged'],
+        passive: false,
         equipped: true,
+        locked: false,
+        depleted: false,
         acquiredAt: Date.now(),
       };
 
@@ -384,12 +385,13 @@ describe('characterSlice', () => {
       const equipment: Equipment = {
         id: 'equip-1',
         name: 'Las Rifle',
-        tier: 'accessible',
+        tier: 'common',
         category: 'weapon',
-        rarity: 'common',
         description: 'Standard issue laser rifle',
-        tags: ['ranged'],
+        passive: false,
         equipped: true,
+        locked: false,
+        depleted: false,
         acquiredAt: Date.now(),
       };
 

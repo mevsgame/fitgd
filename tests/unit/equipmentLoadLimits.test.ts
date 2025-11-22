@@ -59,12 +59,13 @@ describe('characterSlice - Equipment Load Limits', () => {
                 const equipment: Equipment = {
                     id: `equip-${i}`,
                     name: `Item ${i}`,
-                    tier: 'accessible',
+                    tier: 'common',
                     category: 'weapon',
-                    rarity: 'common',
                     description: `Test item ${i}`,
-                    tags: ['bonus'],
+                    passive: false,
                     equipped: false,
+                    locked: false,
+                    depleted: false,
                     acquiredAt: Date.now(),
                 };
                 store.dispatch(addEquipment({ characterId, equipment }));
@@ -86,12 +87,13 @@ describe('characterSlice - Equipment Load Limits', () => {
             const extraEquipment: Equipment = {
                 id: 'equip-extra',
                 name: 'Extra Item',
-                tier: 'accessible',
+                tier: 'common',
                 category: 'weapon',
-                rarity: 'common',
                 description: 'Should not be equipped',
-                tags: ['bonus'],
+                passive: false,
                 equipped: false,
+                locked: false,
+                depleted: false,
                 acquiredAt: Date.now(),
             };
             store.dispatch(addEquipment({ characterId, equipment: extraEquipment }));
@@ -116,44 +118,45 @@ describe('characterSlice - Equipment Load Limits', () => {
         });
     });
 
-    describe('equipment tags', () => {
-        it('should create equipment with bonus tag', () => {
-            const equipment: Equipment = {
-                id: 'equip-1',
-                name: 'Las Rifle',
-                tier: 'accessible',
-                category: 'weapon',
-                rarity: 'common',
-                description: 'Standard issue laser rifle',
-                tags: ['bonus', 'ranged'],
-                equipped: false,
-                acquiredAt: Date.now(),
-            };
-
-            store.dispatch(addEquipment({ characterId, equipment }));
-
-            const character = store.getState().characters.byId[characterId];
-            expect(character.equipment[0].tags).toContain('bonus');
-            expect(character.equipment[0].tags).toContain('ranged');
-        });
-
-        it('should create equipment with passive tag', () => {
+    describe('equipment passive flag', () => {
+        it('should create equipment with passive flag', () => {
             const equipment: Equipment = {
                 id: 'equip-1',
                 name: 'Armor Plating',
-                tier: 'accessible',
+                tier: 'common',
                 category: 'armor',
-                rarity: 'common',
                 description: 'Passive protection',
-                tags: ['passive', 'armor'],
+                passive: true,
                 equipped: true,
+                locked: false,
+                depleted: false,
                 acquiredAt: Date.now(),
             };
 
             store.dispatch(addEquipment({ characterId, equipment }));
 
             const character = store.getState().characters.byId[characterId];
-            expect(character.equipment[0].tags).toContain('passive');
+            expect(character.equipment[0].passive).toBe(true);
+        });
+
+        it('should create equipment as active by default', () => {
+            const equipment: Equipment = {
+                id: 'equip-1',
+                name: 'Las Rifle',
+                tier: 'common',
+                category: 'weapon',
+                description: 'Standard issue laser rifle',
+                passive: false,
+                equipped: false,
+                locked: false,
+                depleted: false,
+                acquiredAt: Date.now(),
+            };
+
+            store.dispatch(addEquipment({ characterId, equipment }));
+
+            const character = store.getState().characters.byId[characterId];
+            expect(character.equipment[0].passive).toBe(false);
         });
     });
 });

@@ -6,7 +6,7 @@
  */
 
 import { ClockSize } from "./clock";
-import type { EquipmentCategoryConfig } from "./equipment";
+import type { EquipmentCategoryConfig, EquipmentTier } from "./equipment";
 
 export interface GameConfig {
   character: {
@@ -43,7 +43,14 @@ export interface GameConfig {
   };
 
   equipment: {
+    // Momentum cost to acquire equipment via flashback based on tier
+    momentumCostByTier: Record<EquipmentTier, number>;
+    // Equipment categories and their mechanical effects
     categories: Record<string, EquipmentCategoryConfig>;
+    // Categories that do not count toward load limit
+    augmentationCategories: string[];
+    // Categories that are replenished on Momentum Reset
+    consumableCategories: string[];
   };
 
   resolution: {

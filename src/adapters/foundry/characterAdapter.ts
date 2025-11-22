@@ -53,8 +53,11 @@ export function exportCharacterToFoundry(
     system: {
       category: equipment.category,
       description: equipment.description,
-      rarity: equipment.rarity,
+      tier: equipment.tier,
       passive: equipment.passive,
+      locked: equipment.locked,
+      depleted: equipment.depleted,
+      acquiredVia: equipment.acquiredVia,
     },
   }));
 
@@ -121,11 +124,15 @@ export function importCharacterFromFoundry(
       return {
         id: item._id,
         name: item.name,
+        type: equipData.equipmentType || 'equipment',  // equipmentType from item, default to 'equipment'
+        tier: equipData.tier || 'common',
         category: equipData.category,
         description: equipData.description,
-        rarity: equipData.rarity || 'common',
         passive: equipData.passive || false,
         equipped: false,
+        locked: equipData.locked || false,
+        depleted: equipData.depleted || false,
+        acquiredVia: equipData.acquiredVia,
         acquiredAt: Date.now()
       };
     });

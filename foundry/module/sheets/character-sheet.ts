@@ -185,6 +185,7 @@ class FitGDCharacterSheet extends ActorSheet {
     html.find('.edit-equipment-btn').click(this._onEditEquipment.bind(this));
     html.find('.delete-equipment-btn').click(this._onDeleteEquipment.bind(this));
     html.find('.equipped-checkbox').change(this._onToggleEquipped.bind(this));
+    html.find('.auto-equip-toggle').change(this._onToggleAutoEquip.bind(this));
 
     // Drag events for hotbar macros
     html.find('.draggable').on('dragstart', this._onFitGDDragStart.bind(this));
@@ -676,8 +677,8 @@ class FitGDCharacterSheet extends ActorSheet {
     const characterId = this._getReduxId();
     if (!characterId) return;
 
-    // Players can only browse accessible items
-    const tierFilter = game.user?.isGM ? null : 'accessible';
+    // Players can only browse common items
+    const tierFilter = game.user?.isGM ? null : 'common';
 
     new EquipmentBrowserDialog(characterId, { tierFilter }).render(true);
   }
@@ -772,6 +773,32 @@ class FitGDCharacterSheet extends ActorSheet {
       console.error('FitGD | Toggle equipped error:', error);
       // Revert checkbox on error
       target.checked = !equipped;
+    }
+  }
+
+  /**
+   * Toggle autoEquip state for equipped items
+   * Automatically re-equips item at Momentum Reset if enabled
+   */
+  private async _onToggleAutoEquip(event: JQuery.ChangeEvent): Promise<void> {
+    const target = event.currentTarget as HTMLInputElement;
+    const autoEquip = target.checked;
+
+    try {
+      const { equipmentId } = getEquipmentDataset(target);
+      const characterId = this._getReduxId();
+      if (!characterId) return;
+
+      await game.fitgd.bridge.execute({
+        type: 'characters/updateEquipment',
+        payload: { characterId, equipmentId, updates: { autoEquip } },
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      ui.notifications?.error(`Error: ${errorMessage}`);
+      console.error('FitGD | Toggle autoEquip error:', error);
+      // Revert checkbox on error
+      target.checked = !autoEquip;
     }
   }
 }

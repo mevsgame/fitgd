@@ -15,8 +15,8 @@ import type { TraitTransaction, ConsequenceTransaction } from '@/types/playerRou
 import { selectCanUseRally } from '@/selectors/characterSelectors';
 import { selectStimsAvailable } from '@/selectors/clockSelectors';
 
-import { selectActiveEquipment, selectPassiveEquipment, selectCurrentLoad, selectEquipmentEffect } from '@/selectors/equipmentSelectors';
-import { selectDicePool, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect } from '@/selectors/playerRoundStateSelectors';
+import { selectActiveEquipment, selectPassiveEquipment, selectCurrentLoad, selectEquipmentEffect, isEquipmentConsumable } from '@/selectors/equipmentSelectors';
+import { selectDicePool, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect, selectEquipmentEffects, selectEquipmentModifiedPosition, selectEquipmentModifiedEffect } from '@/selectors/playerRoundStateSelectors';
 
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
 
@@ -65,6 +65,20 @@ interface PlayerActionWidgetData {
   equippedItems: Equipment[];
   activeEquipmentItem?: Equipment;
   passiveEquipment: Equipment[];
+
+  // Equipment effects from selected items
+  equipmentEffects?: {
+    diceBonus?: number;
+    dicePenalty?: number;
+    positionBonus?: number;
+    positionPenalty?: number;
+    effectBonus?: number;
+    effectPenalty?: number;
+  };
+
+  // Equipment-modified position and effect
+  equipmentModifiedPosition?: Position;
+  equipmentModifiedEffect?: Effect;
 
   // Harm clocks (for display)
   harmClocks: Array<Clock & { status?: string }>;
@@ -385,8 +399,10 @@ export class PlayerActionWidget extends Application {
       // Available approaches
       approaches: Object.keys(this.character.approaches),
 
-      // Equipment for selection
-      equippedItems: selectActiveEquipment(this.character),
+      // Equipment for selection (excluding depleted consumables - they cannot be used once consumed)
+      equippedItems: selectActiveEquipment(this.character).filter(
+        item => !item.depleted // Depleted consumables cannot be selected
+      ),
       activeEquipmentItem: this.playerState?.equippedForAction?.[0]
         ? this.character.equipment.find(e => e.id === this.playerState!.equippedForAction![0])
         : undefined,
@@ -426,47 +442,12 @@ export class PlayerActionWidget extends Application {
       // Passive equipment for display
       passiveEquipment: selectPassiveEquipment(this.character),
 
-      // Equipment effect preview (for plan display)
-      equipmentEffectPreview: (() => {
-        if (this.playerState?.rollMode !== 'equipment' || !this.playerState?.equippedForAction?.[0]) {
-          return {};
-        }
-        return selectEquipmentEffect(this.character, this.playerState.equippedForAction[0]);
-      })(),
+      // Equipment effects from selected items (using new selectors)
+      equipmentEffects: selectEquipmentEffects(state, this.characterId),
 
-      // Equipment position proposal (with modifiers)
-      equipmentPositionProposal: (() => {
-        if (this.playerState?.rollMode !== 'equipment' || !this.playerState?.equippedForAction?.[0]) {
-          return this.playerState?.position || 'risky';
-        }
-        const effect = selectEquipmentEffect(this.character, this.playerState.equippedForAction[0]);
-        let pos = (this.playerState?.position || 'risky') as Position;
-
-        if (effect.positionBonus) {
-          pos = improvePosition(pos, effect.positionBonus);
-        } else if (effect.positionPenalty) {
-          pos = worsenPosition(pos, effect.positionPenalty);
-        }
-
-        return pos;
-      })(),
-
-      // Equipment effect proposal (with modifiers)
-      equipmentEffectProposal: (() => {
-        if (this.playerState?.rollMode !== 'equipment' || !this.playerState?.equippedForAction?.[0]) {
-          return this.playerState?.effect || 'standard';
-        }
-        const effect = selectEquipmentEffect(this.character, this.playerState.equippedForAction[0]);
-        let eff = (this.playerState?.effect || 'standard') as Effect;
-
-        if (effect.effectBonus) {
-          eff = improveEffect(eff, effect.effectBonus);
-        } else if (effect.effectPenalty) {
-          eff = worsenEffect(eff, effect.effectPenalty);
-        }
-
-        return eff;
-      })(),
+      // Equipment-modified position and effect (using new selectors)
+      equipmentModifiedPosition: selectEquipmentModifiedPosition(state, this.characterId),
+      equipmentModifiedEffect: selectEquipmentModifiedEffect(state, this.characterId),
 
       // Consequence transaction data (for GM_RESOLVING_CONSEQUENCE state)
       ...(this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE' ? this._getConsequenceData(state) : {}),
@@ -662,11 +643,17 @@ export class PlayerActionWidget extends Application {
 
   /**
    * Handle active equipment change
+   *
+   * When equipment is selected for an action:
+   * 1. Update the action plan with selected equipment
+   * 2. If it's a consumable, mark it as depleted (single-use items are consumed immediately)
+   *
+   * Note: Equipment locking happens when equipped, not when selected for an action
    */
   private async _onActiveEquipmentChange(event: JQuery.ChangeEvent): Promise<void> {
     const equipmentId = (event.currentTarget as HTMLSelectElement).value;
 
-    await game.fitgd.bridge.execute(
+    const actions = [
       {
         type: 'playerRoundState/setActionPlan',
         payload: {
@@ -677,7 +664,26 @@ export class PlayerActionWidget extends Application {
           position: this.playerState?.position || 'risky',
           effect: this.playerState?.effect || 'standard',
         },
-      },
+      } as any,
+    ];
+
+    // If a consumable is selected, mark it as depleted
+    // (consumables are single-use and consumed immediately when selected)
+    if (equipmentId) {
+      const equipment = this.character.equipment.find(e => e.id === equipmentId);
+      if (equipment && isEquipmentConsumable(equipment)) {
+        actions.push({
+          type: 'characters/markEquipmentDepleted',
+          payload: {
+            characterId: this.characterId,
+            equipmentId,
+          },
+        } as any);
+      }
+    }
+
+    await game.fitgd.bridge.executeBatch(
+      actions,
       { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
     );
   }
@@ -996,7 +1002,6 @@ export class PlayerActionWidget extends Application {
           <ul style="list-style: none; padding: 0;">
             ${equipment.map(item => {
       const isEquipped = equippedIds.has(item.id);
-      const isBonus = item.tags.includes('bonus');
       const loadCost = 1; // Default to 1 load per item
       // Disable if not equipped and at max load
       const disabled = !isEquipped && currentLoad + loadCost > maxLoad;

@@ -139,8 +139,8 @@ export class EquipmentBrowserDialog extends Dialog {
         <div class="browser-filters">
           <select class="tier-filter">
             <option value="all" ${!this.tierFilter ? 'selected' : ''}>All Tiers</option>
-            <option value="accessible" ${this.tierFilter === 'accessible' ? 'selected' : ''}>Accessible</option>
-            <option value="inaccessible" ${this.tierFilter === 'inaccessible' ? 'selected' : ''}>Inaccessible</option>
+            <option value="common" ${this.tierFilter === 'common' ? 'selected' : ''}>Common</option>
+            <option value="rare" ${this.tierFilter === 'rare' ? 'selected' : ''}>Rare</option>
             <option value="epic" ${this.tierFilter === 'epic' ? 'selected' : ''}>Epic</option>
           </select>
 
@@ -253,9 +253,9 @@ export class EquipmentBrowserDialog extends Dialog {
       return;
     }
 
-    // Check tier restrictions (players can only add accessible items)
-    if (!game.user.isGM && template.tier === 'inaccessible') {
-      ui.notifications.warn('Inaccessible equipment requires a flashback (1 Momentum + trait)');
+    // Check tier restrictions (players can only add common items)
+    if (!game.user.isGM && template.tier === 'rare') {
+      ui.notifications.warn('Rare equipment requires a flashback (1 Momentum + trait)');
       // TODO: Open flashback dialog
       return;
     }

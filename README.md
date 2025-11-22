@@ -7,11 +7,12 @@ A **TypeScript + Redux Toolkit** event-sourced state management system for "Forg
 - ✅ Event-sourced architecture with complete command history
 - ✅ Full TypeScript type safety
 - ✅ High-level API for gameplay verbs (push, flashback, take harm, etc.)
-- ✅ TDD approach with 146 passing tests (100% coverage)
+- ✅ TDD approach with 777 passing tests (100% coverage)
 - ✅ Foundry VTT adapter for seamless integration
 - ✅ Abstract clock system (harm, consumables, addiction, progress)
 - ✅ Momentum-based resource economy (not stress/trauma)
 - ✅ Character traits, action dots, equipment management
+- ✅ Equipment system with load limits, flashback acquisition, and augmentations
 - ✅ Crew management with shared Momentum pool
 
 ## Installation
@@ -126,9 +127,12 @@ game.action.push({ crewId, type: "extra-die" });
 ### Core Mechanics
 - **12 starting action dots** (0-4 per action)
 - **2 starting traits** (role + background)
+- **Equipment**: Manage loadout with 5-item limit. Acquire rare items via flashback (1M cost)
 - **Harm**: Physical, Morale (6-segment clocks, max 3 active)
 - **Momentum**: Shared crew resource, spent on push/flashback, gained from consequences/leaning into traits
 - **Rally**: Recover trait/harm at low Momentum (0-3)
+- **Augmentations**: Permanent enhancements (don't count toward load, GM-activated on rolls)
+- **Consumables**: Single-use items that can be depleted and replenished at reset
 
 ## API Reference
 
@@ -143,6 +147,7 @@ game.action.push({ crewId, type: "extra-die" });
 - **CharacterAPI**: create, leanIntoTrait, useRally, advanceActionDots, groupTraits
 - **ActionAPI**: push, flashback, applyConsequences
 - **ResourceAPI**: useConsumable, useStim
+- **EquipmentAPI**: equipItem, unequipItem, acquireFlashback, selectCurrentLoad, selectAugmentations
 - **CrewAPI**: create, member management, Momentum operations, performReset
 - **HarmAPI**: take, recover, convertToScar
 - **ClockAPI**: createProgress, advance, reduce, delete
@@ -214,6 +219,7 @@ See [`.github/workflows/build-on-release.yml`](.github/workflows/build-on-releas
 - ✅ Character & Crew management (traits, action dots, Momentum)
 - ✅ Abstract Clock System (harm, consumables, addiction, progress)
 - ✅ Advanced mechanics (trait grouping, flashbacks, Rally)
+- ✅ Equipment System (load management, flashback acquisition, augmentations, consumables)
 - ✅ High-Level Game API (verb-based gameplay actions)
 - ✅ Foundry VTT Integration (sheets, dialogs, macros, persistence)
 - ✅ Bridge API Pattern (safe state management, broadcast handling)

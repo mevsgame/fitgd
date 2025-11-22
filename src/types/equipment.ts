@@ -1,4 +1,16 @@
-export type EquipmentRarity = 'common' | 'rare' | 'epic'
+/**
+ * Equipment tier determines acquisition cost and availability (rules_primer.md)
+ * - common: Free to equip, always available (declare freely)
+ * - rare: Costs 1 Momentum to acquire via flashback (requires justifying Trait)
+ * - epic: Cannot be acquired via flashback, must be earned as story reward
+ */
+export type EquipmentTier = 'common' | 'rare' | 'epic';
+
+/**
+ * Legacy alias for backwards compatibility during transition
+ * @deprecated Use EquipmentTier instead
+ */
+export type EquipmentRarity = 'common' | 'rare' | 'epic';
 
 /**
  * Mechanical effects granted by equipment categories

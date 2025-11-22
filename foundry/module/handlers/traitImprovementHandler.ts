@@ -84,7 +84,7 @@ export class TraitImprovementHandler {
     }
 
     // Equipment improvements
-    if (playerState.equippedForAction?.length > 0) {
+    if (playerState.equippedForAction && playerState.equippedForAction.length > 0) {
       const equipment = this.config.character!.equipment.filter(e =>
         playerState.equippedForAction!.includes(e.id)
       );

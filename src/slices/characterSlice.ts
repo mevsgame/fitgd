@@ -36,6 +36,7 @@ interface CreateCharacterPayload {
   name: string;
   traits: Trait[];
   approaches: Approaches;
+  equipment?: Equipment[];
   userId?: string;
 }
 
@@ -103,6 +104,39 @@ interface CreateTraitFromFlashbackPayload {
   userId?: string;
 }
 
+interface LockEquipmentPayload {
+  characterId: string;
+  equipmentId: string;
+  userId?: string;
+}
+
+interface UnlockAllEquipmentPayload {
+  characterId: string;
+  userId?: string;
+}
+
+interface MarkEquipmentDepletedPayload {
+  characterId: string;
+  equipmentId: string;
+  userId?: string;
+}
+
+interface ReplenishConsumablesPayload {
+  characterId: string;
+  userId?: string;
+}
+
+interface MarkEquipmentUsedPayload {
+  characterId: string;
+  equipmentId: string;
+  userId?: string;
+}
+
+interface AutoEquipItemsPayload {
+  characterId: string;
+  userId?: string;
+}
+
 /**
  * Character Slice
  */
@@ -148,7 +182,7 @@ const characterSlice = createSlice({
           traits: traitsWithIds,
           approaches: payload.approaches,
           unallocatedApproachDots: unallocated,
-          equipment: [],
+          equipment: payload.equipment || [],
           rallyAvailable: true,
           createdAt: timestamp,
           updatedAt: timestamp,
@@ -759,6 +793,293 @@ const characterSlice = createSlice({
       prepare: (payload: { characterId: string; amount: number; userId?: string }) => ({ payload }),
     },
 
+    /**
+     * Lock equipment when equipped (rules_primer.md: "Once an item is equipped, it remains equipped until the next Momentum Reset")
+     * This action explicitly marks equipment as locked, preventing manual unequipping during gameplay
+     */
+    lockEquipment: {
+      reducer: (state, action: PayloadAction<LockEquipmentPayload>) => {
+        const { characterId, equipmentId } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        const equipment = character.equipment.find((e) => e.id === equipmentId);
+
+        if (!equipment) {
+          throw new Error(`Equipment ${equipmentId} not found`);
+        }
+
+        equipment.locked = true;
+        character.updatedAt = Date.now();
+
+        state.history.push({
+          type: 'characters/lockEquipment',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: action.payload.userId,
+        });
+      },
+      prepare: (payload: LockEquipmentPayload) => {
+        const command: Command = {
+          type: 'characters/lockEquipment',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    /**
+     * Unlock all equipment when Momentum Reset occurs (rules_primer.md: "At the start of a Momentum Reset, you can unequip any number of items")
+     */
+    unlockAllEquipment: {
+      reducer: (state, action: PayloadAction<UnlockAllEquipmentPayload>) => {
+        const { characterId } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        // Unlock all equipped items
+        character.equipment.forEach((equip) => {
+          if (equip.equipped) {
+            equip.locked = false;
+          }
+        });
+
+        character.updatedAt = Date.now();
+
+        state.history.push({
+          type: 'characters/unlockAllEquipment',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: action.payload.userId,
+        });
+      },
+      prepare: (payload: UnlockAllEquipmentPayload) => {
+        const command: Command = {
+          type: 'characters/unlockAllEquipment',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    /**
+     * Mark consumable as depleted when used (rules_primer.md: "Single-use items that provide higher bonuses. After use, they remain equipped but become unusable")
+     */
+    markEquipmentDepleted: {
+      reducer: (state, action: PayloadAction<MarkEquipmentDepletedPayload>) => {
+        const { characterId, equipmentId } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        const equipment = character.equipment.find((e) => e.id === equipmentId);
+
+        if (!equipment) {
+          throw new Error(`Equipment ${equipmentId} not found`);
+        }
+
+        equipment.depleted = true;
+        character.updatedAt = Date.now();
+
+        state.history.push({
+          type: 'characters/markEquipmentDepleted',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: action.payload.userId,
+        });
+      },
+      prepare: (payload: MarkEquipmentDepletedPayload) => {
+        const command: Command = {
+          type: 'characters/markEquipmentDepleted',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    /**
+     * Replenish consumables on Momentum Reset (rules_primer.md: "Consumables are removed or replenished during a Momentum Reset")
+     */
+    replenishConsumables: {
+      reducer: (state, action: PayloadAction<ReplenishConsumablesPayload>) => {
+        const { characterId } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        // Reset depleted flag for all consumable-category items
+        const consumableCategories = DEFAULT_CONFIG.equipment.consumableCategories;
+        character.equipment.forEach((equip) => {
+          if (consumableCategories.includes(equip.category)) {
+            equip.depleted = false;
+          }
+        });
+
+        character.updatedAt = Date.now();
+
+        state.history.push({
+          type: 'characters/replenishConsumables',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: action.payload.userId,
+        });
+      },
+      prepare: (payload: ReplenishConsumablesPayload) => {
+        const command: Command = {
+          type: 'characters/replenishConsumables',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    /**
+     * Mark equipment as used (locked) when selected for an action
+     * Rules: Once equipment is used in an action, it cannot be unequipped until next Momentum Reset
+     */
+    markEquipmentUsed: {
+      reducer: (state, action: PayloadAction<MarkEquipmentUsedPayload>) => {
+        const { characterId, equipmentId } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        const equipment = character.equipment.find((e) => e.id === equipmentId);
+
+        if (!equipment) {
+          throw new Error(`Equipment ${equipmentId} not found`);
+        }
+
+        equipment.locked = true;
+        character.updatedAt = Date.now();
+
+        state.history.push({
+          type: 'characters/markEquipmentUsed',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: action.payload.userId,
+        });
+      },
+      prepare: (payload: MarkEquipmentUsedPayload) => {
+        const command: Command = {
+          type: 'characters/markEquipmentUsed',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    /**
+     * Auto-equip items marked with autoEquip flag at Momentum Reset
+     * Rules: At reset, items flagged with autoEquip: true are automatically re-equipped
+     */
+    autoEquipItems: {
+      reducer: (state, action: PayloadAction<AutoEquipItemsPayload>) => {
+        const { characterId } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        // Auto-equip items with autoEquip flag
+        character.equipment.forEach((equip) => {
+          if (equip.autoEquip) {
+            equip.equipped = true;
+            equip.locked = false; // Fresh equip after reset
+          }
+        });
+
+        character.updatedAt = Date.now();
+
+        state.history.push({
+          type: 'characters/autoEquipItems',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: action.payload.userId,
+        });
+      },
+      prepare: (payload: AutoEquipItemsPayload) => {
+        const command: Command = {
+          type: 'characters/autoEquipItems',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
     resetRally: {
       reducer: (state, action: PayloadAction<{ characterId: string; userId?: string }>) => {
         const { characterId, userId } = action.payload;
@@ -850,6 +1171,12 @@ export const {
   removeEquipment,
   updateEquipment,
   toggleEquipped,
+  lockEquipment,
+  unlockAllEquipment,
+  markEquipmentDepleted,
+  replenishConsumables,
+  markEquipmentUsed,
+  autoEquipItems,
   advanceApproach,
   addUnallocatedDots,
   useRally,

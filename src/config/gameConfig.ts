@@ -1,5 +1,5 @@
 import type { GameConfig } from '../types';
-import type { EquipmentCategoryConfig } from '../types/equipment';
+import type { EquipmentCategoryConfig, EquipmentTier } from '../types/equipment';
 
 /**
  * Default Game Configuration
@@ -42,6 +42,14 @@ export const DEFAULT_CONFIG: GameConfig = {
   },
 
   equipment: {
+    // Momentum cost to acquire equipment via flashback based on tier (rules_primer.md)
+    momentumCostByTier: {
+      common: 0,          // Declare freely, no cost
+      rare: 1,            // Requires 1 Momentum flashback (must justify with Trait)
+      epic: Infinity,     // Cannot be acquired via flashback, must be earned
+    } as Record<EquipmentTier, number>,
+
+    // Equipment categories and their mechanical effects
     categories: {
       'weapon': {
         name: 'Weapon',
@@ -74,6 +82,12 @@ export const DEFAULT_CONFIG: GameConfig = {
         description: 'Effective but attracts attention (bolter, grenade launcher)',
       },
     } as Record<string, EquipmentCategoryConfig>,
+
+    // Augmentations do not count toward load limit
+    augmentationCategories: ['cybernetic', 'biological', 'psionic'],
+
+    // Consumables are replenished on Momentum Reset
+    consumableCategories: ['consumable', 'grenade', 'stim', 'medkit'],
   },
 
   resolution: {

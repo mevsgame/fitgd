@@ -1,0 +1,124 @@
+<div class="equipment-management-dialog">
+  {{!-- Header: Load and Momentum Display --}}
+  <div class="dialog-header">
+    <h2>Manage Equipment</h2>
+    <div class="header-stats">
+      <div class="load-display">
+        <strong>Load:</strong> <span class="load-value">{{currentLoad}}/{{maxLoad}}</span>
+        {{#if isAtMaxLoad}}
+          <span class="load-warning">(At Capacity)</span>
+        {{/if}}
+      </div>
+      <div class="momentum-display">
+        <strong>Momentum:</strong> <span class="momentum-value">{{momentum}}/{{maxMomentum}}</span>
+      </div>
+    </div>
+  </div>
+
+  {{!-- Search/Filter --}}
+  <div class="dialog-search">
+    <input
+      type="text"
+      class="equipment-search"
+      placeholder="Search by name, category, or tier..."
+      value="{{searchQuery}}"
+    />
+  </div>
+
+  {{!-- Body: Equipment Grid --}}
+  <div class="dialog-body">
+    {{!-- Equipped Items Section --}}
+    {{#if equippedItems.length}}
+      <div class="equipment-section equipped-section">
+        <h3>Equipped Items</h3>
+        {{> equipment-grid items=equippedItems isManagementDialog=true}}
+      </div>
+    {{/if}}
+
+    {{!-- Unequipped Items Section --}}
+    {{#if unequippedItems.length}}
+      <div class="equipment-section unequipped-section">
+        <h3>Available Equipment</h3>
+        {{> equipment-grid items=unequippedItems isManagementDialog=true}}
+      </div>
+    {{/if}}
+
+    {{!-- Augmentations Section --}}
+    {{#if augmentations.length}}
+      <div class="equipment-section augmentations-section">
+        <h3>Augmentations (Not Count Toward Load)</h3>
+        {{> equipment-grid items=augmentations isManagementDialog=false}}
+      </div>
+    {{/if}}
+
+    {{!-- Depleted Consumables Section --}}
+    {{#if depletedConsumables.length}}
+      <div class="equipment-section depleted-section">
+        <h3>Depleted Consumables (Replenish at Reset)</h3>
+        {{> equipment-grid items=depletedConsumables isManagementDialog=false}}
+      </div>
+    {{/if}}
+
+    {{!-- No Equipment Message --}}
+    {{#if (not (or equippedItems.length unequippedItems.length augmentations.length depletedConsumables.length))}}
+      <p class="no-equipment-message">No equipment available.</p>
+    {{/if}}
+  </div>
+
+  {{!-- Momentum Cost Summary --}}
+  <div class="cost-summary">
+    {{#if momentumCost}}
+      <p>
+        <strong>Momentum Cost:</strong>
+        <span class="momentum-cost">{{momentumCost}}M</span>
+        (for equipping {{momentumCost}} rare item{{#if (gt momentumCost 1)}}s{{/if}})
+      </p>
+      {{#if (gte momentum momentumCost)}}
+        <p class="cost-ok">✓ You have sufficient Momentum</p>
+      {{else}}
+        <p class="cost-insufficient">✗ Not enough Momentum (need {{momentumCost}}, have {{momentum}})</p>
+      {{/if}}
+    {{else}}
+      {{#if (gt stagedChanges.size 0)}}
+        <p><strong>No Momentum cost</strong> (common items and unequipping)</p>
+      {{/if}}
+    {{/if}}
+  </div>
+
+  {{!-- Action Buttons --}}
+  <div class="dialog-buttons">
+    {{!-- Flashback Equipment Button --}}
+    {{#if (not isAtMaxLoad)}}
+      <button type="button" data-action="flashback" class="primary">
+        <i class="fas fa-history"></i> Create Flashback Item
+      </button>
+    {{else}}
+      <button type="button" class="primary" disabled title="Equipment load is full">
+        <i class="fas fa-history"></i> Create Flashback Item
+      </button>
+    {{/if}}
+
+    <div class="button-spacer"></div>
+
+    {{!-- Cancel Button --}}
+    <button type="button" data-action="cancel" class="secondary">Cancel</button>
+
+    {{!-- Accept Button --}}
+    {{#if canAcceptChanges}}
+      <button type="button" data-action="accept" class="primary">
+        Accept Changes
+        {{#if momentumCost}}
+          (Spend {{momentumCost}}M)
+        {{/if}}
+      </button>
+    {{else}}
+      <button type="button" class="primary" disabled>
+        {{#if (not (gt stagedChanges.size 0))}}
+          No Changes
+        {{else if (not (gte momentum momentumCost))}}
+          Insufficient Momentum
+        {{/if}}
+      </button>
+    {{/if}}
+  </div>
+</div>

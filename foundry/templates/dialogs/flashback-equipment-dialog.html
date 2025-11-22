@@ -1,0 +1,110 @@
+<div class="flashback-equipment-dialog">
+  <!-- Header -->
+  <div class="dialog-header">
+    <h2>Flashback: Acquire Equipment</h2>
+    <p class="momentum-display">Current Momentum: <strong>{{momentum}}/10</strong></p>
+  </div>
+
+  <!-- Status Messages -->
+  {{#if (not canEquip)}}
+  <div class="dialog-warning">
+    <i class="fas fa-exclamation-triangle"></i>
+    <strong>Load Full!</strong> You have {{currentLoad}}/{{maxLoad}} items equipped. Unequip something first.
+  </div>
+  {{/if}}
+
+  <!-- Tier Selection -->
+  <div class="equipment-form">
+    <div class="form-group">
+      <label for="tier">Equipment Tier:</label>
+      <select name="tier" id="tier">
+        <option value="common" {{#if (eq selectedTier "common")}}selected{{/if}}>
+          Common (Free - declare without flashback)
+        </option>
+        <option value="rare" {{#if (eq selectedTier "rare")}}selected{{/if}}>
+          Rare (1 Momentum - requires flashback to justify access)
+        </option>
+        <option value="epic" disabled>
+          Epic (Cannot flashback - must be earned)
+        </option>
+      </select>
+      <p class="help-text">
+        {{#if (eq selectedTier "common")}}
+          <i class="fas fa-info-circle"></i> Common equipment is declared freely without spending Momentum.
+        {{else if (eq selectedTier "rare")}}
+          <i class="fas fa-history"></i> Rare equipment requires a 1 Momentum flashback to justify having access to this tier.
+        {{else}}
+          <i class="fas fa-ban"></i> Epic equipment cannot be acquired through flashbacks. Must be earned as story rewards from the GM.
+        {{/if}}
+      </p>
+    </div>
+
+    <!-- Equipment Name -->
+    <div class="form-group">
+      <label for="itemName">Equipment Name:</label>
+      <input
+        type="text"
+        name="itemName"
+        id="itemName"
+        placeholder="e.g., 'Scoped Rifle', 'Combat Armor', 'Plasma Cutter'"
+        value="{{selectedItemName}}"
+      />
+    </div>
+
+    <!-- Equipment Description -->
+    <div class="form-group">
+      <label for="itemDescription">Description (optional):</label>
+      <textarea
+        name="itemDescription"
+        id="itemDescription"
+        rows="3"
+        placeholder="How did you acquire this? What makes it special? What does it look like?"
+      >{{selectedItemDescription}}</textarea>
+    </div>
+
+    <!-- Momentum Cost Summary -->
+    {{#if (gt momentumCostEstimate 0)}}
+    <div class="cost-summary">
+      <p>
+        <strong>Cost:</strong>
+        {{#if (eq momentumCostEstimate 1)}}
+          <span class="momentum-cost">1 Momentum</span> (rare equipment requires flashback)
+        {{/if}}
+      </p>
+      {{#if (gte momentum momentumCostEstimate)}}
+        <p class="cost-ok">✓ You have enough Momentum</p>
+      {{else}}
+        <p class="cost-insufficient">✗ Not enough Momentum (need {{momentumCostEstimate}}, have {{momentum}})</p>
+      {{/if}}
+    </div>
+    {{/if}}
+
+    <!-- Load Summary -->
+    <div class="load-summary">
+      <p><strong>Current Load:</strong> {{currentLoad}}/{{maxLoad}}</p>
+      {{#if canEquip}}
+        <p class="load-ok">✓ You have space for this item</p>
+      {{else}}
+        <p class="load-full">✗ Load is full - unequip an item first</p>
+      {{/if}}
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="dialog-buttons">
+    <button type="button" data-action="cancel" class="secondary">Cancel</button>
+    <button
+      type="button"
+      data-action="apply"
+      class="primary"
+      {{#if (not selectedItemName)}}disabled{{/if}}
+      {{#if (not canEquip)}}disabled{{/if}}
+    >
+      {{#if (eq selectedTier "common")}}
+        Declare Equipment
+      {{else if (eq selectedTier "rare")}}
+        Flashback & Acquire ({{momentumCostEstimate}}M)
+      {{/if}}
+    </button>
+  </div>
+</div>
