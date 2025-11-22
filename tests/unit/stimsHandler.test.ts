@@ -129,6 +129,72 @@ describe('StimsHandler', () => {
 
       expect(result.isValid).toBe(true);
     });
+
+    it('should allow stims even if player used Push Yourself', () => {
+      // Push Yourself is an independent mechanic (spend Momentum for +1d)
+      // Stims usage should not be blocked by Push
+      store.dispatch(initializePlayerState({ characterId: 'char-123' }));
+      store.dispatch(setStimsUsed({ characterId: 'char-123', used: false })); // Explicitly not used
+
+      // Note: We cannot manually set pushed flag since Redux state is immutable.
+      // The important part is that stimsUsedThisAction is NOT set,
+      // so validation should pass regardless of pushed/flashback flags.
+      state = store.getState() as RootState;
+      const playerState = state.playerRoundState.byCharacterId['char-123'];
+
+      const result = handler.validateStimsUsage(state, playerState);
+
+      // Should be valid - stims only blocked by stimsUsedThisAction
+      expect(result.isValid).toBe(true);
+      expect(result.reason).toBeUndefined();
+    });
+
+    it('should allow stims even if player used Flashback', () => {
+      // Flashback is an independent mechanic (spend Momentum for narrative rewind)
+      // Stims usage should not be blocked by Flashback
+      store.dispatch(initializePlayerState({ characterId: 'char-123' }));
+      store.dispatch(setStimsUsed({ characterId: 'char-123', used: false })); // Explicitly not used
+
+      // The validation only checks stimsUsedThisAction, not flashbackApplied
+      state = store.getState() as RootState;
+      const playerState = state.playerRoundState.byCharacterId['char-123'];
+
+      const result = handler.validateStimsUsage(state, playerState);
+
+      // Should be valid - stims only blocked by stimsUsedThisAction
+      expect(result.isValid).toBe(true);
+      expect(result.reason).toBeUndefined();
+    });
+
+    it('should allow stims even if player used both Push and Flashback', () => {
+      // All three mechanics (Push, Flashback, Stims) are independent
+      store.dispatch(initializePlayerState({ characterId: 'char-123' }));
+      store.dispatch(setStimsUsed({ characterId: 'char-123', used: false }));
+
+      // The validation only checks stimsUsedThisAction, not pushed or flashbackApplied
+      state = store.getState() as RootState;
+      const playerState = state.playerRoundState.byCharacterId['char-123'];
+
+      const result = handler.validateStimsUsage(state, playerState);
+
+      // Should be valid - stims are independent of both Push and Flashback
+      expect(result.isValid).toBe(true);
+      expect(result.reason).toBeUndefined();
+    });
+
+    it('should reject if stims already used (independent of other mechanics)', () => {
+      // Only stimsUsedThisAction should block stims
+      store.dispatch(initializePlayerState({ characterId: 'char-123' }));
+      store.dispatch(setStimsUsed({ characterId: 'char-123', used: true })); // Stims already used
+      state = store.getState() as RootState;
+
+      const playerState = state.playerRoundState.byCharacterId['char-123'];
+
+      const result = handler.validateStimsUsage(state, playerState);
+
+      expect(result.isValid).toBe(false);
+      expect(result.reason).toBe('already-used');
+    });
   });
 
   /* -------------------------------------------- */

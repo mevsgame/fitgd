@@ -114,11 +114,16 @@ The widget supports three distinct roll modes, selectable by the player during t
 5.  **Batch Update**: Dispatches `setRollResult`, `applyOutcome`, and `transitionState` in a single `executeBatch` call to ensure atomicity.
 
 #### The Stims Interrupt
-When a player uses Stims to resist a consequence:
-1.  **Addiction Check**: A d6 is rolled against the Addiction Clock.
-2.  **Clock Advance**: The Addiction Clock is advanced based on the roll.
-3.  **Reroll**: The original action is rerolled with the new context.
-This entire sequence is handled transactionally to prevent "free" rerolls or missed addiction ticks.
+See **[Stims Mechanics](mechanics-stims.md)** for comprehensive documentation.
+
+**Widget Integration:**
+- **State**: Available in `GM_RESOLVING_CONSEQUENCE` (post-roll consequence resolution)
+- **Handler**: Delegates to `StimsWorkflowHandler` for orchestration
+- **Validation**: Enforces "once per action" via `stimsUsedThisAction` flag (independent of Push/Flashback)
+- **Flow**: Validate → Addiction 1d6 roll → Advance clock → Mark used → Check lockout → Auto-reroll
+- **Lockout**: Disabled if crew addiction filled, persists until cleared via Rally/Reset
+
+The stims interrupt is a last-resort mechanic for desperate situations, advancing the character's addiction clock at the cost of a reroll opportunity.
 
 ## Rules Integration
 - **Position & Effect**: The widget is the authoritative source for negotiating these values.

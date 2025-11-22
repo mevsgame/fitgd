@@ -1601,6 +1601,13 @@ export class PlayerActionWidget extends Application {
       silent: true,
     });
 
+    // Mark stims as used this action (prevents using again)
+    const markStimsUsedAction = this.stimsHandler.createMarkStimsUsedAction();
+    await game.fitgd.bridge.execute(markStimsUsedAction as any, {
+      affectedReduxIds: [asReduxId(this.characterId)],
+      silent: true,
+    });
+
     // Check if addiction clock filled (Lockout)
     const updatedState = game.fitgd.store.getState();
     const updatedClock = updatedState.clocks.byId[addictionClockId!];
