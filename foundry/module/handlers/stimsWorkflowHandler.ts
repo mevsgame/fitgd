@@ -15,7 +15,7 @@ import type { RootState } from '@/store';
 import type { PlayerRoundState } from '@/types/playerRoundState';
 import type { Clock } from '@/types/clock';
 import { selectAddictionClockByCharacter, selectStimsAvailable } from '@/selectors/clockSelectors';
-import { asReduxId } from '../types/ids';
+import { asReduxId, type ReduxId } from '../types/ids';
 
 /**
  * Configuration for stims workflow
@@ -233,13 +233,13 @@ export class StimsWorkflowHandler {
   /**
    * Generate addiction roll notification
    *
-   * @param rollValue - Roll result
+   * @param _rollValue - Roll result
    * @param segments - Segments added
    * @param currentSegments - Current clock segments
    * @param maxSegments - Max clock segments
    * @returns Notification text
    */
-  generateAddictionNotification(rollValue: number, segments: number, currentSegments: number, maxSegments: number): string {
+  generateAddictionNotification(_rollValue: number, segments: number, currentSegments: number, maxSegments: number): string {
     return `Addiction clock: ${currentSegments}/${maxSegments} (+${segments})`;
   }
 
@@ -255,14 +255,14 @@ export class StimsWorkflowHandler {
   /**
    * Create pre-roll batch actions (clears consequence, marks stims used, transitions to STIMS_ROLLING)
    *
-   * @param addictionClockId - ID of addiction clock
-   * @param addictionSegments - Segments added in this roll
+   * @param _addictionClockId - ID of addiction clock
+   * @param _addictionSegments - Segments added in this roll
    * @param hasConsequenceTransaction - Whether consequence transaction exists
    * @returns Array of Redux actions
    */
   createPreRollBatch(
-    addictionClockId: string,
-    addictionSegments: number,
+    _addictionClockId: string,
+    _addictionSegments: number,
     hasConsequenceTransaction: boolean
   ): Array<{ type: string; payload: unknown }> {
     const batch: Array<{ type: string; payload: unknown }> = [];
@@ -359,7 +359,7 @@ export class StimsWorkflowHandler {
    *
    * @returns Redux ID for Bridge API
    */
-  getAffectedReduxId(): string {
+  getAffectedReduxId(): ReduxId {
     return asReduxId(this.config.characterId);
   }
 

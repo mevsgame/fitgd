@@ -1577,7 +1577,7 @@ export class PlayerActionWidget extends Application {
     if (!addictionClock) {
       const createAction = this.stimsWorkflowHandler.createAddictionClockAction();
       await game.fitgd.bridge.execute(createAction as any, {
-        affectedReduxIds: [asReduxId(this.stimsWorkflowHandler.getAffectedReduxId())],
+        affectedReduxIds: [this.stimsWorkflowHandler.getAffectedReduxId()],
         silent: true,
       });
       addictionClockId = createAction.payload.id;
@@ -1597,7 +1597,7 @@ export class PlayerActionWidget extends Application {
     // Advance addiction clock
     const advanceAction = this.stimsWorkflowHandler.createAdvanceAddictionClockAction(addictionClockId!, addictionAmount);
     await game.fitgd.bridge.execute(advanceAction as any, {
-      affectedReduxIds: [asReduxId(this.stimsWorkflowHandler.getAffectedReduxId())],
+      affectedReduxIds: [this.stimsWorkflowHandler.getAffectedReduxId()],
       silent: true,
     });
 
