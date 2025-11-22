@@ -88,16 +88,6 @@ export const selectTotalApproachDots = createSelector(
   }
 );
 
-/**
- * Get equipment by tier
- */
-export const selectEquipmentByTier = createSelector(
-  [selectCharacterById, (_state: RootState, _characterId: string, tier: string) => tier],
-  (character, tier) => {
-    if (!character) return [];
-    return character.equipment.filter((e) => e.tier === tier);
-  }
-);
 
 /**
  * Check if character has a specific trait by name

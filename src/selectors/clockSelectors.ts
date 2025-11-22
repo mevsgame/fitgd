@@ -1,7 +1,7 @@
 import { createSelector } from '@reduxjs/toolkit';
 import type { ClockState } from '../slices/clockSlice';
 import type { Clock, ClockType } from '../types';
-import { isClockFilled, isClockFrozen } from '../validators/clockValidator';
+import { isClockFilled } from '../validators/clockValidator';
 
 /**
  * Clock Selectors
@@ -92,20 +92,7 @@ export const selectHarmClocksByCharacter = createSelector(
   }
 );
 
-/**
- * Get consumable clocks for a crew
- */
-export const selectConsumableClocksByCrew = createSelector(
-  [
-    selectClocksState,
-    (_state: RootState, crewId: string) => crewId,
-  ],
-  (clocksState, crewId): Clock[] => {
-    const key = `consumable:${crewId}`;
-    const clockIds = clocksState.byTypeAndEntity[key] || [];
-    return clockIds.map((id) => clocksState.byId[id]);
-  }
-);
+
 
 /**
  * Get addiction clock for a character
@@ -138,22 +125,7 @@ export const selectAddictionClockByCrew = createSelector(
   }
 );
 
-/**
- * Get consumable clock by subtype
- */
-export const selectConsumableClockBySubtype = createSelector(
-  [
-    selectClocksState,
-    (_state: RootState, crewId: string, _subtype: string) => crewId,
-    (_state: RootState, _crewId: string, subtype: string) => subtype,
-  ],
-  (clocksState, crewId, subtype): Clock | null => {
-    const key = `consumable:${crewId}`;
-    const clockIds = clocksState.byTypeAndEntity[key] || [];
-    const clocks = clockIds.map((id) => clocksState.byId[id]);
-    return clocks.find((clock) => clock.subtype === subtype) || null;
-  }
-);
+
 
 /**
  * Check if character is dying (has 6/6 harm clock)
@@ -222,38 +194,13 @@ export const selectStimsAvailable = createSelector(
     }
 
     // Stims are LOCKED crew-wide if ANY character's addiction clock is filled or frozen
-    const isLocked = addictionClocks.some((clock: Clock) => isClockFilled(clock) || isClockFrozen(clock));
+    const isLocked = addictionClocks.some((clock: Clock) => isClockFilled(clock) || clock.metadata?.frozen === true);
     console.log('FitGD | Stims available:', !isLocked);
     return !isLocked;
   }
 );
 
-/**
- * Check if consumable is available (not frozen crew-wide)
- *
- * Consumables are tracked per-character but frozen crew-wide when ANY clock fills.
- * This checks if ANY consumable clock with the given subtype is frozen.
- */
-export const selectConsumableAvailable = createSelector(
-  [
-    selectClocksState,
-    (_state: RootState, _crewId: string, subtype: string) => subtype,
-  ],
-  (clocksState, subtype): boolean => {
-    // Find ALL consumable clocks with this subtype
-    const consumableClocks = clocksState.allIds
-      .map((id) => clocksState.byId[id])
-      .filter(
-        (clock) => clock.clockType === 'consumable' && clock.subtype === subtype
-      );
 
-    // If no clocks exist yet, available
-    if (consumableClocks.length === 0) return true;
-
-    // If ANY clock is frozen, consumable is not available
-    return !consumableClocks.some((clock) => isClockFrozen(clock));
-  }
-);
 
 /**
  * Get harm clock count for character

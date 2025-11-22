@@ -4,7 +4,7 @@
  * Low-change entity stored with full snapshot + command history.
  */
 
-import { EquipmentTier, EquipmentAcquisition, EquipmentRarity } from "./equipment";
+import { EquipmentRarity } from "./equipment";
 
 /**
  * Trait category types
@@ -45,7 +45,6 @@ export interface Equipment {
 
   // Core equipment data (copied from template at creation, fully editable)
   name: string;
-  tier: EquipmentTier;
   rarity: EquipmentRarity;
   category: string; // e.g., 'weapon', 'armor', 'tool' - maps to equipmentCategories in config
   description: string;
@@ -57,7 +56,6 @@ export interface Equipment {
 
   // Provenance (event sourcing metadata)
   acquiredAt: number; // Timestamp when acquired
-  acquiredVia?: EquipmentAcquisition;
   sourceItemId?: string; // Optional: Original template ID (for reference only)
 
   // Flexible metadata

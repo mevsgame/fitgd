@@ -148,18 +148,6 @@ describe('Game API Integration', () => {
       expect(leanResult.momentumGained).toBe(2);
       expect(leanResult.newMomentum).toBe(7); // 5 + 2
 
-      // === ACTION 4: Use consumable (frag grenade) ===
-
-      const grenadeResult = game.resource.useConsumable({
-        crewId,
-        characterId: char1Id,
-        consumableType: 'frag_grenades',
-        depletionRoll: 3,
-      });
-
-      expect(grenadeResult.clockId).toBeDefined();
-      expect(grenadeResult.segmentsAdded).toBe(3);
-      expect(grenadeResult.isFrozen).toBe(false);
 
       // === ACTION 5: Success! No consequences ===
 
@@ -201,11 +189,6 @@ describe('Game API Integration', () => {
       const canUseStims = game.query.canUseStim(crewId);
       expect(canUseStims).toBe(true); // Addiction not filled
 
-      const canUseGrenades = game.query.canUseConsumable({
-        crewId,
-        consumableType: 'frag_grenades',
-      });
-      expect(canUseGrenades).toBe(true); // Not frozen
 
       // === DOWNTIME: Recover from harm ===
 

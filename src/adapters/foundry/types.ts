@@ -6,7 +6,7 @@
  */
 
 import { ClockSize, ProgressClockCategory } from "@/types";
-import { EquipmentRarity, EquipmentTier } from "@/types/equipment";
+import { EquipmentRarity } from "@/types/equipment";
 import { TraitCategory } from "@/types/character";
 
 /**
@@ -117,7 +117,6 @@ export interface ConsumableClockData {
   segments: number;
   maxSegments: ClockSize;
   rarity: EquipmentRarity;
-  tier: EquipmentTier;
   frozen: boolean;
   color: ClockColor; // green
 }
@@ -161,7 +160,6 @@ export interface FoundryTraitData {
  * Equipment item data
  */
 export interface FoundryEquipmentData {
-  tier: EquipmentTier | 'epic';
   category: string; // 'weapon', 'armor', 'tool', etc.
   description?: string;
   rarity: EquipmentRarity;

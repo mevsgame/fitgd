@@ -9,10 +9,8 @@ import {
   deleteClock,
 } from '../slices/clockSlice';
 import {
-  selectConsumableClockBySubtype,
   selectAddictionClockByCharacter,
   selectStimsAvailable,
-  selectConsumableAvailable,
 } from '../selectors/clockSelectors';
 import { isClockFilled } from '../validators/clockValidator';
 import { generateId } from '../utils/uuid';
@@ -20,25 +18,10 @@ import { generateId } from '../utils/uuid';
 /**
  * Resource Management Helpers
  *
- * Application layer functions for managing consumables and stims with proper validation.
+ * Application layer functions for managing stims and momentum resets with proper validation.
  * These coordinate multiple slices (character, clock) and enforce game rules.
  */
 
-export interface UseConsumableParams {
-  crewId: string;
-  characterId: string;
-  consumableType: string; // e.g., 'frag_grenades', 'stims', 'medkits'
-  depletionRoll: number; // d6 result (1-6)
-  userId?: string;
-}
-
-export interface UseConsumableResult {
-  clockId: string;
-  segmentsAdded: number;
-  newSegments: number;
-  isFrozen: boolean; // True if this use filled/froze the clock
-  tierDowngraded: boolean; // True if tier was downgraded
-}
 
 export interface UseStimParams {
   crewId: string;
@@ -53,96 +36,6 @@ export interface UseStimResult {
   newSegments: number;
   isAddicted: boolean; // True if this use filled the addiction clock
   addictTraitId?: string; // ID of the "Addict" trait if added
-}
-
-/**
- * Use a consumable item (grenades, medkits, etc.)
- *
- * Validates that the consumable is not frozen, then adds depletion segments.
- * If the clock fills, it will be frozen and tier will be downgraded.
- *
- * @param store - Redux store
- * @param params - Consumable usage parameters
- * @returns Result with clock state
- * @throws Error if consumable is frozen/inaccessible
- */
-export function useConsumable(
-  store: Store,
-  params: UseConsumableParams
-): UseConsumableResult {
-  const { crewId, characterId, consumableType, depletionRoll, userId } = params;
-
-  // Validate depletion roll
-  if (depletionRoll < 1 || depletionRoll > 6) {
-    throw new Error(`Depletion roll must be 1-6 (got ${depletionRoll})`);
-  }
-
-  const state = store.getState();
-
-  // Check if consumable is available (not frozen)
-  const isAvailable = selectConsumableAvailable(state, crewId, consumableType);
-  if (!isAvailable) {
-    throw new Error(
-      `Consumable "${consumableType}" is no longer accessible (depleted)`
-    );
-  }
-
-  // Get or create consumable clock for this character
-  // Note: Consumables are tracked per-character but frozen crew-wide
-  let clock = selectConsumableClockBySubtype(state, characterId, consumableType);
-
-  if (!clock) {
-    // Create new consumable clock
-    // Default to common (8 segments) unless specified in metadata
-    store.dispatch(
-      createClock({
-        entityId: characterId,
-        clockType: 'consumable',
-        subtype: consumableType,
-        rarity: 'common', // TODO: Should be passed as param or config
-        tier: 'accessible',
-        userId,
-      })
-    );
-
-    // Refresh state after creation
-    const newState = store.getState();
-    clock = selectConsumableClockBySubtype(newState, characterId, consumableType);
-
-    if (!clock) {
-      throw new Error('Failed to create consumable clock');
-    }
-  }
-
-  const clockId = clock.id;
-  const previousSegments = clock.segments;
-
-  // Add depletion segments
-  store.dispatch(
-    addSegments({
-      clockId,
-      amount: depletionRoll,
-      userId,
-    })
-  );
-
-  // Get updated clock state
-  const updatedState = store.getState();
-  const updatedClock = updatedState.clocks.byId[clockId];
-
-  const isFrozen = updatedClock.metadata?.frozen === true;
-  const tierDowngraded =
-    previousSegments < updatedClock.maxSegments &&
-    updatedClock.segments >= updatedClock.maxSegments &&
-    updatedClock.metadata?.tier === 'inaccessible';
-
-  return {
-    clockId,
-    segmentsAdded: depletionRoll,
-    newSegments: updatedClock.segments,
-    isFrozen,
-    tierDowngraded,
-  };
 }
 
 /**

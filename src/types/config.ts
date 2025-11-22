@@ -29,13 +29,6 @@ export interface GameConfig {
       maxClocks: number;
       segments: ClockSize;
     };
-    consumable: {
-      segments: {
-        common: ClockSize;
-        uncommon: ClockSize;
-        epic: ClockSize;
-      };
-    };
     addiction: {
       segments: ClockSize;
       resetReduction: number;

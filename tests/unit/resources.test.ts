@@ -6,15 +6,12 @@ import clockReducer from '../../src/slices/clockSlice';
 import { createCharacter } from '../../src/slices/characterSlice';
 import { createCrew } from '../../src/slices/crewSlice';
 import {
-  useConsumable,
   useStim,
   performMomentumReset,
 } from '../../src/resources';
 import {
-  selectConsumableClockBySubtype,
   selectAddictionClockByCharacter,
   selectStimsAvailable,
-  selectConsumableAvailable,
 } from '../../src/selectors/clockSelectors';
 import type { RootState } from '../../src/store';
 
@@ -73,182 +70,6 @@ describe('Resource Management', () => {
     store.dispatch({
       type: 'crews/addCharacterToCrew',
       payload: { crewId, characterId },
-    });
-  });
-
-  describe('useConsumable', () => {
-    it('should create consumable clock on first use', () => {
-      const result = useConsumable(store, {
-        crewId,
-        characterId,
-        consumableType: 'frag_grenades',
-        depletionRoll: 3,
-      });
-
-      expect(result.clockId).toBeDefined();
-      expect(result.segmentsAdded).toBe(3);
-      expect(result.newSegments).toBe(3);
-      expect(result.isFrozen).toBe(false);
-      expect(result.tierDowngraded).toBe(false);
-
-      // Verify clock was created
-      const state = store.getState() as RootState;
-      const clock = selectConsumableClockBySubtype(
-        state,
-        characterId,
-        'frag_grenades'
-      );
-      expect(clock).toBeDefined();
-      expect(clock?.segments).toBe(3);
-      expect(clock?.maxSegments).toBe(8); // Common rarity
-    });
-
-    it('should add segments to existing consumable clock', () => {
-      // First use
-      const result1 = useConsumable(store, {
-        crewId,
-        characterId,
-        consumableType: 'frag_grenades',
-        depletionRoll: 3,
-      });
-
-      // Second use
-      const result2 = useConsumable(store, {
-        crewId,
-        characterId,
-        consumableType: 'frag_grenades',
-        depletionRoll: 2,
-      });
-
-      expect(result2.clockId).toBe(result1.clockId);
-      expect(result2.segmentsAdded).toBe(2);
-      expect(result2.newSegments).toBe(5);
-      expect(result2.isFrozen).toBe(false);
-    });
-
-    it('should freeze consumable clock when filled', () => {
-      // Use consumable multiple times to fill clock (8 segments)
-      useConsumable(store, {
-        crewId,
-        characterId,
-        consumableType: 'frag_grenades',
-        depletionRoll: 3,
-      });
-
-      const result = useConsumable(store, {
-        crewId,
-        characterId,
-        consumableType: 'frag_grenades',
-        depletionRoll: 5, // 3 + 5 = 8 (filled)
-      });
-
-      expect(result.newSegments).toBe(8);
-      expect(result.isFrozen).toBe(true);
-      expect(result.tierDowngraded).toBe(true);
-
-      // Verify clock is frozen
-      const state = store.getState() as RootState;
-      const clock = selectConsumableClockBySubtype(
-        state,
-        characterId,
-        'frag_grenades'
-      );
-      expect(clock?.metadata?.frozen).toBe(true);
-      expect(clock?.metadata?.tier).toBe('inaccessible');
-    });
-
-    it('should reject usage when consumable is frozen', () => {
-      // Fill the clock (8 segments for common rarity)
-      useConsumable(store, {
-        crewId,
-        characterId,
-        consumableType: 'frag_grenades',
-        depletionRoll: 4,
-      });
-      useConsumable(store, {
-        crewId,
-        characterId,
-        consumableType: 'frag_grenades',
-        depletionRoll: 4, // 4 + 4 = 8 (filled)
-      });
-
-      // Try to use again
-      expect(() =>
-        useConsumable(store, {
-          crewId,
-          characterId,
-          consumableType: 'frag_grenades',
-          depletionRoll: 1,
-        })
-      ).toThrow('no longer accessible');
-    });
-
-    it('should validate depletion roll is 1-6', () => {
-      expect(() =>
-        useConsumable(store, {
-          crewId,
-          characterId,
-          consumableType: 'frag_grenades',
-          depletionRoll: 0,
-        })
-      ).toThrow('must be 1-6');
-
-      expect(() =>
-        useConsumable(store, {
-          crewId,
-          characterId,
-          consumableType: 'frag_grenades',
-          depletionRoll: 7,
-        })
-      ).toThrow('must be 1-6');
-    });
-
-    it('should track different consumable types separately', () => {
-      const grenades = useConsumable(store, {
-        crewId,
-        characterId,
-        consumableType: 'frag_grenades',
-        depletionRoll: 3,
-      });
-
-      const medkits = useConsumable(store, {
-        crewId,
-        characterId,
-        consumableType: 'medkits',
-        depletionRoll: 2,
-      });
-
-      expect(grenades.clockId).not.toBe(medkits.clockId);
-      expect(grenades.newSegments).toBe(3);
-      expect(medkits.newSegments).toBe(2);
-    });
-
-    it('should check availability with selector', () => {
-      // Available initially
-      let state = store.getState() as RootState;
-      expect(
-        selectConsumableAvailable(state, characterId, 'frag_grenades')
-      ).toBe(true);
-
-      // Fill clock (8 segments for common rarity)
-      useConsumable(store, {
-        crewId,
-        characterId,
-        consumableType: 'frag_grenades',
-        depletionRoll: 4,
-      });
-      useConsumable(store, {
-        crewId,
-        characterId,
-        consumableType: 'frag_grenades',
-        depletionRoll: 4, // 4 + 4 = 8 (filled)
-      });
-
-      // Not available after freezing
-      state = store.getState() as RootState;
-      expect(
-        selectConsumableAvailable(state, characterId, 'frag_grenades')
-      ).toBe(false);
     });
   });
 

@@ -28,13 +28,6 @@ export const DEFAULT_CONFIG: GameConfig = {
       maxClocks: 3, // Max 3 harm clocks per character
       segments: 6,  // 6-segment harm clocks
     },
-    consumable: {
-      segments: {
-        common: 8,
-        uncommon: 6,
-        epic: 4,
-      },
-    },
     addiction: {
       segments: 8,          // 8-segment addiction clock
       resetReduction: 2,    // Reduce by 2 on Momentum Reset

@@ -49,13 +49,10 @@ function determineClockColor(clock: Clock): ClockColor {
     case 'harm':
       // Morale harm uses grey, physical harm uses red
       if (clock.subtype?.toLowerCase().includes('morale') ||
-          clock.subtype?.toLowerCase().includes('shaken')) {
+        clock.subtype?.toLowerCase().includes('shaken')) {
         return 'grey';
       }
       return 'red';
-
-    case 'consumable':
-      return 'green';
 
     case 'addiction':
       return 'yellow';

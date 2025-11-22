@@ -79,7 +79,6 @@ describe('characterSlice', () => {
                     equipment: {
                         id: `item-${i}`,
                         name: `Item ${i}`,
-                        tier: 'accessible',
                         category: 'gear',
                         rarity: 'common',
                         description: 'Test item',

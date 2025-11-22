@@ -6,13 +6,11 @@ import {
   findClockWithFewestSegments,
   validateSingleAddictionClock,
   isClockFilled,
-  validateConsumableMetadata,
   validateClockExists,
   validateProgressClockSize,
 } from '../validators/clockValidator';
 import { isOrphanedCommand } from '../utils/commandUtils';
 import type { Clock, ClockSize, ClockType, Command, ProgressClockCategory } from '../types';
-import { EquipmentRarity, EquipmentTier } from '@/types/equipment';
 
 /**
  * Clock Slice State
@@ -48,8 +46,6 @@ interface CreateClockPayload {
   entityId: string;
   clockType: ClockType;
   subtype?: string;
-  rarity?: EquipmentRarity;
-  tier?: EquipmentTier;
   maxSegments?: ClockSize; // For progress clocks (4, 6, 8, or 12)
   category?: ProgressClockCategory;
   description?: string;
@@ -166,20 +162,6 @@ function getClocksByTypeAndEntity(
 }
 
 /**
- * Helper: Get clocks by type and subtype
- */
-function getClocksByTypeAndSubtype(
-  state: ClockState,
-  clockType: ClockType,
-  subtype: string
-): Clock[] {
-  const typeClocks = state.byType[clockType] || [];
-  return typeClocks
-    .map((id) => state.byId[id])
-    .filter((clock) => clock.subtype === subtype);
-}
-
-/**
  * Helper: Get all clocks of a specific type
  */
 function getClocksByType(
@@ -261,10 +243,6 @@ const clockSlice = createSlice({
         const timestamp = Date.now();
 
         // Type-specific validation and metadata
-        if (payload.clockType === 'consumable') {
-          validateConsumableMetadata(payload.rarity, payload.tier);
-        }
-
         if (payload.clockType === 'progress') {
           if (!payload.maxSegments) {
             throw new Error('Progress clocks require maxSegments (4, 6, 8, or 12)');
@@ -274,20 +252,13 @@ const clockSlice = createSlice({
 
         const maxSegments = getMaxSegments(
           payload.clockType,
-          payload.rarity,
           payload.maxSegments
         );
 
         // Build metadata based on clock type
         let metadata: Record<string, unknown> | undefined;
 
-        if (payload.clockType === 'consumable') {
-          metadata = {
-            rarity: payload.rarity,
-            tier: payload.tier,
-            frozen: false,
-          };
-        } else if (payload.clockType === 'addiction') {
+        if (payload.clockType === 'addiction') {
           metadata = {
             frozen: false,
           };
@@ -339,39 +310,6 @@ const clockSlice = createSlice({
             `tried to add ${amount} to ${oldSegments}/${clock.maxSegments}, ` +
             `capped to ${clock.segments}/${clock.maxSegments}`
           );
-        }
-
-        // Special handling for consumable clocks when filled
-        if (
-          clock.clockType === 'consumable' &&
-          !wasFilled &&
-          isClockFilled(clock)
-        ) {
-          // Freeze this clock
-          if (clock.metadata) {
-            clock.metadata.frozen = true;
-
-            // Downgrade tier
-            if (clock.metadata.tier === 'accessible') {
-              clock.metadata.tier = 'inaccessible';
-            }
-          }
-
-          // Freeze all other clocks of same subtype
-          if (clock.subtype) {
-            const relatedClocks = getClocksByTypeAndSubtype(
-              state,
-              'consumable',
-              clock.subtype
-            );
-
-            relatedClocks.forEach((relatedClock) => {
-              if (relatedClock.id !== clock.id && relatedClock.metadata) {
-                relatedClock.metadata.frozen = true;
-                relatedClock.updatedAt = Date.now();
-              }
-            });
-          }
         }
 
         // Special handling for addiction clocks when filled

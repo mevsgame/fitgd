@@ -51,7 +51,6 @@ export function exportCharacterToFoundry(
     name: equipment.name,
     type: 'equipment' as const,
     system: {
-      tier: equipment.tier,
       category: equipment.category,
       description: equipment.description,
       rarity: equipment.rarity,
@@ -122,7 +121,6 @@ export function importCharacterFromFoundry(
       return {
         id: item._id,
         name: item.name,
-        tier: equipData.tier,
         category: equipData.category,
         description: equipData.description,
         rarity: equipData.rarity || 'common',
