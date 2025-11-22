@@ -54,6 +54,22 @@
           </select>
         </div>
         {{/if}}
+
+        <!-- Equipment Selection (only in Equipment mode) -->
+        {{#if (eq playerState.rollMode 'equipment')}}
+        <div class="form-group equipment-selection">
+          <label>Active Equipment:</label>
+          <select name="active-equipment" class="active-equipment-select">
+            <option value="">-- Select Equipment --</option>
+            {{#each equippedItems}}
+            <option value="{{this.id}}"
+              {{#if (eq ../activeEquipmentItem.id this.id)}}selected{{/if}}>
+              {{this.name}} ({{this.category}})
+            </option>
+            {{/each}}
+          </select>
+        </div>
+        {{/if}}
       </div>
       {{/if}}
 
@@ -172,15 +188,45 @@
           <strong>Mode: Synergy</strong><br>
           {{capitalize playerState.selectedApproach}} ({{lookup character.approaches playerState.selectedApproach}}d) + {{capitalize playerState.secondaryApproach}} ({{lookup character.approaches playerState.secondaryApproach}}d)
         </div>
+        {{else if (eq playerState.rollMode 'equipment')}}
+        <div class="plan-line equipment-info">
+          <strong>Mode: Equipment</strong><br>
+          {{capitalize playerState.selectedApproach}} ({{lookup character.approaches playerState.selectedApproach}}d) + {{activeEquipmentItem.name}}
+          {{#if equipmentEffectPreview.diceBonus}}
+            (+{{equipmentEffectPreview.diceBonus}}d)
+          {{/if}}
+          {{#if equipmentEffectPreview.dicePenalty}}
+            (-{{equipmentEffectPreview.dicePenalty}}d)
+          {{/if}}
+        </div>
         {{else}}
         <div class="plan-line">Approach: {{capitalize playerState.selectedApproach}} ({{lookup character.approaches
           playerState.selectedApproach}}d)</div>
         {{/if}}
-        <div class="plan-line">Position: {{uppercase (default playerState.position "risky")}} → <span
-            class="{{#if playerState.traitTransaction}}improved{{/if}}">{{uppercase improvedPosition}}</span></div>
-        <div class="plan-line">Effect: {{uppercase (default playerState.effect "standard")}} → <span
-            class="{{#if (and playerState.pushed (eq playerState.pushType 'improved-effect'))}}improved{{/if}}">{{uppercase
-            improvedEffect}}</span></div>
+
+        <!-- Position with Equipment Modifiers -->
+        <div class="plan-line">
+          Position: {{uppercase (default playerState.position "risky")}}
+          {{#if equipmentEffectPreview.positionBonus}}
+            <span class="equipment-modifier positive">→ {{uppercase equipmentPositionProposal}} (equipment improves by {{equipmentEffectPreview.positionBonus}})</span>
+          {{else if equipmentEffectPreview.positionPenalty}}
+            <span class="equipment-modifier negative">→ {{uppercase equipmentPositionProposal}} (equipment worsens by {{equipmentEffectPreview.positionPenalty}})</span>
+          {{else}}
+            → <span class="{{#if playerState.traitTransaction}}improved{{/if}}">{{uppercase improvedPosition}}</span>
+          {{/if}}
+        </div>
+
+        <!-- Effect with Equipment Modifiers -->
+        <div class="plan-line">
+          Effect: {{uppercase (default playerState.effect "standard")}}
+          {{#if equipmentEffectPreview.effectBonus}}
+            <span class="equipment-modifier positive">→ {{uppercase equipmentEffectProposal}} (equipment improves by {{equipmentEffectPreview.effectBonus}})</span>
+          {{else if equipmentEffectPreview.effectPenalty}}
+            <span class="equipment-modifier negative">→ {{uppercase equipmentEffectProposal}} (equipment worsens by {{equipmentEffectPreview.effectPenalty}})</span>
+          {{else}}
+            → <span class="{{#if (and playerState.pushed (eq playerState.pushType 'improved-effect'))}}improved{{/if}}">{{uppercase improvedEffect}}</span>
+          {{/if}}
+        </div>
 
         {{#if improvements.length}}
         <div class="plan-line improvements">

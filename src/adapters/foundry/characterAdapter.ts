@@ -55,7 +55,7 @@ export function exportCharacterToFoundry(
       category: equipment.category,
       description: equipment.description,
       rarity: equipment.rarity,
-      tags: equipment.tags,
+      passive: equipment.passive,
     },
   }));
 
@@ -126,7 +126,7 @@ export function importCharacterFromFoundry(
         category: equipData.category,
         description: equipData.description,
         rarity: equipData.rarity || 'common',
-        tags: equipData.tags || [],
+        passive: equipData.passive || false,
         equipped: false,
         acquiredAt: Date.now()
       };

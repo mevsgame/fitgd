@@ -76,20 +76,16 @@ export const selectDicePool = createSelector(
       // Synergy: Add Secondary Approach Rating
       pool += character.approaches[playerState.secondaryApproach] || 0;
     } else if (mode === 'equipment') {
-      // Equipment: Add +1d ONLY if equipped item has 'bonus' tag
-      // We check all items in equippedForAction. If ANY has 'bonus', we add +1d (max +1d from equipment).
-      // The rules say "Equipment (+1d)". Usually implies one bonus die from gear.
+      // Equipment: Apply category-based effects
       if (playerState.equippedForAction && playerState.equippedForAction.length > 0) {
-        // We need to look up the actual equipment objects to check tags
-        // Since we don't have the equipment list in the arguments of this selector,
-        // we rely on the character object which is already selected.
-        const hasBonusItem = playerState.equippedForAction.some(id => {
-          const item = character.equipment.find(e => e.id === id);
-          return item && item.equipped && item.tags.includes('bonus');
-        });
+        const equipmentId = playerState.equippedForAction[0]; // First (primary) equipment item
+        const item = character.equipment.find(e => e.id === equipmentId);
 
-        if (hasBonusItem) {
-          pool += 1;
+        if (item && item.equipped) {
+          // Get equipment effect from config based on category
+          const { diceBonus = 0, dicePenalty = 0 } = DEFAULT_CONFIG.equipment.categories[item.category]?.effect || {};
+          pool += diceBonus;
+          pool -= dicePenalty;
         }
       }
     }

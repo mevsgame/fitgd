@@ -83,7 +83,7 @@ describe('characterSlice', () => {
                         category: 'gear',
                         rarity: 'common',
                         description: 'Test item',
-                        tags: [],
+                        passive: false,
                         equipped: false,
                         acquiredAt: Date.now(),
                     },

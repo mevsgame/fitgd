@@ -47,10 +47,10 @@ export interface Equipment {
   name: string;
   tier: EquipmentTier;
   rarity: EquipmentRarity;
-  category: string; // e.g., 'weapon', 'armor', 'tool'
+  category: string; // e.g., 'weapon', 'armor', 'tool' - maps to equipmentCategories in config
   description: string;
   img?: string; // Optional: image path
-  tags: string[];
+  passive: boolean; // If true, can't be selected for actions (passive effects only)
 
   // Instance state
   equipped: boolean; // Is currently equipped?

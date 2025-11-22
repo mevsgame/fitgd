@@ -15,12 +15,13 @@ import type { TraitTransaction, ConsequenceTransaction } from '@/types/playerRou
 import { selectCanUseRally } from '@/selectors/characterSelectors';
 import { selectStimsAvailable } from '@/selectors/clockSelectors';
 
-import { selectActiveEquipment, selectPassiveEquipment, selectCurrentLoad } from '@/selectors/equipmentSelectors';
+import { selectActiveEquipment, selectPassiveEquipment, selectCurrentLoad, selectEquipmentEffect } from '@/selectors/equipmentSelectors';
 import { selectDicePool, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect } from '@/selectors/playerRoundStateSelectors';
 
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
 
 import { calculateOutcome } from '@/utils/diceRules';
+import { improvePosition, worsenPosition, improveEffect, worsenEffect } from '@/utils/positionEffectHelpers';
 
 import { FlashbackTraitsDialog } from '../dialogs/FlashbackTraitsDialog';
 import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog, RallyDialog } from '../dialogs/index';
@@ -425,6 +426,48 @@ export class PlayerActionWidget extends Application {
       // Passive equipment for display
       passiveEquipment: selectPassiveEquipment(this.character),
 
+      // Equipment effect preview (for plan display)
+      equipmentEffectPreview: (() => {
+        if (this.playerState?.rollMode !== 'equipment' || !this.playerState?.equippedForAction?.[0]) {
+          return {};
+        }
+        return selectEquipmentEffect(this.character, this.playerState.equippedForAction[0]);
+      })(),
+
+      // Equipment position proposal (with modifiers)
+      equipmentPositionProposal: (() => {
+        if (this.playerState?.rollMode !== 'equipment' || !this.playerState?.equippedForAction?.[0]) {
+          return this.playerState?.position || 'risky';
+        }
+        const effect = selectEquipmentEffect(this.character, this.playerState.equippedForAction[0]);
+        let pos = (this.playerState?.position || 'risky') as Position;
+
+        if (effect.positionBonus) {
+          pos = improvePosition(pos, effect.positionBonus);
+        } else if (effect.positionPenalty) {
+          pos = worsenPosition(pos, effect.positionPenalty);
+        }
+
+        return pos;
+      })(),
+
+      // Equipment effect proposal (with modifiers)
+      equipmentEffectProposal: (() => {
+        if (this.playerState?.rollMode !== 'equipment' || !this.playerState?.equippedForAction?.[0]) {
+          return this.playerState?.effect || 'standard';
+        }
+        const effect = selectEquipmentEffect(this.character, this.playerState.equippedForAction[0]);
+        let eff = (this.playerState?.effect || 'standard') as Effect;
+
+        if (effect.effectBonus) {
+          eff = improveEffect(eff, effect.effectBonus);
+        } else if (effect.effectPenalty) {
+          eff = worsenEffect(eff, effect.effectPenalty);
+        }
+
+        return eff;
+      })(),
+
       // Consequence transaction data (for GM_RESOLVING_CONSEQUENCE state)
       ...(this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE' ? this._getConsequenceData(state) : {}),
     };
@@ -629,10 +672,14 @@ export class PlayerActionWidget extends Application {
         type: 'playerRoundState/setActionPlan',
         payload: {
           characterId: this.characterId,
+          approach: this.playerState?.selectedApproach || 'force',
           equippedForAction: equipmentId ? [equipmentId] : [],
+          rollMode: 'equipment', // Ensure mode stays equipment
+          position: this.playerState?.position || 'risky',
+          effect: this.playerState?.effect || 'standard',
         },
       },
-      { affectedReduxIds: [asReduxId(this.characterId)], silent: true }
+      { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
     );
   }
 

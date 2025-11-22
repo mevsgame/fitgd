@@ -6,6 +6,7 @@
  */
 
 import { ClockSize } from "./clock";
+import type { EquipmentCategoryConfig } from "./equipment";
 
 export interface GameConfig {
   character: {
@@ -46,6 +47,10 @@ export interface GameConfig {
 
   rally: {
     maxMomentumToUse: number; // Rally only available at 0-3 Momentum
+  };
+
+  equipment: {
+    categories: Record<string, EquipmentCategoryConfig>;
   };
 
   resolution: {

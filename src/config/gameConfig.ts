@@ -1,4 +1,5 @@
 import type { GameConfig } from '../types';
+import type { EquipmentCategoryConfig } from '../types/equipment';
 
 /**
  * Default Game Configuration
@@ -45,6 +46,41 @@ export const DEFAULT_CONFIG: GameConfig = {
 
   rally: {
     maxMomentumToUse: 3, // Rally only available at 0-3 Momentum
+  },
+
+  equipment: {
+    categories: {
+      'weapon': {
+        name: 'Weapon',
+        effect: { diceBonus: 1 },
+        description: 'Standard melee or ranged weapon',
+      },
+      'heavy-weapon': {
+        name: 'Heavy Weapon',
+        effect: { diceBonus: 2, positionPenalty: 1 },
+        description: 'Powerful but unwieldy (heavy bolter, plasma cannon)',
+      },
+      'precision-tool': {
+        name: 'Precision Tool',
+        effect: { effectBonus: 1 },
+        description: 'Improves quality of work (surgical tools, lockpicks)',
+      },
+      'stealth-gear': {
+        name: 'Stealth Gear',
+        effect: { positionBonus: 1 },
+        description: 'Reduces risk of detection',
+      },
+      'armor': {
+        name: 'Armor',
+        effect: { positionBonus: 1, dicePenalty: 1 },
+        description: 'Protective but restrictive',
+      },
+      'loud-weapon': {
+        name: 'Loud Weapon',
+        effect: { diceBonus: 1, positionPenalty: 1 },
+        description: 'Effective but attracts attention (bolter, grenade launcher)',
+      },
+    } as Record<string, EquipmentCategoryConfig>,
   },
 
   resolution: {
