@@ -127,7 +127,8 @@ Refined interface for defining item properties.
 
 ### Load Management
 - **Load Limit**: Characters have a maximum load (default: **5**).
-- **Locking**: Once an item is equipped during a mission, it is **locked** until the next **Momentum Reset**.
+- **Equipped**: Items marked as "Equipped" are part of your current loadout. They appear in the Player Action Widget dropdowns and are available for use. You can freely unequip them *unless* they are locked.
+- **Locked**: Once an item is **used** in a roll (or acquired via Flashback), it becomes **Locked**. Locked items cannot be unequipped until the next **Momentum Reset**. This allows you to "auto-equip" a standard loadout but change your mind about unused gear during the mission.
 - **Validation**: The UI prevents equipping items if it would exceed the max load.
 
 ### Item Tiers & Acquisition
@@ -148,8 +149,8 @@ Refined interface for defining item properties.
 
 ### Augmentations
 - **Nature**: Permanent cybernetic or biological enhancements.
-- **Usage**: Do not count towards Load.
-- **Activation**: Cannot be "equipped" by the player. Instead, the **GM** must explicitly enable them for a specific roll via the Player Action Widget if they are relevant to the situation.
+- **Usage**: Count towards Load like any other equipment.
+- **Activation**: Always equipped. Can be explicitly enabled for a specific roll via the Player Action Widget if relevant.
 - **Effect**: When enabled, they provide their defined bonuses (Position, Effect, or Dice) to the current roll transaction.
 
 ## Rules Integration

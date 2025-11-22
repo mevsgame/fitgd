@@ -51,6 +51,7 @@ export interface Equipment {
   description: string;
   img?: string; // Optional: image path
   passive: boolean; // If true, can't be selected for actions (passive effects only)
+  tags?: string[]; // Optional: tags for categorization or bonus effects
 
   // Instance state
   equipped: boolean; // Is currently equipped?

@@ -297,7 +297,7 @@ export class EquipmentManagementDialog extends Application {
    */
   private _calculateLoad(): number {
     if (!this.character) return 0;
-    return this.character.equipment.filter((e) => e.type !== 'augmentation' && e.equipped).length;
+    return this.character.equipment.filter((e) => e.equipped).length;
   }
 
   /**

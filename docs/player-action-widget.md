@@ -101,7 +101,7 @@ The widget supports three distinct roll modes, selectable by the player during t
 3.  **Equipment Mode**:
     - **Dice Pool**: `Primary Approach` + `Equipment Bonus` (if any).
     - **Use Case**: Relying heavily on a specific item.
-    - **UI**: Reveals an "Active Equipment" dropdown. Selecting an item may grant dice pool modifiers or position/effect changes.
+    - **UI**: Reveals an "Active Equipment" dropdown. Selecting an item may grant dice pool modifiers or position/effect changes. **Note:** Using an item in a roll will **Lock** it for the remainder of the mission.
     - **Flashback Item**: Players can also create a temporary "Flashback Item" (costing Momentum) via the equipment dialog if they need a specific tool they didn't equip. See [Equipment Management](./mechanics-equipment.md).
 
 ### Complex Workflows

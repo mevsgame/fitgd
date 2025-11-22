@@ -250,7 +250,7 @@ You may consolidate three similar traits into a single broader one in two situat
 
 - **Load Limit:** Characters can equip a maximum number of items at once. The GM determines this limit at the start of each campaign (typically **5 items**).
 
-- **Locking Equipment:** Once an item is equipped, it remains equipped until the next Momentum Reset. You cannot unequip items during a session.
+- **Locking Equipment:** Items are **locked** once they are **used** in a roll (or acquired via Flashback). Until then, "equipped" items can be swapped freely, allowing you to adjust your loadout as the mission evolves. Locked items remain equipped until the next Momentum Reset.
 
 - **Consumables:** Single-use items that provide higher bonuses. After use, they remain equipped but become unusable. They continue to take up load space until the next Momentum Reset.
 

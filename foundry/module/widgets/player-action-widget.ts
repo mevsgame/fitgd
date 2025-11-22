@@ -669,7 +669,7 @@ export class PlayerActionWidget extends Application {
 
     // If a consumable is selected, mark it as depleted
     // (consumables are single-use and consumed immediately when selected)
-    if (equipmentId) {
+    if (equipmentId && this.character) {
       const equipment = this.character.equipment.find(e => e.id === equipmentId);
       if (equipment && isEquipmentConsumable(equipment)) {
         actions.push({
@@ -1006,6 +1006,7 @@ export class PlayerActionWidget extends Application {
       // Disable if not equipped and at max load
       const disabled = !isEquipped && currentLoad + loadCost > maxLoad;
 
+      const isBonus = item.tags?.includes('bonus');
       return `
                 <li style="margin-bottom: 5px; display: flex; align-items: center;">
                   <input type="checkbox" name="equipped" value="${item.id}" 
@@ -1189,6 +1190,20 @@ export class PlayerActionWidget extends Application {
 
       // Execute all roll outcome actions as batch
       const rollBatch = this.diceRollingHandler.createRollOutcomeBatch(dicePool, rollResult, outcome);
+
+      // Lock equipment used in this roll
+      if (playerState?.equippedForAction?.length) {
+        playerState.equippedForAction.forEach((equipmentId) => {
+          rollBatch.push({
+            type: 'characters/markEquipmentUsed',
+            payload: {
+              characterId: this.characterId,
+              equipmentId,
+            },
+          });
+        });
+      }
+
       console.log('FitGD | Roll outcome batch actions:', rollBatch);
 
       await game.fitgd.bridge.executeBatch(
