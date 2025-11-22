@@ -24,14 +24,11 @@
         </select>
       </div>
 
-      <!-- Synergy Mode Section -->
+      <!-- Synergy/Equipment Mode Selection -->
       {{#if playerState.selectedApproach}}
-      <div class="synergy-section">
+      <div class="mode-selection">
         <label>Mode:</label>
         <div class="mode-buttons">
-          <button type="button" data-action="set-mode" data-mode="standard" class="{{#if (eq playerState.rollMode 'standard')}}active{{/if}}">
-            Standard
-          </button>
           <button type="button" data-action="set-mode" data-mode="synergy" class="{{#if (eq playerState.rollMode 'synergy')}}active{{/if}}">
             Synergy
           </button>
@@ -42,7 +39,7 @@
 
         <!-- Secondary Approach (only in Synergy mode) -->
         {{#if (eq playerState.rollMode 'synergy')}}
-        <div class="form-group secondary-approach-group">
+        <div class="secondary-approach-selection">
           <label>Secondary Approach:</label>
           <select name="secondary-approach" class="secondary-approach-select">
             <option value="">-- Select Secondary --</option>
@@ -57,7 +54,7 @@
 
         <!-- Equipment Selection (only in Equipment mode) -->
         {{#if (eq playerState.rollMode 'equipment')}}
-        <div class="form-group equipment-selection">
+        <div class="equipment-selection">
           <label>Active Equipment:</label>
           <select name="active-equipment" class="active-equipment-select">
             <option value="">-- Select Equipment --</option>

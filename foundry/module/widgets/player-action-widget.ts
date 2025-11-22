@@ -618,12 +618,10 @@ export class PlayerActionWidget extends Application {
    */
   private async _onRollModeChange(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
-    const mode = event.currentTarget.dataset.mode as 'synergy' | 'equipment' | 'standard';
+    const mode = event.currentTarget.dataset.mode as 'synergy' | 'equipment';
 
-    let newMode = mode;
-    if (this.playerState?.rollMode === mode) {
-      newMode = 'standard'; // Toggle off by selecting standard mode
-    }
+    // Toggle mode: click to activate, click again to deactivate
+    const newMode = this.playerState?.rollMode === mode ? undefined : mode;
 
     await game.fitgd.bridge.execute(
       {
