@@ -8,6 +8,7 @@ This rule defines the workflow for documenting features in the docs/ directory. 
 
 ## Purpose
 To provide a lean, information-packed source of truth for the LLM when working on specific features, bridging the gap between high-level rules and code implementation.
+Your purpose is to provide foundation that cannot be implemented via unit or automated tests and would require manual testing.
 
 ## Workflow
 
@@ -29,12 +30,17 @@ Brief description of the feature's purpose and user flow.
 - **State Machine**: If the feature uses a state machine (like PlayerActionWidget), document the states and transitions.
 - **Transactions**: Does the feature use a transaction pattern (e.g., building up state in a widget before committing to persistent storage)? Document what is transient and when it gets committed.
 
-### 3. Implementation Details
+### 3. UI/UX Design
+- **Visuals**: Describe key visual states (e.g., "Locked", "Depleted", "Active").
+- **Interactions**: Document user interactions (e.g., "Hover to see details", "Click to toggle").
+- **Synchronized Views**: If the feature involves real-time sync (like Player Action Widget), explicitly document the **GM View** vs **Player View** and how they interact (e.g., "Turn Passing" flow).
+
+### 4. Implementation Details
 - **Handlers**: List any dedicated Handler classes (e.g., StimsWorkflowHandler) that encapsulate business logic.
 - **Bridge API**: How does this feature use the Bridge API for cross-client updates? (e.g., executeBatch, specific action types).
 - **UI Components**: List related Widgets, Dialogs, and Handlebars templates.
 
-### 4. Rules Integration
+### 5. Rules Integration
 - **Primary Rules**: Explicitly link to the relevant sections in vault/rules_primer.md.
 - **Edge Cases**: Document any specific rule interpretations or edge cases handled by this feature.
 

@@ -1,0 +1,49 @@
+# Character Sheet
+
+## Overview
+The **Character Sheet** is the primary interface for managing a character's long-term state. Unlike the ephemeral [Player Action Widget](./player-action-widget.md), which focuses on the current moment of action, the sheet handles character advancement, loadout, and trauma.
+
+## Architecture & State
+
+### Data Binding
+The sheet does not store state itself. Instead, it acts as a reactive view for the Redux store.
+- **Read**: In `getData()`, it fetches the character state from `state.characters.byId[actor.id]`.
+- **Write**: User interactions (clicks, inputs) trigger Redux actions via the `FoundryReduxBridge`.
+
+### Unified IDs
+The system uses a "Unified ID" strategy where the Foundry Actor ID is identical to the Redux Character ID. This eliminates the need for a mapping layer and simplifies data retrieval.
+
+### Redux Slices
+- **`characterSlice`**: Source of truth for traits, equipment, and action dots.
+- **`clockSlice`**: Source of truth for Harm and Addiction clocks.
+- **`crewSlice`**: Referenced to determine which crew the character belongs to (for Rally mechanics).
+
+## Implementation Details
+
+### Edit Mode
+The sheet features an explicit **Edit Mode** for Action Dots.
+- **View Mode**: Dots are read-only. Clicking them does nothing (or rolls, in future iterations).
+- **Edit Mode**: Clicking a dot updates the rating.
+    - *Logic*: Clicking the Nth dot sets rating to N. Clicking the current rating (N) sets it to N-1 (or 0 if it was 1).
+    - *Validation*: The sheet prevents saving if there are unallocated dots remaining.
+
+### Sub-Features
+
+#### Equipment Management
+- **Loadout**: Toggling the "Equipped" checkbox updates the character's current load.
+- **Browser**: Opens `EquipmentBrowserDialog` to add new items from the compendium or custom creation.
+
+#### Clock Integration
+- **Harm Clocks**: Created via `ClockCreationDialog`.
+- **Addiction Clock**: Automatically displayed if it exists in the Redux store.
+- **Interactivity**: GM can click clock segments to advance/reduce them directly on the sheet.
+
+#### Drag & Drop
+The sheet supports the `dragstart` event to create Macro hotbar shortcuts for:
+- **Rolls**: Dragging an Action name creates a roll macro.
+- **Traits**: Dragging a Trait creates a "Lean Into Trait" macro.
+
+## Rules Integration
+- **Action Ratings**: Enforces the 0-4 dot limit per action.
+- **Load Limits**: While the sheet allows over-equipping, it provides visual feedback (via the Widget) when load is exceeded.
+- **Trauma**: Harm clocks are the primary representation of long-term consequences.
