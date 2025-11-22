@@ -128,7 +128,13 @@ Refined interface for defining item properties.
 ### Load Management
 - **Load Limit**: Characters have a maximum load (default: **5**).
 - **Equipped**: Items marked as "Equipped" are part of your current loadout. They appear in the Player Action Widget dropdowns and are available for use. You can freely unequip them *unless* they are locked.
-- **Locked**: Once an item is **used** in a roll (or acquired via Flashback), it becomes **Locked**. Locked items cannot be unequipped until the next **Momentum Reset**. This allows you to "auto-equip" a standard loadout but change your mind about unused gear during the mission.
+- **Locked**: Once an item is **used** in a roll (or acquired via Flashback), it becomes **Locked**. Locked items cannot be unequipped until the next **Momentum Reset**:
+    - **When Locking Occurs**: Items are locked when the roll is committed (in the `_onRoll` handler), not when selected in the dropdown
+    - **Visual Indication**: Locked items show a lock icon and have their checkbox disabled in the Character Sheet
+    - **Enforcement**: The Character Sheet's `_onToggleEquipped` handler validates that locked items cannot be unequipped:
+        - If a player attempts to unequip a locked item, they see a warning: "This item is locked until Momentum Reset"
+        - The checkbox is automatically reverted to the checked state
+    - **Purpose**: This allows you to "auto-equip" a standard loadout but change your mind about unused gear during the mission. Once committed to using an item, you cannot swap it out.
 - **Validation**: The UI prevents equipping items if it would exceed the max load.
 
 ### Item Tiers & Acquisition

@@ -1056,7 +1056,7 @@ export class PlayerActionWidget extends Application {
                 type: 'characters/toggleEquipped',
                 payload: {
                   characterId: this.characterId,
-                  itemId: itemId,
+                  equipmentId: itemId,
                   equipped: false
                 }
               });
@@ -1068,7 +1068,7 @@ export class PlayerActionWidget extends Application {
                 type: 'characters/toggleEquipped',
                 payload: {
                   characterId: this.characterId,
-                  itemId: itemId,
+                  equipmentId: itemId,
                   equipped: true
                 }
               });
@@ -1080,6 +1080,25 @@ export class PlayerActionWidget extends Application {
                 { affectedReduxIds: [asReduxId(this.characterId)] }
               );
               ui.notifications?.info(`Updated loadout`);
+            }
+
+            // After equipping items, set roll mode to "equipment" and select first equipped item
+            if (newEquippedIds.size > 0) {
+              const firstEquippedId = [...newEquippedIds][0];
+              await game.fitgd.bridge.execute(
+                {
+                  type: 'playerRoundState/setActionPlan',
+                  payload: {
+                    characterId: this.characterId,
+                    approach: this.playerState?.selectedApproach || 'force',
+                    rollMode: 'equipment',
+                    equippedForAction: [firstEquippedId],
+                    position: this.playerState?.position || 'risky',
+                    effect: this.playerState?.effect || 'standard',
+                  },
+                },
+                { affectedReduxIds: [asReduxId(this.characterId)] }
+              );
             }
           }
         },
@@ -1287,21 +1306,21 @@ export class PlayerActionWidget extends Application {
   private async _onAcceptConsequences(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
 
-    console.log('FitGD | Player accepted consequences, transitioning to GM_RESOLVING_CONSEQUENCE');
+    console.log('FitGD | Player accepted consequences, transitioning to APPLYING_EFFECTS');
 
-    // Transition to GM_RESOLVING_CONSEQUENCE state
+    // Transition to APPLYING_EFFECTS state (next step after accepting consequences)
     await game.fitgd.bridge.execute(
       {
         type: 'playerRoundState/transitionState',
         payload: {
           characterId: this.characterId,
-          newState: 'GM_RESOLVING_CONSEQUENCE',
+          newState: 'APPLYING_EFFECTS',
         },
       },
       { affectedReduxIds: [asReduxId(this.characterId)], force: true } // Force re-render
     );
 
-    console.log('FitGD | Transitioned to GM_RESOLVING_CONSEQUENCE');
+    console.log('FitGD | Transitioned to APPLYING_EFFECTS');
   }
 
   /* -------------------------------------------- */

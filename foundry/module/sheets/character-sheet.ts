@@ -184,7 +184,7 @@ class FitGDCharacterSheet extends ActorSheet {
     html.find('.add-equipment-btn').click(this._onAddEquipment.bind(this));
     html.find('.edit-equipment-btn').click(this._onEditEquipment.bind(this));
     html.find('.delete-equipment-btn').click(this._onDeleteEquipment.bind(this));
-    html.find('.equipped-checkbox').change(this._onToggleEquipped.bind(this));
+    html.find('.equip-toggle').change(this._onToggleEquipped.bind(this));
     html.find('.auto-equip-toggle').change(this._onToggleAutoEquip.bind(this));
 
     // Drag events for hotbar macros
@@ -762,6 +762,25 @@ class FitGDCharacterSheet extends ActorSheet {
       const { equipmentId } = getEquipmentDataset(target);
       const characterId = this._getReduxId();
       if (!characterId) return;
+
+      // Get character data to check if item is locked
+      const character = game.fitgd.api.character.getCharacter(characterId);
+      if (!character) {
+        throw new Error('Character not found');
+      }
+
+      // Find the equipment item
+      const item = character.equipment.find((e: Equipment) => e.id === equipmentId);
+      if (!item) {
+        throw new Error('Equipment not found');
+      }
+
+      // Prevent unequipping locked items
+      if (!equipped && item.locked) {
+        ui.notifications?.warn('This item is locked until Momentum Reset');
+        target.checked = true; // Revert checkbox
+        return;
+      }
 
       await game.fitgd.bridge.execute({
         type: 'characters/toggleEquipped',

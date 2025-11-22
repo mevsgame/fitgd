@@ -29,7 +29,13 @@ The widget derives its UI state primarily from `playerRoundStateSlice`. The key 
     - Triggered on Failure/Partial Success.
     - GM selects consequences (Harm, Complication, Clock ticks).
     - Player can interrupt with **Stims**.
-5.  **COMPLETE**:
+    - **Valid Transitions**:
+        - To `APPLYING_EFFECTS`: When player accepts consequences
+        - To `STIMS_ROLLING`: When player uses stims to resist
+5.  **APPLYING_EFFECTS**:
+    - Consequences are applied to character/crew state.
+    - Transitions to `TURN_COMPLETE`.
+6.  **TURN_COMPLETE**:
     - Turn ends, widget closes or resets.
 
 ### Synchronized Views (GM vs Player)
@@ -83,8 +89,12 @@ The widget uses a **Transaction Pattern** to handle complex state changes that r
 - **Lifecycle**:
     1.  **Stage**: GM selects "Harm" or "Clock Tick". A `ConsequenceTransaction` object is created.
     2.  **Preview**: The Player sees exactly what is about to happen (e.g., "Taking 2 Harm: Broken Leg").
-    3.  **Interrupt**: The Player can use **Stims** to resist. This pauses the transaction.
-    4.  **Commit**: GM clicks "Apply". The Harm is added to the character and Clocks are updated in a single atomic batch.
+    3.  **Validation**: The "Accept Consequences" button is disabled until the GM fully configures the consequence:
+        - Button shows "Waiting for GM to configure consequence..." when disabled
+        - Button becomes enabled and shows "Accept Consequences" once GM completes configuration
+        - This prevents players from accepting consequences before they're properly set up
+    4.  **Interrupt**: The Player can use **Stims** to resist. This pauses the transaction.
+    5.  **Commit**: Player clicks "Accept Consequences". The state transitions to `APPLYING_EFFECTS`, and the Harm is added to the character and Clocks are updated in a single atomic batch.
 
 ### Roll Modes
 The widget supports three distinct roll modes, selectable by the player during the Decision Phase:
@@ -101,7 +111,20 @@ The widget supports three distinct roll modes, selectable by the player during t
 3.  **Equipment Mode**:
     - **Dice Pool**: `Primary Approach` + `Equipment Bonus` (if any).
     - **Use Case**: Relying heavily on a specific item.
-    - **UI**: Reveals an "Active Equipment" dropdown. Selecting an item may grant dice pool modifiers or position/effect changes. **Note:** Using an item in a roll will **Lock** it for the remainder of the mission.
+    - **UI**: Reveals an "Active Equipment" dropdown. Selecting an item may grant dice pool modifiers or position/effect changes.
+    - **Equipment Selection Flow**:
+        1. Player clicks "Equipment" button in "SPEND MOMENTUM" section
+        2. Equipment Management Dialog opens showing all character equipment
+        3. Player toggles items on/off (respecting load limits)
+        4. On "Save Loadout", the widget automatically:
+           - Sets `rollMode` to 'equipment'
+           - Pre-selects the first equipped item in the dropdown
+           - Makes the "Active Equipment" dropdown visible
+    - **Equipment Locking**: Using an item in a roll will **Lock** it for the remainder of the mission:
+        - Locked items cannot be unequipped via the character sheet (checkbox is disabled)
+        - Locked items remain locked until Momentum Reset occurs
+        - This prevents players from swapping equipment mid-mission after committing to using it
+        - The locking happens when the roll is committed, not when the item is selected
     - **Flashback Item**: Players can also create a temporary "Flashback Item" (costing Momentum) via the equipment dialog if they need a specific tool they didn't equip. See [Equipment Management](./mechanics-equipment.md).
 
 ### Complex Workflows

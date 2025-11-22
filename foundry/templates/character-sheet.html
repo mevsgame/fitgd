@@ -202,37 +202,47 @@
         </button>
       </div>
 
-      <span class="category-badge">{{item.category}}</span>
-    </div>
-    </div>
+      <div class="equipment-list">
+        {{#each system.equipment as |item|}}
+        <div class="equipment-item {{#if item.equipped}}equipped{{/if}} {{#if item.locked}}locked{{/if}}"
+          data-equipment-id="{{item.id}}">
+          <div class="equipment-main-row">
+            <div class="equipment-info">
+              <div class="equipment-name-wrapper">
+                <input type="checkbox" class="equip-toggle" data-equipment-id="{{item.id}}" {{checked item.equipped}}
+                  {{#if item.locked}}disabled{{/if}}
+                  title="{{#if item.locked}}Locked until Momentum Reset{{else}}Equip{{/if}}" />
+                <h4 class="equipment-name">{{item.name}}</h4>
+              </div>
+              <span class="category-badge">{{item.category}}</span>
+            </div>
 
-    <div class="equipment-controls">
-      <button class="edit-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Edit">
-        <i class="fas fa-edit"></i>
-      </button>
-      <button class="delete-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Remove">
-        <i class="fas fa-trash"></i>
-      </button>
-    </div>
-    </div>
+            <div class="equipment-controls">
+              <button class="edit-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Edit">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="delete-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Remove">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
 
-    {{#if item.description}}
-    <p class="equipment-description">{{item.description}}</p>
-    {{/if}}
+          {{#if item.description}}
+          <p class="equipment-description">{{item.description}}</p>
+          {{/if}}
 
-    {{#if (eq item.tier "inaccessible")}}
-    <p class="equipment-note">
-      <i class="fas fa-lock"></i> Requires flashback to acquire
-    </p>
-    {{/if}}
-    </div>
-    {{/each}}
-    </div>
-    {{else}}
-    <p class="no-equipment">
-      No equipment yet. Click "Add Equipment" to browse available items.
-    </p>
-    {{/if}}
+          {{#if (eq item.tier "inaccessible")}}
+          <p class="equipment-note">
+            <i class="fas fa-lock"></i> Requires flashback to acquire
+          </p>
+          {{/if}}
+        </div>
+        {{else}}
+        <p class="no-equipment">
+          No equipment yet. Click "Add Equipment" to browse available items.
+        </p>
+        {{/each}}
+      </div>
     </div>
 
   </section>
