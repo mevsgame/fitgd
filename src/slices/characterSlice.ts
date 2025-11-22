@@ -672,6 +672,12 @@ const characterSlice = createSlice({
           }
         }
 
+        // If unequipping, check if locked
+        if (!equipped && equipment.equipped && equipment.locked) {
+          // Block unequipping if locked
+          throw new Error(`Cannot unequip locked item ${equipment.name} until Momentum Reset`);
+        }
+
         equipment.equipped = equipped;
         character.updatedAt = Date.now();
 

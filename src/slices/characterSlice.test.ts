@@ -120,4 +120,48 @@ describe('characterSlice', () => {
 
         expect(state.byId[charId].equipment[5].equipped).toBe(false);
     });
+
+    it('should prevent unequipping locked items', () => {
+        const initialState = { byId: {}, allIds: [], history: [] };
+        const createAction = createCharacter({
+            name: 'Test Char',
+            traits: mockTraits,
+            approaches: mockApproaches,
+        });
+        let state = characterReducer(initialState, createAction);
+        const charId = state.allIds[0];
+
+        // Add a locked item
+        state = characterReducer(
+            state,
+            addEquipment({
+                characterId: charId,
+                equipment: {
+                    id: 'locked-item',
+                    name: 'Locked Item',
+                    type: 'equipment',
+                    tier: 'common',
+                    category: 'gear',
+                    description: 'Locked item',
+                    passive: false,
+                    equipped: true,
+                    locked: true,
+                    depleted: false,
+                    acquiredAt: Date.now(),
+                },
+            })
+        );
+
+        // Try to unequip locked item (Should throw)
+        expect(() => {
+            characterReducer(
+                state,
+                toggleEquipped({
+                    characterId: charId,
+                    equipmentId: 'locked-item',
+                    equipped: false,
+                })
+            );
+        }).toThrow(/Cannot unequip locked item/);
+    });
 });

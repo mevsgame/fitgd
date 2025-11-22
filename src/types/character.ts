@@ -66,4 +66,11 @@ export interface Equipment {
 
   // Flexible metadata
   metadata?: Record<string, unknown>; // Custom fields (damage, range, etc.)
+
+  // Modifiers
+  modifiers?: {
+    position?: 'none' | 'plus_one_step' | 'minus_one_step';
+    effect?: 'none' | 'plus_one_level' | 'minus_one_level';
+    dicePool?: number;
+  };
 }
