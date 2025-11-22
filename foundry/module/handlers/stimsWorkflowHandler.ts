@@ -97,7 +97,7 @@ export class StimsWorkflowHandler {
     }
 
     // Check if stims already used in this action
-    if (playerState?.pushed || playerState?.flashbackApplied) {
+    if (playerState?.stimsUsedThisAction) {
       return { isValid: false, reason: 'already-used' };
     }
 
