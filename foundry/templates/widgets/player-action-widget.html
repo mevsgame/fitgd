@@ -27,8 +27,8 @@
       <!-- Synergy/Equipment Mode Selection -->
       {{#if playerState.selectedApproach}}
       <div class="mode-selection">
-        <label>Mode:</label>
-        <div class="mode-buttons">
+        <label style="display: block; margin-bottom: 8px;">Mode:</label>
+        <div class="button-row">
           <button type="button" data-action="set-mode" data-mode="synergy" class="{{#if (eq playerState.rollMode 'synergy')}}active{{/if}}">
             Synergy
           </button>
@@ -39,14 +39,16 @@
 
         <!-- Secondary Approach (only in Synergy mode) -->
         {{#if (eq playerState.rollMode 'synergy')}}
-        <div class="secondary-approach-selection">
+        <div class="form-group">
           <label>Secondary Approach:</label>
-          <select name="secondary-approach" class="secondary-approach-select">
+          <select name="secondary-approach" class="secondary-approach-select approach-select">
             <option value="">-- Select Secondary --</option>
             {{#each approaches}}
+            {{#unless (eq this ../playerState.selectedApproach)}}
             <option value="{{this}}" {{#if (eq ../playerState.secondaryApproach this)}}selected{{/if}}>
               {{capitalize this}} ({{lookup ../character.approaches this}}d)
             </option>
+            {{/unless}}
             {{/each}}
           </select>
         </div>
@@ -54,9 +56,9 @@
 
         <!-- Equipment Selection (only in Equipment mode) -->
         {{#if (eq playerState.rollMode 'equipment')}}
-        <div class="equipment-selection">
+        <div class="form-group">
           <label>Active Equipment:</label>
-          <select name="active-equipment" class="active-equipment-select">
+          <select name="active-equipment" class="active-equipment-select approach-select">
             <option value="">-- Select Equipment --</option>
             {{#each equippedItems}}
             <option value="{{this.id}}"
@@ -339,12 +341,14 @@
     </div>
     <p class="consequence-message">You face consequences...</p>
 
+    {{#unless isGM}}
     <div class="action-buttons">
       <button type="button" data-action="use-stims" {{#if playerState.stimsUsedThisAction}}disabled{{/if}}>
         {{#if playerState.stimsUsedThisAction}}Stims Already Used{{else}}Use Stims & Reroll{{/if}}
       </button>
       <button type="button" data-action="accept-consequences" class="primary">Accept Consequences</button>
     </div>
+    {{/unless}}
   </div>
   {{/if}}
 
@@ -500,7 +504,8 @@
       </div>
       {{/if}}
     </div>
-    {{else}}
+
+    {{#unless isGM}}
     <!-- ==================== PLAYER ACTIONS ==================== -->
     <div class="player-consequence-actions">
       <h4>⚡ Your Options:</h4>
@@ -524,6 +529,7 @@
         </button>
       </div>
     </div>
+    {{/unless}}
     {{/if}}
   </div>
   {{/if}}

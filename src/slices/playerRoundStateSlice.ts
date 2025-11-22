@@ -57,6 +57,7 @@ interface SetActionPlanPayload {
   characterId: string;
   approach: keyof Approaches;
   secondaryApproach?: keyof Approaches;
+  equippedForAction?: string[];
   rollMode?: 'standard' | 'synergy' | 'equipment';
   position: Position;
   effect: Effect;
@@ -236,6 +237,7 @@ const playerRoundStateSlice = createSlice({
         characterId,
         approach: selectedApproach,
         secondaryApproach,
+        equippedForAction,
         rollMode,
         position,
         effect
@@ -250,6 +252,7 @@ const playerRoundStateSlice = createSlice({
         ...currentState,
         selectedApproach,
         secondaryApproach,
+        equippedForAction: equippedForAction !== undefined ? equippedForAction : currentState.equippedForAction,
         rollMode,
         position,
         effect,

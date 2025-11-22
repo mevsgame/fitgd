@@ -15,7 +15,7 @@
     <!-- Target Selection -->
     <div class="form-group">
       <label>Target Teammate:</label>
-      <select name="target" class="target-select" {{#unless selectedAction}}disabled{{/unless}}>
+      <select name="target" class="target-select">
         <option value="">-- Select Teammate --</option>
         {{#each teammates}}
         <option value="{{this.id}}" {{#if (eq ../selectedTargetId this.id)}}selected{{/if}}>

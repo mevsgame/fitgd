@@ -651,6 +651,7 @@ export class PlayerActionWidget extends Application {
           characterId: this.characterId,
           approach: this.playerState?.selectedApproach || 'force',
           secondaryApproach: secondaryApproach || undefined,
+          rollMode: 'synergy', // Ensure synergy mode stays active
           position: this.playerState?.position || 'risky',
           effect: this.playerState?.effect || 'standard',
         },
@@ -1120,72 +1121,89 @@ export class PlayerActionWidget extends Application {
 
     if (!this.diceRollingHandler) return;
 
-    const state = game.fitgd.store.getState();
-    const playerState = state.playerRoundState.byCharacterId[this.characterId];
-    const crew = this.crew;
+    try {
+      const state = game.fitgd.store.getState();
+      const playerState = state.playerRoundState.byCharacterId[this.characterId];
+      const crew = this.crew;
 
-    // Validate roll can proceed
-    const validation = this.diceRollingHandler.validateRoll(state, playerState, crew);
-    if (!validation.isValid) {
-      if (validation.reason === 'no-action-selected') {
-        ui.notifications?.warn('Please select an action first');
-      } else if (validation.reason === 'insufficient-momentum') {
-        ui.notifications?.error(
-          `Insufficient Momentum! Need ${validation.momentumNeeded}, have ${validation.momentumAvailable}`
-        );
-      }
-      return;
-    }
+      console.log('FitGD | _onRoll - playerState:', playerState);
 
-    // Spend momentum NOW (before rolling)
-    const momentumCost = this.diceRollingHandler.calculateMomentumCost(playerState);
-    if (this.crewId && momentumCost > 0) {
-      try {
-        game.fitgd.api.crew.spendMomentum({ crewId: this.crewId, amount: momentumCost });
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        ui.notifications?.error(`Failed to spend Momentum: ${errorMessage} `);
+      // Validate roll can proceed
+      const validation = this.diceRollingHandler.validateRoll(state, playerState, crew);
+      if (!validation.isValid) {
+        if (validation.reason === 'no-action-selected') {
+          ui.notifications?.warn('Please select an action first');
+        } else if (validation.reason === 'insufficient-momentum') {
+          ui.notifications?.error(
+            `Insufficient Momentum! Need ${validation.momentumNeeded}, have ${validation.momentumAvailable}`
+          );
+        }
         return;
       }
-    }
 
-    // Apply trait transaction (if exists)
-    if (playerState?.traitTransaction) {
-      try {
-        await this._applyTraitTransaction(playerState.traitTransaction);
-        // NOTE: Position improvement is NOT applied to playerState
-        // It's ephemeral and only affects this roll's consequence calculation
-      } catch (error) {
-        console.error('FitGD | Error applying trait transaction:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        ui.notifications?.error(`Failed to apply trait changes: ${errorMessage} `);
-        return;
+      // Spend momentum NOW (before rolling)
+      const momentumCost = this.diceRollingHandler.calculateMomentumCost(playerState);
+      if (this.crewId && momentumCost > 0) {
+        try {
+          game.fitgd.api.crew.spendMomentum({ crewId: this.crewId, amount: momentumCost });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          ui.notifications?.error(`Failed to spend Momentum: ${errorMessage} `);
+          return;
+        }
       }
-    }
 
-    // Transition to ROLLING
-    await game.fitgd.bridge.execute(
-      this.diceRollingHandler.createTransitionToRollingAction(),
-      { affectedReduxIds: [asReduxId(this.diceRollingHandler.getAffectedReduxId())], silent: true }
-    );
-
-    // Roll dice
-    const dicePool = this.diceRollingHandler.calculateDicePool(state);
-    const rollResult = await this._rollDice(dicePool);
-    const outcome = calculateOutcome(rollResult);
-
-    // Execute all roll outcome actions as batch
-    await game.fitgd.bridge.executeBatch(
-      this.diceRollingHandler.createRollOutcomeBatch(dicePool, rollResult, outcome),
-      {
-        affectedReduxIds: [asReduxId(this.diceRollingHandler.getAffectedReduxId())],
-        force: false,
+      // Apply trait transaction (if exists)
+      if (playerState?.traitTransaction) {
+        try {
+          await this._applyTraitTransaction(playerState.traitTransaction);
+          // NOTE: Position improvement is NOT applied to playerState
+          // It's ephemeral and only affects this roll's consequence calculation
+        } catch (error) {
+          console.error('FitGD | Error applying trait transaction:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          ui.notifications?.error(`Failed to apply trait changes: ${errorMessage} `);
+          return;
+        }
       }
-    );
 
-    // Post success to chat if applicable
-    if (outcome === 'critical' || outcome === 'success') {
-      this._postSuccessToChat(outcome, rollResult);
+      // Transition to ROLLING
+      console.log('FitGD | Transitioning to ROLLING state');
+      await game.fitgd.bridge.execute(
+        this.diceRollingHandler.createTransitionToRollingAction(),
+        { affectedReduxIds: [asReduxId(this.diceRollingHandler.getAffectedReduxId())], silent: true }
+      );
+
+      // Roll dice
+      const dicePool = this.diceRollingHandler.calculateDicePool(state);
+      console.log('FitGD | Rolling with dicePool:', dicePool);
+      const rollResult = await this._rollDice(dicePool);
+      console.log('FitGD | Roll result:', rollResult);
+      const outcome = calculateOutcome(rollResult);
+      console.log('FitGD | Roll outcome:', outcome);
+
+      // Execute all roll outcome actions as batch
+      const rollBatch = this.diceRollingHandler.createRollOutcomeBatch(dicePool, rollResult, outcome);
+      console.log('FitGD | Roll outcome batch actions:', rollBatch);
+
+      await game.fitgd.bridge.executeBatch(
+        rollBatch,
+        {
+          affectedReduxIds: [asReduxId(this.diceRollingHandler.getAffectedReduxId())],
+          force: false,
+        }
+      );
+
+      console.log('FitGD | Roll outcome batch executed');
+
+      // Post success to chat if applicable
+      if (outcome === 'critical' || outcome === 'success') {
+        this._postSuccessToChat(outcome, rollResult);
+      }
+    } catch (error) {
+      console.error('FitGD | Error in _onRoll:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      ui.notifications?.error(`Roll failed: ${errorMessage}`);
     }
   }
 
@@ -1196,24 +1214,43 @@ export class PlayerActionWidget extends Application {
     let roll: Roll;
     let results: number[];
 
-    if (dicePool === 0) {
-      // Roll 2d6, take lowest (desperate roll)
-      roll = await Roll.create('2d6kl').evaluate({ async: true });
-      results = [roll.total];
-    } else {
-      // Roll Nd6
-      roll = await Roll.create(`${dicePool} d6`).evaluate({ async: true });
-      // Extract numeric values from result objects and sort descending
-      results = (roll.dice[0].results as any[]).map((r: any) => r.result).sort((a, b) => b - a);
+    try {
+      console.log(`FitGD | _rollDice - Creating roll with dicePool: ${dicePool}`);
+
+      if (dicePool === 0) {
+        // Roll 2d6, take lowest (desperate roll)
+        console.log('FitGD | _rollDice - Rolling 2d6kl (desperate)');
+        roll = await Roll.create('2d6kl').evaluate({ async: true });
+        results = [roll.total];
+        console.log('FitGD | _rollDice - Desperate roll result:', results);
+      } else {
+        // Roll Nd6
+        console.log(`FitGD | _rollDice - Rolling ${dicePool}d6`);
+        roll = await Roll.create(`${dicePool}d6`).evaluate({ async: true });
+        console.log('FitGD | _rollDice - Roll created, extracting results');
+        // Extract numeric values from result objects and sort descending
+        results = (roll.dice[0].results as any[]).map((r: any) => r.result).sort((a, b) => b - a);
+        console.log('FitGD | _rollDice - Extracted results:', results);
+      }
+
+      // Get fresh player state for flavor text
+      const currentState = game.fitgd.store.getState();
+      const currentPlayerState = currentState.playerRoundState.byCharacterId[this.characterId];
+      const approach = currentPlayerState?.selectedApproach || 'unknown';
+
+      console.log('FitGD | _rollDice - Posting roll to chat');
+      // Post roll to chat
+      await roll.toMessage({
+        speaker: ChatMessage.getSpeaker({ actor: game.actors.get(this.characterId) }),
+        flavor: `${this.character!.name} - ${approach} approach`,
+      });
+
+      console.log('FitGD | _rollDice - Chat message posted, returning results');
+      return results;
+    } catch (error) {
+      console.error('FitGD | Error in _rollDice:', error);
+      throw error;
     }
-
-    // Post roll to chat
-    await roll.toMessage({
-      speaker: ChatMessage.getSpeaker({ actor: game.actors.get(this.characterId) }),
-      flavor: `${this.character!.name} - ${this.playerState!.selectedApproach} approach`,
-    });
-
-    return results;
   }
 
   /**
@@ -1580,7 +1617,7 @@ export class PlayerActionWidget extends Application {
       return;
     }
 
-    // If not locked out, proceed to reroll setup
+    // If not locked out, proceed to reroll
     ui.notifications?.info('Stims used! Rerolling...');
 
     // Transition to STIMS_ROLLING
@@ -1591,29 +1628,64 @@ export class PlayerActionWidget extends Application {
     });
 
     // Wait briefly for animation/state update
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Transition back to ROLLING to trigger the reroll
-    // (The widget will see ROLLING state and auto-trigger _onRoll logic if we called it, 
-    // but _onRoll is triggered by button. Here we want to auto-reroll or let player click?
-    // The design says "Returning to decision phase for reroll" in HTML? 
-    // Actually HTML says "Returning to decision phase for reroll" in STIMS_ROLLING block.
-    // But logic says STIMS_ROLLING -> ROLLING.
-    // Let's just transition to ROLLING and let the player click roll again? 
-    // Or auto-roll?
-    // The original code didn't have auto-roll logic here.
-    // Let's transition to ROLLING and maybe the user has to click roll?
-    // Wait, STIMS_ROLLING is a state.
-    // The state machine says STIMS_ROLLING -> ROLLING.
-
+    // Transition back to ROLLING
     const returnToRollingAction = this.stimsWorkflowHandler.createReturnToRollingAction();
     await game.fitgd.bridge.execute(returnToRollingAction as any, {
       affectedReduxIds: [asReduxId(this.characterId)],
       force: true,
     });
 
-    // Note: The player will see the "Roll" button again (or it might auto-roll if we added that logic).
-    // For now, we just return to state where they can roll.
+    // Wait for state to update
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Auto-reroll immediately
+    console.log('FitGD | Auto-rerolling after stims usage');
+    try {
+      const freshState = game.fitgd.store.getState();
+      const freshPlayerState = freshState.playerRoundState.byCharacterId[this.characterId];
+      const freshCrew = this.crew;
+
+      // Validate roll can proceed
+      const validation = this.diceRollingHandler.validateRoll(freshState, freshPlayerState, freshCrew);
+      if (!validation.isValid) {
+        console.error('FitGD | Auto-reroll validation failed:', validation.reason);
+        ui.notifications?.error('Reroll validation failed');
+        return;
+      }
+
+      // Roll dice
+      const dicePool = this.diceRollingHandler.calculateDicePool(freshState);
+      console.log('FitGD | Auto-rerolling with dicePool:', dicePool);
+      const rollResult = await this._rollDice(dicePool);
+      console.log('FitGD | Auto-reroll result:', rollResult);
+      const outcome = calculateOutcome(rollResult);
+      console.log('FitGD | Auto-reroll outcome:', outcome);
+
+      // Execute all roll outcome actions as batch
+      const rollBatch = this.diceRollingHandler.createRollOutcomeBatch(dicePool, rollResult, outcome);
+      console.log('FitGD | Auto-reroll outcome batch actions:', rollBatch);
+
+      await game.fitgd.bridge.executeBatch(
+        rollBatch,
+        {
+          affectedReduxIds: [asReduxId(this.diceRollingHandler.getAffectedReduxId())],
+          force: false,
+        }
+      );
+
+      console.log('FitGD | Auto-reroll outcome batch executed');
+
+      // Post success to chat if applicable
+      if (outcome === 'critical' || outcome === 'success') {
+        this._postSuccessToChat(outcome, rollResult);
+      }
+    } catch (error) {
+      console.error('FitGD | Error in auto-reroll:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      ui.notifications?.error(`Reroll failed: ${errorMessage}`);
+    }
   }
 
   /**
