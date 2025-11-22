@@ -64,7 +64,7 @@ A Reset marks the end of a dramatic "act," setting the team's Momentum to **5**.
 - **Rare (1 per multiple sessions):** Only at major story beats--extended tension
 
 **Automatic Clock Recovery:**
-All active clocks (Harm, Addiction, and Consumable) automatically recover during a Momentum Reset:
+All active clocks (Harm, Addiction) automatically recover during a Momentum Reset:
 - **Full clocks** (6/6, 8/8, etc.) reduce by 1 segment
 - **Partial clocks** reduce by 2 segments (minimum 0)
 - **Empty clocks** (0 segments) are removed entirely
@@ -107,13 +107,22 @@ A last-resort measure for desperate situations. Once per action, you may use Sti
 Instead of specific skills, characters rely on four core **Approaches**. When you face a challenge, describe your goal and choose the Approach that best fits your method.
 
 **The Dice Pool:**
-The dice you roll depend on whether you are using a specific tool for the job.
+The dice you roll depend on what you're using to accomplish the task.
 
-- **With Equipment:** Roll **[Approach Rating] + 1d**.
-  *(Requirement: You must have a relevant item in an Inventory Slot to gain this bonus).*
+- **With Equipment:** Roll **[Approach Rating] + Equipment Bonus**.
+  *(Requirement: You must have an equipped item to gain this bonus. Equipment bonuses are variable and depend on the category:)*
+  - *Dice bonus (typically +1d or +2d, but can be any value)*
+  - *Position modifier (can improve or worsen position by any number of steps)*
+  - *Effect modifier (can improve or worsen effect by any amount)*
 
-- **Empty-Handed (Synergy):** Roll **[Primary Approach] + [Secondary Approach]**.
-  *(Use this when you have no gear or choose to rely solely on innate ability. GM approval required for the combination).*
+- **Augmentations:** Persistent equipment (armor, implants, etc.) that is always equipped.
+  By default, Augmentation bonuses are **not** considered in rolls. They only apply in
+  specific dramatic situations where they're tactically relevant (e.g., armor helps in
+  combat scenarios, augmented limbs help in climbing). The GM determines when an
+  Augmentation bonus applies.
+
+- **Synergy (Dual Approach):** Roll **[Primary Approach] + [Secondary Approach]**.
+  *(Use when combining innate abilities or going empty-handed. GM approval required for the combination).*
 
 - **Zero Floor:** If your total pool is 0 dice, roll **2d6 and take the lowest**.
 
@@ -227,23 +236,25 @@ You may consolidate three similar traits into a single broader one in two situat
 
 2. **During a Flashback (1 Momentum):** If you have the fewest traits among your crew (or tied for fewest), you may consolidate three traits into one broader trait as part of a flashback action. This costs 1 Momentum total (the flashback cost). The three original traits are consumed, and you may immediately use the new consolidated trait to improve Position or Effect. Role and background traits cannot be consolidated.
 
-#### **Equipment Tiers**
+#### **Equipment**
 
-- **Accessible:** Standard gear for your role. Declare freely.
+##### **Acquisition Tiers**
 
-- **Inaccessible:** Specialized gear. Requires a **1 Momentum Flashback** justified by a Trait. You can establish a new Trait through this flashback to justify the gear access, gaining both the permanent Trait and the equipment.
+- **Common:** Standard gear for your role. Declare freely.
+
+- **Rare:** Specialized gear. Requires a **1 Momentum Flashback** justified by a Trait. You can establish a new Trait through this flashback to justify the gear access, gaining both the permanent Trait and the equipment.
 
 - **Epic:** Legendary gear. Must be earned as a story reward and cannot be acquired through flashbacks.
 
-#### **Consumables (Grenades, Stims, etc.)**
+##### **Equipping & Load Management**
 
-Limited-use items are tracked with **depletion clocks**.
+- **Load Limit:** Characters can equip a maximum number of items at once. The GM determines this limit at the start of each campaign (typically **5 items**).
 
-- **Acquisition:** Gain access via flashbacks, sometimes referencing a teammate's trait to justify it.
+- **Locking Equipment:** Once an item is equipped, it remains equipped until the next Momentum Reset. You cannot unequip items during a session.
 
-- **Usage:** After each use (even on a failed roll), roll a d6 and advance that item's clock by the result.
+- **Consumables:** Single-use items that provide higher bonuses. After use, they remain equipped but become unusable. They continue to take up load space until the next Momentum Reset.
 
-- **Depletion:** Clock size depends on rarity: **Common (8)**, **Uncommon (6)**, or **Rare (4)**.
+- **Re-equipping Rare Items:** If you unequip a Rare item, you must spend **1 Momentum** to re-equip it later. This works like a Flashback—you must explain how you justified having access to this tier of gear.
 
-- **When Any Clock Fills:** That item's **availability drops one tier** for the entire team. Accessible items become Inaccessible, requiring a 1 Momentum flashback + Trait per use. Everyone else's clock for that item freezes at its current count. The filled clock remains filled--no further degradation occurs. Availability is restored only through the story.
+- **During Reset:** At the start of a Momentum Reset, you can unequip any number of items and reorganize your load to fit within the GM's limit for the next act.
 
