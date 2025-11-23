@@ -109,20 +109,13 @@ Instead of specific skills, characters rely on four core **Approaches**. When yo
 **The Dice Pool:**
 The dice you roll depend on what you're using to accomplish the task.
 
-- **With Equipment:** Roll **[Approach Rating] + Equipment Bonus**.
-  *(Requirement: You must have an equipped item to gain this bonus. Equipment bonuses are variable and depend on the category:)*
-  - *Dice bonus (typically +1d or +2d, but can be any value)*
-  - *Position modifier (can improve or worsen position by any number of steps)*
-  - *Effect modifier (can improve or worsen effect by any amount)*
-
-- **Augmentations:** Persistent equipment (armor, implants, etc.) that is always equipped.
-  By default, Augmentation bonuses are **not** considered in rolls. They only apply in
-  specific dramatic situations where they're tactically relevant (e.g., armor helps in
-  combat scenarios, augmented limbs help in climbing). The GM determines when an
-  Augmentation bonus applies.
+- **With Active Equipment:** Roll **[Approach Rating] + Equipment Bonus**.
+  *(Requirement: Choose one equipped Active item from your loadout. Equipment provides bonuses such as additional dice, position improvement, or effect improvement.)*
 
 - **Synergy (Dual Approach):** Roll **[Primary Approach] + [Secondary Approach]**.
-  *(Use when combining innate abilities or going empty-handed. GM approval required for the combination).*
+  *(Combine two Approaches when it makes sense. No equipment required. GM approval required.)*
+
+- **Passive Equipment:** During roll conversation, the GM may approve one equipped Passive item if narratively applicable. This provides its bonus (dice/position/effect) to the roll.
 
 - **Zero Floor:** If your total pool is 0 dice, roll **2d6 and take the lowest**.
 
@@ -238,23 +231,46 @@ You may consolidate three similar traits into a single broader one in two situat
 
 #### **Equipment**
 
+##### **Categories**
+
+All equipment falls into exactly three categories:
+
+- **Active:** Gear used directly in actions (weapons, tools, devices). Can be selected as part of your dice pool instead of a secondary Approach.
+
+- **Passive:** Always-on gear (armor, implants, augmentations). The GM may approve one Passive item per roll if it's narratively relevant, providing its bonus.
+
+- **Consumable:** Single-use items (grenades, stims, medkits). After use, they remain equipped but depleted until the next Momentum Reset.
+
 ##### **Acquisition Tiers**
 
 - **Common:** Standard gear for your role. Declare freely.
 
-- **Rare:** Specialized gear. Requires a **1 Momentum Flashback** justified by a Trait. You can establish a new Trait through this flashback to justify the gear access, gaining both the permanent Trait and the equipment.
+- **Rare:** Specialized gear. Requires a **1 Momentum Flashback** justified by a Trait to acquire. You can establish a new Trait through this flashback.
 
 - **Epic:** Legendary gear. Must be earned as a story reward and cannot be acquired through flashbacks.
 
-##### **Equipping & Load Management**
+##### **Load & Slots**
 
-- **Load Limit:** Characters can equip a maximum number of items at once. The GM determines this limit at the start of each campaign (typically **5 items**).
+- **Load Limit:** Characters can equip a maximum number of item slots at once (typically **5 slots**). Each item occupies 1 or more slots.
 
-- **Locking Equipment:** Items are **locked** once they are **used** in a roll (or acquired via Flashback). Until then, "equipped" items can be swapped freely, allowing you to adjust your loadout as the mission evolves. Locked items remain equipped until the next Momentum Reset.
+- **All equipment categories** (Active, Passive, Consumable) count toward your load limit.
 
-- **Consumables:** Single-use items that provide higher bonuses. After use, they remain equipped but become unusable. They continue to take up load space until the next Momentum Reset.
+##### **Locking Equipment**
 
-- **Re-equipping Rare Items:** If you unequip a Rare item, you must spend **1 Momentum** to re-equip it later. This works like a Flashback—you must explain how you justified having access to this tier of gear.
+- Items are **unlocked** when first equipped and can be swapped freely on your character sheet.
 
-- **During Reset:** At the start of a Momentum Reset, you can unequip any number of items and reorganize your load to fit within the GM's limit for the next act.
+- Items become **locked** when used in a roll (Active selected in dice pool, Passive approved by GM, or Consumable activated).
+
+- **First Lock Cost:** The first time you lock a Rare or Epic item between Resets, pay **1 Momentum**. Common items lock for free.
+
+- Locked items cannot be unequipped until the next Momentum Reset.
+
+- **Consumables:** When locked, they also become depleted (unusable but still occupying slots).
+
+##### **During Reset**
+
+At the start of a Momentum Reset:
+- All items unlock
+- All Consumables replenish
+- You can reorganize your loadout freely within your load limit
 
