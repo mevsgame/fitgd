@@ -11,7 +11,6 @@
  */
 
 import type { Character, Equipment } from '../types';
-import { DEFAULT_CONFIG } from '../config';
 import {
   calculateLoadUsed,
   calculateFirstLockCost,

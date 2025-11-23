@@ -667,8 +667,8 @@ const characterSlice = createSlice({
 
         // If equipping, check load limit
         if (equipped && !equipment.equipped) {
-          const currentLoad = character.equipment.filter(e => e.equipped).length;
-          if (currentLoad >= DEFAULT_CONFIG.character.maxLoad) {
+          const currentLoad = character.equipment.filter(e => e.equipped).reduce((sum, e) => sum + e.slots, 0);
+          if (currentLoad + equipment.slots > character.loadLimit) {
             // Block equipping if load limit reached
             return;
           }
@@ -914,7 +914,7 @@ const characterSlice = createSlice({
           throw new Error(`Equipment ${equipmentId} not found`);
         }
 
-        equipment.depleted = true;
+        equipment.consumed = true;
         character.updatedAt = Date.now();
 
         state.history.push({
@@ -955,11 +955,10 @@ const characterSlice = createSlice({
           throw new Error(`Character ${characterId} not found`);
         }
 
-        // Reset depleted flag for all consumable-category items
-        const consumableCategories = DEFAULT_CONFIG.equipment.consumableCategories;
+        // Reset consumed flag for all consumable-category items
         character.equipment.forEach((equip) => {
-          if (consumableCategories.includes(equip.category)) {
-            equip.depleted = false;
+          if (equip.category === 'consumable') {
+            equip.consumed = false;
           }
         });
 
@@ -1052,12 +1051,9 @@ const characterSlice = createSlice({
           throw new Error(`Character ${characterId} not found`);
         }
 
-        // Auto-equip items with autoEquip flag
+        // Unlock all equipment after reset
         character.equipment.forEach((equip) => {
-          if (equip.autoEquip) {
-            equip.equipped = true;
-            equip.locked = false; // Fresh equip after reset
-          }
+          equip.locked = false;
         });
 
         character.updatedAt = Date.now();

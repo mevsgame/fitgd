@@ -45,6 +45,9 @@ export interface FoundryCharacterData {
     available: boolean;
   };
 
+  // Load Limit (max slots for equipped items, default 5)
+  loadLimit?: number;
+
   // Harm Clocks (derived from Redux clocks, max 3)
   harm: HarmClockData[];
 

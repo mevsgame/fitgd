@@ -317,8 +317,7 @@ export function performMomentumReset(
 
     // Equipment lifecycle reset
     const lockedItems = character.equipment.filter((e: Equipment) => e.locked);
-    const depletedConsumables = character.equipment.filter((e: Equipment) => e.depleted);
-    const autoEquipItemsList = character.equipment.filter((e: Equipment) => e.autoEquip);
+    const depletedConsumables = character.equipment.filter((e: Equipment) => e.consumed);
 
     // Unlock all equipment
     store.dispatch(
@@ -352,7 +351,6 @@ export function performMomentumReset(
       addictionClocksRecovered,
       equipmentUnlocked: lockedItems.length,
       consumablesReplenished: depletedConsumables.length,
-      itemsAutoEquipped: autoEquipItemsList.length,
     };
   });
 
