@@ -38,6 +38,150 @@ The widget derives its UI state primarily from `playerRoundStateSlice`. The key 
 6.  **TURN_COMPLETE**:
     - Turn ends, widget closes or resets.
 
+### Dice Pool Construction
+
+*See also: [Equipment Mechanics](./mechanics-equipment.md) | [Equipment Row View Template](./equipment-row-view-template.md)*
+
+The dice pool is built from up to three components:
+
+1. **Primary Approach** (mandatory)
+   - Player selects Force, Guile, Focus, or Spirit
+   - Provides base dice from character's Approach rating
+   - Must be selected before "Secondary Approach" can be used
+
+2. **Secondary Approach** (optional, unified dropdown)
+   - Single dropdown containing:
+     - **Other Approaches**: Force/Guile/Focus/Spirit (excluding Primary)
+     - **Visual Separator** (horizontal line)
+     - **Active Equipment**: Equipped Active items (Equipment Row View Template - condensed config)
+     - **Consumable Equipment**: Equipped Consumables not depleted (Equipment Row View Template - condensed config)
+   - Equipment order: Active first, then Consumables (alphabetical within each group)
+   - Display format: Name + Bonuses + Category Icon (e.g., "Chainsword +2d")
+   - Player can select one option or leave empty (rolls Primary Approach only)
+   - **Behavior**: If player changes Primary Approach, Secondary selection clears
+
+**Visual Example** (Secondary Approach dropdown when Primary is Force):
+```
+[ Select Secondary ]
+  Guile
+  Focus
+  Spirit
+  ───────────────────────
+  🗡️ Chainsword +2d
+  🔧 Auspex Scanner +1 Effect
+  💊 Combat Stim +1d
+```
+*(Icons: 🗡️ = Active, 🛡️ = Passive, 💊 = Consumable)*
+
+3. **Passive Equipment** (optional, GM-only)
+   - Separate UI section visible to GM only
+   - Two-column grid: Equipment Row View Template + Radio button
+   - Shows all equipped Passive items (locked or unlocked)
+   - GM selects one Passive if narratively applicable
+   - Located below Position and Effect dropdowns
+   - Only available during DECISION_PHASE
+   - GM can change or deselect at any time before roll commit
+
+#### Current Plan Display
+
+Shows the complete action composition visible to both GM and Player:
+
+**Format**: `[Primary] + [Secondary] + [Passive] = [Total Dice]`
+
+**Examples**:
+- `Force + Chainsword + Power Armor = 6d`
+- `Guile + Focus = 4d, Risky → Controlled`
+- `Spirit = 2d, Push (+1d) = 3d, Cost: 1M`
+
+**Additional Info Shown**:
+- Position changes (e.g., "Risky → Controlled")
+- Effect modifiers (e.g., "+1 Effect")
+- Momentum costs (Push, Flashbacks, Equipment locks)
+- Equipment first-lock costs: "First-lock: 2M" (if unlocked Rare/Epic items used)
+
+**Visibility**: Current Plan is synchronized - both GM and Player see the same preview in real-time
+
+### Equipment Integration
+
+*See also: [Equipment Mechanics](./mechanics-equipment.md) | [Equipment Sheet Dialog](./equipment-sheet-dialog.md) | [Character Sheet](./character-sheet.md)*
+
+#### Active & Consumable Equipment Selection
+
+**Unified Dropdown**:
+- Active and Consumable equipment appear in the Secondary Approach dropdown (after approaches and separator)
+- Uses Equipment Row View Template (condensed config): Name + Bonuses + Category Icon
+- Category icon differentiates Active (🗡️) vs Consumable (💊) visually
+
+**Filtering**:
+- Only equipped items shown
+- Depleted Consumables filtered out
+- Locked items still appear (can be used multiple times after first lock)
+
+**Selection**:
+- Selecting an item provides its defined bonus (dice/position/effect)
+- Selected item appears in Current Plan (e.g., "Force + Chainsword = 4d")
+- Item will lock on roll commit (if not already locked)
+
+**Character Sheet Equipment Order**:
+- Character Sheet displays: Passive → Active → Consumable (alphabetical within groups)
+- Secondary Approach dropdown excludes Passive, shows: Active → Consumable
+
+#### Passive Equipment Approval (GM)
+
+**GM Grid Location**:
+- Below Position and Effect dropdowns
+- Only visible to GM (player sees approved result in Current Plan)
+- Always visible during DECISION_PHASE
+
+**Grid Display**:
+- Two columns: Equipment Row View Template (approval config) + Radio button
+- Shows all equipped Passive items (locked or unlocked status visible)
+- Description toggleable for narrative review
+
+**GM Workflow**:
+1. GM reviews roll conversation with player
+2. GM determines if any Passive equipment is narratively applicable
+3. GM selects ONE Passive item via radio button (or none)
+4. Approved Passive appears in Current Plan (player sees: "Force + Power Armor = 3d, +1 Position")
+5. GM can change or deselect before roll commit
+6. Approved Passive locks on roll commit
+
+**Mechanical Effect**:
+- Approved Passive provides its defined bonus (dice/position/effect)
+- Bonus integrated into Current Plan totals
+
+#### Equipment Locking & Momentum
+
+**Locking Trigger**:
+- Items lock when roll is committed (part of transaction)
+- Active: Selected in Secondary Approach dropdown
+- Passive: Approved by GM in grid
+- Consumable: Selected in Secondary Approach dropdown
+
+**First-Lock Momentum Cost**:
+- Rare/Epic items cost 1M on first lock between Resets
+- Common items: 0M (free)
+- Cost calculated per item: Multiple unlocked Rare/Epic items = multiple 1M costs
+- Example: Unlocked Rare Active + Unlocked Rare Passive = 2M total first-lock cost
+
+**Pre-Roll Validation**:
+- Roll button validates sufficient Momentum for equipment locks
+- If insufficient: Button disabled with error "Insufficient Momentum (need XM to lock [Items])"
+- Player must deselect equipment or gain Momentum to proceed
+
+**Consumable Depletion**:
+- When Consumable locks, also sets consumed flag
+- Depleted Consumables:
+  - Remain equipped (occupy slots)
+  - Grayed out, crossed-off visual style on Character Sheet
+  - Filtered out of Secondary Approach dropdown
+  - Replenish at Momentum Reset
+
+**Post-Lock State**:
+- Locked items remain equipped on Character Sheet
+- Cannot be unequipped until Momentum Reset (lock icon visible, checkbox disabled)
+- Can be used in subsequent rolls without additional Momentum cost (already locked)
+
 ### Synchronized Views (GM vs Player)
 The widget is designed as a **shared experience**. Both the GM and the Player see the same widget state in real-time, but their available controls differ based on the current phase.
 
@@ -52,7 +196,6 @@ The widget is designed as a **shared experience**. Both the GM and the Player se
     - **GM**: Has controls to select Harm, Ticks, or Complications.
     - **Player**: View is read-only *unless* they trigger an interrupt (Stims).
     - *Interrupt*: If the Player clicks "Use Stims", the GM's controls are temporarily locked or overridden until the interrupt resolves.
-    - **Augmentation Management**: The GM sees a list of the player's installed augmentations. They can toggle checkboxes to "Enable" specific augmentations for the current roll. Enabled augmentations are reflected in the "Current Plan" and may modify the transaction (bonuses/penalties).
 
 ### Redux Integration
 - **Reads**: `playerRoundState`, `characters`, `crews`, `clocks`.
@@ -66,7 +209,8 @@ To avoid a massive "God Class", business logic is delegated to specialized handl
 - `DiceRollingHandler`: Calculates dice pools, validates rolls, batches outcomes.
 - `ConsequenceResolutionHandler`: Manages the GM's flow of selecting harm/clocks.
 - `StimsWorkflowHandler`: Handles the complex "resist consequence" logic (Addiction roll + Reroll).
-- `TraitHandler` & `EquipmentHandler`: Manage static bonuses.
+- `TraitHandler`: Manages trait transactions (Flashback, Leaning, Consolidation).
+- `EquipmentHandler`: Manages equipment selection, locking, momentum costs for Active/Passive/Consumable items.
 - `RallyHandler`: Manages the [Rally](./mechanics-rally.md) logic.
 
 ### Transaction Pattern
@@ -96,45 +240,88 @@ The widget uses a **Transaction Pattern** to handle complex state changes that r
     4.  **Interrupt**: The Player can use **Stims** to resist. This pauses the transaction.
     5.  **Commit**: Player clicks "Accept Consequences". The state transitions to `APPLYING_EFFECTS`, and the Harm is added to the character and Clocks are updated in a single atomic batch.
 
-### Roll Modes
-The widget supports three distinct roll modes, selectable by the player during the Decision Phase:
+### Roll Transaction Flow
 
-1.  **Standard Mode**:
-    - **Dice Pool**: `Primary Approach` rating.
-    - **Use Case**: Default action roll.
+The roll transaction is atomic and includes dice resolution, equipment locking, momentum spending, and state transitions.
 
-2.  **Synergy Mode**:
-    - **Dice Pool**: `Primary Approach` + `Secondary Approach` ratings.
-    - **Use Case**: Combining two skills (e.g., Force + Guile) for a complex action.
-    - **UI**: Reveals a "Secondary Approach" dropdown when active.
+#### Pre-Roll Validation
 
-3.  **Equipment Mode**:
-    - **Dice Pool**: `Primary Approach` + `Equipment Bonus` (if any).
-    - **Use Case**: Relying heavily on a specific item.
-    - **UI**: Reveals an "Active Equipment" dropdown. Selecting an item may grant dice pool modifiers or position/effect changes.
-    - **Equipment Selection Flow**:
-        1. Player clicks "Equipment" button in "SPEND MOMENTUM" section
-        2. Equipment Management Dialog opens showing all character equipment
-        3. Player toggles items on/off (respecting load limits)
-        4. On "Save Loadout", the widget automatically:
-           - Sets `rollMode` to 'equipment'
-           - Pre-selects the first equipped item in the dropdown
-           - Makes the "Active Equipment" dropdown visible
-    - **Equipment Locking**: Using an item in a roll will **Lock** it for the remainder of the mission:
-        - Locked items cannot be unequipped via the character sheet (checkbox is disabled)
-        - Locked items remain locked until Momentum Reset occurs
-        - This prevents players from swapping equipment mid-mission after committing to using it
-        - The locking happens when the roll is committed, not when the item is selected
-    - **Flashback Item**: Players can also create a temporary "Flashback Item" (costing Momentum) via the equipment dialog if they need a specific tool they didn't equip. See [Equipment Management](./mechanics-equipment.md).
+Before allowing roll execution, the system validates:
+
+1. **Primary Approach selected**: Player must choose Force, Guile, Focus, or Spirit
+2. **Sufficient Momentum**: Must have enough for:
+   - Push costs (if using Push)
+   - Flashback costs (if using Flashback)
+   - Equipment first-lock costs (1M per unlocked Rare/Epic item)
+3. **Valid Position/Effect**: GM must have set Position and Effect values
+4. **Equipment Availability**: Selected equipment must be equipped and (for Consumables) not depleted
+
+**Validation Feedback**:
+- Roll button disabled if validation fails
+- Error message displayed: "Insufficient Momentum (need XM to lock [Items])" or similar
+- Player must resolve issues before proceeding
+
+#### Roll Execution Sequence
+
+When player clicks Roll button and validation passes:
+
+1. **Calculate Total Dice Pool**:
+   - Primary Approach rating
+   - Plus Secondary Approach rating (if synergy selected)
+   - Plus Active/Consumable equipment bonus (if selected)
+   - Plus Passive equipment bonus (if GM approved)
+   - Plus any trait bonuses (Flashback, etc.)
+   - Plus Push bonus (if using Push)
+
+2. **Calculate Total Momentum Cost**:
+   - Push: 1M (if used)
+   - Flashback: 1M per flashback (if used)
+   - Equipment first-locks: 1M per unlocked Rare/Epic item used in roll
+   - Example: Push + Rare Active (unlocked) + Rare Passive (unlocked) = 1M + 1M + 1M = 3M total
+
+3. **Spend Momentum** (deduct from crew momentum pool)
+
+4. **Lock Equipment**:
+   - Set locked flag on Active item (if selected)
+   - Set locked flag on Passive item (if GM approved)
+   - Set locked flag on Consumable item (if selected)
+   - Set consumed flag on Consumable item (depletes it)
+
+5. **Roll Dice** (async operation):
+   - Triggers 3D dice animation (if enabled)
+   - Generates random dice results
+   - Both GM and Player see animation simultaneously
+
+6. **Calculate Outcome**:
+   - Count sixes, fives, etc.
+   - Determine result: Critical (two 6s), Success (6), Partial (4-5), Failure (1-3)
+   - Apply effect modifiers if applicable
+
+7. **Transition State**:
+   - Success/Critical: Transition to result display or TURN_COMPLETE
+   - Partial/Failure: Transition to GM_RESOLVING_CONSEQUENCE
+
+#### Atomic Batch Dispatch
+
+All state changes are dispatched via `game.fitgd.bridge.executeBatch()` to ensure transaction integrity:
+
+```javascript
+await game.fitgd.bridge.executeBatch([
+  { type: 'crew/spendMomentum', payload: { amount: totalCost } },
+  { type: 'equipment/lockItems', payload: { itemIds: [...] } },
+  { type: 'equipment/setConsumed', payload: { itemId: consumableId } },
+  { type: 'playerRoundState/setRollResult', payload: { result, dice } },
+  { type: 'playerRoundState/transitionState', payload: { newState: 'ROLLING' } },
+]);
+```
+
+**Benefits**:
+- All changes succeed or all fail (no partial updates)
+- Single broadcast to all clients
+- Character Sheets and widgets auto-refresh simultaneously
+- No race conditions between state updates
 
 ### Complex Workflows
-
-#### The Roll Workflow
-1.  **Validation**: Checks Momentum, Load, and valid Action.
-2.  **Cost**: Spends Momentum immediately.
-3.  **Traits**: Applies temporary trait transactions (e.g., "Flashback" bonuses).
-4.  **Execution**: Rolls dice (async).
-5.  **Batch Update**: Dispatches `setRollResult`, `applyOutcome`, and `transitionState` in a single `executeBatch` call to ensure atomicity.
 
 #### The Stims Interrupt
 See **[Stims Mechanics](mechanics-stims.md)** for comprehensive documentation.
@@ -149,6 +336,17 @@ See **[Stims Mechanics](mechanics-stims.md)** for comprehensive documentation.
 The stims interrupt is a last-resort mechanic for desperate situations, advancing the character's addiction clock at the cost of a reroll opportunity.
 
 ## Rules Integration
-- **Position & Effect**: The widget is the authoritative source for negotiating these values.
-- **Load**: Enforces `maxLoad` when equipping items during the decision phase.
-- **Momentum**: Enforces crew momentum limits for bonus dice and flashbacks.
+
+*Primary Source: [vault/rules_primer.md](../vault/rules_primer.md)*
+
+- **Position & Effect**: The widget is the authoritative source for negotiating these values during the decision phase.
+- **Momentum**: Enforces crew momentum limits for:
+  - Push (+1d or improve Effect)
+  - Flashbacks (Trait-based positioning)
+  - Equipment first-locks (1M per unlocked Rare/Epic item)
+- **Equipment Categories**: Three distinct usage patterns:
+  - Active: Player selects in Secondary Approach dropdown
+  - Passive: GM approves if narratively applicable
+  - Consumable: Single-use, depletes on lock
+- **Equipment Locking**: Items lock on roll commit, preventing mid-mission swapping.
+- **Dice Pool Construction**: Supports Primary + Secondary (Approach or Equipment) + Passive for flexible action resolution.
