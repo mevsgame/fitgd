@@ -4,7 +4,7 @@
  * Low-change entity stored with full snapshot + command history.
  */
 
-import { EquipmentTier } from "./equipment";
+import type { Equipment } from "./equipment";
 
 /**
  * Trait category types
@@ -24,7 +24,8 @@ export interface Character {
   traits: Trait[];
   approaches: Approaches;
   unallocatedApproachDots: number; // Dots not yet allocated (for milestones/rewards)
-  equipment: Equipment[];
+  equipment: Equipment[];          // Full equipment objects (data + state: equipped, locked, consumed)
+  loadLimit: number;               // Max slots character can equip (default 5)
   rallyAvailable: boolean;
   createdAt: number;
   updatedAt: number;
@@ -39,38 +40,3 @@ export interface Trait {
   acquiredAt: number;
 }
 
-export interface Equipment {
-  // Instance identity
-  id: string;
-
-  // Core equipment data (copied from template at creation, fully editable)
-  name: string;
-  type: 'equipment' | 'consumable' | 'augmentation'; // Equipment type determines mechanics
-  tier: EquipmentTier; // 'common' | 'rare' | 'epic' - determines acquisition cost
-  category: string; // e.g., 'weapon', 'armor', 'tool' - maps to equipmentCategories in config
-  description: string;
-  img?: string; // Optional: image path
-  passive: boolean; // If true, can't be selected for actions (passive effects only)
-  tags?: string[]; // Optional: tags for categorization or bonus effects
-
-  // Instance state
-  equipped: boolean; // Is currently equipped?
-  locked: boolean; // If true, cannot be unequipped (item has been used in session and is locked until Momentum Reset)
-  depleted: boolean; // If true, consumable has been used (still takes load, visual indicator)
-  autoEquip?: boolean; // If true, automatically re-equip after Momentum Reset (default: false)
-
-  // Provenance (event sourcing metadata)
-  acquiredAt: number; // Timestamp when acquired
-  acquiredVia?: 'starting' | 'flashback' | 'earned'; // How was this item acquired?
-  sourceItemId?: string; // Optional: Original template ID (for reference only)
-
-  // Flexible metadata
-  metadata?: Record<string, unknown>; // Custom fields (damage, range, etc.)
-
-  // Modifiers
-  modifiers?: {
-    position?: 'none' | 'plus_one_step' | 'minus_one_step';
-    effect?: 'none' | 'plus_one_level' | 'minus_one_level';
-    dicePool?: number;
-  };
-}

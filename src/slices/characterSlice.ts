@@ -37,6 +37,7 @@ interface CreateCharacterPayload {
   traits: Trait[];
   approaches: Approaches;
   equipment?: Equipment[];
+  loadLimit?: number;
   userId?: string;
 }
 
@@ -183,6 +184,7 @@ const characterSlice = createSlice({
           approaches: payload.approaches,
           unallocatedApproachDots: unallocated,
           equipment: payload.equipment || [],
+          loadLimit: payload.loadLimit || DEFAULT_CONFIG.character.defaultLoadLimit,
           rallyAvailable: true,
           createdAt: timestamp,
           updatedAt: timestamp,
