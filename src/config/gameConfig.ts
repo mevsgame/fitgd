@@ -1,4 +1,5 @@
 import type { GameConfig } from '../types';
+import type { EquipmentCategoryConfig, EquipmentTier } from '../types/equipment';
 
 /**
  * Default Game Configuration
@@ -10,9 +11,10 @@ export const DEFAULT_CONFIG: GameConfig = {
   character: {
     startingTraitCount: 2, // 1 role + 1 background
     // maxTraitCount: undefined, // No cap by default, TBD via playtesting
-    startingActionDots: 12,
-    maxActionDotsPerAction: 4,
-    maxActionDotsAtCreation: 3,
+    startingApproachDots: 5,
+    maxDotsPerApproach: 4,
+    maxDotsAtCreation: 2,
+    maxLoad: 5,
   },
 
   crew: {
@@ -26,13 +28,6 @@ export const DEFAULT_CONFIG: GameConfig = {
       maxClocks: 3, // Max 3 harm clocks per character
       segments: 6,  // 6-segment harm clocks
     },
-    consumable: {
-      segments: {
-        common: 8,
-        uncommon: 6,
-        epic: 4,
-      },
-    },
     addiction: {
       segments: 8,          // 8-segment addiction clock
       resetReduction: 2,    // Reduce by 2 on Momentum Reset
@@ -44,6 +39,55 @@ export const DEFAULT_CONFIG: GameConfig = {
 
   rally: {
     maxMomentumToUse: 3, // Rally only available at 0-3 Momentum
+  },
+
+  equipment: {
+    // Momentum cost to acquire equipment via flashback based on tier (rules_primer.md)
+    momentumCostByTier: {
+      common: 0,          // Declare freely, no cost
+      rare: 1,            // Requires 1 Momentum flashback (must justify with Trait)
+      epic: Infinity,     // Cannot be acquired via flashback, must be earned
+    } as Record<EquipmentTier, number>,
+
+    // Equipment categories and their mechanical effects
+    categories: {
+      'weapon': {
+        name: 'Weapon',
+        effect: { diceBonus: 1 },
+        description: 'Standard melee or ranged weapon',
+      },
+      'heavy-weapon': {
+        name: 'Heavy Weapon',
+        effect: { diceBonus: 2, positionPenalty: 1 },
+        description: 'Powerful but unwieldy (heavy bolter, plasma cannon)',
+      },
+      'precision-tool': {
+        name: 'Precision Tool',
+        effect: { effectBonus: 1 },
+        description: 'Improves quality of work (surgical tools, lockpicks)',
+      },
+      'stealth-gear': {
+        name: 'Stealth Gear',
+        effect: { positionBonus: 1 },
+        description: 'Reduces risk of detection',
+      },
+      'armor': {
+        name: 'Armor',
+        effect: { positionBonus: 1, dicePenalty: 1 },
+        description: 'Protective but restrictive',
+      },
+      'loud-weapon': {
+        name: 'Loud Weapon',
+        effect: { diceBonus: 1, positionPenalty: 1 },
+        description: 'Effective but attracts attention (bolter, grenade launcher)',
+      },
+    } as Record<string, EquipmentCategoryConfig>,
+
+    // Augmentations do not count toward load limit
+    augmentationCategories: ['cybernetic', 'biological', 'psionic'],
+
+    // Consumables are replenished on Momentum Reset
+    consumableCategories: ['consumable', 'grenade', 'stim', 'medkit'],
   },
 
   resolution: {

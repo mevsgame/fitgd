@@ -6,14 +6,16 @@
  */
 
 import { ClockSize } from "./clock";
+import type { EquipmentCategoryConfig, EquipmentTier } from "./equipment";
 
 export interface GameConfig {
   character: {
     startingTraitCount: number;
     maxTraitCount?: number; // Optional cap, TBD via playtesting
-    startingActionDots: number;
-    maxActionDotsPerAction: number;
-    maxActionDotsAtCreation: number;
+    startingApproachDots: number;
+    maxDotsPerApproach: number;
+    maxDotsAtCreation: number;
+    maxLoad: number;
   };
 
   crew: {
@@ -27,13 +29,6 @@ export interface GameConfig {
       maxClocks: number;
       segments: ClockSize;
     };
-    consumable: {
-      segments: {
-        common: ClockSize;
-        uncommon: ClockSize;
-        epic: ClockSize;
-      };
-    };
     addiction: {
       segments: ClockSize;
       resetReduction: number;
@@ -45,6 +40,17 @@ export interface GameConfig {
 
   rally: {
     maxMomentumToUse: number; // Rally only available at 0-3 Momentum
+  };
+
+  equipment: {
+    // Momentum cost to acquire equipment via flashback based on tier
+    momentumCostByTier: Record<EquipmentTier, number>;
+    // Equipment categories and their mechanical effects
+    categories: Record<string, EquipmentCategoryConfig>;
+    // Categories that do not count toward load limit
+    augmentationCategories: string[];
+    // Categories that are replenished on Momentum Reset
+    consumableCategories: string[];
   };
 
   resolution: {
@@ -77,7 +83,7 @@ export interface GameConfig {
       spectacular: number;
     };
     // Success segments (legacy, may be deprecated)
-    successSegments:{
+    successSegments: {
       lesser: number,
       standard: number,
       great: number,

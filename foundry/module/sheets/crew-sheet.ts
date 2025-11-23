@@ -26,7 +26,6 @@ interface CrewSheetData extends ActorSheet.Data {
       foundryActorId: string;
     }>;
     addictionClock: Clock | null;
-    consumableClocks: Clock[];
     progressClocks: Clock[];
   };
   reduxId?: string;
@@ -38,12 +37,11 @@ interface CrewSheetData extends ActorSheet.Data {
  * Foundry VTT Actor Sheet for crew entities. Displays and manages:
  * - Crew members (characters in the crew)
  * - Momentum pool (0-10, starts at 5)
- * - Consumable clocks (grenades, stims, etc.)
  * - Addiction clock (fills when using too many stims)
  * - Progress clocks (long-term projects, threats, goals)
  *
  * All state is stored in Redux, fetched via actor's Redux ID flag.
- * Sheet provides UI for triggering crew-level actions (spend Momentum, use consumables).
+ * Sheet provides UI for triggering crew-level actions (spend Momentum, etc.).
  */
 class FitGDCrewSheet extends ActorSheet {
   static override get defaultOptions(): ActorSheet.Options {
@@ -91,7 +89,6 @@ class FitGDCrewSheet extends ActorSheet {
           currentMomentum: crew.currentMomentum,
           characters: characterDetails,
           addictionClock: game.fitgd.api.query.getAddictionClock(reduxId),
-          consumableClocks: game.fitgd.api.query.getConsumableClocks(reduxId),
           progressClocks: game.fitgd.api.query.getProgressClocks(reduxId)
         };
         context.reduxId = reduxId;

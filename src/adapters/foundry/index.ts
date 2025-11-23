@@ -10,9 +10,9 @@ import {
   importCrewFromFoundry,
   syncCrewToFoundry,
 } from './crewAdapter';
-import { createCharacter, pruneHistory as pruneCharacterHistory, hydrateCharacters } from '../../slices/characterSlice';
-import { createCrew, pruneCrewHistory, hydrateCrews } from '../../slices/crewSlice';
-import { pruneClockHistory, hydrateClocks } from '../../slices/clockSlice';
+import { createCharacter, pruneCharacterHistory, hydrateCharacters, cleanupOrphanedCharacters } from '../../slices/characterSlice';
+import { createCrew, pruneCrewHistory, hydrateCrews, cleanupOrphanedCrews } from '../../slices/crewSlice';
+import { pruneClockHistory, hydrateClocks, cleanupOrphanedClocks } from '../../slices/clockSlice';
 import { selectHistoryStats } from '../../selectors/historySelectors';
 import type { HistoryStats } from '../../selectors/historySelectors';
 
@@ -51,6 +51,9 @@ export interface FoundryAdapter {
   // History management
   getHistoryStats(): HistoryStats;
   pruneAllHistory(): void;
+  cleanupOrphanedClocks(validEntityIds: string[]): void;
+  cleanupOrphanedCharacters(validEntityIds: string[]): void;
+  cleanupOrphanedCrews(validEntityIds: string[]): void;
 }
 
 /**
@@ -112,7 +115,7 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
         createCharacter({
           name: character.name,
           traits: character.traits,
-          actionDots: character.actionDots,
+          approaches: character.approaches,
         })
       );
 
@@ -216,7 +219,7 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
           // Check if this is an expected error (operation on deleted entity)
           const isEntityNotFoundError = error instanceof Error &&
             (error.message.includes('not found') ||
-             error.message.includes('does not exist'));
+              error.message.includes('does not exist'));
 
           if (isEntityNotFoundError) {
             // This is expected - commands for deleted entities can safely be skipped
@@ -252,6 +255,21 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
       const statsAfter = this.getHistoryStats();
       console.log(`FitGD | History after pruning: ${statsAfter.totalCommands} commands (~${statsAfter.estimatedSizeKB}KB)`);
       console.log('FitGD | History pruning complete - current state snapshot retained');
+    },
+
+    cleanupOrphanedClocks(validEntityIds: string[]): void {
+      console.log('FitGD | Cleaning up orphaned clocks');
+      store.dispatch(cleanupOrphanedClocks({ validEntityIds }));
+    },
+
+    cleanupOrphanedCharacters(validEntityIds: string[]): void {
+      console.log('FitGD | Cleaning up orphaned characters');
+      store.dispatch(cleanupOrphanedCharacters({ validIds: validEntityIds }));
+    },
+
+    cleanupOrphanedCrews(validEntityIds: string[]): void {
+      console.log('FitGD | Cleaning up orphaned crews');
+      store.dispatch(cleanupOrphanedCrews({ validIds: validEntityIds }));
     },
   };
 }

@@ -16,7 +16,7 @@ import type { Trait } from '@/types/character';
 import type { Clock } from '@/types/clock';
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
 import { selectDicePool } from '@/selectors/playerRoundStateSelectors';
-import { asReduxId } from '../types/ids';
+import { asReduxId, type ReduxId } from '../types/ids';
 
 /**
  * Configuration for stims operations
@@ -370,7 +370,7 @@ export class StimsHandler {
    *
    * @returns Redux ID for Bridge API
    */
-  getAffectedReduxId(): string {
+  getAffectedReduxId(): ReduxId {
     return asReduxId(this.config.characterId);
   }
 
@@ -379,7 +379,7 @@ export class StimsHandler {
    *
    * @returns Redux ID for Bridge API
    */
-  getAffectedCrewReduxId(): string {
+  getAffectedCrewReduxId(): ReduxId {
     if (!this.config.crewId) {
       throw new Error('No crew ID configured');
     }

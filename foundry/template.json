@@ -1,34 +1,33 @@
 {
   "Actor": {
-    "types": ["character", "crew"],
+    "types": [
+      "character",
+      "crew"
+    ],
     "templates": {
       "base": {
         "description": ""
       }
     },
     "character": {
-      "templates": ["base"],
+      "templates": [
+        "base"
+      ],
       "rallyAvailable": true,
-      "actionDots": {
-        "shoot": 0,
-        "skirmish": 0,
-        "skulk": 0,
-        "wreck": 0,
-        "finesse": 0,
-        "survey": 0,
-        "study": 0,
-        "tech": 0,
-        "attune": 0,
-        "command": 0,
-        "consort": 0,
-        "sway": 0
+      "approaches": {
+        "force": 0,
+        "guile": 0,
+        "focus": 0,
+        "spirit": 0
       },
       "traits": [],
       "harmClocks": [],
       "equipment": []
     },
     "crew": {
-      "templates": ["base"],
+      "templates": [
+        "base"
+      ],
       "currentMomentum": 5,
       "characters": [],
       "addictionClock": null,
@@ -37,22 +36,31 @@
     }
   },
   "Item": {
-    "types": ["trait", "equipment"],
+    "types": [
+      "trait",
+      "equipment"
+    ],
     "templates": {
       "base": {
         "description": ""
       }
     },
     "trait": {
-      "templates": ["base"],
+      "templates": [
+        "base"
+      ],
       "category": "role",
       "disabled": false,
       "acquiredAt": 0
     },
     "equipment": {
-      "templates": ["base"],
+      "templates": [
+        "base"
+      ],
       "tier": "accessible",
       "category": "weapon",
+      "rarity": "common",
+      "tags": [],
       "equipped": false
     }
   }

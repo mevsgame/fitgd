@@ -1,24 +1,17 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { generateId } from '../utils/uuid';
+import { isOrphanedCommand } from '../utils/commandUtils';
 import {
+  validateApproachAdvancement,
+  validateApproachDots,
+  validateTraitAddition,
+  validateTraitRemoval,
+  validateTraitUpdate,
   validateStartingTraits,
-  validateStartingActionDots,
-  validateActionDots,
-  validateTraitCount,
-  validateTraitGrouping,
-  validateActionDotAdvancement,
-  calculateTotalActionDots,
+  validateStartingApproaches,
 } from '../validators/characterValidator';
 import { DEFAULT_CONFIG } from '../config';
-import { isOrphanedCommand } from '../utils/commandUtils';
-import type {
-  Character,
-  Trait,
-  ActionDots,
-  Equipment,
-  Command,
-} from '../types'; 
-import { EquipmentTier, EquipmentAcquisition } from '@/types/equipment';
+import type { Character, Trait, Approaches, Equipment, Command } from '../types';
 
 /**
  * Character Slice State
@@ -39,28 +32,17 @@ const initialState: CharacterState = {
  * Payload Types
  */
 interface CreateCharacterPayload {
-  id?: string; // Optional: If provided, use this ID (e.g., Foundry Actor ID)
+  id?: string;
   name: string;
   traits: Trait[];
-  actionDots: ActionDots;
+  approaches: Approaches;
+  equipment?: Equipment[];
   userId?: string;
 }
 
 interface AddTraitPayload {
   characterId: string;
   trait: Trait;
-  userId?: string;
-}
-
-interface DisableTraitPayload {
-  characterId: string;
-  traitId: string;
-  userId?: string;
-}
-
-interface EnableTraitPayload {
-  characterId: string;
-  traitId: string;
   userId?: string;
 }
 
@@ -77,45 +59,35 @@ interface UpdateTraitNamePayload {
   userId?: string;
 }
 
-interface SetActionDotsPayload {
+interface SetApproachPayload {
   characterId: string;
-  action: keyof ActionDots;
+  approach: keyof Approaches;
   dots: number;
   userId?: string;
 }
 
-interface CreateEquipmentPayload {
-  // Required fields
-  name: string;
-  tier: EquipmentTier;
-  category: string;
-
-  // Optional fields
-  description?: string;
-  img?: string;
-  equipped?: boolean;
-  acquiredVia?: EquipmentAcquisition;
-  sourceItemId?: string; // Track template source (optional)
-  metadata?: Record<string, unknown>;
+interface AdvanceApproachPayload {
+  characterId: string;
+  approach: keyof Approaches;
+  userId?: string;
 }
 
 interface AddEquipmentPayload {
   characterId: string;
-  equipment: CreateEquipmentPayload;
+  equipment: Equipment;
+  userId?: string;
+}
+
+interface RemoveEquipmentPayload {
+  characterId: string;
+  equipmentId: string;
   userId?: string;
 }
 
 interface UpdateEquipmentPayload {
   characterId: string;
   equipmentId: string;
-  changes: {
-    name?: string;
-    tier?: EquipmentTier;
-    category?: string;
-    description?: string;
-    img?: string;
-    metadata?: Record<string, unknown>;
-  };
+  updates: Partial<Equipment>;
   userId?: string;
 }
 
@@ -126,38 +98,42 @@ interface ToggleEquippedPayload {
   userId?: string;
 }
 
-interface RemoveEquipmentPayload {
-  characterId: string;
-  equipmentId: string;
-  userId?: string;
-}
-
-interface UseRallyPayload {
-  characterId: string;
-  userId?: string;
-}
-
-interface ResetRallyPayload {
-  characterId: string;
-  userId?: string;
-}
-
-interface GroupTraitsPayload {
-  characterId: string;
-  traitIds: string[];
-  groupedTrait: Trait;
-  userId?: string;
-}
-
 interface CreateTraitFromFlashbackPayload {
   characterId: string;
   trait: Trait;
   userId?: string;
 }
 
-interface AdvanceActionDotsPayload {
+interface LockEquipmentPayload {
   characterId: string;
-  action: keyof ActionDots;
+  equipmentId: string;
+  userId?: string;
+}
+
+interface UnlockAllEquipmentPayload {
+  characterId: string;
+  userId?: string;
+}
+
+interface MarkEquipmentDepletedPayload {
+  characterId: string;
+  equipmentId: string;
+  userId?: string;
+}
+
+interface ReplenishConsumablesPayload {
+  characterId: string;
+  userId?: string;
+}
+
+interface MarkEquipmentUsedPayload {
+  characterId: string;
+  equipmentId: string;
+  userId?: string;
+}
+
+interface AutoEquipItemsPayload {
+  characterId: string;
   userId?: string;
 }
 
@@ -185,50 +161,39 @@ const characterSlice = createSlice({
         });
       },
       prepare: (payload: CreateCharacterPayload) => {
-        // Validate
+        // Validate payload
         validateStartingTraits(payload.traits);
-        validateStartingActionDots(payload.actionDots);
+        validateStartingApproaches(payload.approaches);
 
-        const now = Date.now();
+        const timestamp = Date.now();
+        const totalDots = Object.values(payload.approaches).reduce((a, b) => a + b, 0);
+        const unallocated = DEFAULT_CONFIG.character.startingApproachDots - totalDots;
 
-        // Calculate unallocated dots (12 - sum of allocated)
-        const allocatedDots = calculateTotalActionDots(payload.actionDots);
-        const unallocatedDots = DEFAULT_CONFIG.character.startingActionDots - allocatedDots;
+        // Ensure all traits have id and acquiredAt
+        const traitsWithIds = payload.traits.map(trait => ({
+          ...trait,
+          id: trait.id || generateId(),
+          acquiredAt: trait.acquiredAt || timestamp,
+        }));
 
         const character: Character = {
-          id: payload.id || generateId(), // Use provided ID or generate new one
+          id: payload.id || generateId(),
           name: payload.name,
-          traits: payload.traits,
-          actionDots: payload.actionDots,
-          unallocatedActionDots: unallocatedDots,
-          equipment: [],
+          traits: traitsWithIds,
+          approaches: payload.approaches,
+          unallocatedApproachDots: unallocated,
+          equipment: payload.equipment || [],
           rallyAvailable: true,
-          createdAt: now,
-          updatedAt: now,
+          createdAt: timestamp,
+          updatedAt: timestamp,
         };
 
-        // Create command for history
-        const command: Command = {
-          type: 'characters/createCharacter',
-          payload: character,
-          timestamp: now,
-          version: 1,
-          userId: payload.userId,
-          commandId: generateId(),
-        };
-
-        return {
-          payload: character,
-          meta: { command },
-        };
+        return { payload: character };
       },
     },
 
     addTrait: {
-      reducer: (
-        state,
-        action: PayloadAction<{ characterId: string; trait: Trait }>
-      ) => {
+      reducer: (state, action: PayloadAction<AddTraitPayload>) => {
         const { characterId, trait } = action.payload;
         const character = state.byId[characterId];
 
@@ -236,11 +201,18 @@ const characterSlice = createSlice({
           throw new Error(`Character ${characterId} not found`);
         }
 
-        character.traits.push(trait);
-        character.updatedAt = Date.now();
+        // Ensure trait has id and acquiredAt
+        const traitWithId = {
+          ...trait,
+          id: trait.id || generateId(),
+          acquiredAt: trait.acquiredAt || Date.now(),
+        };
 
-        // Validate trait count if configured
-        validateTraitCount(character);
+        // Validate trait addition
+        validateTraitAddition(character, traitWithId);
+
+        character.traits.push(traitWithId);
+        character.updatedAt = Date.now();
 
         // Log command to history
         state.history.push({
@@ -269,31 +241,29 @@ const characterSlice = createSlice({
       },
     },
 
-    disableTrait: {
-      reducer: (
-        state,
-        action: PayloadAction<{ characterId: string; traitId: string }>
-      ) => {
-        const { characterId, traitId } = action.payload;
+    createTraitFromFlashback: {
+      reducer: (state, action: PayloadAction<CreateTraitFromFlashbackPayload>) => {
+        const { characterId, trait } = action.payload;
         const character = state.byId[characterId];
 
         if (!character) {
           throw new Error(`Character ${characterId} not found`);
         }
 
-        const trait = character.traits.find((t) => t.id === traitId);
-        if (!trait) {
-          throw new Error(
-            `Trait ${traitId} not found on character ${characterId}`
-          );
-        }
+        // Ensure trait has id and acquiredAt
+        const traitWithId = {
+          ...trait,
+          id: trait.id || generateId(),
+          acquiredAt: trait.acquiredAt || Date.now(),
+        };
 
-        trait.disabled = true;
+        // Flashback traits bypass some validation but we still check basics
+        character.traits.push(traitWithId);
         character.updatedAt = Date.now();
 
         // Log command to history
         state.history.push({
-          type: 'characters/disableTrait',
+          type: 'characters/createTraitFromFlashback',
           payload: action.payload,
           timestamp: character.updatedAt,
           version: 1,
@@ -301,9 +271,9 @@ const characterSlice = createSlice({
           userId: undefined,
         });
       },
-      prepare: (payload: DisableTraitPayload) => {
+      prepare: (payload: CreateTraitFromFlashbackPayload) => {
         const command: Command = {
-          type: 'characters/disableTrait',
+          type: 'characters/createTraitFromFlashback',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -316,68 +286,111 @@ const characterSlice = createSlice({
           meta: { command },
         };
       },
+    },
+
+    groupTraits: {
+      reducer: (state, action: PayloadAction<{ characterId: string; traitIds: string[]; groupedTrait: Trait; userId?: string }>) => {
+        const { characterId, traitIds, groupedTrait } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        if (traitIds.length !== 3) {
+          throw new Error('Must group exactly 3 traits');
+        }
+
+        // Verify all traits exist
+        const traitsExist = traitIds.every(id => character.traits.some(t => t.id === id));
+        if (!traitsExist) {
+          throw new Error('One or more traits not found');
+        }
+
+        // Remove old traits
+        character.traits = character.traits.filter(t => !traitIds.includes(t.id));
+
+        // Add new grouped trait
+        const newTrait = {
+          ...groupedTrait,
+          id: groupedTrait.id || generateId(),
+          category: 'grouped' as const,
+          acquiredAt: Date.now(),
+        };
+        character.traits.push(newTrait);
+        character.updatedAt = Date.now();
+
+        state.history.push({
+          type: 'characters/groupTraits',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: action.payload.userId,
+        });
+      },
+      prepare: (payload: { characterId: string; traitIds: string[]; groupedTrait: Trait; userId?: string }) => ({ payload }),
+    },
+
+    disableTrait: {
+      reducer: (state, action: PayloadAction<{ characterId: string; traitId: string; userId?: string }>) => {
+        const { characterId, traitId } = action.payload;
+        const character = state.byId[characterId];
+        if (!character) return;
+
+        const trait = character.traits.find(t => t.id === traitId);
+        if (trait) {
+          trait.disabled = true;
+          character.updatedAt = Date.now();
+
+          state.history.push({
+            type: 'characters/disableTrait',
+            payload: action.payload,
+            timestamp: character.updatedAt,
+            version: 1,
+            commandId: generateId(),
+            userId: action.payload.userId,
+          });
+        }
+      },
+      prepare: (payload: { characterId: string; traitId: string; userId?: string }) => ({ payload }),
     },
 
     enableTrait: {
-      reducer: (
-        state,
-        action: PayloadAction<{ characterId: string; traitId: string }>
-      ) => {
+      reducer: (state, action: PayloadAction<{ characterId: string; traitId: string; userId?: string }>) => {
         const { characterId, traitId } = action.payload;
         const character = state.byId[characterId];
+        if (!character) return;
 
-        if (!character) {
-          throw new Error(`Character ${characterId} not found`);
+        const trait = character.traits.find(t => t.id === traitId);
+        if (trait) {
+          trait.disabled = false;
+          character.updatedAt = Date.now();
+
+          state.history.push({
+            type: 'characters/enableTrait',
+            payload: action.payload,
+            timestamp: character.updatedAt,
+            version: 1,
+            commandId: generateId(),
+            userId: action.payload.userId,
+          });
         }
-
-        const trait = character.traits.find((t) => t.id === traitId);
-        if (!trait) {
-          throw new Error(
-            `Trait ${traitId} not found on character ${characterId}`
-          );
-        }
-
-        trait.disabled = false;
-        character.updatedAt = Date.now();
-
-        // Log command to history
-        state.history.push({
-          type: 'characters/enableTrait',
-          payload: action.payload,
-          timestamp: character.updatedAt,
-          version: 1,
-          commandId: generateId(),
-          userId: undefined,
-        });
       },
-      prepare: (payload: EnableTraitPayload) => {
-        const command: Command = {
-          type: 'characters/enableTrait',
-          payload,
-          timestamp: Date.now(),
-          version: 1,
-          userId: payload.userId,
-          commandId: generateId(),
-        };
-
-        return {
-          payload,
-          meta: { command },
-        };
-      },
+      prepare: (payload: { characterId: string; traitId: string; userId?: string }) => ({ payload }),
     },
 
     removeTrait: {
-      reducer: (
-        state,
-        action: PayloadAction<{ characterId: string; traitId: string }>
-      ) => {
+      reducer: (state, action: PayloadAction<RemoveTraitPayload>) => {
         const { characterId, traitId } = action.payload;
         const character = state.byId[characterId];
 
         if (!character) {
           throw new Error(`Character ${characterId} not found`);
         }
+
+        // Validate trait removal
+        validateTraitRemoval(character, traitId);
 
         character.traits = character.traits.filter((t) => t.id !== traitId);
         character.updatedAt = Date.now();
@@ -410,10 +423,7 @@ const characterSlice = createSlice({
     },
 
     updateTraitName: {
-      reducer: (
-        state,
-        action: PayloadAction<{ characterId: string; traitId: string; name: string }>
-      ) => {
+      reducer: (state, action: PayloadAction<UpdateTraitNamePayload>) => {
         const { characterId, traitId, name } = action.payload;
         const character = state.byId[characterId];
 
@@ -421,15 +431,14 @@ const characterSlice = createSlice({
           throw new Error(`Character ${characterId} not found`);
         }
 
-        const trait = character.traits.find((t) => t.id === traitId);
-        if (!trait) {
-          throw new Error(
-            `Trait ${traitId} not found on character ${characterId}`
-          );
-        }
+        // Validate trait update
+        validateTraitUpdate(character, traitId, { name });
 
-        trait.name = name.trim();
-        character.updatedAt = Date.now();
+        const trait = character.traits.find((t) => t.id === traitId);
+        if (trait) {
+          trait.name = name;
+          character.updatedAt = Date.now();
+        }
 
         // Log command to history
         state.history.push({
@@ -458,43 +467,37 @@ const characterSlice = createSlice({
       },
     },
 
-    setActionDots: {
-      reducer: (
-        state,
-        action: PayloadAction<{
-          characterId: string;
-          action: keyof ActionDots;
-          dots: number;
-        }>
-      ) => {
-        const { characterId, action: actionName, dots } = action.payload;
+    setApproach: {
+      reducer: (state, action: PayloadAction<SetApproachPayload>) => {
+        const { characterId, approach, dots } = action.payload;
         const character = state.byId[characterId];
 
         if (!character) {
           throw new Error(`Character ${characterId} not found`);
         }
 
-        // Validate dots value
-        validateActionDots(actionName, dots);
+        // Calculate cost/refund
+        const currentDots = character.approaches[approach];
+        const diff = dots - currentDots;
 
-        // Calculate difference and adjust unallocated dots
-        const oldDots = character.actionDots[actionName];
-        const difference = dots - oldDots;
+        // Validate new value
+        // Validate new value - moved to prepare
+        // validateApproachDots(dots);
 
-        // Check if we have enough unallocated dots
-        if (difference > character.unallocatedActionDots) {
+        // Check if we have enough unallocated dots (if increasing)
+        if (diff > 0 && character.unallocatedApproachDots < diff) {
           throw new Error(
-            `Not enough unallocated action dots (need ${difference}, have ${character.unallocatedActionDots})`
+            `Insufficient unallocated dots (need ${diff}, have ${character.unallocatedApproachDots})`
           );
         }
 
-        character.actionDots[actionName] = dots;
-        character.unallocatedActionDots -= difference;
+        character.approaches[approach] = dots;
+        character.unallocatedApproachDots -= diff;
         character.updatedAt = Date.now();
 
         // Log command to history
         state.history.push({
-          type: 'characters/setActionDots',
+          type: 'characters/setApproach',
           payload: action.payload,
           timestamp: character.updatedAt,
           version: 1,
@@ -502,9 +505,10 @@ const characterSlice = createSlice({
           userId: undefined,
         });
       },
-      prepare: (payload: SetActionDotsPayload) => {
+      prepare: (payload: SetApproachPayload) => {
+        validateApproachDots(payload.dots);
         const command: Command = {
-          type: 'characters/setActionDots',
+          type: 'characters/setApproach',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -520,10 +524,7 @@ const characterSlice = createSlice({
     },
 
     addEquipment: {
-      reducer: (
-        state,
-        action: PayloadAction<{ characterId: string; equipment: Equipment }>
-      ) => {
+      reducer: (state, action: PayloadAction<AddEquipmentPayload>) => {
         const { characterId, equipment } = action.payload;
         const character = state.byId[characterId];
 
@@ -531,7 +532,7 @@ const characterSlice = createSlice({
           throw new Error(`Character ${characterId} not found`);
         }
 
-        // Safety: Ensure equipment has an ID (handles legacy data or edge cases)
+        // Generate ID if not present
         if (!equipment.id) {
           equipment.id = generateId();
         }
@@ -543,51 +544,31 @@ const characterSlice = createSlice({
         state.history.push({
           type: 'characters/addEquipment',
           payload: action.payload,
-          timestamp: equipment.acquiredAt,
+          timestamp: character.updatedAt,
           version: 1,
           commandId: generateId(),
           userId: undefined,
         });
       },
       prepare: (payload: AddEquipmentPayload) => {
-        const timestamp = Date.now();
-
-        // Create full Equipment instance from template data
-        const equipment: Equipment = {
-          id: generateId(),
-          name: payload.equipment.name,
-          tier: payload.equipment.tier,
-          category: payload.equipment.category,
-          description: payload.equipment.description || '',
-          img: payload.equipment.img,
-          equipped: payload.equipment.equipped ?? false,
-          acquiredAt: timestamp,
-          acquiredVia: payload.equipment.acquiredVia,
-          sourceItemId: payload.equipment.sourceItemId,
-          metadata: payload.equipment.metadata,
-        };
-
         const command: Command = {
           type: 'characters/addEquipment',
-          payload: { characterId: payload.characterId, equipment },
-          timestamp,
+          payload,
+          timestamp: Date.now(),
           version: 1,
           userId: payload.userId,
           commandId: generateId(),
         };
 
         return {
-          payload: { characterId: payload.characterId, equipment },
+          payload,
           meta: { command },
         };
       },
     },
 
     removeEquipment: {
-      reducer: (
-        state,
-        action: PayloadAction<{ characterId: string; equipmentId: string }>
-      ) => {
+      reducer: (state, action: PayloadAction<RemoveEquipmentPayload>) => {
         const { characterId, equipmentId } = action.payload;
         const character = state.byId[characterId];
 
@@ -595,9 +576,7 @@ const characterSlice = createSlice({
           throw new Error(`Character ${characterId} not found`);
         }
 
-        character.equipment = character.equipment.filter(
-          (e) => e.id !== equipmentId
-        );
+        character.equipment = character.equipment.filter((e) => e.id !== equipmentId);
         character.updatedAt = Date.now();
 
         // Log command to history
@@ -629,7 +608,7 @@ const characterSlice = createSlice({
 
     updateEquipment: {
       reducer: (state, action: PayloadAction<UpdateEquipmentPayload>) => {
-        const { characterId, equipmentId, changes } = action.payload;
+        const { characterId, equipmentId, updates } = action.payload;
         const character = state.byId[characterId];
 
         if (!character) {
@@ -637,23 +616,10 @@ const characterSlice = createSlice({
         }
 
         const equipment = character.equipment.find((e) => e.id === equipmentId);
-
-        if (!equipment) {
-          throw new Error(`Equipment ${equipmentId} not found`);
+        if (equipment) {
+          Object.assign(equipment, updates);
+          character.updatedAt = Date.now();
         }
-
-        // Apply changes (all fields editable!)
-        if (changes.name !== undefined) equipment.name = changes.name;
-        if (changes.tier !== undefined) equipment.tier = changes.tier;
-        if (changes.category !== undefined) equipment.category = changes.category;
-        if (changes.description !== undefined)
-          equipment.description = changes.description;
-        if (changes.img !== undefined) equipment.img = changes.img;
-        if (changes.metadata !== undefined) {
-          equipment.metadata = { ...equipment.metadata, ...changes.metadata };
-        }
-
-        character.updatedAt = Date.now();
 
         // Log command to history
         state.history.push({
@@ -697,6 +663,21 @@ const characterSlice = createSlice({
           throw new Error(`Equipment ${equipmentId} not found`);
         }
 
+        // If equipping, check load limit
+        if (equipped && !equipment.equipped) {
+          const currentLoad = character.equipment.filter(e => e.equipped).length;
+          if (currentLoad >= DEFAULT_CONFIG.character.maxLoad) {
+            // Block equipping if load limit reached
+            return;
+          }
+        }
+
+        // If unequipping, check if locked
+        if (!equipped && equipment.equipped && equipment.locked) {
+          // Block unequipping if locked
+          throw new Error(`Cannot unequip locked item ${equipment.name} until Momentum Reset`);
+        }
+
         equipment.equipped = equipped;
         character.updatedAt = Date.now();
 
@@ -727,28 +708,27 @@ const characterSlice = createSlice({
       },
     },
 
-    addUnallocatedDots: {
+    advanceApproach: {
       reducer: (
         state,
-        action: PayloadAction<{ characterId: string; amount: number }>
+        action: PayloadAction<{ characterId: string; approach: keyof Approaches }>
       ) => {
-        const { characterId, amount } = action.payload;
+        const { characterId, approach } = action.payload;
         const character = state.byId[characterId];
 
         if (!character) {
           throw new Error(`Character ${characterId} not found`);
         }
 
-        if (amount < 0) {
-          throw new Error('Cannot add negative unallocated dots');
-        }
+        // Validate advancement
+        validateApproachAdvancement(character, approach);
 
-        character.unallocatedActionDots += amount;
+        character.approaches[approach] += 1;
         character.updatedAt = Date.now();
 
         // Log command to history
         state.history.push({
-          type: 'characters/addUnallocatedDots',
+          type: 'characters/advanceApproach',
           payload: action.payload,
           timestamp: character.updatedAt,
           version: 1,
@@ -756,9 +736,9 @@ const characterSlice = createSlice({
           userId: undefined,
         });
       },
-      prepare: (payload: { characterId: string; amount: number; userId?: string }) => {
+      prepare: (payload: AdvanceApproachPayload) => {
         const command: Command = {
-          type: 'characters/addUnallocatedDots',
+          type: 'characters/advanceApproach',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -774,225 +754,85 @@ const characterSlice = createSlice({
     },
 
     useRally: {
-      reducer: (state, action: PayloadAction<{ characterId: string }>) => {
-        const { characterId } = action.payload;
+      reducer: (state, action: PayloadAction<{ characterId: string; userId?: string }>) => {
+        const { characterId, userId } = action.payload;
         const character = state.byId[characterId];
-
-        if (!character) {
-          throw new Error(`Character ${characterId} not found`);
-        }
+        if (!character) return;
 
         if (!character.rallyAvailable) {
-          throw new Error(
-            `Character ${characterId} has already used their Rally`
-          );
+          throw new Error(`Rally already used for character ${characterId}`);
         }
 
         character.rallyAvailable = false;
         character.updatedAt = Date.now();
 
-        // Log command to history
         state.history.push({
           type: 'characters/useRally',
           payload: action.payload,
           timestamp: character.updatedAt,
           version: 1,
           commandId: generateId(),
-          userId: undefined,
+          userId,
         });
       },
-      prepare: (payload: UseRallyPayload) => {
-        const command: Command = {
-          type: 'characters/useRally',
-          payload,
-          timestamp: Date.now(),
-          version: 1,
-          userId: payload.userId,
-          commandId: generateId(),
-        };
-
-        return {
-          payload,
-          meta: { command },
-        };
-      },
+      prepare: (payload: { characterId: string; userId?: string }) => ({ payload }),
     },
 
-    resetRally: {
-      reducer: (state, action: PayloadAction<{ characterId: string }>) => {
-        const { characterId } = action.payload;
+    addUnallocatedDots: {
+      reducer: (state, action: PayloadAction<{ characterId: string; amount: number; userId?: string }>) => {
+        const { characterId, amount } = action.payload;
+        const character = state.byId[characterId];
+        if (!character) return;
+
+        character.unallocatedApproachDots += amount;
+        character.updatedAt = Date.now();
+
+        state.history.push({
+          type: 'characters/addUnallocatedDots',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: action.payload.userId,
+        });
+      },
+      prepare: (payload: { characterId: string; amount: number; userId?: string }) => ({ payload }),
+    },
+
+    /**
+     * Lock equipment when equipped (rules_primer.md: "Once an item is equipped, it remains equipped until the next Momentum Reset")
+     * This action explicitly marks equipment as locked, preventing manual unequipping during gameplay
+     */
+    lockEquipment: {
+      reducer: (state, action: PayloadAction<LockEquipmentPayload>) => {
+        const { characterId, equipmentId } = action.payload;
         const character = state.byId[characterId];
 
         if (!character) {
           throw new Error(`Character ${characterId} not found`);
         }
 
-        character.rallyAvailable = true;
+        const equipment = character.equipment.find((e) => e.id === equipmentId);
+
+        if (!equipment) {
+          throw new Error(`Equipment ${equipmentId} not found`);
+        }
+
+        equipment.locked = true;
         character.updatedAt = Date.now();
 
-        // Log command to history
         state.history.push({
-          type: 'characters/resetRally',
+          type: 'characters/lockEquipment',
           payload: action.payload,
           timestamp: character.updatedAt,
           version: 1,
           commandId: generateId(),
-          userId: undefined,
+          userId: action.payload.userId,
         });
       },
-      prepare: (payload: ResetRallyPayload) => {
+      prepare: (payload: LockEquipmentPayload) => {
         const command: Command = {
-          type: 'characters/resetRally',
-          payload,
-          timestamp: Date.now(),
-          version: 1,
-          userId: payload.userId,
-          commandId: generateId(),
-        };
-
-        return {
-          payload,
-          meta: { command },
-        };
-      },
-    },
-
-    groupTraits: {
-      reducer: (
-        state,
-        action: PayloadAction<{
-          characterId: string;
-          traitIds: string[];
-          groupedTrait: Trait;
-        }>
-      ) => {
-        const { characterId, traitIds, groupedTrait } = action.payload;
-        const character = state.byId[characterId];
-
-        if (!character) {
-          throw new Error(`Character ${characterId} not found`);
-        }
-
-        // Validate trait grouping
-        validateTraitGrouping(character, traitIds);
-
-        // Remove the 3 original traits
-        character.traits = character.traits.filter(
-          (t) => !traitIds.includes(t.id)
-        );
-
-        // Add the grouped trait
-        character.traits.push(groupedTrait);
-        character.updatedAt = Date.now();
-
-        // Log command to history
-        state.history.push({
-          type: 'characters/groupTraits',
-          payload: action.payload,
-          timestamp: character.updatedAt,
-          version: 1,
-          commandId: generateId(),
-          userId: undefined,
-        });
-      },
-      prepare: (payload: GroupTraitsPayload) => {
-        const command: Command = {
-          type: 'characters/groupTraits',
-          payload,
-          timestamp: Date.now(),
-          version: 1,
-          userId: payload.userId,
-          commandId: generateId(),
-        };
-
-        return {
-          payload,
-          meta: { command },
-        };
-      },
-    },
-
-    createTraitFromFlashback: {
-      reducer: (
-        state,
-        action: PayloadAction<{ characterId: string; trait: Trait }>
-      ) => {
-        const { characterId, trait } = action.payload;
-        const character = state.byId[characterId];
-
-        if (!character) {
-          throw new Error(`Character ${characterId} not found`);
-        }
-
-        // Flashback traits have category 'flashback'
-        if (trait.category !== 'flashback') {
-          throw new Error(
-            'Trait created from flashback must have category "flashback"'
-          );
-        }
-
-        character.traits.push(trait);
-        character.updatedAt = Date.now();
-
-        // Log command to history
-        state.history.push({
-          type: 'characters/createTraitFromFlashback',
-          payload: action.payload,
-          timestamp: character.updatedAt,
-          version: 1,
-          commandId: generateId(),
-          userId: undefined,
-        });
-      },
-      prepare: (payload: CreateTraitFromFlashbackPayload) => {
-        const command: Command = {
-          type: 'characters/createTraitFromFlashback',
-          payload,
-          timestamp: Date.now(),
-          version: 1,
-          userId: payload.userId,
-          commandId: generateId(),
-        };
-
-        return {
-          payload,
-          meta: { command },
-        };
-      },
-    },
-
-    advanceActionDots: {
-      reducer: (
-        state,
-        action: PayloadAction<{ characterId: string; action: keyof ActionDots }>
-      ) => {
-        const { characterId, action: actionType } = action.payload;
-        const character = state.byId[characterId];
-
-        if (!character) {
-          throw new Error(`Character ${characterId} not found`);
-        }
-
-        // Validate advancement
-        validateActionDotAdvancement(character, actionType);
-
-        // Advance by 1
-        character.actionDots[actionType] += 1;
-        character.updatedAt = Date.now();
-
-        // Log command to history
-        state.history.push({
-          type: 'characters/advanceActionDots',
-          payload: action.payload,
-          timestamp: character.updatedAt,
-          version: 1,
-          commandId: generateId(),
-          userId: undefined,
-        });
-      },
-      prepare: (payload: AdvanceActionDotsPayload) => {
-        const command: Command = {
-          type: 'characters/advanceActionDots',
+          type: 'characters/lockEquipment',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -1008,11 +848,265 @@ const characterSlice = createSlice({
     },
 
     /**
-     * Prune command history
-     *
-     * Clears all command history, keeping only the current state snapshot.
-     * This reduces memory/storage usage while maintaining current game state.
+     * Unlock all equipment when Momentum Reset occurs (rules_primer.md: "At the start of a Momentum Reset, you can unequip any number of items")
      */
+    unlockAllEquipment: {
+      reducer: (state, action: PayloadAction<UnlockAllEquipmentPayload>) => {
+        const { characterId } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        // Unlock all equipped items
+        character.equipment.forEach((equip) => {
+          if (equip.equipped) {
+            equip.locked = false;
+          }
+        });
+
+        character.updatedAt = Date.now();
+
+        state.history.push({
+          type: 'characters/unlockAllEquipment',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: action.payload.userId,
+        });
+      },
+      prepare: (payload: UnlockAllEquipmentPayload) => {
+        const command: Command = {
+          type: 'characters/unlockAllEquipment',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    /**
+     * Mark consumable as depleted when used (rules_primer.md: "Single-use items that provide higher bonuses. After use, they remain equipped but become unusable")
+     */
+    markEquipmentDepleted: {
+      reducer: (state, action: PayloadAction<MarkEquipmentDepletedPayload>) => {
+        const { characterId, equipmentId } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        const equipment = character.equipment.find((e) => e.id === equipmentId);
+
+        if (!equipment) {
+          throw new Error(`Equipment ${equipmentId} not found`);
+        }
+
+        equipment.depleted = true;
+        character.updatedAt = Date.now();
+
+        state.history.push({
+          type: 'characters/markEquipmentDepleted',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: action.payload.userId,
+        });
+      },
+      prepare: (payload: MarkEquipmentDepletedPayload) => {
+        const command: Command = {
+          type: 'characters/markEquipmentDepleted',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    /**
+     * Replenish consumables on Momentum Reset (rules_primer.md: "Consumables are removed or replenished during a Momentum Reset")
+     */
+    replenishConsumables: {
+      reducer: (state, action: PayloadAction<ReplenishConsumablesPayload>) => {
+        const { characterId } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        // Reset depleted flag for all consumable-category items
+        const consumableCategories = DEFAULT_CONFIG.equipment.consumableCategories;
+        character.equipment.forEach((equip) => {
+          if (consumableCategories.includes(equip.category)) {
+            equip.depleted = false;
+          }
+        });
+
+        character.updatedAt = Date.now();
+
+        state.history.push({
+          type: 'characters/replenishConsumables',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: action.payload.userId,
+        });
+      },
+      prepare: (payload: ReplenishConsumablesPayload) => {
+        const command: Command = {
+          type: 'characters/replenishConsumables',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    /**
+     * Mark equipment as used (locked) when selected for an action
+     * Rules: Once equipment is used in an action, it cannot be unequipped until next Momentum Reset
+     */
+    markEquipmentUsed: {
+      reducer: (state, action: PayloadAction<MarkEquipmentUsedPayload>) => {
+        const { characterId, equipmentId } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        const equipment = character.equipment.find((e) => e.id === equipmentId);
+
+        if (!equipment) {
+          throw new Error(`Equipment ${equipmentId} not found`);
+        }
+
+        equipment.locked = true;
+        character.updatedAt = Date.now();
+
+        state.history.push({
+          type: 'characters/markEquipmentUsed',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: action.payload.userId,
+        });
+      },
+      prepare: (payload: MarkEquipmentUsedPayload) => {
+        const command: Command = {
+          type: 'characters/markEquipmentUsed',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    /**
+     * Auto-equip items marked with autoEquip flag at Momentum Reset
+     * Rules: At reset, items flagged with autoEquip: true are automatically re-equipped
+     */
+    autoEquipItems: {
+      reducer: (state, action: PayloadAction<AutoEquipItemsPayload>) => {
+        const { characterId } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        // Auto-equip items with autoEquip flag
+        character.equipment.forEach((equip) => {
+          if (equip.autoEquip) {
+            equip.equipped = true;
+            equip.locked = false; // Fresh equip after reset
+          }
+        });
+
+        character.updatedAt = Date.now();
+
+        state.history.push({
+          type: 'characters/autoEquipItems',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId: action.payload.userId,
+        });
+      },
+      prepare: (payload: AutoEquipItemsPayload) => {
+        const command: Command = {
+          type: 'characters/autoEquipItems',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    resetRally: {
+      reducer: (state, action: PayloadAction<{ characterId: string; userId?: string }>) => {
+        const { characterId, userId } = action.payload;
+        const character = state.byId[characterId];
+        if (!character) return;
+
+        character.rallyAvailable = true;
+        character.updatedAt = Date.now();
+
+        state.history.push({
+          type: 'characters/resetRally',
+          payload: action.payload,
+          timestamp: character.updatedAt,
+          version: 1,
+          commandId: generateId(),
+          userId,
+        });
+      },
+      prepare: (payload: { characterId: string; userId?: string }) => ({ payload }),
+    },
+
     pruneHistory: (state) => {
       state.history = [];
     },
@@ -1042,18 +1136,29 @@ const characterSlice = createSlice({
       });
     },
 
-    /**
-     * Hydrate state from serialized snapshot
-     *
-     * Used when loading saved state from Foundry world settings.
-     * Replaces entire state with the provided snapshot.
-     */
+    cleanupOrphanedCharacters: (state, action: PayloadAction<{ validIds: string[] }>) => {
+      const { validIds } = action.payload;
+      const validIdSet = new Set(validIds);
+      const charsToRemove: string[] = [];
+
+      for (const charId of state.allIds) {
+        if (!validIdSet.has(charId)) {
+          charsToRemove.push(charId);
+        }
+      }
+
+      for (const charId of charsToRemove) {
+        delete state.byId[charId];
+      }
+
+      state.allIds = state.allIds.filter(id => !charsToRemove.includes(id));
+    },
+
     hydrateCharacters: (state, action: PayloadAction<Record<string, Character>>) => {
       const characters = action.payload;
-
       state.byId = characters;
       state.allIds = Object.keys(characters);
-      state.history = []; // No history in snapshots
+      state.history = [];
     },
   },
 });
@@ -1061,23 +1166,30 @@ const characterSlice = createSlice({
 export const {
   createCharacter,
   addTrait,
+  createTraitFromFlashback,
+  groupTraits,
   disableTrait,
   enableTrait,
   removeTrait,
   updateTraitName,
-  setActionDots,
+  setApproach,
   addEquipment,
+  removeEquipment,
   updateEquipment,
   toggleEquipped,
-  removeEquipment,
+  lockEquipment,
+  unlockAllEquipment,
+  markEquipmentDepleted,
+  replenishConsumables,
+  markEquipmentUsed,
+  autoEquipItems,
+  advanceApproach,
   addUnallocatedDots,
   useRally,
   resetRally,
-  groupTraits,
-  createTraitFromFlashback,
-  advanceActionDots,
-  pruneHistory,
+  pruneHistory: pruneCharacterHistory,
   pruneOrphanedHistory,
+  cleanupOrphanedCharacters,
   hydrateCharacters,
 } = characterSlice.actions;
 

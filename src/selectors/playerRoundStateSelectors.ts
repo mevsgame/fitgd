@@ -8,6 +8,8 @@
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
 import type { PlayerRoundState, Position, Effect } from '../types/playerRoundState';
+import type { EquipmentEffect } from '../types/equipment';
+import { DEFAULT_CONFIG } from '../config/gameConfig';
 import {
   calculateConsequenceSeverity,
   calculateMomentumGain,
@@ -15,6 +17,12 @@ import {
   improvePosition,
   improveEffect,
 } from '../utils/playerRoundRules';
+import {
+  improvePosition as improvePositionBySteps,
+  worsenPosition as worsenPositionBySteps,
+  improveEffect as improveEffectBySteps,
+  worsenEffect as worsenEffectBySteps,
+} from '../utils/positionEffectHelpers';
 
 /**
  * Select player state by character ID
@@ -58,34 +66,200 @@ export const selectDicePool = createSelector(
     (state: RootState, characterId: string) => selectPlayerState(state, characterId),
   ],
   (character, playerState) => {
-    if (!character || !playerState?.selectedAction) {
+    if (!character || !playerState?.selectedApproach) {
       return 0;
     }
 
-    // Base: action dots for selected action
-    let pool = character.actionDots[playerState.selectedAction] || 0;
+    // 1. Start with Primary Approach
+    let pool = character.approaches[playerState.selectedApproach] || 0;
 
-    // +1d if using a trait
+    // 2. Add Secondary Source (Synergy OR Equipment)
+    // Note: rollMode defaults to 'equipment' if undefined for backward compatibility,
+    // or we can default to 'standard'. Let's assume 'equipment' is the default flow if not specified,
+    // but strictly checking the mode is safer.
+    const mode = playerState.rollMode || 'equipment';
+
+    if (mode === 'synergy' && playerState.secondaryApproach) {
+      // Synergy: Add Secondary Approach Rating
+      pool += character.approaches[playerState.secondaryApproach] || 0;
+    } else if (mode === 'equipment') {
+      // Equipment: Apply category-based effects
+      if (playerState.equippedForAction && playerState.equippedForAction.length > 0) {
+        const equipmentId = playerState.equippedForAction[0]; // First (primary) equipment item
+        const item = character.equipment.find(e => e.id === equipmentId);
+
+        if (item && item.equipped) {
+          // Get equipment effect from config based on category
+          const { diceBonus = 0, dicePenalty = 0 } = DEFAULT_CONFIG.equipment.categories[item.category]?.effect || {};
+          pool += diceBonus;
+          pool -= dicePenalty;
+        }
+      }
+    }
+
+    // 3. Add Trait (+1d)
     if (playerState.selectedTraitId) {
       pool += 1;
     }
 
-    // +1d if using equipment (any equipment counts)
-    if (playerState.equippedForAction && playerState.equippedForAction.length > 0) {
+    // 4. Add Push (+1d)
+    if (playerState.pushed && playerState.pushType === 'extra-die') {
       pool += 1;
     }
 
-    // +1d if pushed
-    if (playerState.pushed) {
-      pool += 1;
-    }
-
-    // +1d if flashback applied
+    // 5. Add Flashback (+1d)
     if (playerState.flashbackApplied) {
       pool += 1;
     }
 
     return pool;
+  }
+);
+
+/**
+ * Select cumulative equipment effects for a player's selected equipment
+ *
+ * Computes the total effects from all equipment items selected for the action,
+ * combining dice bonuses/penalties, position modifiers, and effect modifiers.
+ *
+ * Rules (rules_primer.md):
+ * - Only equipped items grant bonuses
+ * - Equipment bonuses are variable and depend on category
+ * - Includes: dice bonus, position modifier, effect modifier
+ *
+ * @returns EquipmentEffect with cumulative bonuses (all optional fields)
+ *
+ * @example
+ * // Character has 2 equipped items for action, each with +1d
+ * selectEquipmentEffects(state, characterId) // → { diceBonus: 2 }
+ */
+export const selectEquipmentEffects = createSelector(
+  [
+    (state: RootState, characterId: string) => state.characters.byId[characterId],
+    (state: RootState, characterId: string) => selectPlayerState(state, characterId),
+  ],
+  (character, playerState): EquipmentEffect => {
+    if (!character || !playerState?.equippedForAction || playerState.equippedForAction.length === 0) {
+      return {};
+    }
+
+    // Accumulate effects from all equipped items
+    const effects: EquipmentEffect = {
+      diceBonus: 0,
+      dicePenalty: 0,
+      effectBonus: 0,
+      effectPenalty: 0,
+      positionBonus: 0,
+      positionPenalty: 0,
+      criticalDiceBonus: 0,
+      criticalEffectBonus: 0,
+    };
+
+    playerState.equippedForAction.forEach((equipmentId) => {
+      const item = character.equipment.find(e => e.id === equipmentId);
+
+      if (item && item.equipped) {
+        const categoryConfig = DEFAULT_CONFIG.equipment.categories[item.category];
+        const itemEffect = categoryConfig?.effect || {};
+
+        // Accumulate all effect modifiers
+        if (itemEffect.diceBonus) effects.diceBonus! += itemEffect.diceBonus;
+        if (itemEffect.dicePenalty) effects.dicePenalty! += itemEffect.dicePenalty;
+        if (itemEffect.effectBonus) effects.effectBonus! += itemEffect.effectBonus;
+        if (itemEffect.effectPenalty) effects.effectPenalty! += itemEffect.effectPenalty;
+        if (itemEffect.positionBonus) effects.positionBonus! += itemEffect.positionBonus;
+        if (itemEffect.positionPenalty) effects.positionPenalty! += itemEffect.positionPenalty;
+        if (itemEffect.criticalDiceBonus) effects.criticalDiceBonus! += itemEffect.criticalDiceBonus;
+        if (itemEffect.criticalEffectBonus) effects.criticalEffectBonus! += itemEffect.criticalEffectBonus;
+      }
+    });
+
+    // Return only non-zero effects
+    const result: EquipmentEffect = {};
+    if (effects.diceBonus && effects.diceBonus > 0) result.diceBonus = effects.diceBonus;
+    if (effects.dicePenalty && effects.dicePenalty > 0) result.dicePenalty = effects.dicePenalty;
+    if (effects.effectBonus && effects.effectBonus > 0) result.effectBonus = effects.effectBonus;
+    if (effects.effectPenalty && effects.effectPenalty > 0) result.effectPenalty = effects.effectPenalty;
+    if (effects.positionBonus && effects.positionBonus > 0) result.positionBonus = effects.positionBonus;
+    if (effects.positionPenalty && effects.positionPenalty > 0) result.positionPenalty = effects.positionPenalty;
+    if (effects.criticalDiceBonus && effects.criticalDiceBonus > 0) result.criticalDiceBonus = effects.criticalDiceBonus;
+    if (effects.criticalEffectBonus && effects.criticalEffectBonus > 0) result.criticalEffectBonus = effects.criticalEffectBonus;
+
+    return result;
+  }
+);
+
+/**
+ * Calculate position after applying equipment modifiers
+ *
+ * Rules (rules_primer.md):
+ * - Equipment can improve or worsen position by any number of steps
+ * - Position modifiers are shown to player before roll
+ *
+ * @returns Effective position for roll (with equipment modifiers applied)
+ * @example
+ * // Base position: risky, equipment has positionBonus: 1
+ * selectEquipmentModifiedPosition(state, characterId) // → 'controlled'
+ */
+export const selectEquipmentModifiedPosition = createSelector(
+  [
+    (state: RootState, characterId: string) => selectPlayerState(state, characterId),
+    (state: RootState, characterId: string) => selectEquipmentEffects(state, characterId),
+  ],
+  (playerState, equipmentEffects): Position => {
+    const basePosition = playerState?.position || 'risky';
+
+    // Apply position modifiers from equipment
+    let modifiedPosition = basePosition;
+
+    // Apply positive modifiers (improvements)
+    if (equipmentEffects.positionBonus && equipmentEffects.positionBonus > 0) {
+      modifiedPosition = improvePositionBySteps(modifiedPosition, equipmentEffects.positionBonus);
+    }
+
+    // Apply negative modifiers (worsening)
+    if (equipmentEffects.positionPenalty && equipmentEffects.positionPenalty > 0) {
+      modifiedPosition = worsenPositionBySteps(modifiedPosition, equipmentEffects.positionPenalty);
+    }
+
+    return modifiedPosition;
+  }
+);
+
+/**
+ * Calculate effect after applying equipment modifiers
+ *
+ * Rules (rules_primer.md):
+ * - Equipment can improve or worsen effect by any amount
+ * - Effect modifiers are shown to player before roll
+ *
+ * @returns Effective effect for roll (with equipment modifiers applied)
+ * @example
+ * // Base effect: standard, equipment has effectBonus: 1
+ * selectEquipmentModifiedEffect(state, characterId) // → 'great'
+ */
+export const selectEquipmentModifiedEffect = createSelector(
+  [
+    (state: RootState, characterId: string) => selectPlayerState(state, characterId),
+    (state: RootState, characterId: string) => selectEquipmentEffects(state, characterId),
+  ],
+  (playerState, equipmentEffects): Effect => {
+    const baseEffect = playerState?.effect || 'standard';
+
+    // Apply effect modifiers from equipment
+    let modifiedEffect = baseEffect;
+
+    // Apply positive modifiers (improvements)
+    if (equipmentEffects.effectBonus && equipmentEffects.effectBonus > 0) {
+      modifiedEffect = improveEffectBySteps(modifiedEffect, equipmentEffects.effectBonus);
+    }
+
+    // Apply negative modifiers (worsening)
+    if (equipmentEffects.effectPenalty && equipmentEffects.effectPenalty > 0) {
+      modifiedEffect = worsenEffectBySteps(modifiedEffect, equipmentEffects.effectPenalty);
+    }
+
+    return modifiedEffect;
   }
 );
 
@@ -178,7 +352,7 @@ export const selectAvailableActions = createSelector(
     switch (playerState.state) {
       case 'DECISION_PHASE':
         actions.push('select_action', 'toggle_push', 'toggle_trait', 'toggle_equipment');
-        if (playerState.selectedAction) {
+        if (playerState.selectedApproach) {
           actions.push('commit_roll');
         }
         break;
@@ -358,3 +532,9 @@ export const selectEffectiveEffect = createSelector(
     return baseEffect;
   }
 );
+
+/**
+ * Export tables for testing and UI
+ */
+export const CONSEQUENCE_TABLE = DEFAULT_CONFIG.resolution.consequenceSegmentsBase;
+export const MOMENTUM_GAIN_TABLE = DEFAULT_CONFIG.resolution.momentumOnConsequence;

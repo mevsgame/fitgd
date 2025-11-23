@@ -131,6 +131,16 @@ export class HistoryManagementConfig extends FormApplication {
         try {
           const adapter = game.fitgd!.foundry;
 
+          // Clean up orphaned entities first
+          // This ensures the snapshot we're about to save is clean
+          const validCharacterIds = (game.actors as any).filter((a: any) => a.type === 'character').map((a: any) => a.id);
+          const validCrewIds = (game.actors as any).filter((a: any) => a.type === 'crew').map((a: any) => a.id);
+          const allValidEntityIds = [...validCharacterIds, ...validCrewIds];
+
+          adapter.cleanupOrphanedCharacters(validCharacterIds);
+          adapter.cleanupOrphanedCrews(validCrewIds);
+          adapter.cleanupOrphanedClocks(allValidEntityIds);
+
           // Prune all command history
           adapter.pruneAllHistory();
 

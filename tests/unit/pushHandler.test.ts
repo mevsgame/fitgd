@@ -14,23 +14,21 @@ import type { PlayerRoundState } from '../../src/types/playerRoundState';
 
 describe('PushHandler', () => {
   const mockPlayerState = (overrides?: Partial<PlayerRoundState>): PlayerRoundState => ({
+    characterId: 'char-1',
     state: 'DECISION_PHASE',
-    selectedAction: 'consort',
+    selectedApproach: 'spirit',
     position: 'risky',
     effect: 'standard',
-    crewClockId: null,
-    harmTargetCharacterId: null,
-    harmClockId: null,
-    consequenceType: null,
-    consequenceTransaction: null,
-    traitTransaction: null,
+    consequenceType: undefined,
+    consequenceTransaction: undefined,
+    traitTransaction: undefined,
     pushed: false,
     pushType: undefined,
     flashbackApplied: false,
-    selectedTraitId: null,
+    selectedTraitId: undefined,
     equippedForAction: [],
-    rollResult: null,
-    rollOutcome: null,
+    outcome: undefined,
+    stateEnteredAt: Date.now(),
     ...overrides,
   });
 
@@ -340,3 +338,6 @@ describe('PushHandler', () => {
     });
   });
 });
+
+
+

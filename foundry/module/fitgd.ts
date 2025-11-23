@@ -93,7 +93,7 @@ function setSetting<T>(key: string, value: T): Promise<T> {
 /**
  * Initialize the FitGD system
  */
-Hooks.once('init', async function() {
+Hooks.once('init', async function () {
   console.log('FitGD | Initializing Forged in the Grimdark system');
 
   // Create global namespace
@@ -156,7 +156,7 @@ Hooks.once('init', async function() {
   }
 
   // Expose save function for dialogs and sheets to use
-  game.fitgd!.saveImmediate = async function(): Promise<void> {
+  game.fitgd!.saveImmediate = async function (): Promise<void> {
     try {
       // Get new commands since last broadcast
       const newCommands = getNewCommandsSinceLastBroadcast();
@@ -204,30 +204,72 @@ Hooks.once('init', async function() {
         if (autoPruneEnabled) {
           console.log('FitGD | Auto-prune enabled, checking for orphaned history...');
 
-          // Get command counts before pruning
+          // Get state before any operations
           const stateBefore = game.fitgd!.store.getState();
           const commandsBefore =
             stateBefore.characters.history.length +
             stateBefore.crews.history.length +
             stateBefore.clocks.history.length;
+          const characterCountBefore = stateBefore.characters.allIds.length;
+          const crewCountBefore = stateBefore.crews.allIds.length;
+          const clockCountBefore = stateBefore.clocks.allIds.length;
 
-          // Dispatch prune actions for all slices
+          // 1. Identify valid entity IDs from Foundry
+          const validCharacterIds = game.actors.filter(a => a.type === 'character').map(a => a.id);
+          const validCrewIds = game.actors.filter(a => a.type === 'crew').map(a => a.id);
+          const allValidEntityIds = [...validCharacterIds, ...validCrewIds];
+
+          // 2. Cleanup State (remove orphans from Redux state)
+          // This modifies state.byId and state.allIds
+          game.fitgd!.foundry.cleanupOrphanedCharacters(validCharacterIds);
+          game.fitgd!.foundry.cleanupOrphanedCrews(validCrewIds);
+          game.fitgd!.foundry.cleanupOrphanedClocks(allValidEntityIds);
+
+          // Get state after cleanup to identify valid clock IDs for history pruning
+          const stateAfterCleanup = game.fitgd!.store.getState();
+          const validClockIds = new Set(stateAfterCleanup.clocks.allIds);
+
+          // 3. Prune History (remove commands for orphans)
+          // This modifies state.history
           game.fitgd!.store.dispatch({ type: 'characters/pruneOrphanedHistory' });
           game.fitgd!.store.dispatch({ type: 'crews/pruneOrphanedHistory' });
-          game.fitgd!.store.dispatch({ type: 'clocks/pruneOrphanedHistory' });
+          game.fitgd!.store.dispatch({
+            type: 'clocks/pruneOrphanedHistory',
+            payload: { validIds: validClockIds }
+          });
 
-          // Get command counts after pruning
+          // 4. Check results
           const stateAfter = game.fitgd!.store.getState();
           const commandsAfter =
             stateAfter.characters.history.length +
             stateAfter.crews.history.length +
             stateAfter.clocks.history.length;
 
-          const prunedCount = commandsBefore - commandsAfter;
+          const characterCountAfter = stateAfter.characters.allIds.length;
+          const crewCountAfter = stateAfter.crews.allIds.length;
+          const clockCountAfter = stateAfter.clocks.allIds.length;
 
-          if (prunedCount > 0) {
-            console.log(`FitGD | Auto-pruned ${prunedCount} orphaned command(s) from history`);
-            ui.notifications!.info(`Auto-pruned ${prunedCount} orphaned command(s) from history`);
+          const prunedCount = commandsBefore - commandsAfter;
+          const cleanedCount = (characterCountBefore - characterCountAfter) +
+            (crewCountBefore - crewCountAfter) +
+            (clockCountBefore - clockCountAfter);
+
+          if (prunedCount > 0 || cleanedCount > 0) {
+            console.log(`FitGD | Auto-prune: Removed ${cleanedCount} orphaned entities and ${prunedCount} history commands`);
+
+            if (cleanedCount > 0) {
+              ui.notifications!.info(`FitGD: Cleaned up ${cleanedCount} orphaned entities`);
+
+              // If we cleaned up state, we MUST update the snapshot to persist the deletion
+              // Otherwise, re-hydrating from the old snapshot would bring them back
+              console.log('FitGD | Updating state snapshot to persist cleanup...');
+              const stateSnapshot = game.fitgd!.foundry.exportState();
+              await setSetting('stateSnapshot', stateSnapshot);
+            }
+
+            if (prunedCount > 0) {
+              ui.notifications!.info(`FitGD: Pruned ${prunedCount} history commands`);
+            }
           }
         }
       }
@@ -272,8 +314,8 @@ Hooks.once('init', async function() {
   // Register sheet classes
   registerSheetClasses();
 
-  // Register Handlebars helpers
-  registerHandlebarsHelpers();
+  // Register Handlebars helpers and partials
+  await registerHandlebarsHelpers();
 
   // Register hooks
   registerCombatHooks();
@@ -293,7 +335,7 @@ Hooks.once('init', async function() {
 /**
  * Load saved game state when world is ready
  */
-Hooks.once('ready', async function() {
+Hooks.once('ready', async function () {
   console.log(`FitGD | World ready for user: ${game.user!.name} (isGM: ${game.user!.isGM})`);
   console.log(`FitGD | game.fitgd initialized: ${!!game.fitgd}, has store: ${!!game.fitgd?.store}, has api: ${!!game.fitgd?.api}`);
 
@@ -378,7 +420,7 @@ Hooks.once('ready', async function() {
   });
 
   // Expose test function for manual socket testing
-  game.fitgd!.testSocket = async function(): Promise<void> {
+  game.fitgd!.testSocket = async function (): Promise<void> {
     console.log('FitGD | Testing socketlib...');
     console.log('FitGD | Socket object:', game.fitgd!.socket);
 

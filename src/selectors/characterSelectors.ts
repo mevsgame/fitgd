@@ -75,29 +75,19 @@ export const selectCanUseRally = createSelector(
 );
 
 /**
- * Get total action dots for a character
+ * Get total approach dots for a character
  */
-export const selectTotalActionDots = createSelector(
+export const selectTotalApproachDots = createSelector(
   [selectCharacterById],
   (character): number => {
     if (!character) return 0;
-    return Object.values(character.actionDots).reduce(
-      (sum, dots) => sum + dots,
+    return Object.values(character.approaches).reduce(
+      (sum: number, dots: number) => sum + dots,
       0
     );
   }
 );
 
-/**
- * Get equipment by tier
- */
-export const selectEquipmentByTier = createSelector(
-  [selectCharacterById, (_state: RootState, _characterId: string, tier: string) => tier],
-  (character, tier) => {
-    if (!character) return [];
-    return character.equipment.filter((e) => e.tier === tier);
-  }
-);
 
 /**
  * Check if character has a specific trait by name

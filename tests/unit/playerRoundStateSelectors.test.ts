@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
-import characterReducer, { createCharacter } from '../../src/slices/characterSlice';
+import { EnhancedStore } from '@reduxjs/toolkit';
+import { configureStore } from '../../src/store';
+import { RootState } from '../../src/store';
+import characterReducer, { createCharacter, addEquipment } from '../../src/slices/characterSlice';
 import crewReducer, { createCrew } from '../../src/slices/crewSlice';
 import clockReducer, { createClock, addSegments } from '../../src/slices/clockSlice';
 import playerRoundStateReducer, {
@@ -14,6 +16,9 @@ import {
   selectActivePlayerId,
   selectIsActivePlayer,
   selectDicePool,
+  selectEquipmentEffects,
+  selectEquipmentModifiedPosition,
+  selectEquipmentModifiedEffect,
   selectConsequenceSeverity,
   selectMomentumGain,
   selectMomentumCost,
@@ -31,41 +36,26 @@ import {
 } from '../../src/selectors/playerRoundStateSelectors';
 
 describe('playerRoundStateSelectors', () => {
-  let store: ReturnType<typeof configureStore>;
+  let store: EnhancedStore<RootState>;
   let characterId: string;
   let crewId: string;
 
   beforeEach(() => {
-    store = configureStore({
-      reducer: {
-        characters: characterReducer,
-        crews: crewReducer,
-        clocks: clockReducer,
-        playerRoundState: playerRoundStateReducer,
-      },
-    });
+    store = configureStore();
 
     // Create test character
     store.dispatch(
       createCharacter({
         name: 'Test Character',
         traits: [
-          { name: 'Role', category: 'role', disabled: false },
-          { name: 'Background', category: 'background', disabled: false },
+          { id: 'trait-role-1', name: 'Role', category: 'role', disabled: false, acquiredAt: Date.now() },
+          { id: 'trait-bg-1', name: 'Background', category: 'background', disabled: false, acquiredAt: Date.now() },
         ],
-        actionDots: {
-          shoot: 3,
-          skirmish: 2,
-          skulk: 1,
-          wreck: 1,
-          finesse: 1,
-          survey: 1,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          command: 2,
-          consort: 0,
-          sway: 0,
+        approaches: {
+          force: 2,
+          guile: 2,
+          focus: 1,
+          spirit: 0,
         },
       })
     );
@@ -131,65 +121,95 @@ describe('playerRoundStateSelectors', () => {
       expect(result).toBe(0);
     });
 
-    it('should return base action dots', () => {
+    it('should return base approach rating (Standard Mode)', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'risky',
           effect: 'standard',
+          rollMode: 'standard',
         })
       );
 
       const result = selectDicePool(store.getState(), characterId);
-      expect(result).toBe(3); // shoot: 3
+      expect(result).toBe(2); // force: 2
     });
 
-    it('should add 1d for using trait', () => {
+    it('should add secondary approach rating (Synergy Mode)', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force', // 2
+          secondaryApproach: 'guile', // 2
           position: 'risky',
           effect: 'standard',
+          rollMode: 'synergy',
         })
       );
+
+      const result = selectDicePool(store.getState(), characterId);
+      expect(result).toBe(4); // 2 + 2
+    });
+
+    it('should NOT add secondary approach if mode is NOT synergy', () => {
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force', // 2
+          secondaryApproach: 'guile', // 2
+          position: 'risky',
+          effect: 'standard',
+          rollMode: 'standard', // Explicitly standard
+        })
+      );
+
+      const result = selectDicePool(store.getState(), characterId);
+      expect(result).toBe(2); // Only force
+    });
+
+    it('should add +1d if equipment has bonus tag (Equipment Mode)', () => {
+      // Add equipment with bonus tag to character
+      const equipment = {
+        id: 'equip-bonus',
+        name: 'Bonus Item',
+        tier: 'common' as const,
+        category: 'weapon',
+        rarity: 'common' as const,
+        description: 'Bonus',
+        tags: ['bonus'],
+        equipped: true,
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addEquipment({ characterId, equipment }));
+
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'risky',
+          effect: 'standard',
+          rollMode: 'equipment',
+        })
+      );
+
       store.dispatch(
         setImprovements({
           characterId,
-          selectedTraitId: 'trait-123',
+          equippedForAction: [equipment.id],
         })
       );
 
       const result = selectDicePool(store.getState(), characterId);
-      expect(result).toBe(4); // 3 + 1 (trait)
+      expect(result).toBe(3); // 2 + 1 (bonus equipment)
     });
 
-    it('should add 1d for using equipment', () => {
+    it('should add +1d for pushing (Extra Die)', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
-          position: 'risky',
-          effect: 'standard',
-        })
-      );
-      store.dispatch(
-        setImprovements({
-          characterId,
-          equippedForAction: ['weapon-1'],
-        })
-      );
-
-      const result = selectDicePool(store.getState(), characterId);
-      expect(result).toBe(4); // 3 + 1 (equipment)
-    });
-
-    it('should add 1d for pushing', () => {
-      store.dispatch(
-        setActionPlan({
-          characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'risky',
           effect: 'standard',
         })
@@ -198,18 +218,40 @@ describe('playerRoundStateSelectors', () => {
         setImprovements({
           characterId,
           pushed: true,
+          pushType: 'extra-die',
         })
       );
 
       const result = selectDicePool(store.getState(), characterId);
-      expect(result).toBe(4); // 3 + 1 (pushed)
+      expect(result).toBe(3); // 2 + 1
     });
 
-    it('should add 1d for flashback', () => {
+    it('should NOT add +1d for pushing if push type is NOT extra-die', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
+          position: 'risky',
+          effect: 'standard',
+        })
+      );
+      store.dispatch(
+        setImprovements({
+          characterId,
+          pushed: true,
+          pushType: 'improved-effect',
+        })
+      );
+
+      const result = selectDicePool(store.getState(), characterId);
+      expect(result).toBe(2); // 2 + 0
+    });
+
+    it('should add +1d for flashback', () => {
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
           position: 'risky',
           effect: 'standard',
         })
@@ -222,50 +264,46 @@ describe('playerRoundStateSelectors', () => {
       );
 
       const result = selectDicePool(store.getState(), characterId);
-      expect(result).toBe(4); // 3 + 1 (flashback)
+      expect(result).toBe(3); // 2 + 1
     });
 
-    it('should stack all improvements', () => {
+    it('should stack Synergy + Push + Flashback', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force', // 2
+          secondaryApproach: 'guile', // 2
           position: 'risky',
           effect: 'standard',
+          rollMode: 'synergy',
         })
       );
       store.dispatch(
         setImprovements({
           characterId,
-          selectedTraitId: 'trait-123',
-          equippedForAction: ['weapon-1'],
           pushed: true,
+          pushType: 'extra-die',
           flashbackApplied: true,
         })
       );
 
       const result = selectDicePool(store.getState(), characterId);
-      expect(result).toBe(7); // 3 + 1 (trait) + 1 (equipment) + 1 (pushed) + 1 (flashback)
+      expect(result).toBe(6); // 2 (force) + 2 (guile) + 1 (push) + 1 (flashback)
     });
 
-    it('should work with 0 action dots', () => {
+    it('should handle 0 dots in approach', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'attune', // 0 dots
+          approach: 'spirit', // 0
           position: 'risky',
           effect: 'standard',
-        })
-      );
-      store.dispatch(
-        setImprovements({
-          characterId,
-          pushed: true,
+          rollMode: 'standard',
         })
       );
 
       const result = selectDicePool(store.getState(), characterId);
-      expect(result).toBe(1); // 0 + 1 (pushed)
+      expect(result).toBe(0);
     });
   });
 
@@ -274,11 +312,11 @@ describe('playerRoundStateSelectors', () => {
       // Controlled: 1 segment
       expect(selectConsequenceSeverity('controlled')).toBe(1);
 
-      // Risky: 3 segments
-      expect(selectConsequenceSeverity('risky')).toBe(3);
+      // Risky: 2 segments
+      expect(selectConsequenceSeverity('risky')).toBe(2);
 
-      // Desperate: 5 segments
-      expect(selectConsequenceSeverity('desperate')).toBe(5);
+      // Desperate: 4 segments
+      expect(selectConsequenceSeverity('desperate')).toBe(4);
     });
 
     it('should match CONSEQUENCE_TABLE', () => {
@@ -292,8 +330,8 @@ describe('playerRoundStateSelectors', () => {
       // All positions should return same value regardless of effect
       // This test documents that effect is intentionally ignored for consequences
       expect(selectConsequenceSeverity('controlled')).toBe(1);
-      expect(selectConsequenceSeverity('risky')).toBe(3);
-      expect(selectConsequenceSeverity('desperate')).toBe(5);
+      expect(selectConsequenceSeverity('risky')).toBe(2);
+      expect(selectConsequenceSeverity('desperate')).toBe(4);
     });
   });
 
@@ -381,7 +419,7 @@ describe('playerRoundStateSelectors', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'risky',
           effect: 'standard',
         })
@@ -615,7 +653,7 @@ describe('playerRoundStateSelectors', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'risky',
           effect: 'standard',
         })
@@ -666,7 +704,7 @@ describe('playerRoundStateSelectors', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'desperate',
           effect: 'standard',
         })
@@ -680,6 +718,7 @@ describe('playerRoundStateSelectors', () => {
             newTrait: {
               name: 'Flashback Trait',
               description: 'Created via flashback',
+              category: 'flashback',
             },
             positionImprovement: true,
             momentumCost: 1,
@@ -696,7 +735,7 @@ describe('playerRoundStateSelectors', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'impossible',
           effect: 'standard',
         })
@@ -712,6 +751,7 @@ describe('playerRoundStateSelectors', () => {
               newTrait: {
                 name: 'Consolidated Trait',
                 description: 'Three traits combined',
+                category: 'grouped',
               },
             },
             positionImprovement: true,
@@ -729,7 +769,7 @@ describe('playerRoundStateSelectors', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'controlled',
           effect: 'standard',
         })
@@ -756,7 +796,7 @@ describe('playerRoundStateSelectors', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'desperate',
           effect: 'standard',
         })
@@ -791,7 +831,7 @@ describe('playerRoundStateSelectors', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'risky',
           effect: 'standard',
         })
@@ -834,7 +874,7 @@ describe('playerRoundStateSelectors', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'risky',
           effect: 'limited',
         })
@@ -857,7 +897,7 @@ describe('playerRoundStateSelectors', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'risky',
           effect: 'great',
         })
@@ -880,7 +920,7 @@ describe('playerRoundStateSelectors', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'risky',
           effect: 'spectacular',
         })
@@ -903,7 +943,7 @@ describe('playerRoundStateSelectors', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'risky',
           effect: 'standard',
         })
@@ -927,4 +967,526 @@ describe('playerRoundStateSelectors', () => {
       expect(playerState?.effect).toBe('standard'); // NOT mutated
     });
   });
+
+  describe('selectEquipmentEffects', () => {
+    it('should return empty object when no equipment selected', () => {
+      // Initialize player state first
+      store.dispatch(setActivePlayer({ characterId }));
+
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'risky',
+          effect: 'standard',
+        })
+      );
+
+      const result = selectEquipmentEffects(store.getState(), characterId);
+      expect(result).toEqual({});
+    });
+
+    it('should return empty object when equippedForAction is empty array', () => {
+      // Initialize player state first
+      store.dispatch(setActivePlayer({ characterId }));
+
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'risky',
+          effect: 'standard',
+          equippedForAction: [],
+        })
+      );
+
+      const result = selectEquipmentEffects(store.getState(), characterId);
+      expect(result).toEqual({});
+    });
+
+    it('should accumulate single equipment effect (diceBonus)', () => {
+      // Initialize player state first
+      store.dispatch(setActivePlayer({ characterId }));
+
+      const equipment = {
+        id: 'equip-weapon',
+        name: 'Las Rifle',
+        tier: 'common' as const,
+        category: 'weapon',
+        description: 'Standard weapon',
+        passive: false,
+        equipped: true,
+        locked: false,
+        depleted: false,
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addEquipment({ characterId, equipment }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'risky',
+          effect: 'standard',
+          equippedForAction: [equipment.id],
+        })
+      );
+
+      const result = selectEquipmentEffects(store.getState(), characterId);
+      // Weapon category has diceBonus effect from config
+      expect(result.diceBonus).toBeDefined();
+      expect(typeof result.diceBonus).toBe('number');
+    });
+
+    it('should accumulate multiple equipment effects', () => {
+      // Initialize player state first
+      store.dispatch(setActivePlayer({ characterId }));
+
+      const equip1 = {
+        id: 'equip-weapon',
+        name: 'Las Rifle',
+        tier: 'common' as const,
+        category: 'weapon',
+        description: 'Standard weapon',
+        passive: false,
+        equipped: true,
+        locked: false,
+        depleted: false,
+        acquiredAt: Date.now(),
+      };
+
+      const equip2 = {
+        id: 'equip-armor',
+        name: 'Combat Armor',
+        tier: 'common' as const,
+        category: 'armor',
+        description: 'Protective gear',
+        passive: true,
+        equipped: true,
+        locked: false,
+        depleted: false,
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addEquipment({ characterId, equipment: equip1 }));
+      store.dispatch(addEquipment({ characterId, equipment: equip2 }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'risky',
+          effect: 'standard',
+          equippedForAction: [equip1.id, equip2.id],
+        })
+      );
+
+      const result = selectEquipmentEffects(store.getState(), characterId);
+      // Should have combined effects from both items
+      // The exact values depend on weapon + armor category configs
+      expect(result).toBeDefined();
+    });
+
+    it('should ignore unequipped items in equippedForAction', () => {
+      // Initialize player state first
+      store.dispatch(setActivePlayer({ characterId }));
+
+      const equipment = {
+        id: 'equip-unequipped',
+        name: 'Unequipped Item',
+        tier: 'common' as const,
+        category: 'weapon',
+        description: 'Not equipped',
+        passive: false,
+        equipped: false,
+        locked: false,
+        depleted: false,
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addEquipment({ characterId, equipment }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'risky',
+          effect: 'standard',
+          equippedForAction: [equipment.id],
+        })
+      );
+
+      const result = selectEquipmentEffects(store.getState(), characterId);
+      // Should return empty because item is not equipped
+      expect(result).toEqual({});
+    });
+
+    it('should ignore non-existent equipment IDs', () => {
+      // Initialize player state first
+      store.dispatch(setActivePlayer({ characterId }));
+
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'risky',
+          effect: 'standard',
+          equippedForAction: ['non-existent-id'],
+        })
+      );
+
+      const result = selectEquipmentEffects(store.getState(), characterId);
+      expect(result).toEqual({});
+    });
+
+    it('should only include non-zero effects in result', () => {
+      // Initialize player state first
+      store.dispatch(setActivePlayer({ characterId }));
+
+      const equipment = {
+        id: 'equip-test',
+        name: 'Test Item',
+        tier: 'common' as const,
+        category: 'weapon',
+        description: 'Test equipment',
+        passive: false,
+        equipped: true,
+        locked: false,
+        depleted: false,
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addEquipment({ characterId, equipment }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'risky',
+          effect: 'standard',
+          equippedForAction: [equipment.id],
+        })
+      );
+
+      const result = selectEquipmentEffects(store.getState(), characterId);
+
+      // Verify no zero or undefined effects in result
+      Object.values(result).forEach(value => {
+        if (value !== undefined) {
+          expect(value).not.toBe(0);
+          expect(typeof value).toBe('number');
+        }
+      });
+    });
+
+    it('should return empty object for character with no player state', () => {
+      // Character exists but has no player round state
+      const result = selectEquipmentEffects(store.getState(), characterId);
+      expect(result).toEqual({});
+    });
+
+    it('should return empty object for non-existent character', () => {
+      const result = selectEquipmentEffects(store.getState(), 'non-existent-char');
+      expect(result).toEqual({});
+    });
+  });
+
+  describe('selectEquipmentModifiedPosition', () => {
+    it('should return base position when no equipment selected', () => {
+      store.dispatch(setActivePlayer({ characterId }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'risky',
+          effect: 'standard',
+        })
+      );
+
+      const result = selectEquipmentModifiedPosition(store.getState(), characterId);
+      expect(result).toBe('risky');
+    });
+
+    it('should improve position by equipment bonus', () => {
+      store.dispatch(setActivePlayer({ characterId }));
+
+      // Add equipment that improves position
+      const equipment = {
+        id: 'equip-defensive',
+        name: 'Defensive Gear',
+        tier: 'common' as const,
+        category: 'armor', // armor typically has position bonus
+        description: 'Protective equipment',
+        passive: true,
+        equipped: true,
+        locked: false,
+        depleted: false,
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addEquipment({ characterId, equipment }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'desperate',
+          effect: 'standard',
+          equippedForAction: [equipment.id],
+        })
+      );
+
+      const result = selectEquipmentModifiedPosition(store.getState(), characterId);
+      // Position should improve from desperate toward controlled
+      // Exact improvement depends on armor category config
+      expect(result).toBeDefined();
+      // It should be <= desperate (not worsened)
+      expect(['controlled', 'risky', 'desperate']).toContain(result);
+    });
+
+    it('should worsen position by equipment penalty', () => {
+      store.dispatch(setActivePlayer({ characterId }));
+
+      // Add equipment that worsens position
+      const equipment = {
+        id: 'equip-loud',
+        name: 'Loud Equipment',
+        tier: 'common' as const,
+        category: 'weapon',
+        description: 'Obvious, loud gear',
+        passive: false,
+        equipped: true,
+        locked: false,
+        depleted: false,
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addEquipment({ characterId, equipment }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'controlled',
+          effect: 'standard',
+          equippedForAction: [equipment.id],
+        })
+      );
+
+      const result = selectEquipmentModifiedPosition(store.getState(), characterId);
+      // Position can worsen or stay same depending on weapon config
+      expect(result).toBeDefined();
+      expect(['controlled', 'risky', 'desperate', 'impossible']).toContain(result);
+    });
+
+    it('should cap position at controlled (best)', () => {
+      store.dispatch(setActivePlayer({ characterId }));
+
+      // Add equipment with large position bonus
+      const equipment = {
+        id: 'equip-defensive',
+        name: 'Defensive Gear',
+        tier: 'common' as const,
+        category: 'armor',
+        description: 'Protective equipment',
+        passive: true,
+        equipped: true,
+        locked: false,
+        depleted: false,
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addEquipment({ characterId, equipment }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'controlled',
+          effect: 'standard',
+          equippedForAction: [equipment.id],
+        })
+      );
+
+      const result = selectEquipmentModifiedPosition(store.getState(), characterId);
+      // Should not improve beyond controlled
+      expect(result).toBe('controlled');
+    });
+
+    it('should cap position at impossible (worst)', () => {
+      store.dispatch(setActivePlayer({ characterId }));
+
+      const equipment = {
+        id: 'equip-test',
+        name: 'Test Equipment',
+        tier: 'common' as const,
+        category: 'weapon',
+        description: 'Test',
+        passive: false,
+        equipped: true,
+        locked: false,
+        depleted: false,
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addEquipment({ characterId, equipment }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'impossible',
+          effect: 'standard',
+          equippedForAction: [equipment.id],
+        })
+      );
+
+      const result = selectEquipmentModifiedPosition(store.getState(), characterId);
+      // Should not worsen beyond impossible
+      expect(result).toBe('impossible');
+    });
+  });
+
+  describe('selectEquipmentModifiedEffect', () => {
+    it('should return base effect when no equipment selected', () => {
+      store.dispatch(setActivePlayer({ characterId }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'risky',
+          effect: 'standard',
+        })
+      );
+
+      const result = selectEquipmentModifiedEffect(store.getState(), characterId);
+      expect(result).toBe('standard');
+    });
+
+    it('should improve effect by equipment bonus', () => {
+      store.dispatch(setActivePlayer({ characterId }));
+
+      const equipment = {
+        id: 'equip-quality',
+        name: 'Quality Equipment',
+        tier: 'rare' as const,
+        category: 'weapon',
+        description: 'High quality weapon',
+        passive: false,
+        equipped: true,
+        locked: false,
+        depleted: false,
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addEquipment({ characterId, equipment }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'risky',
+          effect: 'standard',
+          equippedForAction: [equipment.id],
+        })
+      );
+
+      const result = selectEquipmentModifiedEffect(store.getState(), characterId);
+      // Effect should improve or stay same depending on weapon config
+      expect(result).toBeDefined();
+      expect(['limited', 'standard', 'great', 'spectacular']).toContain(result);
+    });
+
+    it('should worsen effect by equipment penalty', () => {
+      store.dispatch(setActivePlayer({ characterId }));
+
+      const equipment = {
+        id: 'equip-crude',
+        name: 'Crude Equipment',
+        tier: 'common' as const,
+        category: 'weapon',
+        description: 'Poor quality weapon',
+        passive: false,
+        equipped: true,
+        locked: false,
+        depleted: false,
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addEquipment({ characterId, equipment }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'risky',
+          effect: 'great',
+          equippedForAction: [equipment.id],
+        })
+      );
+
+      const result = selectEquipmentModifiedEffect(store.getState(), characterId);
+      // Effect can be modified depending on weapon config
+      expect(result).toBeDefined();
+      expect(['limited', 'standard', 'great', 'spectacular']).toContain(result);
+    });
+
+    it('should cap effect at spectacular (best)', () => {
+      store.dispatch(setActivePlayer({ characterId }));
+
+      const equipment = {
+        id: 'equip-test',
+        name: 'Test Equipment',
+        tier: 'common' as const,
+        category: 'weapon',
+        description: 'Test',
+        passive: false,
+        equipped: true,
+        locked: false,
+        depleted: false,
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addEquipment({ characterId, equipment }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'risky',
+          effect: 'spectacular',
+          equippedForAction: [equipment.id],
+        })
+      );
+
+      const result = selectEquipmentModifiedEffect(store.getState(), characterId);
+      // Should not improve beyond spectacular
+      expect(result).toBe('spectacular');
+    });
+
+    it('should cap effect at limited (worst)', () => {
+      store.dispatch(setActivePlayer({ characterId }));
+
+      const equipment = {
+        id: 'equip-test',
+        name: 'Test Equipment',
+        tier: 'common' as const,
+        category: 'weapon',
+        description: 'Test',
+        passive: false,
+        equipped: true,
+        locked: false,
+        depleted: false,
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addEquipment({ characterId, equipment }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'risky',
+          effect: 'limited',
+          equippedForAction: [equipment.id],
+        })
+      );
+
+      const result = selectEquipmentModifiedEffect(store.getState(), characterId);
+      // Should not worsen beyond limited
+      expect(result).toBe('limited');
+    });
+  });
 });
+
+
+

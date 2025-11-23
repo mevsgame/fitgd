@@ -32,6 +32,10 @@ interface PlayerRoundState {
   position?: string;
   effect?: string;
   selectedAction?: string;
+  selectedApproach?: string;
+  secondaryApproach?: string;
+  equippedForAction?: string[];
+  rollMode?: string;
   gmApproved?: boolean;
   traitTransaction?: any;
   pushed?: boolean;
@@ -183,12 +187,20 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
           });
         }
 
-        if (receivedPlayerState.selectedAction && receivedPlayerState.selectedAction !== currentPlayerState?.selectedAction) {
+        // Handle new approach-based action plan (selectedApproach, secondaryApproach, equippedForAction, rollMode)
+        if (receivedPlayerState.selectedApproach &&
+            (receivedPlayerState.selectedApproach !== currentPlayerState?.selectedApproach ||
+             receivedPlayerState.secondaryApproach !== currentPlayerState?.secondaryApproach ||
+             JSON.stringify(receivedPlayerState.equippedForAction) !== JSON.stringify(currentPlayerState?.equippedForAction) ||
+             receivedPlayerState.rollMode !== currentPlayerState?.rollMode)) {
           game.fitgd!.store.dispatch({
             type: 'playerRoundState/setActionPlan',
             payload: {
               characterId,
-              action: receivedPlayerState.selectedAction,
+              approach: receivedPlayerState.selectedApproach,
+              secondaryApproach: receivedPlayerState.secondaryApproach,
+              equippedForAction: receivedPlayerState.equippedForAction,
+              rollMode: receivedPlayerState.rollMode,
               position: receivedPlayerState.position || 'risky',
               effect: receivedPlayerState.effect || 'standard'
             }

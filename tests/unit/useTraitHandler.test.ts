@@ -14,29 +14,29 @@ import type { PlayerRoundState } from '../../src/types/playerRoundState';
 
 describe('UseTraitHandler', () => {
   const mockPlayerState = (overrides?: Partial<PlayerRoundState>): PlayerRoundState => ({
+    characterId: 'char-1',
     state: 'DECISION_PHASE',
-    selectedAction: 'consort',
+    selectedApproach: 'spirit',
     position: 'risky',
     effect: 'standard',
-    crewClockId: null,
-    harmTargetCharacterId: null,
-    harmClockId: null,
-    consequenceType: null,
-    consequenceTransaction: null,
-    traitTransaction: null,
+    consequenceType: undefined,
+    consequenceTransaction: undefined,
+    traitTransaction: undefined,
     pushed: false,
     pushType: undefined,
     flashbackApplied: false,
-    selectedTraitId: null,
+    selectedTraitId: undefined,
     equippedForAction: [],
-    rollResult: null,
-    rollOutcome: null,
+    outcome: undefined,
+    stateEnteredAt: Date.now(),
     ...overrides,
   });
 
   const mockTraitTransaction = {
     mode: 'existing' as const,
     selectedTraitId: 'trait-1',
+    positionImprovement: false,
+    momentumCost: 0,
   };
 
   describe('validateUseTrait', () => {
@@ -233,7 +233,7 @@ describe('UseTraitHandler', () => {
       });
 
       const playerState = mockPlayerState({
-        traitTransaction: null,
+        traitTransaction: undefined,
       });
 
       expect(handler.hasActiveTraitTransaction(playerState)).toBe(false);
@@ -320,7 +320,7 @@ describe('UseTraitHandler', () => {
 
       // Toggle off
       const stateAfterOff = mockPlayerState({
-        traitTransaction: null,
+        traitTransaction: undefined,
       });
       expect(handler.validateUseTrait(stateAfterOff).isValid).toBe(true);
     });
@@ -342,3 +342,6 @@ describe('UseTraitHandler', () => {
     });
   });
 });
+
+
+

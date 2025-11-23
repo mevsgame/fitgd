@@ -51,9 +51,13 @@ export function exportCharacterToFoundry(
     name: equipment.name,
     type: 'equipment' as const,
     system: {
-      tier: equipment.tier,
       category: equipment.category,
       description: equipment.description,
+      tier: equipment.tier,
+      passive: equipment.passive,
+      locked: equipment.locked,
+      depleted: equipment.depleted,
+      acquiredVia: equipment.acquiredVia,
     },
   }));
 
@@ -62,19 +66,11 @@ export function exportCharacterToFoundry(
     name: character.name,
     type: 'character',
     system: {
-      actions: {
-        shoot: { value: character.actionDots.shoot },
-        skirmish: { value: character.actionDots.skirmish },
-        skulk: { value: character.actionDots.skulk },
-        wreck: { value: character.actionDots.wreck },
-        finesse: { value: character.actionDots.finesse },
-        survey: { value: character.actionDots.survey },
-        study: { value: character.actionDots.study },
-        tech: { value: character.actionDots.tech },
-        attune: { value: character.actionDots.attune },
-        command: { value: character.actionDots.command },
-        consort: { value: character.actionDots.consort },
-        sway: { value: character.actionDots.sway },
+      approaches: {
+        force: { value: character.approaches.force },
+        guile: { value: character.approaches.guile },
+        focus: { value: character.approaches.focus },
+        spirit: { value: character.approaches.spirit },
       },
       rally: {
         available: character.rallyAvailable,
@@ -128,10 +124,15 @@ export function importCharacterFromFoundry(
       return {
         id: item._id,
         name: item.name,
-        tier: equipData.tier,
+        type: equipData.equipmentType || 'equipment',  // equipmentType from item, default to 'equipment'
+        tier: equipData.tier || 'common',
         category: equipData.category,
         description: equipData.description,
+        passive: equipData.passive || false,
         equipped: false,
+        locked: equipData.locked || false,
+        depleted: equipData.depleted || false,
+        acquiredVia: equipData.acquiredVia,
         acquiredAt: Date.now()
       };
     });
@@ -140,21 +141,13 @@ export function importCharacterFromFoundry(
     id: foundryActor._id,
     name: foundryActor.name,
     traits,
-    actionDots: {
-      shoot: system.actions.shoot.value,
-      skirmish: system.actions.skirmish.value,
-      skulk: system.actions.skulk.value,
-      wreck: system.actions.wreck.value,
-      finesse: system.actions.finesse.value,
-      survey: system.actions.survey.value,
-      study: system.actions.study.value,
-      tech: system.actions.tech.value,
-      attune: system.actions.attune.value,
-      command: system.actions.command.value,
-      consort: system.actions.consort.value,
-      sway: system.actions.sway.value,
+    approaches: {
+      force: system.approaches.force.value,
+      guile: system.approaches.guile.value,
+      focus: system.approaches.focus.value,
+      spirit: system.approaches.spirit.value,
     },
-    unallocatedActionDots: system.unallocatedActionDots ?? 0,
+    unallocatedApproachDots: system.unallocatedActionDots ?? 0,
     equipment,
     rallyAvailable: system.rally.available,
     createdAt: system.createdAt,

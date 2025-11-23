@@ -11,23 +11,73 @@
     {{#unless isGM}}
     <!-- ==================== PLAYER CONTROLS ==================== -->
     <div class="player-controls">
-      <!-- Action Selection -->
+      <!-- Approach Selection -->
       <div class="form-group">
-        <label>Action:</label>
-        <select name="action" class="action-select">
-          <option value="">-- Select Action --</option>
-          {{#each actions}}
-          <option value="{{this}}" {{#if (eq ../playerState.selectedAction this)}}selected{{/if}}>
-            {{capitalize this}} ({{lookup ../character.actionDots this}}d)
+        <label>Primary Approach:</label>
+        <select name="approach" class="approach-select">
+          <option value="">-- Select Approach --</option>
+          {{#each approaches}}
+          <option value="{{this}}" {{#if (eq ../playerState.selectedApproach this)}}selected{{/if}}>
+            {{capitalize this}} ({{lookup ../character.approaches this}}d)
           </option>
           {{/each}}
         </select>
       </div>
 
+      <!-- Synergy/Equipment Mode Selection -->
+      {{#if playerState.selectedApproach}}
+      <div class="mode-selection">
+        <label style="display: block; margin-bottom: 8px;">Mode:</label>
+        <div class="button-row">
+          <button type="button" data-action="set-mode" data-mode="synergy"
+            class="{{#if (eq playerState.rollMode 'synergy')}}active{{/if}}">
+            Synergy
+          </button>
+          <button type="button" data-action="set-mode" data-mode="equipment"
+            class="{{#if (eq playerState.rollMode 'equipment')}}active{{/if}}">
+            Equipment
+          </button>
+        </div>
+
+        <!-- Secondary Approach (only in Synergy mode) -->
+        {{#if (eq playerState.rollMode 'synergy')}}
+        <div class="form-group">
+          <label>Secondary Approach:</label>
+          <select name="secondary-approach" class="secondary-approach-select approach-select">
+            <option value="">-- Select Secondary --</option>
+            {{#each approaches}}
+            {{#unless (eq this ../playerState.selectedApproach)}}
+            <option value="{{this}}" {{#if (eq ../playerState.secondaryApproach this)}}selected{{/if}}>
+              {{capitalize this}} ({{lookup ../character.approaches this}}d)
+            </option>
+            {{/unless}}
+            {{/each}}
+          </select>
+        </div>
+        {{/if}}
+
+        <!-- Equipment Selection (only in Equipment mode) -->
+        {{#if (eq playerState.rollMode 'equipment')}}
+        <div class="form-group">
+          <label>Active Equipment:</label>
+          <select name="active-equipment" class="active-equipment-select approach-select">
+            <option value="">-- Select Equipment --</option>
+            {{#each equippedItems}}
+            <option value="{{this.id}}" {{#if (eq ../activeEquipmentItem.id this.id)}}selected{{/if}}>
+              {{this.name}} ({{this.category}})
+            </option>
+            {{/each}}
+          </select>
+        </div>
+        {{/if}}
+      </div>
+      {{/if}}
+
       <!-- Position & Effect Display (Read-Only for Player) -->
       <div class="position-effect-display">
         <div class="position">
-          Position: <span class="position-{{playerState.position}}">{{uppercase (default playerState.position "RISKY")}}</span>
+          Position: <span class="position-{{playerState.position}}">{{uppercase (default playerState.position
+            "RISKY")}}</span>
         </div>
         <div class="effect">
           Effect: <span class="effect-level">{{uppercase (default playerState.effect "STANDARD")}}</span>
@@ -56,9 +106,9 @@
           <!-- Momentum Track (Compact) -->
           <div class="momentum-track-compact">
             {{#times 10}}
-              <span class="momentum-box-compact {{#if (lt this ../momentum)}}filled{{/if}}">
-                {{#if (eq this ../momentum)}}▶{{/if}}
-              </span>
+            <span class="momentum-box-compact {{#if (lt this ../momentum)}}filled{{/if}}">
+              {{#if (eq this ../momentum)}}▶{{/if}}
+            </span>
             {{/times}}
           </div>
           <!-- Replenishment Buttons -->
@@ -77,16 +127,23 @@
       <div class="prepare-actions">
         <h4>SPEND MOMENTUM:</h4>
         <div class="button-row">
-          <button type="button" data-action="use-trait" class="{{#if playerState.traitTransaction}}active{{/if}}" {{#if (and (eq playerState.position "controlled") (lt momentum 1))}}disabled{{/if}}>
+          <button type="button" data-action="use-trait" class="{{#if playerState.traitTransaction}}active{{/if}}" {{#if
+            (and (eq playerState.position "controlled" ) (lt momentum 1))}}disabled{{/if}}>
             Use Trait
           </button>
+          {{#unless (eq playerState.rollMode 'synergy')}}
           <button type="button" data-action="equipment">
             Equipment
           </button>
-          <button type="button" data-action="push-die" class="{{#if (and playerState.pushed (eq playerState.pushType 'extra-die'))}}active{{/if}}" {{#if (lt momentum 1)}}disabled{{/if}}>
+          {{/unless}}
+          <button type="button" data-action="push-die"
+            class="{{#if (and playerState.pushed (eq playerState.pushType 'extra-die'))}}active{{/if}}" {{#if (lt
+            momentum 1)}}disabled{{/if}}>
             Push (+1d)
           </button>
-          <button type="button" data-action="push-effect" class="{{#if (and playerState.pushed (eq playerState.pushType 'improved-effect'))}}active{{/if}}" {{#if (lt momentum 1)}}disabled{{/if}}>
+          <button type="button" data-action="push-effect"
+            class="{{#if (and playerState.pushed (eq playerState.pushType 'improved-effect'))}}active{{/if}}" {{#if (lt
+            momentum 1)}}disabled{{/if}}>
             Push (Effect)
           </button>
         </div>
@@ -101,32 +158,83 @@
       <div class="form-group">
         <label>Set Position:</label>
         <select name="position" class="position-select">
-          <option value="controlled" {{#if (eq playerState.position "controlled")}}selected{{/if}}>Controlled</option>
-          <option value="risky" {{#if (eq (default playerState.position "risky") "risky")}}selected{{/if}}>Risky</option>
-          <option value="desperate" {{#if (eq playerState.position "desperate")}}selected{{/if}}>Desperate</option>
-          <option value="impossible" {{#if (eq playerState.position "impossible")}}selected{{/if}}>Impossible</option>
+          <option value="controlled" {{#if (eq playerState.position "controlled" )}}selected{{/if}}>Controlled</option>
+          <option value="risky" {{#if (eq (default playerState.position "risky" ) "risky" )}}selected{{/if}}>Risky
+          </option>
+          <option value="desperate" {{#if (eq playerState.position "desperate" )}}selected{{/if}}>Desperate</option>
+          <option value="impossible" {{#if (eq playerState.position "impossible" )}}selected{{/if}}>Impossible</option>
         </select>
       </div>
       <div class="form-group">
         <label>Set Effect:</label>
         <select name="effect" class="effect-select">
-          <option value="limited" {{#if (eq playerState.effect "limited")}}selected{{/if}}>Limited</option>
-          <option value="standard" {{#if (eq (default playerState.effect "standard") "standard")}}selected{{/if}}>Standard</option>
-          <option value="great" {{#if (eq playerState.effect "great")}}selected{{/if}}>Great</option>
-          <option value="spectacular" {{#if (eq playerState.effect "spectacular")}}selected{{/if}}>Spectacular</option>
+          <option value="limited" {{#if (eq playerState.effect "limited" )}}selected{{/if}}>Limited</option>
+          <option value="standard" {{#if (eq (default playerState.effect "standard" ) "standard" )}}selected{{/if}}>
+            Standard</option>
+          <option value="great" {{#if (eq playerState.effect "great" )}}selected{{/if}}>Great</option>
+          <option value="spectacular" {{#if (eq playerState.effect "spectacular" )}}selected{{/if}}>Spectacular</option>
         </select>
       </div>
     </div>
     {{/if}}
 
     <!-- ==================== CURRENT PLAN (SHARED BY GM AND PLAYER) ==================== -->
-    {{#if playerState.selectedAction}}
+    {{#if playerState.selectedApproach}}
     <div class="action-plan-preview">
       <h4>📋 Current Plan:</h4>
       <div class="plan-box">
-        <div class="plan-line">Action: {{capitalize playerState.selectedAction}} ({{lookup character.actionDots playerState.selectedAction}}d)</div>
-        <div class="plan-line">Position: {{uppercase (default playerState.position "risky")}} → <span class="{{#if playerState.traitTransaction}}improved{{/if}}">{{uppercase improvedPosition}}</span></div>
-        <div class="plan-line">Effect: {{uppercase (default playerState.effect "standard")}} → <span class="{{#if (and playerState.pushed (eq playerState.pushType 'improved-effect'))}}improved{{/if}}">{{uppercase improvedEffect}}</span></div>
+        {{#if (eq playerState.rollMode 'synergy')}}
+        <div class="plan-line synergy-info">
+          <strong>Mode: Synergy</strong><br>
+          {{capitalize playerState.selectedApproach}} ({{lookup character.approaches playerState.selectedApproach}}d) +
+          {{capitalize playerState.secondaryApproach}} ({{lookup character.approaches playerState.secondaryApproach}}d)
+        </div>
+        {{else if (eq playerState.rollMode 'equipment')}}
+        <div class="plan-line equipment-info">
+          <strong>Mode: Equipment</strong><br>
+          {{capitalize playerState.selectedApproach}} ({{lookup character.approaches playerState.selectedApproach}}d) +
+          {{activeEquipmentItem.name}}
+          {{#if equipmentEffectPreview.diceBonus}}
+          (+{{equipmentEffectPreview.diceBonus}}d)
+          {{/if}}
+          {{#if equipmentEffectPreview.dicePenalty}}
+          (-{{equipmentEffectPreview.dicePenalty}}d)
+          {{/if}}
+        </div>
+        {{else}}
+        <div class="plan-line">Approach: {{capitalize playerState.selectedApproach}} ({{lookup character.approaches
+          playerState.selectedApproach}}d)</div>
+        {{/if}}
+
+        <!-- Position with Equipment Modifiers -->
+        <div class="plan-line">
+          Position: {{uppercase (default playerState.position "risky")}}
+          {{#if equipmentEffectPreview.positionBonus}}
+          <span class="equipment-modifier positive">→ {{uppercase equipmentPositionProposal}} (equipment improves by
+            {{equipmentEffectPreview.positionBonus}})</span>
+          {{else if equipmentEffectPreview.positionPenalty}}
+          <span class="equipment-modifier negative">→ {{uppercase equipmentPositionProposal}} (equipment worsens by
+            {{equipmentEffectPreview.positionPenalty}})</span>
+          {{else}}
+          → <span class="{{#if playerState.traitTransaction}}improved{{/if}}">{{uppercase improvedPosition}}</span>
+          {{/if}}
+        </div>
+
+        <!-- Effect with Equipment Modifiers -->
+        <div class="plan-line">
+          Effect: {{uppercase (default playerState.effect "standard")}}
+          {{#if equipmentEffectPreview.effectBonus}}
+          <span class="equipment-modifier positive">→ {{uppercase equipmentEffectProposal}} (equipment improves by
+            {{equipmentEffectPreview.effectBonus}})</span>
+          {{else if equipmentEffectPreview.effectPenalty}}
+          <span class="equipment-modifier negative">→ {{uppercase equipmentEffectProposal}} (equipment worsens by
+            {{equipmentEffectPreview.effectPenalty}})</span>
+          {{else}}
+          → <span
+            class="{{#if (and playerState.pushed (eq playerState.pushType 'improved-effect'))}}improved{{/if}}">{{uppercase
+            improvedEffect}}</span>
+          {{/if}}
+        </div>
 
         {{#if improvements.length}}
         <div class="plan-line improvements">
@@ -150,20 +258,22 @@
       </div>
     </div>
     {{else}}
-    <p class="waiting">⏳ Waiting for player to select an action...</p>
+    <p class="waiting">⏳ Waiting for player to select an approach...</p>
     {{/if}}
 
     <!-- Action Buttons (different for GM vs Player) -->
     <div class="action-buttons">
       {{#if isGM}}
       <!-- GM sees "Accept Roll" button -->
-      <button type="button" data-action="approve-roll" class="primary {{#if playerState.gmApproved}}approved{{/if}}" {{#unless playerState.selectedAction}}disabled{{/unless}}>
+      <button type="button" data-action="approve-roll" class="primary {{#if playerState.gmApproved}}approved{{/if}}"
+        {{#unless playerState.selectedApproach}}disabled{{/unless}}>
         {{#if playerState.gmApproved}}✅ Roll Approved{{else}}✓ Accept Roll{{/if}}
       </button>
       {{else}}
       <!-- Player sees "Roll" button (disabled until GM approves) -->
       <button type="button" data-action="cancel" class="secondary">Cancel</button>
-      <button type="button" data-action="roll" class="primary {{#if playerState.gmApproved}}approved{{/if}}" {{#unless (and playerState.selectedAction playerState.gmApproved)}}disabled{{/unless}}>
+      <button type="button" data-action="roll" class="primary {{#if playerState.gmApproved}}approved{{/if}}" {{#unless
+        (and playerState.selectedApproach playerState.gmApproved)}}disabled{{/unless}}>
         {{#if playerState.gmApproved}}🎲 ROLL ACTION{{else}}⏳ Waiting for GM Approval{{/if}}
       </button>
       {{/if}}
@@ -240,12 +350,17 @@
     </div>
     <p class="consequence-message">You face consequences...</p>
 
+    {{#unless isGM}}
     <div class="action-buttons">
       <button type="button" data-action="use-stims" {{#if playerState.stimsUsedThisAction}}disabled{{/if}}>
         {{#if playerState.stimsUsedThisAction}}Stims Already Used{{else}}Use Stims & Reroll{{/if}}
       </button>
-      <button type="button" data-action="accept-consequences" class="primary">Accept Consequences</button>
+      <button type="button" data-action="accept-consequences" class="primary" {{#unless
+        consequenceConfigured}}disabled{{/unless}}>
+        {{#if consequenceConfigured}}Accept Consequences{{else}}Waiting for GM to configure consequence...{{/if}}
+      </button>
     </div>
+    {{/unless}}
   </div>
   {{/if}}
 
@@ -272,48 +387,50 @@
         <div class="plan-line">
           <strong>Type:</strong>
           {{#if (eq consequenceTransaction.consequenceType 'harm')}}
-            💔 Harm
+          💔 Harm
           {{else}}
-            ⏱️ Crew Clock
+          ⏱️ Crew Clock
           {{/if}}
         </div>
 
         {{#if (eq consequenceTransaction.consequenceType 'harm')}}
-          {{#if harmTargetCharacter}}
-          <div class="plan-line">
-            <strong>Target:</strong> {{harmTargetCharacter.name}}
-            {{#if (eq harmTargetCharacter.id character.id)}}
-              <span class="label">(Acting)</span>
-            {{else}}
-              <span class="label protect">(Protected)</span>
-            {{/if}}
-          </div>
+        {{#if harmTargetCharacter}}
+        <div class="plan-line">
+          <strong>Target:</strong> {{harmTargetCharacter.name}}
+          {{#if (eq harmTargetCharacter.id character.id)}}
+          <span class="label">(Acting)</span>
+          {{else}}
+          <span class="label protect">(Protected)</span>
           {{/if}}
+        </div>
+        {{/if}}
 
-          {{#if selectedHarmClock}}
-          <div class="plan-line">
-            <strong>Clock:</strong> {{selectedHarmClock.subtype}} ({{selectedHarmClock.segments}}/{{selectedHarmClock.maxSegments}})
-          </div>
-          {{/if}}
+        {{#if selectedHarmClock}}
+        <div class="plan-line">
+          <strong>Clock:</strong> {{selectedHarmClock.subtype}}
+          ({{selectedHarmClock.segments}}/{{selectedHarmClock.maxSegments}})
+        </div>
+        {{/if}}
 
-          {{#if calculatedHarmSegments}}
-          <div class="plan-line highlight">
-            <strong>Harm:</strong> +{{calculatedHarmSegments}} segments
-            <span class="calculation">({{uppercase effectivePosition}}/{{uppercase effectiveEffect}})</span>
-          </div>
-          {{/if}}
+        {{#if calculatedHarmSegments}}
+        <div class="plan-line highlight">
+          <strong>Harm:</strong> +{{calculatedHarmSegments}} segments
+          <span class="calculation">({{uppercase effectivePosition}}/{{uppercase effectiveEffect}})</span>
+        </div>
+        {{/if}}
         {{/if}}
 
         {{#if (eq consequenceTransaction.consequenceType 'crew-clock')}}
-          {{#if selectedCrewClock}}
-          <div class="plan-line">
-            <strong>Clock:</strong> {{selectedCrewClock.subtype}} ({{selectedCrewClock.segments}}/{{selectedCrewClock.maxSegments}})
-          </div>
-          <div class="plan-line highlight">
-            <strong>Advance:</strong> +{{calculatedHarmSegments}} segments
-            <span class="calculation">({{uppercase effectivePosition}})</span>
-          </div>
-          {{/if}}
+        {{#if selectedCrewClock}}
+        <div class="plan-line">
+          <strong>Clock:</strong> {{selectedCrewClock.subtype}}
+          ({{selectedCrewClock.segments}}/{{selectedCrewClock.maxSegments}})
+        </div>
+        <div class="plan-line highlight">
+          <strong>Advance:</strong> +{{calculatedHarmSegments}} segments
+          <span class="calculation">({{uppercase effectivePosition}})</span>
+        </div>
+        {{/if}}
         {{/if}}
 
         {{#if calculatedMomentumGain}}
@@ -324,7 +441,8 @@
       </div>
     </div>
     {{else}}
-    <p class="waiting">⏳ {{#if isGM}}Select consequence type to begin...{{else}}Waiting for GM to configure consequence...{{/if}}</p>
+    <p class="waiting">⏳ {{#if isGM}}Select consequence type to begin...{{else}}Waiting for GM to configure
+      consequence...{{/if}}</p>
     {{/if}}
 
     {{#if isGM}}
@@ -334,16 +452,12 @@
 
       <!-- Consequence Type Toggles -->
       <div class="consequence-type-toggles">
-        <button type="button"
-                data-action="select-consequence-type"
-                data-type="harm"
-                class="consequence-type-btn {{#if (eq consequenceTransaction.consequenceType 'harm')}}active{{/if}}">
+        <button type="button" data-action="select-consequence-type" data-type="harm"
+          class="consequence-type-btn {{#if (eq consequenceTransaction.consequenceType 'harm')}}active{{/if}}">
           💔 Harm
         </button>
-        <button type="button"
-                data-action="select-consequence-type"
-                data-type="crew-clock"
-                class="consequence-type-btn {{#if (eq consequenceTransaction.consequenceType 'crew-clock')}}active{{/if}}">
+        <button type="button" data-action="select-consequence-type" data-type="crew-clock"
+          class="consequence-type-btn {{#if (eq consequenceTransaction.consequenceType 'crew-clock')}}active{{/if}}">
           ⏱️ Crew Clock
         </button>
       </div>
@@ -355,20 +469,22 @@
           <label>Target Character:</label>
           <button type="button" data-action="select-harm-target" class="select-btn">
             {{#if harmTargetCharacter}}
-              {{harmTargetCharacter.name}} {{#if (eq harmTargetCharacter.id character.id)}}(Acting){{else}}(Protected){{/if}}
+            {{harmTargetCharacter.name}} {{#if (eq harmTargetCharacter.id
+            character.id)}}(Acting){{else}}(Protected){{/if}}
             {{else}}
-              Select Character...
+            Select Character...
             {{/if}}
           </button>
         </div>
 
         <div class="form-group">
           <label>Harm Clock:</label>
-          <button type="button" data-action="select-harm-clock" class="select-btn" {{#unless harmTargetCharacter}}disabled{{/unless}}>
+          <button type="button" data-action="select-harm-clock" class="select-btn" {{#unless
+            harmTargetCharacter}}disabled{{/unless}}>
             {{#if selectedHarmClock}}
-              {{selectedHarmClock.subtype}} ({{selectedHarmClock.segments}}/{{selectedHarmClock.maxSegments}})
+            {{selectedHarmClock.subtype}} ({{selectedHarmClock.segments}}/{{selectedHarmClock.maxSegments}})
             {{else}}
-              {{#if harmTargetCharacter}}Select or Create Clock...{{else}}(Select target first){{/if}}
+            {{#if harmTargetCharacter}}Select or Create Clock...{{else}}(Select target first){{/if}}
             {{/if}}
           </button>
         </div>
@@ -383,9 +499,9 @@
           <label>Select Clock:</label>
           <button type="button" data-action="select-crew-clock" class="select-btn">
             {{#if selectedCrewClock}}
-              {{selectedCrewClock.subtype}} ({{selectedCrewClock.segments}}/{{selectedCrewClock.maxSegments}})
+            {{selectedCrewClock.subtype}} ({{selectedCrewClock.segments}}/{{selectedCrewClock.maxSegments}})
             {{else}}
-              Select or Create Clock...
+            Select or Create Clock...
             {{/if}}
           </button>
         </div>
@@ -400,36 +516,33 @@
       </div>
       {{/if}}
     </div>
-    {{else}}
+
+    {{#unless isGM}}
     <!-- ==================== PLAYER ACTIONS ==================== -->
     <div class="player-consequence-actions">
       <h4>⚡ Your Options:</h4>
       <div class="player-action-buttons">
         <!-- Player can use stims to reroll (unless locked by addiction) -->
-        <button type="button"
-                data-action="use-stims-gm-phase"
-                class="stims-btn"
-                {{#if (or playerState.stimsUsedThisAction stimsLocked)}}disabled{{/if}}>
+        <button type="button" data-action="use-stims-gm-phase" class="stims-btn" {{#if (or
+          playerState.stimsUsedThisAction stimsLocked)}}disabled{{/if}}>
           {{#if stimsLocked}}
-            💉 Stims LOCKED (Addiction)
+          💉 Stims LOCKED (Addiction)
           {{else if playerState.stimsUsedThisAction}}
-            💉 Stims Already Used
+          💉 Stims Already Used
           {{else}}
-            💉 Use Stims & Reroll
+          💉 Use Stims & Reroll
           {{/if}}
         </button>
 
         <!-- Player approves GM's configured consequence -->
-        <button type="button"
-                data-action="approve-consequence"
-                class="primary"
-                {{#unless consequenceConfigured}}disabled{{/unless}}>
+        <button type="button" data-action="approve-consequence" class="primary" {{#unless
+          consequenceConfigured}}disabled{{/unless}}>
           {{#if consequenceConfigured}}✓ Accept Consequence{{else}}⏳ Waiting for GM...{{/if}}
         </button>
       </div>
     </div>
+    {{/unless}}
     {{/if}}
   </div>
   {{/if}}
 </div>
-

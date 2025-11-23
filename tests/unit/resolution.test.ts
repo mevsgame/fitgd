@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore } from '../../src/store';
 import characterReducer from '../../src/slices/characterSlice';
 import crewReducer from '../../src/slices/crewSlice';
 import clockReducer from '../../src/slices/clockSlice';
@@ -10,7 +10,7 @@ import {
 } from '../../src/resolution';
 import { createCharacter } from '../../src/slices/characterSlice';
 import { createCrew } from '../../src/slices/crewSlice';
-import type { ActionDots, Trait } from '../../src/types';
+import type { Approaches, Trait } from '../../src/types';
 
 describe('resolution helpers', () => {
   let store: ReturnType<typeof configureStore>;
@@ -18,13 +18,7 @@ describe('resolution helpers', () => {
   let crewId: string;
 
   beforeEach(() => {
-    store = configureStore({
-      reducer: {
-        characters: characterReducer,
-        crews: crewReducer,
-        clocks: clockReducer,
-      },
-    });
+    store = configureStore();
 
     // Create character
     const traits: Trait[] = [
@@ -44,26 +38,18 @@ describe('resolution helpers', () => {
       },
     ];
 
-    const actionDots: ActionDots = {
-      shoot: 3,
-      skirmish: 2,
-      skulk: 1,
-      wreck: 1,
-      finesse: 1,
-      survey: 1,
-      study: 1,
-      tech: 0,
-      attune: 0,
-      command: 1,
-      consort: 1,
-      sway: 0,
+    const approaches: Approaches = {
+      force: 2,
+      guile: 1,
+      focus: 1,
+      spirit: 0,
     };
 
     store.dispatch(
       createCharacter({
         name: 'Test Character',
         traits,
-        actionDots,
+        approaches,
       })
     );
 
@@ -232,26 +218,10 @@ describe('resolution helpers', () => {
   });
 
   describe('applyHarmConsequence', () => {
-    it('should apply 0 segments for controlled + limited', () => {
+    it('should apply 1 segment for controlled position', () => {
       const result = applyHarmConsequence(store, {
         characterId,
         position: 'controlled',
-        effect: 'limited',
-        harmType: 'Physical Harm',
-      });
-
-      expect(result.segmentsAdded).toBe(0);
-      expect(result.isDying).toBe(false);
-
-      const clock = store.getState().clocks.byId[result.clockId];
-      expect(clock.segments).toBe(0);
-    });
-
-    it('should apply 1 segment for controlled + standard', () => {
-      const result = applyHarmConsequence(store, {
-        characterId,
-        position: 'controlled',
-        effect: 'standard',
         harmType: 'Physical Harm',
       });
 
@@ -262,11 +232,10 @@ describe('resolution helpers', () => {
       expect(clock.segments).toBe(1);
     });
 
-    it('should apply 2 segments for controlled + great', () => {
+    it('should apply 2 segments for risky position', () => {
       const result = applyHarmConsequence(store, {
         characterId,
-        position: 'controlled',
-        effect: 'great',
+        position: 'risky',
         harmType: 'Physical Harm',
       });
 
@@ -276,74 +245,55 @@ describe('resolution helpers', () => {
       expect(clock.segments).toBe(2);
     });
 
-    it('should apply 3 segments for risky + standard', () => {
-      const result = applyHarmConsequence(store, {
-        characterId,
-        position: 'risky',
-        effect: 'standard',
-        harmType: 'Physical Harm',
-      });
-
-      expect(result.segmentsAdded).toBe(3);
-
-      const clock = store.getState().clocks.byId[result.clockId];
-      expect(clock.segments).toBe(3);
-    });
-
-    it('should apply 6 segments for desperate + great (dying)', () => {
+    it('should apply 4 segments for desperate position', () => {
       const result = applyHarmConsequence(store, {
         characterId,
         position: 'desperate',
-        effect: 'great',
         harmType: 'Physical Harm',
       });
 
-      expect(result.segmentsAdded).toBe(6);
-      expect(result.isDying).toBe(true);
+      expect(result.segmentsAdded).toBe(4);
+      expect(result.isDying).toBe(false);
 
       const clock = store.getState().clocks.byId[result.clockId];
-      expect(clock.segments).toBe(6);
+      expect(clock.segments).toBe(4);
       expect(clock.maxSegments).toBe(6);
     });
 
     it('should add to existing harm clock', () => {
-      // First harm: 2 segments
+      // First harm: 1 segment (controlled)
       const result1 = applyHarmConsequence(store, {
         characterId,
         position: 'controlled',
-        effect: 'great',
         harmType: 'Physical Harm',
       });
 
-      expect(result1.segmentsAdded).toBe(2);
+      expect(result1.segmentsAdded).toBe(1);
 
-      // Second harm: +3 segments (same type)
+      // Second harm: +2 segments (risky, same type)
       const result2 = applyHarmConsequence(store, {
         characterId,
         position: 'risky',
-        effect: 'standard',
         harmType: 'Physical Harm',
       });
 
-      expect(result2.segmentsAdded).toBe(3);
+      expect(result2.segmentsAdded).toBe(2);
       expect(result2.clockId).toBe(result1.clockId); // Same clock
 
       const clock = store.getState().clocks.byId[result2.clockId];
-      expect(clock.segments).toBe(5); // 2 + 3
+      expect(clock.segments).toBe(3); // 1 + 2
     });
 
     it('should create separate clocks for different harm types', () => {
       const result1 = applyHarmConsequence(store, {
         characterId,
         position: 'risky',
-        effect: 'standard',
         harmType: 'Physical Harm',
       });
 
       const result2 = applyHarmConsequence(store, {
         characterId,
         position: 'controlled',
-        effect: 'standard',
         harmType: 'Shaken Morale',
       });
 
@@ -358,21 +308,18 @@ describe('resolution helpers', () => {
       const result1 = applyHarmConsequence(store, {
         characterId,
         position: 'risky',
-        effect: 'standard',
-        harmType: 'Physical Harm', // 3 segments
+        harmType: 'Physical Harm', // 2 segments
       });
 
       const result2 = applyHarmConsequence(store, {
         characterId,
         position: 'desperate',
-        effect: 'standard',
-        harmType: 'Shaken Morale', // 5 segments
+        harmType: 'Shaken Morale', // 4 segments
       });
 
       const result3 = applyHarmConsequence(store, {
         characterId,
         position: 'controlled',
-        effect: 'standard',
         harmType: 'Psychic Corruption', // 1 segment (fewest)
       });
 
@@ -380,7 +327,6 @@ describe('resolution helpers', () => {
       const result4 = applyHarmConsequence(store, {
         characterId,
         position: 'risky',
-        effect: 'limited',
         harmType: 'Exhaustion', // 2 segments
       });
 
@@ -396,3 +342,6 @@ describe('resolution helpers', () => {
     });
   });
 });
+
+
+

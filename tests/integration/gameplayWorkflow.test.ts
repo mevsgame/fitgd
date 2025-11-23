@@ -7,10 +7,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { configureStore } from '../../src/store';
 import { createGameAPI } from '../../src/api';
+import type { EnhancedStore } from '@reduxjs/toolkit';
+import type { RootState } from '../../src/store';
+import type { GameAPI } from '../../src/api';
+import type { Trait } from '../../src/types';
 
 describe('Complete Gameplay Workflows', () => {
-  let store;
-  let api;
+  let store: EnhancedStore<RootState>;
+  let api: GameAPI;
 
   beforeEach(() => {
     store = configureStore();
@@ -38,19 +42,11 @@ describe('Complete Gameplay Workflows', () => {
             disabled: false,
           },
         ],
-        actionDots: {
-          shoot: 3,
-          command: 2,
-          skirmish: 1,
-          skulk: 0,
-          wreck: 0,
-          finesse: 0,
-          survey: 2,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 2,
+        approaches: {
+          force: 2,
+          guile: 1,
+          focus: 1,
+          spirit: 1,
         },
       });
 
@@ -73,13 +69,13 @@ describe('Complete Gameplay Workflows', () => {
 
       // Verify harm applied
       expect(harmResult.harmApplied).toBeDefined();
-      expect(harmResult.harmApplied.segmentsAdded).toBe(3); // Risky/Standard = 3
-      expect(harmResult.harmApplied.isDying).toBe(false);
+      expect(harmResult.harmApplied?.segmentsAdded).toBe(2); // Risky = 2
+      expect(harmResult.harmApplied?.isDying).toBe(false);
 
       // Step 5: Check harm clocks
       const harmClocks = api.query.getHarmClocks(characterId);
       expect(harmClocks).toHaveLength(1);
-      expect(harmClocks[0].segments).toBe(3);
+      expect(harmClocks[0].segments).toBe(2);
       expect(harmClocks[0].maxSegments).toBe(6);
     });
   });
@@ -94,19 +90,11 @@ describe('Complete Gameplay Workflows', () => {
           { name: 'Trait 1', category: 'role', disabled: false },
           { name: 'Trait 2', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 3,
-          command: 2,
-          skirmish: 1,
-          skulk: 0,
-          wreck: 0,
-          finesse: 0,
-          survey: 2,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 2,
+        approaches: {
+          force: 2,
+          guile: 1,
+          focus: 1,
+          spirit: 1,
         },
       });
       api.crew.addCharacter({ crewId, characterId });
@@ -161,19 +149,11 @@ describe('Complete Gameplay Workflows', () => {
           { name: 'Trait 1', category: 'role', disabled: false },
           { name: 'Trait 2', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 3,
-          command: 2,
-          skirmish: 1,
-          skulk: 0,
-          wreck: 0,
-          finesse: 0,
-          survey: 2,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 2,
+        approaches: {
+          force: 2,
+          guile: 1,
+          focus: 1,
+          spirit: 1,
         },
       });
       api.crew.addCharacter({ crewId, characterId });
@@ -211,7 +191,7 @@ describe('Complete Gameplay Workflows', () => {
 
       // Trait should be re-enabled
       const updatedChar = api.character.getCharacter(characterId);
-      expect(updatedChar.traits.find((t) => t.id === traitId).disabled).toBe(
+      expect(updatedChar.traits.find((t: Trait) => t.id === traitId)?.disabled).toBe(
         false
       );
 
@@ -234,38 +214,36 @@ describe('Complete Gameplay Workflows', () => {
           { name: 'Role', category: 'role', disabled: false },
           { name: 'Background', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 3,
-          command: 2,
-          skirmish: 1,
-          skulk: 0,
-          wreck: 0,
-          finesse: 0,
-          survey: 2,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 2,
+        approaches: {
+          force: 2,
+          guile: 1,
+          focus: 1,
+          spirit: 1,
         },
       });
       api.crew.addCharacter({ crewId, characterId });
 
-      // Take 3 segments (not dying)
+      // Take 2 segments (Risky = 2)
       api.harm.take({
         characterId,
         harmType: 'Physical Harm',
         position: 'risky',
-        effect: 'standard',
       });
       expect(api.query.isDying(characterId)).toBe(false);
 
-      // Take 3 more segments (6 total, dying)
+      // Take 2 more segments (4 total)
+      api.harm.take({
+        characterId,
+        harmType: 'Physical Harm',
+        position: 'risky',
+      });
+      expect(api.query.isDying(characterId)).toBe(false);
+
+      // Take 2 more segments (6 total, dying)
       const result = api.harm.take({
         characterId,
         harmType: 'Physical Harm',
         position: 'risky',
-        effect: 'standard',
       });
 
       expect(result.isDying).toBe(true);
@@ -283,19 +261,11 @@ describe('Complete Gameplay Workflows', () => {
           { name: 'Role', category: 'role', disabled: false },
           { name: 'Background', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 3,
-          command: 2,
-          skirmish: 1,
-          skulk: 0,
-          wreck: 0,
-          finesse: 0,
-          survey: 2,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 2,
+        approaches: {
+          force: 2,
+          guile: 1,
+          focus: 1,
+          spirit: 1,
         },
       });
 
@@ -304,11 +274,10 @@ describe('Complete Gameplay Workflows', () => {
         characterId,
         harmType: 'Physical Harm',
         position: 'risky',
-        effect: 'standard',
       });
 
       const harmClocks = api.query.getHarmClocks(characterId);
-      expect(harmClocks[0].segments).toBe(3);
+      expect(harmClocks[0].segments).toBe(2);
 
       // Recover 2 segments
       api.harm.recover({
@@ -318,7 +287,7 @@ describe('Complete Gameplay Workflows', () => {
       });
 
       const updatedClocks = api.query.getHarmClocks(characterId);
-      expect(updatedClocks[0].segments).toBe(1);
+      expect(updatedClocks[0].segments).toBe(0);
     });
   });
 
@@ -331,19 +300,11 @@ describe('Complete Gameplay Workflows', () => {
           { name: 'Trait 1', category: 'role', disabled: false },
           { name: 'Trait 2', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 3,
-          command: 2,
-          skirmish: 1,
-          skulk: 0,
-          wreck: 0,
-          finesse: 0,
-          survey: 2,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 2,
+        approaches: {
+          force: 2,
+          guile: 1,
+          focus: 1,
+          spirit: 1,
         },
       });
       api.crew.addCharacter({ crewId, characterId });
@@ -367,7 +328,7 @@ describe('Complete Gameplay Workflows', () => {
       expect(character.traits).toHaveLength(3);
 
       // Group 3 traits into 1
-      const traitIds = character.traits.map((t) => t.id);
+      const traitIds = character.traits.map((t: Trait) => t.id);
       api.character.groupTraits({
         characterId,
         traitIds: [traitIds[0], traitIds[1], traitIds[2]],
@@ -392,30 +353,25 @@ describe('Complete Gameplay Workflows', () => {
           { name: 'Role', category: 'role', disabled: false },
           { name: 'Background', category: 'background', disabled: false },
         ],
-        actionDots: {
-          shoot: 3,
-          command: 2,
-          skirmish: 1,
-          skulk: 0,
-          wreck: 0,
-          finesse: 0,
-          survey: 2,
-          study: 1,
-          tech: 0,
-          attune: 0,
-          consort: 1,
-          sway: 2,
+        approaches: {
+          force: 2,
+          guile: 1,
+          focus: 1,
+          spirit: 1,
         },
       });
 
       // Can't have 4 at creation, but can advance to 4
-      api.character.advanceActionDots({
+      api.character.advanceApproach({
         characterId,
-        action: 'shoot',
+        approach: 'force',
       });
 
       const character = api.character.getCharacter(characterId);
-      expect(character.actionDots.shoot).toBe(4);
+      expect(character.approaches.force).toBe(3);
     });
   });
 });
+
+
+

@@ -17,7 +17,7 @@ import {
 } from '../../foundry/module/handlers/consequenceResolutionHandler';
 import type { ConsequenceTransaction } from '../../src/types/playerRoundState';
 import type { RootState } from '../../src/store';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore } from '../../src/store';
 import playerRoundStateReducer, {
   setConsequenceTransaction,
 } from '../../src/slices/playerRoundStateSlice';
@@ -32,14 +32,7 @@ describe('ConsequenceResolutionHandler', () => {
 
   beforeEach(() => {
     // Setup store with all reducers
-    store = configureStore({
-      reducer: {
-        playerRoundState: playerRoundStateReducer,
-        characters: characterReducer,
-        crews: crewReducer,
-        clocks: clockReducer,
-      },
-    });
+    store = configureStore();
 
     config = {
       characterId: 'char-123',
@@ -581,3 +574,6 @@ describe('ConsequenceResolutionHandler', () => {
     });
   });
 });
+
+
+

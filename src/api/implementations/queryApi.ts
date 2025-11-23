@@ -2,7 +2,6 @@ import type { Store } from '@reduxjs/toolkit';
 import type { Trait } from '../../types';
 import {
   selectStimsAvailable,
-  selectConsumableAvailable,
   selectIsCharacterDying,
   selectHarmClocksByCharacter,
   selectClocksByEntityId,
@@ -50,18 +49,7 @@ export function createQueryAPI(store: Store) {
       return selectStimsAvailable(state);
     },
 
-    /**
-     * Can crew use a specific consumable?
-     */
-    canUseConsumable(params: {
-      crewId: string;
-      consumableType: string;
-    }): boolean {
-      const { crewId, consumableType } = params;
 
-      const state = store.getState();
-      return selectConsumableAvailable(state, crewId, consumableType);
-    },
 
     /**
      * Is character dying? (has 6/6 harm clock)
@@ -171,31 +159,5 @@ export function createQueryAPI(store: Store) {
       };
     },
 
-    /**
-     * Get consumable clocks for crew
-     */
-    getConsumableClocks(crewId: string): Array<{
-      id: string;
-      subtype: string;
-      segments: number;
-      maxSegments: number;
-      metadata: {
-        rarity?: string;
-        tier?: string;
-        frozen?: boolean;
-        [key: string]: unknown;
-      };
-    }> {
-      const state = store.getState();
-      const clocks = selectClocksByTypeAndEntity(state, 'consumable', crewId);
-
-      return clocks.map((clock) => ({
-        id: clock.id,
-        subtype: clock.subtype ?? 'Unknown',
-        segments: clock.segments,
-        maxSegments: clock.maxSegments,
-        metadata: clock.metadata ?? {},
-      }));
-    },
   };
 }

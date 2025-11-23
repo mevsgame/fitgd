@@ -4,8 +4,7 @@
  * Foundry VTT Actor Sheet for character entities
  */
 
-import type { Trait, Equipment, ActionDots } from '@/types/character';
-import type { Clock } from '@/types/clock';
+import type { Trait, Equipment, Approaches } from '@/types/character';
 
 import {
   AddTraitDialog
@@ -18,25 +17,25 @@ import {
 } from '../dialogs/index';
 
 import {
-  getActionDataset,
   getClockDataset,
   getTraitDataset,
   getEquipmentDataset,
   getDatasetInt,
+  getApproachDataset,
 } from '../utils/dataset-helpers';
 
 interface CharacterSheetData extends ActorSheet.Data {
   editMode: boolean;
   system?: {
-    actionDots: Array<{ action: string; dots: number }>;
+    approaches: Array<{ approach: string; dots: number }>;
     traits: Trait[];
     equipment: Equipment[];
     rallyAvailable: boolean;
-    harmClocks: Clock[];
-    addictionClock: Clock | null;
-    unallocatedActionDots: number;
-    allocatedActionDots: number;
-    totalActionDots: number;
+    harmClocks: any[]; // Using any to avoid strict Clock type mismatch for view-only data
+    addictionClock: any | null;
+    unallocatedApproachDots: number;
+    allocatedApproachDots: number;
+    totalApproachDots: number;
   };
   crewId?: string | null;
   reduxId?: string;
@@ -74,7 +73,7 @@ class FitGDCharacterSheet extends ActorSheet {
       template: 'systems/forged-in-the-grimdark/templates/character-sheet.html',
       width: 700,
       height: 800,
-      tabs: [{ navSelector: '.sheet-tabs', contentSelector: '.sheet-body', initial: 'actions' }]
+      tabs: [{ navSelector: '.sheet-tabs', contentSelector: '.sheet-body', initial: 'approaches' }]
     });
   }
 
@@ -101,15 +100,18 @@ class FitGDCharacterSheet extends ActorSheet {
 
       if (character) {
         // Calculate total allocated dots
-        const allocatedDots = Object.values(character.actionDots).reduce((sum, dots) => sum + dots, 0);
-        const unallocatedDots = character.unallocatedActionDots;
+        const allocatedDots = Object.values(character.approaches).reduce((sum, dots) => (sum as number) + (dots as number), 0) as number;
+        const unallocatedDots = character.unallocatedApproachDots as number;
         const totalDots = allocatedDots + unallocatedDots;
 
-        // Convert actionDots object to array for easier template iteration
-        const actionDotsArray = Object.entries(character.actionDots).map(([action, dots]) => ({
-          action,
-          dots
+        // Convert approaches object to array for easier template iteration
+        const approachesArray = Object.entries(character.approaches).map(([approach, dots]) => ({
+          approach,
+          dots: dots as number
         }));
+
+        console.log('FitGD | Character approaches object:', character.approaches);
+        console.log('FitGD | Approaches array for template:', approachesArray);
 
         // Get addiction clock for this character
         const state = game.fitgd.store.getState();
@@ -118,15 +120,15 @@ class FitGDCharacterSheet extends ActorSheet {
         );
 
         context.system = {
-          actionDots: actionDotsArray,
+          approaches: approachesArray,
           traits: character.traits,
           equipment: character.equipment,
           rallyAvailable: character.rallyAvailable,
           harmClocks: game.fitgd.api.query.getHarmClocks(reduxId),
           addictionClock: addictionClock || null,
-          unallocatedActionDots: unallocatedDots,
-          allocatedActionDots: allocatedDots,
-          totalActionDots: totalDots
+          unallocatedApproachDots: unallocatedDots,
+          allocatedApproachDots: allocatedDots,
+          totalApproachDots: totalDots
         };
 
         // Find crew for this character
@@ -134,7 +136,8 @@ class FitGDCharacterSheet extends ActorSheet {
         context.reduxId = reduxId;
 
         console.log('FitGD | Context system data:', context.system);
-        console.log('FitGD | Harm clocks:', context.system.harmClocks);
+        console.log('FitGD | Approaches in context.system:', context.system.approaches);
+        console.log('FitGD | Harm clocks:', context.system?.harmClocks);
       } else {
         console.warn('FitGD | Character not found in Redux for ID:', reduxId);
       }
@@ -181,10 +184,11 @@ class FitGDCharacterSheet extends ActorSheet {
     html.find('.add-equipment-btn').click(this._onAddEquipment.bind(this));
     html.find('.edit-equipment-btn').click(this._onEditEquipment.bind(this));
     html.find('.delete-equipment-btn').click(this._onDeleteEquipment.bind(this));
-    html.find('.equipped-checkbox').change(this._onToggleEquipped.bind(this));
+    html.find('.equip-toggle').change(this._onToggleEquipped.bind(this));
+    html.find('.auto-equip-toggle').change(this._onToggleAutoEquip.bind(this));
 
     // Drag events for hotbar macros
-    html.find('.draggable').on('dragstart', this._onDragStart.bind(this));
+    html.find('.draggable').on('dragstart', this._onFitGDDragStart.bind(this));
   }
 
   /**
@@ -214,7 +218,7 @@ class FitGDCharacterSheet extends ActorSheet {
   /**
    * Handle drag start for creating hotbar macros
    */
-  private _onDragStart(event: JQuery.DragStartEvent): void {
+  private _onFitGDDragStart(event: JQuery.DragStartEvent): void {
     // jQuery wraps the native event, so we need to access originalEvent
     const dataTransfer = (event.originalEvent as DragEvent)?.dataTransfer || (event as any).dataTransfer;
 
@@ -249,19 +253,17 @@ class FitGDCharacterSheet extends ActorSheet {
   }
 
   /**
-   * Handle clicking on action dots to set the value (only in edit mode)
+   * Handle clicking on approach dots to set the value (only in edit mode)
    */
   private async _onDotClick(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
     event.stopPropagation();
 
     console.log('FitGD | Dot clicked, editMode:', this.editMode);
-    console.log('FitGD | Event target:', event.target);
-    console.log('FitGD | Event currentTarget:', event.currentTarget);
 
     // Only allow editing in edit mode
     if (!this.editMode) {
-      ui.notifications?.warn('Click Edit to allocate action dots');
+      ui.notifications?.warn('Click Edit to allocate approach dots');
       return;
     }
 
@@ -272,27 +274,25 @@ class FitGDCharacterSheet extends ActorSheet {
     }
 
     // Try to get data attributes from both target and currentTarget
-    // Prefer event.target (the actual clicked element) first, as it has both data-action and data-value
     const targetEl = event.target as HTMLElement;
     const currentTargetEl = event.currentTarget as HTMLElement;
 
     try {
-      // Try target first, fall back to currentTarget
-      let action: string;
+      let approach: string;
       let value: number;
 
       try {
-        const dataset = getActionDataset(targetEl);
-        action = dataset.action;
+        const dataset = getApproachDataset(targetEl);
+        approach = dataset.approach;
         value = parseInt(dataset.value, 10);
       } catch {
         // Fall back to currentTarget if target doesn't have required attributes
-        const dataset = getActionDataset(currentTargetEl);
-        action = dataset.action;
+        const dataset = getApproachDataset(currentTargetEl);
+        approach = dataset.approach;
         value = parseInt(dataset.value, 10);
       }
 
-      console.log('FitGD | Parsed action:', action, 'value:', value);
+      console.log('FitGD | Parsed approach:', approach, 'value:', value);
 
       // Get current character state to check if we should toggle to 0
       const character = game.fitgd.api.character.getCharacter(characterId);
@@ -301,7 +301,7 @@ class FitGDCharacterSheet extends ActorSheet {
         return;
       }
 
-      const currentDots = character.actionDots[action as keyof ActionDots];
+      const currentDots = character.approaches[approach as keyof Approaches];
       let newDots = value;
 
       // Feature: If clicking on a single filled dot (current dots is 1 and clicking dot 1), set to 0
@@ -310,16 +310,16 @@ class FitGDCharacterSheet extends ActorSheet {
         console.log('FitGD | Toggling single dot to 0');
       }
 
-      console.log('FitGD | Calling setActionDots with:', { characterId, action, dots: newDots });
+      console.log('FitGD | Calling setApproach with:', { characterId, approach, dots: newDots });
 
-      // Update the action dots (Redux will handle unallocated dots validation)
-      game.fitgd.api.character.setActionDots({
+      // Update the approach dots (Redux will handle unallocated dots validation)
+      game.fitgd.api.character.setApproach({
         characterId,
-        action,
+        approach: approach as keyof Approaches,
         dots: newDots
       });
 
-      console.log('FitGD | setActionDots succeeded');
+      console.log('FitGD | setApproach succeeded');
 
       // Save and broadcast changes to other clients
       await game.fitgd.saveImmediate();
@@ -330,7 +330,7 @@ class FitGDCharacterSheet extends ActorSheet {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       ui.notifications?.error(`Error: ${errorMessage}`);
-      console.error('FitGD | Set action dots error:', error);
+      console.error('FitGD | Set approach dots error:', error);
     }
   }
 
@@ -356,10 +356,10 @@ class FitGDCharacterSheet extends ActorSheet {
         return;
       }
 
-      console.log('FitGD | Attempting to save, unallocated dots:', character.unallocatedActionDots);
+      console.log('FitGD | Attempting to save, unallocated dots:', character.unallocatedApproachDots);
 
-      if (character.unallocatedActionDots > 0) {
-        ui.notifications?.warn(`You must allocate all ${character.unallocatedActionDots} remaining action dots before saving`);
+      if (character.unallocatedApproachDots > 0) {
+        ui.notifications?.warn(`You must allocate all ${character.unallocatedApproachDots} remaining approach dots before saving`);
         return;
       }
 
@@ -370,12 +370,12 @@ class FitGDCharacterSheet extends ActorSheet {
       // Save and broadcast final dot allocation to other clients
       await game.fitgd.saveImmediate();
 
-      ui.notifications?.info('Action dots saved');
+      ui.notifications?.info('Approach dots saved');
     } else {
       // Enter edit mode
       this.editMode = true;
       console.log('FitGD | Entering edit mode');
-      ui.notifications?.info('Edit mode: Click dots to allocate action ratings');
+      ui.notifications?.info('Edit mode: Click dots to allocate approach ratings');
     }
 
     // Re-render to update button text and dot states
@@ -427,7 +427,7 @@ class FitGDCharacterSheet extends ActorSheet {
                 metadata: clockData.description ? { description: clockData.description } : undefined,
               },
             },
-            { affectedReduxIds: [characterId], force: true }
+            { affectedReduxIds: [characterId as any], force: true }
           );
 
           ui.notifications?.info(`Harm clock "${clockData.name}" created`);
@@ -580,7 +580,7 @@ class FitGDCharacterSheet extends ActorSheet {
 
       // Get trait name for confirmation
       const character = game.fitgd.api.character.getCharacter(characterId);
-      const trait = character?.traits.find(t => t.id === traitId);
+      const trait = character?.traits.find((t: Trait) => t.id === traitId);
       const traitName = trait?.name || 'Unknown Trait';
 
       const confirmed = await Dialog.confirm({
@@ -595,7 +595,7 @@ class FitGDCharacterSheet extends ActorSheet {
 
       if (!confirmed) return;
 
-      game.fitgd.api.character.removeTrait({ characterId, traitId });
+      game.fitgd.api.character.removeTrait(characterId, traitId);
       await game.fitgd.saveImmediate();
       this.render(false);
       ui.notifications?.info(`Trait "${traitName}" deleted`);
@@ -624,12 +624,12 @@ class FitGDCharacterSheet extends ActorSheet {
 
       // Get original name to check if it changed
       const character = game.fitgd.api.character.getCharacter(characterId);
-      const trait = character?.traits.find((t) => t.id === traitId);
+      const trait = character?.traits.find((t: Trait) => t.id === traitId);
       const originalName = trait?.name;
 
       if (newName === originalName) return; // No change
 
-      game.fitgd.api.character.updateTraitName({ characterId, traitId, name: newName });
+      game.fitgd.api.character.updateTraitName(characterId, traitId, newName);
       await game.fitgd.saveImmediate();
       ui.notifications?.info(`Trait renamed to "${newName}"`);
     } catch (error) {
@@ -656,7 +656,7 @@ class FitGDCharacterSheet extends ActorSheet {
           type: isChecked ? 'characters/resetRally' : 'characters/useRally',
           payload: { characterId }
         },
-        { affectedReduxIds: [characterId] }
+        { affectedReduxIds: [characterId as any] }
       );
 
       ui.notifications?.info(`Rally ${isChecked ? 'enabled' : 'disabled'}`);
@@ -677,8 +677,8 @@ class FitGDCharacterSheet extends ActorSheet {
     const characterId = this._getReduxId();
     if (!characterId) return;
 
-    // Players can only browse accessible items
-    const tierFilter = game.user?.isGM ? null : 'accessible';
+    // Players can only browse common items
+    const tierFilter = game.user?.isGM ? null : 'common';
 
     new EquipmentBrowserDialog(characterId, { tierFilter }).render(true);
   }
@@ -696,14 +696,14 @@ class FitGDCharacterSheet extends ActorSheet {
       if (!characterId) return;
 
       const character = game.fitgd.api.character.getCharacter(characterId);
-      const equipment = character?.equipment?.find((e) => e.id === equipmentId);
+      const equipment = character?.equipment?.find((e: Equipment) => e.id === equipmentId);
 
       if (!equipment) {
         ui.notifications?.error('Equipment not found');
         return;
       }
 
-      new EquipmentEditDialog(characterId, equipment).render(true);
+      (new EquipmentEditDialog(characterId, equipment) as any).render(true);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       ui.notifications?.error(`Error: ${errorMessage}`);
@@ -724,7 +724,7 @@ class FitGDCharacterSheet extends ActorSheet {
       if (!characterId) return;
 
       const character = game.fitgd.api.character.getCharacter(characterId);
-      const equipment = character?.equipment?.find((e) => e.id === equipmentId);
+      const equipment = character?.equipment?.find((e: Equipment) => e.id === equipmentId);
 
       if (!equipment) {
         ui.notifications?.error('Equipment not found');
@@ -763,6 +763,25 @@ class FitGDCharacterSheet extends ActorSheet {
       const characterId = this._getReduxId();
       if (!characterId) return;
 
+      // Get character data to check if item is locked
+      const character = game.fitgd.api.character.getCharacter(characterId);
+      if (!character) {
+        throw new Error('Character not found');
+      }
+
+      // Find the equipment item
+      const item = character.equipment.find((e: Equipment) => e.id === equipmentId);
+      if (!item) {
+        throw new Error('Equipment not found');
+      }
+
+      // Prevent unequipping locked items
+      if (!equipped && item.locked) {
+        ui.notifications?.warn('This item is locked until Momentum Reset');
+        target.checked = true; // Revert checkbox
+        return;
+      }
+
       await game.fitgd.bridge.execute({
         type: 'characters/toggleEquipped',
         payload: { characterId, equipmentId, equipped },
@@ -773,6 +792,32 @@ class FitGDCharacterSheet extends ActorSheet {
       console.error('FitGD | Toggle equipped error:', error);
       // Revert checkbox on error
       target.checked = !equipped;
+    }
+  }
+
+  /**
+   * Toggle autoEquip state for equipped items
+   * Automatically re-equips item at Momentum Reset if enabled
+   */
+  private async _onToggleAutoEquip(event: JQuery.ChangeEvent): Promise<void> {
+    const target = event.currentTarget as HTMLInputElement;
+    const autoEquip = target.checked;
+
+    try {
+      const { equipmentId } = getEquipmentDataset(target);
+      const characterId = this._getReduxId();
+      if (!characterId) return;
+
+      await game.fitgd.bridge.execute({
+        type: 'characters/updateEquipment',
+        payload: { characterId, equipmentId, updates: { autoEquip } },
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      ui.notifications?.error(`Error: ${errorMessage}`);
+      console.error('FitGD | Toggle autoEquip error:', error);
+      // Revert checkbox on error
+      target.checked = !autoEquip;
     }
   }
 }

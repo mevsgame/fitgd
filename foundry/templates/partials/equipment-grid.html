@@ -1,0 +1,83 @@
+{{!--
+Equipment Grid Template
+
+A reusable partial for displaying equipment in a grid layout.
+Used by Character Sheet and Equipment Management Dialog.
+
+Visual States:
+- Equipped Items: Shown at top, highlighted
+- Unequipped Items: Shown below, dimmed
+- Locked: Icon indicating item cannot be unequipped (mission in progress)
+- Depleted: Gray/crossed-out for used consumables (still takes load)
+- Augmentations: Shown separately (don't count toward load)
+
+Context Parameters:
+- items: Array of equipment items
+- isManagementDialog: Boolean - true if in dialog (enables toggling), false for display-only
+- onToggle: Function called when item is clicked (only if isManagementDialog=true)
+--}}
+
+<div class="equipment-grid">
+  {{#if items.length}}
+    {{#each items}}
+      <div class="equipment-item {{this.tier}} {{#if this.equipped}}equipped{{/if}} {{#if this.locked}}locked{{/if}} {{#if this.depleted}}depleted{{/if}} {{#if (eq this.type 'augmentation')}}augmentation{{/if}}" {{#if @root.isManagementDialog}}data-equipment-id="{{this.id}}"{{/if}}>
+
+        {{!-- Equipment Icon/Image --}}
+        <div class="equipment-icon">
+          {{#if this.img}}
+            <img src="{{this.img}}" alt="{{this.name}}" title="{{this.name}}" />
+          {{else}}
+            <i class="fas fa-box"></i>
+          {{/if}}
+        </div>
+
+        {{!-- Equipment Info --}}
+        <div class="equipment-info">
+          <div class="equipment-name">{{this.name}}</div>
+          <div class="equipment-meta">
+            <span class="tier-badge tier-{{this.tier}}">{{this.tier}}</span>
+            {{#if this.category}}
+              <span class="category-badge">{{this.category}}</span>
+            {{/if}}
+          </div>
+        </div>
+
+        {{!-- Equipment State Indicators --}}
+        <div class="equipment-indicators">
+          {{#if this.equipped}}
+            <span class="equipment-badge equipped" title="Equipped">
+              <i class="fas fa-check-circle"></i>
+            </span>
+          {{/if}}
+
+          {{#if this.locked}}
+            <span class="equipment-badge locked" title="Locked until Momentum Reset (mission in progress)">
+              <i class="fas fa-lock"></i>
+            </span>
+          {{/if}}
+
+          {{#if this.depleted}}
+            <span class="equipment-badge depleted" title="Consumable used (replenishes at reset)">
+              <i class="fas fa-hourglass-end"></i>
+            </span>
+          {{/if}}
+
+          {{#if (eq this.type 'augmentation')}}
+            <span class="equipment-badge augmentation" title="Augmentation (doesn't count toward load)">
+              <i class="fas fa-microchip"></i>
+            </span>
+          {{/if}}
+        </div>
+
+        {{!-- Description Tooltip --}}
+        {{#if this.description}}
+          <div class="equipment-description" title="{{this.description}}">
+            {{this.description}}
+          </div>
+        {{/if}}
+      </div>
+    {{/each}}
+  {{else}}
+    <p class="no-equipment">No equipment</p>
+  {{/if}}
+</div>

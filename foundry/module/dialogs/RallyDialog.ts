@@ -15,10 +15,9 @@
  * - If the trait was disabled, it gets re-enabled
  */
 
-import type { Character, SocialAction } from '@/types/character';
+import type { Character } from '@/types/character';
 import type { Crew } from '@/types/crew';
-import type { ReduxId } from '@/types/foundry';
-import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
+import type { ReduxId } from '../types/ids';
 
 type RallyOutcome = 'critical' | 'success' | 'partial' | 'fail';
 
@@ -29,7 +28,7 @@ interface RallyDialogData {
   teammates: Character[];
   targetCharacter: Character | null;
   targetTraits: Character['traits'];
-  selectedAction: SocialAction | null;
+
   selectedTargetId: string | null;
   selectedTraitId: string | null;
   actionDots: number;
@@ -47,7 +46,6 @@ export class RallyDialog extends Application {
   private crew: Crew;
 
   // Selection state
-  private selectedAction: SocialAction | null = null;
   private selectedTargetId: string | null = null;
   private selectedTraitId: string | null = null;
 
@@ -57,7 +55,7 @@ export class RallyDialog extends Application {
   private momentumGain: number = 0;
   private outcome: RallyOutcome | null = null;
 
-  private html?: JQuery;
+
 
   /**
    * Create a new Rally Dialog
@@ -83,7 +81,7 @@ export class RallyDialog extends Application {
       height: 'auto',
       title: 'Rally Teammate',
       resizable: false,
-    });
+    } as any);
   }
 
   override get id(): string {
@@ -108,11 +106,10 @@ export class RallyDialog extends Application {
       targetTraits = targetCharacter?.traits || [];
     }
 
-    // Get action dots for selected action
-    let actionDots = 0;
-    if (this.selectedAction) {
-      actionDots = this.character.actionDots[this.selectedAction] || 0;
-    }
+    // Get action dots (Spirit + Guile)
+    const spirit = this.character.approaches.spirit || 0;
+    const guile = this.character.approaches.guile || 0;
+    const actionDots = spirit + guile;
 
     const currentMomentum = this.crew?.currentMomentum || 0;
 
@@ -124,7 +121,6 @@ export class RallyDialog extends Application {
       teammates,
       targetCharacter,
       targetTraits,
-      selectedAction: this.selectedAction,
       selectedTargetId: this.selectedTargetId,
       selectedTraitId: this.selectedTraitId,
       actionDots,
@@ -132,18 +128,17 @@ export class RallyDialog extends Application {
       rollResult: this.rollResult,
       momentumGain: this.momentumGain,
       outcome: this.outcome,
-      canRoll: !!(this.selectedAction && this.selectedTargetId && this.selectedTraitId && !this.hasRolled),
+      canRoll: !!(this.selectedTargetId && this.selectedTraitId && !this.hasRolled),
     };
   }
 
   override activateListeners(html: JQuery): void {
     super.activateListeners(html);
 
-    // Store html for later use
-    this.html = html;
+
 
     // Action selection
-    html.find('[name="action"]').change(this._onActionChange.bind(this));
+
 
     // Target selection
     html.find('[name="target"]').change(this._onTargetChange.bind(this));
@@ -158,13 +153,7 @@ export class RallyDialog extends Application {
     html.find('[data-action="cancel"]').click(() => this.close());
   }
 
-  /**
-   * Handle action selection change
-   */
-  private _onActionChange(event: JQuery.ChangeEvent): void {
-    this.selectedAction = (event.currentTarget.value || null) as SocialAction | null;
-    this.render();
-  }
+
 
   /**
    * Handle target selection change
@@ -190,27 +179,28 @@ export class RallyDialog extends Application {
   private async _onRoll(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
 
-    if (!this.selectedAction || !this.selectedTargetId || !this.selectedTraitId) {
-      ui.notifications.warn('Please select action, target, and trait');
+    if (!this.selectedTargetId || !this.selectedTraitId) {
+      ui.notifications.warn('Please select target and trait');
       return;
     }
 
-    // Get action dots
-    const actionDots = this.character.actionDots[this.selectedAction] || 0;
+    // Get action dots (Spirit + Guile)
+    const spirit = this.character.approaches.spirit || 0;
+    const guile = this.character.approaches.guile || 0;
+    const actionDots = spirit + guile;
 
     // Roll dice (Controlled position always)
     const diceCount = Math.max(actionDots, 2); // 0 dots = roll 2d6 keep lowest
-    const roll = new Roll(`${diceCount}d6`);
-    await roll.evaluate({ async: true });
+    const roll = await Roll.create(`${diceCount}d6`).evaluate({ async: true });
 
-    const results = roll.terms[0].results.map(r => r.result);
+    const results = (roll.terms[0] as any).results.map((r: any) => r.result);
     const highest = Math.max(...results);
 
     // Determine outcome
     let outcome: RallyOutcome;
     let momentumGain: number;
 
-    const criticalCount = results.filter(r => r === 6).length;
+    const criticalCount = results.filter((r: number) => r === 6).length;
     if (criticalCount >= 2) {
       outcome = 'critical';
       momentumGain = 4;
@@ -228,7 +218,7 @@ export class RallyDialog extends Application {
     // If 0 dots, roll 2d6 keep lowest
     if (actionDots === 0) {
       const lowest = Math.min(...results);
-      if (lowest === 6 && results.filter(r => r === 6).length >= 2) {
+      if (lowest === 6 && results.filter((r: number) => r === 6).length >= 2) {
         outcome = 'critical';
         momentumGain = 4;
       } else if (lowest === 6) {
@@ -252,7 +242,7 @@ export class RallyDialog extends Application {
     // Show roll result in chat
     await roll.toMessage({
       speaker: ChatMessage.getSpeaker({ actor: this.character.name }),
-      flavor: `<strong>Rally: ${this.selectedAction}</strong> (Controlled)`,
+      flavor: `<strong>Rally: Spirit + Guile</strong> (Controlled)`,
     });
 
     // Automatically apply results after roll
@@ -320,7 +310,7 @@ export class RallyDialog extends Application {
         <div class="fitgd-rally-summary">
           <h3>🎖️ Rally</h3>
           <p><strong>${this.character.name}</strong> rallies <strong>${targetCharacter.name}</strong></p>
-          <p><strong>Action:</strong> ${this.selectedAction.charAt(0).toUpperCase() + this.selectedAction.slice(1)}</p>
+          <p><strong>Action:</strong> Spirit + Guile</p>
           <p><strong>Trait Referenced:</strong> "${trait.name}"</p>
           <hr>
           <p><strong>Outcome:</strong> ${outcomeText[outcome]}</p>

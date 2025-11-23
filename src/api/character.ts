@@ -1,4 +1,4 @@
-import type { Character, Trait, ActionDots, Equipment } from '../types';
+import type { Character, Trait, Approaches, Equipment } from '../types';
 
 /**
  * Character API
@@ -8,7 +8,11 @@ import type { Character, Trait, ActionDots, Equipment } from '../types';
  */
 export interface CharacterAPI {
   // Creation
-  createCharacter(name: string, traits: Trait[], actionDots: ActionDots): string;
+  create(params: {
+    name: string;
+    traits: Trait[];
+    approaches: Approaches;
+  }): string;
 
   // Traits
   addTrait(characterId: string, trait: Trait): void;
@@ -18,8 +22,9 @@ export interface CharacterAPI {
   enableTrait(characterId: string, traitId: string): void;
   groupTraits(characterId: string, traitIds: [string, string, string], newTrait: Trait): void;
 
-  // Action Dots
-  setActionDots(params: { characterId: string; action: keyof ActionDots; dots: number }): void;
+  // Approaches
+  setApproach(params: { characterId: string; approach: keyof Approaches; dots: number }): void;
+  advanceApproach(params: { characterId: string; approach: keyof Approaches }): void;
   addUnallocatedDots(params: { characterId: string; amount: number }): void;
 
   // Equipment
@@ -32,6 +37,6 @@ export interface CharacterAPI {
 
   // Queries
   getCharacter(characterId: string): Character | null;
-  getCharacterTraits(characterId: string): Trait[];
+  getAvailableTraits(characterId: string): Trait[];
   canUseRally(characterId: string): boolean;
 }

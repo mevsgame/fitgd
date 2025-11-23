@@ -11,7 +11,9 @@ This is a collaborative storytelling game. You describe what your character does
   1. One **Role** Trait (e.g., Served with Elite Infantry Regiment, Fled Imprisonment as Rogue Psyker).
   2. One **Background** Trait (e.g., Survived City Underbelly Gang Wars, Washout from Military Academy).
 
-- **Actions:** You have 12 total dots to distribute across the 12 Actions, with a maximum of 3 dots in any single Action at character creation. You can have 0 dots in some Actions.
+- **Approaches:** You have **5 dots** to distribute across the four Approaches (**Force, Guile, Focus, Spirit**).
+  - The maximum rating in any Approach is **2** at character creation.
+  - You may have 0 dots in an Approach.
 
 - **Equipment:** Choose your starting equipment based on your Traits.
 
@@ -62,7 +64,7 @@ A Reset marks the end of a dramatic "act," setting the team's Momentum to **5**.
 - **Rare (1 per multiple sessions):** Only at major story beats--extended tension
 
 **Automatic Clock Recovery:**
-All active clocks (Harm, Addiction, and Consumable) automatically recover during a Momentum Reset:
+All active clocks (Harm, Addiction) automatically recover during a Momentum Reset:
 - **Full clocks** (6/6, 8/8, etc.) reduce by 1 segment
 - **Partial clocks** reduce by 2 segments (minimum 0)
 - **Empty clocks** (0 segments) are removed entirely
@@ -73,7 +75,7 @@ All active clocks (Harm, Addiction, and Consumable) automatically recover during
 
 #### **Rally**
 
-A character can initiate a **flashback** where they reference a teammate's Trait to inspire the group. The referenced teammate must be present. This social action is **always in a Controlled position.**
+A character can initiate a **flashback** where they reference a teammate's Trait to inspire the group. The referenced teammate must be present. This social action uses **Spirit + Guile** and is **always in a Controlled position.**
 
 - **Momentum Gain:** **1-4 Momentum**, based on your roll result (1-3: 1 Momentum, 4-5: 2 Momentum, 6: 3 Momentum, Critical: 4 Momentum). Consequences from Rally are reduced effect (gaining less Momentum) rather than harm or complications.
 
@@ -100,24 +102,38 @@ A last-resort measure for desperate situations. Once per action, you may use Sti
 
 ## CORE MECHANICS
 
-#### **Actions & Rolls**
+#### **Approaches & Rolls**
 
-Roll a number of d6s equal to your Action rating (if zero, roll 2d6 and take the lowest).
+Instead of specific skills, characters rely on four core **Approaches**. When you face a challenge, describe your goal and choose the Approach that best fits your method.
 
-| ACTION       | DESCRIPTION                                                                 |
-| ------------ | --------------------------------------------------------------------------- |
-| **Shoot**    | Attack at a distance with ranged weapons.                                   |
-| **Skirmish** | Engage in close-quarters combat, both armed and unarmed.                    |
-| **Skulk**    | Move unseen, unheard, or follow a target without being noticed.             |
-| **Wreck**    | Apply brute force to destroy an obstacle or create chaos.                   |
-| **Finesse**  | Use careful, precise movements, like picking a lock or disarming a trap.    |
-| **Survey**   | Observe your surroundings to spot details or understand a situation.        |
-| **Study**    | Scrutinize details, research lore, or analyze a person or object.           |
-| **Tech**     | Interact with, repair, or bypass technology and machine spirits.            |
-| **Attune**   | Sense the unnatural energies of the immaterium, corruption, or psychic phenomena. |
-| **Command**  | Compel obedience or inspire action through authority and intimidation.      |
-| **Consort**  | Socialize, build relationships, and navigate social situations.             |
-| **Sway**     | Persuade, deceive, or manipulate others through charm and lies.             |
+**The Dice Pool:**
+The dice you roll depend on what you're using to accomplish the task.
+
+- **With Equipment:** Roll **[Approach Rating] + Equipment Bonus**.
+  *(Requirement: You must have an equipped item to gain this bonus. Equipment bonuses are variable and depend on the category:)*
+  - *Dice bonus (typically +1d or +2d, but can be any value)*
+  - *Position modifier (can improve or worsen position by any number of steps)*
+  - *Effect modifier (can improve or worsen effect by any amount)*
+
+- **Augmentations:** Persistent equipment (armor, implants, etc.) that is always equipped.
+  By default, Augmentation bonuses are **not** considered in rolls. They only apply in
+  specific dramatic situations where they're tactically relevant (e.g., armor helps in
+  combat scenarios, augmented limbs help in climbing). The GM determines when an
+  Augmentation bonus applies.
+
+- **Synergy (Dual Approach):** Roll **[Primary Approach] + [Secondary Approach]**.
+  *(Use when combining innate abilities or going empty-handed. GM approval required for the combination).*
+
+- **Zero Floor:** If your total pool is 0 dice, roll **2d6 and take the lowest**.
+
+**The Four Approaches:**
+
+| APPROACH | DESCRIPTION |
+| :--- | :--- |
+| **FORCE** | **Overpowering.** Violence, athletics, intimidation, heavy lifting. |
+| **GUILE** | **Indirect.** Stealth, speed, deception, dexterity. |
+| **FOCUS** | **Calculated.** Precision, technology, observation, medicine, shooting. |
+| **SPIRIT** | **Internal.** Willpower, command, charm, psychic attunement. |
 
 **Roll Results:**
 - **1-3 (Failure):** You face consequences based on your Position and gain Momentum (+1 Controlled, +2 Risky, +4 Desperate, +6 Impossible).
@@ -220,33 +236,25 @@ You may consolidate three similar traits into a single broader one in two situat
 
 2. **During a Flashback (1 Momentum):** If you have the fewest traits among your crew (or tied for fewest), you may consolidate three traits into one broader trait as part of a flashback action. This costs 1 Momentum total (the flashback cost). The three original traits are consumed, and you may immediately use the new consolidated trait to improve Position or Effect. Role and background traits cannot be consolidated.
 
-#### **Equipment Tiers**
+#### **Equipment**
 
-- **Accessible:** Standard gear for your role. Declare freely.
+##### **Acquisition Tiers**
 
-- **Inaccessible:** Specialized gear. Requires a **1 Momentum Flashback** justified by a Trait. You can establish a new Trait through this flashback to justify the gear access, gaining both the permanent Trait and the equipment.
+- **Common:** Standard gear for your role. Declare freely.
+
+- **Rare:** Specialized gear. Requires a **1 Momentum Flashback** justified by a Trait. You can establish a new Trait through this flashback to justify the gear access, gaining both the permanent Trait and the equipment.
 
 - **Epic:** Legendary gear. Must be earned as a story reward and cannot be acquired through flashbacks.
 
-#### **Consumables (Grenades, Stims, etc.)**
+##### **Equipping & Load Management**
 
-Limited-use items are tracked with **depletion clocks**.
+- **Load Limit:** Characters can equip a maximum number of items at once. The GM determines this limit at the start of each campaign (typically **5 items**).
 
-- **Acquisition:** Gain access via flashbacks, sometimes referencing a teammate's trait to justify it.
+- **Locking Equipment:** Items are **locked** once they are **used** in a roll (or acquired via Flashback). Until then, "equipped" items can be swapped freely, allowing you to adjust your loadout as the mission evolves. Locked items remain equipped until the next Momentum Reset.
 
-- **Usage:** After each use (even on a failed roll), roll a d6 and advance that item's clock by the result.
+- **Consumables:** Single-use items that provide higher bonuses. After use, they remain equipped but become unusable. They continue to take up load space until the next Momentum Reset.
 
-- **Depletion:** Clock size depends on rarity: **Common (8)**, **Uncommon (6)**, or **Rare (4)**.
+- **Re-equipping Rare Items:** If you unequip a Rare item, you must spend **1 Momentum** to re-equip it later. This works like a Flashback—you must explain how you justified having access to this tier of gear.
 
-- **When Any Clock Fills:** That item's **availability drops one tier** for the entire team. Accessible items become Inaccessible, requiring a 1 Momentum flashback + Trait per use. Everyone else's clock for that item freezes at its current count. The filled clock remains filled--no further degradation occurs. Availability is restored only through the story.
+- **During Reset:** At the start of a Momentum Reset, you can unequip any number of items and reorganize your load to fit within the GM's limit for the next act.
 
----
-
-## PLAYTEST QUESTIONS
-
-These design questions need observation during actual play:
-
-- **Trait Cap:** What's a reasonable maximum number of Traits per character to prevent bloat?
-- **Momentum Homeostasis:** Does the system naturally oscillate around 5 Momentum as designed?
-- **Rally Frequency:** How often do teams actually drop to 0-3 Momentum and use Rally?
-- **Reset Cadence:** Which reset frequency (frequent/moderate/rare) creates the best tension and pacing?

@@ -10,27 +10,12 @@
 
   <!-- Selection Phase -->
   <div class="selection-phase">
-    <!-- Action Selection -->
-    <div class="form-group">
-      <label>Social Action:</label>
-      <select name="action" class="action-select">
-        <option value="">-- Select Action --</option>
-        <option value="command" {{#if (eq selectedAction "command")}}selected{{/if}}>
-          Command ({{character.actionDots.command}}d)
-        </option>
-        <option value="consort" {{#if (eq selectedAction "consort")}}selected{{/if}}>
-          Consort ({{character.actionDots.consort}}d)
-        </option>
-        <option value="sway" {{#if (eq selectedAction "sway")}}selected{{/if}}>
-          Sway ({{character.actionDots.sway}}d)
-        </option>
-      </select>
-    </div>
+    <!-- Action Selection Removed (Fixed to Spirit + Guile) -->
 
     <!-- Target Selection -->
     <div class="form-group">
       <label>Target Teammate:</label>
-      <select name="target" class="target-select" {{#unless selectedAction}}disabled{{/unless}}>
+      <select name="target" class="target-select">
         <option value="">-- Select Teammate --</option>
         {{#each teammates}}
         <option value="{{this.id}}" {{#if (eq ../selectedTargetId this.id)}}selected{{/if}}>
@@ -51,7 +36,9 @@
 
       <div class="traits-grid">
         {{#each targetTraits}}
-        <div class="trait-item {{#if (eq ../selectedTraitId this.id)}}selected{{/if}} {{#if this.disabled}}disabled-trait{{/if}}" data-trait-id="{{this.id}}">
+        <div
+          class="trait-item {{#if (eq ../selectedTraitId this.id)}}selected{{/if}} {{#if this.disabled}}disabled-trait{{/if}}"
+          data-trait-id="{{this.id}}">
           <div class="trait-name">{{this.name}}</div>
           <div class="trait-category">{{this.category}}</div>
           {{#if this.disabled}}

@@ -1,11 +1,10 @@
 import type { Clock, ClockSize, ClockType } from '../types';
 import { DEFAULT_CONFIG } from '../config/gameConfig';
-import { EquipmentRarity, EquipmentTier } from '@/types/equipment';
 
 /**
  * Clock Validator
  *
- * Type-specific validation for harm, consumable, and addiction clocks.
+ * Type-specific validation for harm, addiction, and progress clocks.
  */
 
 /**
@@ -58,18 +57,11 @@ export function validateSegmentRange(
  */
 export function getMaxSegments(
   clockType: ClockType,
-  rarity?: EquipmentRarity,
   customSize?: ClockSize
 ): ClockSize {
   switch (clockType) {
     case 'harm':
       return DEFAULT_CONFIG.clocks.harm.segments; // 6
-
-    case 'consumable':
-      if (!rarity) {
-        throw new Error('Consumable clocks require a rarity');
-      }
-      return DEFAULT_CONFIG.clocks.consumable.segments[rarity];
 
     case 'addiction':
       return DEFAULT_CONFIG.clocks.addiction.segments; // 8
@@ -132,38 +124,7 @@ export function isClockFilled(clock: Clock): boolean {
   return clock.segments >= clock.maxSegments;
 }
 
-/**
- * Check if clock is frozen (for consumables)
- */
-export function isClockFrozen(clock: Clock): boolean {
-  return clock.metadata?.frozen === true;
-}
 
-/**
- * Validate consumable clock metadata
- */
-export function validateConsumableMetadata(
-  rarity?: EquipmentRarity,
-  tier?: EquipmentTier
-): void {
-  if (!rarity) {
-    throw new Error('Consumable clocks require a rarity (common, uncommon, rare)');
-  }
-
-  if (!tier) {
-    throw new Error('Consumable clocks require a tier (accessible, inaccessible)');
-  }
-
-  const validRarities = ['common', 'uncommon', 'rare'];
-  if (!validRarities.includes(rarity)) {
-    throw new Error(`Invalid rarity: ${rarity}. Must be common, uncommon, or rare.`);
-  }
-
-  const validTiers = ['accessible', 'inaccessible'];
-  if (!validTiers.includes(tier)) {
-    throw new Error(`Invalid tier: ${tier}. Must be accessible or inaccessible.`);
-  }
-}
 
 /**
  * Calculate addiction clock reduction on reset

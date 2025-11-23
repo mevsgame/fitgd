@@ -141,8 +141,8 @@ export class ActionRollDialog extends Dialog {
     const poolDisplay = html.find('.pool-count');
 
     const updatePool = () => {
-      const action = actionSelect.val() as keyof Character['actionDots'];
-      const actionDots = character.actionDots[action] || 0;
+      const action = actionSelect.val() as keyof Character['approaches'];
+      const actionDots = character.approaches[action] || 0;
       const push = pushCheckbox.is(':checked') ? 1 : 0;
       const devils = devilsCheckbox.is(':checked') ? 1 : 0;
       const bonus = parseInt(bonusInput.val() as string) || 0;
@@ -185,7 +185,7 @@ export class ActionRollDialog extends Dialog {
     const bonusDice = parseInt(html.find('[name="bonusDice"]').val() as string) || 0;
 
     // Calculate dice pool
-    const actionDots = character.actionDots[action as keyof Character['actionDots']] || 0;
+    const actionDots = character.approaches[action as keyof Character['approaches']] || 0;
     let dicePool = actionDots + bonusDice;
 
     if (push) {

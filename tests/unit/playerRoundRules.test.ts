@@ -285,7 +285,7 @@ describe('playerRoundRules - Gameplay Scenarios', () => {
     const momentum = calculateMomentumGain(position);
     const clockProgress = calculateSuccessClockProgress(position, effect);
 
-    expect(consequence).toBe(5); // Desperate = 5 segments
+    expect(consequence).toBe(4); // Desperate = 4 segments
     expect(momentum).toBe(4); // Desperate = 4 momentum
     expect(clockProgress).toBe(6); // 5 + 1 = 6
   });
@@ -317,3 +317,6 @@ describe('playerRoundRules - Gameplay Scenarios', () => {
     );
   });
 });
+
+
+

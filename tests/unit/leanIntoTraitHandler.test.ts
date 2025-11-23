@@ -9,51 +9,50 @@
 
 import { describe, it, expect } from 'vitest';
 import { LeanIntoTraitHandler } from '../../foundry/module/handlers/leanIntoTraitHandler';
-import type { Character } from '../../src/types/character';
+import type { Character, Trait } from '../../src/types/character';
 
 describe('LeanIntoTraitHandler', () => {
   // Test data
-  const mockTrait1 = {
+  const mockTrait1: Trait = {
     id: 'trait-1',
     name: 'Daring',
     description: 'Bold and fearless',
+    category: 'role' as const,
     disabled: false,
+    acquiredAt: Date.now(),
   };
 
-  const mockTrait2 = {
+  const mockTrait2: Trait = {
     id: 'trait-2',
     name: 'Careful',
     description: 'Methodical approach',
+    category: 'background' as const,
     disabled: false,
+    acquiredAt: Date.now(),
   };
 
-  const mockDisabledTrait = {
+  const mockDisabledTrait: Trait = {
     id: 'trait-3',
     name: 'Reckless',
     description: 'Throw caution to the wind',
+    category: 'scar' as const,
     disabled: true,
+    acquiredAt: Date.now(),
   };
 
-  const mockCharacter = (traits = [mockTrait1, mockTrait2]): Character => ({
+  const mockCharacter = (traits: Trait[] = [mockTrait1, mockTrait2]): Character => ({
     id: 'char-1',
     name: 'Test Character',
     traits,
-    actionDots: {
-      consort: 0,
-      prowess: 0,
-      finesse: 0,
-      insight: 0,
-      sway: 0,
-      attune: 0,
-      command: 0,
-      craft: 0,
-      study: 0,
-      rig: 0,
-      scrap: 0,
-      wield: 0,
+    approaches: {
+      force: 0,
+      guile: 0,
+      focus: 0,
+      spirit: 0,
     },
     equipment: [],
     rallyAvailable: true,
+    unallocatedApproachDots: 0,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   });
@@ -301,3 +300,6 @@ describe('LeanIntoTraitHandler', () => {
     });
   });
 });
+
+
+

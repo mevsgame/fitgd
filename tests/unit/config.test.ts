@@ -6,7 +6,7 @@ describe('Config', () => {
   it('should have valid DEFAULT_CONFIG', () => {
     expect(DEFAULT_CONFIG).toBeDefined();
     expect(DEFAULT_CONFIG.character.startingTraitCount).toBe(2);
-    expect(DEFAULT_CONFIG.character.startingActionDots).toBe(12);
+    expect(DEFAULT_CONFIG.character.startingApproachDots).toBe(5);
     expect(DEFAULT_CONFIG.crew.startingMomentum).toBe(5);
     expect(DEFAULT_CONFIG.crew.maxMomentum).toBe(10);
     expect(DEFAULT_CONFIG.clocks.harm.maxClocks).toBe(3);
@@ -14,9 +14,6 @@ describe('Config', () => {
   });
 
   it('should have valid clock configurations', () => {
-    expect(DEFAULT_CONFIG.clocks.consumable.segments.common).toBe(8);
-    expect(DEFAULT_CONFIG.clocks.consumable.segments.uncommon).toBe(6);
-    expect(DEFAULT_CONFIG.clocks.consumable.segments.epic).toBe(4);
     expect(DEFAULT_CONFIG.clocks.addiction.segments).toBe(8);
     expect(DEFAULT_CONFIG.clocks.addiction.resetReduction).toBe(2);
   });
@@ -45,3 +42,6 @@ describe('UUID', () => {
     expect(ids.size).toBe(100); // All unique
   });
 });
+
+
+

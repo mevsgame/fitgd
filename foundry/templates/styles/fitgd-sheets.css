@@ -14,7 +14,8 @@
 }
 
 .fitgd .window-content {
-  /* background: url('../../ui/parchment-dark.jpg') repeat; */ /* Optional background texture */
+  /* background: url('../../ui/parchment-dark.jpg') repeat; */
+  /* Optional background texture */
   background-color: #1a1a1a !important;
   background: #1a1a1a !important;
   padding: 0;
@@ -49,7 +50,8 @@
   padding: 10px;
   background: linear-gradient(to right, #2a2a2a, #1a1a1a);
   border-bottom: 2px solid #8b0000;
-  flex: 0 0 auto; /* Don't grow, don't shrink */
+  flex: 0 0 auto;
+  /* Don't grow, don't shrink */
 }
 
 .fitgd .sheet-header .profile-img {
@@ -152,7 +154,8 @@
   flex: 0;
   padding: 6px 12px;
   font-size: 13px;
-  min-width: 0; /* Allow buttons to shrink */
+  min-width: 0;
+  /* Allow buttons to shrink */
   font-weight: bold;
 }
 
@@ -165,7 +168,8 @@
   gap: 0;
   border-bottom: 2px solid #8b0000;
   background: #2a2a2a;
-  flex: 0; /* Don't grow, don't shrink */
+  flex: 0;
+  /* Don't grow, don't shrink */
 }
 
 .fitgd .sheet-tabs .item {
@@ -366,9 +370,12 @@
   display: flex;
   gap: 10px;
 }
+
 .fitgd .take-action-btn {
-  white-space: nowrap;  /* Prevent text wrapping */
+  white-space: nowrap;
+  /* Prevent text wrapping */
 }
+
 /* Dot Allocation Display */
 .fitgd .dot-allocation-display {
   background: #2a2a2a;
@@ -507,6 +514,94 @@
   min-width: 20px;
   text-align: center;
 }
+
+/* -------------------------------------------- */
+/*  Approaches (New System)                     */
+/* -------------------------------------------- */
+
+.fitgd .approaches-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.fitgd .approaches-header .header-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.fitgd .approaches-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.fitgd .approach-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.fitgd .approach-row:hover {
+  background: #333;
+  border-color: #666;
+}
+
+.fitgd .approach-label {
+  flex: 0 0 80px;
+  font-weight: bold;
+  text-transform: capitalize;
+  color: #ddd;
+  font-size: 14px;
+}
+
+.fitgd .approach-dots {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.fitgd .approach-dots .dot {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #555;
+  border-radius: 50%;
+  background: #222;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fitgd .approach-dots .dot:hover {
+  border-color: #888;
+  transform: scale(1.15);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
+}
+
+.fitgd .approach-dots .dot.filled {
+  background: #ff6347;
+  border-color: #ff6347;
+  box-shadow: 0 0 4px rgba(255, 99, 71, 0.8);
+}
+
+.fitgd .approach-dots .dot.filled:hover {
+  box-shadow: 0 0 8px rgba(255, 99, 71, 1.0);
+}
+
+.fitgd .approach-value {
+  font-weight: bold;
+  color: #ff6347;
+  min-width: 25px;
+  text-align: center;
+  font-size: 16px;
+}
+
 
 /* -------------------------------------------- */
 /*  Traits                                      */
@@ -750,10 +845,10 @@
   background: transparent;
   border: none;
   color: #4169e1;
-  cursor: pointer; 
+  cursor: pointer;
   font-size: 16px;
   opacity: 0.9;
-  transition: all 0.2s; 
+  transition: all 0.2s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -763,10 +858,10 @@
   background: transparent;
   border: none;
   color: #ff6347;
-  cursor: pointer; 
+  cursor: pointer;
   font-size: 16px;
   opacity: 0.9;
-  transition: all 0.2s; 
+  transition: all 0.2s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -878,7 +973,7 @@
   display: none;
 }
 
-.equipment-browser-dialog .browser-equipment-item input[type="radio"]:checked + .browser-equipment-row {
+.equipment-browser-dialog .browser-equipment-item input[type="radio"]:checked+.browser-equipment-row {
   outline: 2px solid #4169e1;
   outline-offset: -2px;
   border-radius: 4px;
@@ -988,7 +1083,8 @@
   background: #2a2a2a;
   border: 1px solid #444;
   border-radius: 4px;
-  flex: 0 0 calc(33% - 8px); /* 3 clocks per row with gap */
+  flex: 0 0 calc(33% - 8px);
+  /* 3 clocks per row with gap */
   min-width: 220px;
   max-width: 280px;
   box-sizing: border-box;
@@ -2302,7 +2398,8 @@
   color: #ffd700;
 }
 
-.action-select {
+.action-select,
+.approach-select {
   width: 100%;
   padding: 10px 8px;
   background: #2a2a2a;
@@ -2315,14 +2412,16 @@
   min-height: 38px;
 }
 
-.action-select option {
+.action-select option,
+.approach-select option {
   padding: 8px;
   line-height: 1.5;
   background: #2a2a2a;
   color: #e0e0e0;
 }
 
-.action-select option:hover {
+.action-select option:hover,
+.approach-select option:hover {
   background: #3a3a3a;
   color: #fff;
 }
@@ -2485,7 +2584,7 @@
 
 .momentum-replenishment h4 {
   margin: 0 0 10px 0;
-  color: #ffd700; 
+  color: #ffd700;
 }
 
 .replenishment-row {
@@ -2549,7 +2648,7 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
- 
+
 
 .action-plan-preview {
   margin: 15px 0;
@@ -2716,8 +2815,15 @@
 }
 
 @keyframes fadeInOut {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 /* Roll Outcome Display */
@@ -2744,9 +2850,12 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7), 0 0 10px rgba(255, 215, 0, 0.5);
   }
+
   50% {
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 215, 0, 0.8);
   }
@@ -3066,4 +3175,208 @@
 /* Hidden utility class for search filtering */
 .selection-dialog .item-option.hidden {
   display: none;
+}/* ========================================================================== */
+/*  Equipment Dialogs Styling                                                */
+/* ========================================================================== */
+
+/* -------------------------------------------- */
+/*  Flashback Equipment Dialog                 */
+/* -------------------------------------------- */
+
+.flashback-equipment-dialog {
+  padding: 15px;
+  font-family: "Signika", sans-serif;
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+
+.flashback-equipment-dialog .dialog-header {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.flashback-equipment-dialog .dialog-header h2 {
+  margin: 0 0 10px 0;
+  color: #ffd700;
+}
+
+.flashback-equipment-dialog .momentum-display {
+  margin: 5px 0;
+  font-size: 1.1em;
+}
+
+.flashback-equipment-dialog .dialog-warning {
+  padding: 12px;
+  background: rgba(255, 152, 0, 0.1);
+  border-left: 3px solid #ff9800;
+  margin-bottom: 15px;
+  border-radius: 4px;
+}
+
+.flashback-equipment-dialog .equipment-form {
+  margin-bottom: 20px;
+}
+
+.flashback-equipment-dialog .form-group {
+  margin-bottom: 15px;
+}
+
+.flashback-equipment-dialog .form-group label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #ffd700;
+}
+
+.flashback-equipment-dialog .form-group select,
+.flashback-equipment-dialog .form-group input[type="text"],
+.flashback-equipment-dialog .form-group textarea {
+  width: 100%;
+  padding: 8px;
+  background: #2a2a2a;
+  border: 1px solid #555;
+  color: #e0e0e0;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: "Signika", sans-serif;
+  line-height: 1.5;
+  min-height: 38px;
+}
+
+.flashback-equipment-dialog .form-group select {
+  cursor: pointer;
+  height: auto;
+}
+
+.flashback-equipment-dialog .form-group select option {
+  padding: 8px;
+  line-height: 1.5;
+  background: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.flashback-equipment-dialog .form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.flashback-equipment-dialog .help-text {
+  font-size: 0.9em;
+  color: #aaa;
+  margin-top: 5px;
+  line-height: 1.4;
+}
+
+.flashback-equipment-dialog .cost-summary {
+  margin-bottom: 15px;
+  padding: 12px;
+  background: #2a2a2a;
+  border-radius: 4px;
+  border-left: 3px solid #42a5f5;
+}
+
+.flashback-equipment-dialog .cost-summary p {
+  margin: 5px 0;
+}
+
+.flashback-equipment-dialog .momentum-cost {
+  color: #42a5f5;
+  font-weight: bold;
+}
+
+.flashback-equipment-dialog .cost-ok {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.flashback-equipment-dialog .cost-insufficient {
+  color: #f44336;
+  font-weight: bold;
+}
+
+.flashback-equipment-dialog .load-summary {
+  margin-bottom: 15px;
+  padding: 12px;
+  background: #2a2a2a;
+  border-radius: 4px;
+}
+
+.flashback-equipment-dialog .load-summary p {
+  margin: 5px 0;
+}
+
+.flashback-equipment-dialog .load-ok {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.flashback-equipment-dialog .load-full {
+  color: #f44336;
+  font-weight: bold;
+}
+
+.flashback-equipment-dialog .dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.flashback-equipment-dialog .dialog-buttons button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 1em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: "Signika", sans-serif;
+}
+
+.flashback-equipment-dialog .dialog-buttons button.primary {
+  background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+  color: #fff;
+  border: 2px solid #42a5f5;
+}
+
+.flashback-equipment-dialog .dialog-buttons button.primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  box-shadow: 0 0 15px rgba(66, 165, 245, 0.8);
+}
+
+.flashback-equipment-dialog .dialog-buttons button.primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.flashback-equipment-dialog .dialog-buttons button.secondary {
+  background: #4a4a4a;
+  color: #e0e0e0;
+  border: 1px solid #666;
+}
+
+.flashback-equipment-dialog .dialog-buttons button.secondary:hover {
+  background: #5a5a5a;
+}
+
+/* -------------------------------------------- */
+/*  Fix Dropdown Styling Issues                */
+/* -------------------------------------------- */
+
+/* Ensure all equipment dialog dropdowns have proper height and don't cut off text */
+.equipment-edit-dialog select,
+.equipment-management-dialog select,
+.flashback-equipment-dialog select {
+  height: auto !important;
+  min-height: 38px;
+  line-height: 1.5;
+  padding: 8px;
+}
+
+.equipment-edit-dialog select option,
+.equipment-management-dialog select option,
+.flashback-equipment-dialog select option {
+  padding: 8px;
+  line-height: 1.5;
+  min-height: 30px;
 }

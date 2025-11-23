@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore } from '../../src/store';
 import playerRoundStateReducer, {
   initializePlayerState,
   setActivePlayer,
@@ -27,11 +27,7 @@ describe('playerRoundState - Scenario Tests', () => {
   const characterId = 'test-char';
 
   beforeEach(() => {
-    store = configureStore({
-      reducer: {
-        playerRoundState: playerRoundStateReducer,
-      },
-    });
+    store = configureStore();
   });
 
   describe('Basic Action Roll Scenario', () => {
@@ -50,13 +46,13 @@ describe('playerRoundState - Scenario Tests', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'risky',
           effect: 'standard',
         })
       );
       state = store.getState().playerRoundState.byCharacterId[characterId];
-      expect(state.selectedAction).toBe('shoot');
+      expect(state.selectedApproach).toBe('force');
       expect(state.state).toBe('DECISION_PHASE'); // Doesn't auto-transition
 
       // Commit roll
@@ -94,7 +90,7 @@ describe('playerRoundState - Scenario Tests', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'skulk',
+          approach: 'guile',
           position: 'desperate',
           effect: 'limited',
         })
@@ -154,7 +150,7 @@ describe('playerRoundState - Scenario Tests', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'risky',
           effect: 'great',
         })
@@ -237,7 +233,7 @@ describe('playerRoundState - Scenario Tests', () => {
       store.dispatch(
         setActionPlan({
           characterId: char1,
-          action: 'skirmish',
+          approach: 'force',
           position: 'controlled',
           effect: 'standard',
         })
@@ -258,7 +254,7 @@ describe('playerRoundState - Scenario Tests', () => {
       store.dispatch(
         setActionPlan({
           characterId: char2,
-          action: 'skulk',
+          approach: 'guile',
           position: 'desperate',
           effect: 'limited',
         })
@@ -324,7 +320,7 @@ describe('playerRoundState - Scenario Tests', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'risky',
           effect: 'standard',
         })
@@ -351,7 +347,7 @@ describe('playerRoundState - Scenario Tests', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'skirmish',
+          approach: 'force',
           position: 'risky',
           effect: 'standard',
         })
@@ -388,7 +384,7 @@ describe('playerRoundState - Scenario Tests', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'consort',
+          approach: 'spirit',
           position: 'desperate',
           effect: 'great',
         })
@@ -423,7 +419,7 @@ describe('playerRoundState - Scenario Tests', () => {
       store.dispatch(
         setActionPlan({
           characterId,
-          action: 'shoot',
+          approach: 'force',
           position: 'risky',
           effect: 'standard',
         })
@@ -442,7 +438,7 @@ describe('playerRoundState - Scenario Tests', () => {
 
       let state = store.getState().playerRoundState.byCharacterId[characterId];
       expect(state.state).toBe('TURN_COMPLETE');
-      expect(state.selectedAction).toBe('shoot');
+      expect(state.selectedApproach).toBe('force');
       expect(state.rollResult).toBeDefined();
 
       // Reset for new turn
@@ -450,10 +446,14 @@ describe('playerRoundState - Scenario Tests', () => {
       state = store.getState().playerRoundState.byCharacterId[characterId];
 
       expect(state.state).toBe('IDLE_WAITING');
-      expect(state.selectedAction).toBeUndefined();
+      expect(state.selectedApproach).toBeUndefined();
       expect(state.rollResult).toBeUndefined();
       expect(state.position).toBeUndefined();
       expect(state.effect).toBeUndefined();
     });
   });
 });
+
+
+
+

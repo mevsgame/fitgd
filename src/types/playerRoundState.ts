@@ -5,7 +5,7 @@
  * Used to drive the Player Action Widget UI and enforce valid state transitions.
  */
 
-import type { ActionDots } from './character';
+import type { Approaches } from './character';
 import type { Position, Effect } from './resolution';
 
 // Re-export for convenience
@@ -129,8 +129,14 @@ export interface PlayerRoundState {
   /** Current state in the round */
   state: PlayerRoundStateType;
 
-  /** Selected action (e.g., 'shoot', 'skirmish') */
-  selectedAction?: keyof ActionDots;
+  /** Selected approach (e.g., 'force', 'guile') */
+  selectedApproach?: keyof Approaches;
+
+  /** Secondary approach for Synergy mode */
+  secondaryApproach?: keyof Approaches;
+
+  /** Roll mode: 'standard' (just primary), 'synergy' (primary + secondary), or 'equipment' (primary + item bonus) */
+  rollMode?: 'standard' | 'synergy' | 'equipment';
 
   /** Position level (controlled/risky/desperate) */
   position?: Position;
@@ -145,6 +151,9 @@ export interface PlayerRoundState {
 
   /** Equipment IDs being used for this action */
   equippedForAction?: string[];
+
+  /** Augmentation IDs enabled for this roll (GM control only) */
+  enabledAugmentationIds?: string[];
 
   /** Push Yourself flag (costs 1M) */
   pushed?: boolean;

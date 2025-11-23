@@ -1,6 +1,6 @@
 import type { Store } from '@reduxjs/toolkit';
-import type { Trait } from '../types';
-import { addTrait, enableTrait, resetRally } from '../slices/characterSlice';
+import type { Trait, Equipment } from '../types';
+import { addTrait, enableTrait, resetRally, unlockAllEquipment, replenishConsumables, autoEquipItems } from '../slices/characterSlice';
 import { resetMomentum } from '../slices/crewSlice';
 import {
   createClock,
@@ -9,10 +9,8 @@ import {
   deleteClock,
 } from '../slices/clockSlice';
 import {
-  selectConsumableClockBySubtype,
   selectAddictionClockByCharacter,
   selectStimsAvailable,
-  selectConsumableAvailable,
 } from '../selectors/clockSelectors';
 import { isClockFilled } from '../validators/clockValidator';
 import { generateId } from '../utils/uuid';
@@ -20,25 +18,10 @@ import { generateId } from '../utils/uuid';
 /**
  * Resource Management Helpers
  *
- * Application layer functions for managing consumables and stims with proper validation.
+ * Application layer functions for managing stims and momentum resets with proper validation.
  * These coordinate multiple slices (character, clock) and enforce game rules.
  */
 
-export interface UseConsumableParams {
-  crewId: string;
-  characterId: string;
-  consumableType: string; // e.g., 'frag_grenades', 'stims', 'medkits'
-  depletionRoll: number; // d6 result (1-6)
-  userId?: string;
-}
-
-export interface UseConsumableResult {
-  clockId: string;
-  segmentsAdded: number;
-  newSegments: number;
-  isFrozen: boolean; // True if this use filled/froze the clock
-  tierDowngraded: boolean; // True if tier was downgraded
-}
 
 export interface UseStimParams {
   crewId: string;
@@ -53,96 +36,6 @@ export interface UseStimResult {
   newSegments: number;
   isAddicted: boolean; // True if this use filled the addiction clock
   addictTraitId?: string; // ID of the "Addict" trait if added
-}
-
-/**
- * Use a consumable item (grenades, medkits, etc.)
- *
- * Validates that the consumable is not frozen, then adds depletion segments.
- * If the clock fills, it will be frozen and tier will be downgraded.
- *
- * @param store - Redux store
- * @param params - Consumable usage parameters
- * @returns Result with clock state
- * @throws Error if consumable is frozen/inaccessible
- */
-export function useConsumable(
-  store: Store,
-  params: UseConsumableParams
-): UseConsumableResult {
-  const { crewId, characterId, consumableType, depletionRoll, userId } = params;
-
-  // Validate depletion roll
-  if (depletionRoll < 1 || depletionRoll > 6) {
-    throw new Error(`Depletion roll must be 1-6 (got ${depletionRoll})`);
-  }
-
-  const state = store.getState();
-
-  // Check if consumable is available (not frozen)
-  const isAvailable = selectConsumableAvailable(state, crewId, consumableType);
-  if (!isAvailable) {
-    throw new Error(
-      `Consumable "${consumableType}" is no longer accessible (depleted)`
-    );
-  }
-
-  // Get or create consumable clock for this character
-  // Note: Consumables are tracked per-character but frozen crew-wide
-  let clock = selectConsumableClockBySubtype(state, characterId, consumableType);
-
-  if (!clock) {
-    // Create new consumable clock
-    // Default to common (8 segments) unless specified in metadata
-    store.dispatch(
-      createClock({
-        entityId: characterId,
-        clockType: 'consumable',
-        subtype: consumableType,
-        rarity: 'common', // TODO: Should be passed as param or config
-        tier: 'accessible',
-        userId,
-      })
-    );
-
-    // Refresh state after creation
-    const newState = store.getState();
-    clock = selectConsumableClockBySubtype(newState, characterId, consumableType);
-
-    if (!clock) {
-      throw new Error('Failed to create consumable clock');
-    }
-  }
-
-  const clockId = clock.id;
-  const previousSegments = clock.segments;
-
-  // Add depletion segments
-  store.dispatch(
-    addSegments({
-      clockId,
-      amount: depletionRoll,
-      userId,
-    })
-  );
-
-  // Get updated clock state
-  const updatedState = store.getState();
-  const updatedClock = updatedState.clocks.byId[clockId];
-
-  const isFrozen = updatedClock.metadata?.frozen === true;
-  const tierDowngraded =
-    previousSegments < updatedClock.maxSegments &&
-    updatedClock.segments >= updatedClock.maxSegments &&
-    updatedClock.metadata?.tier === 'inaccessible';
-
-  return {
-    clockId,
-    segmentsAdded: depletionRoll,
-    newSegments: updatedClock.segments,
-    isFrozen,
-    tierDowngraded,
-  };
 }
 
 /**
@@ -264,6 +157,9 @@ export interface MomentumResetResult {
     traitsReEnabled: number; // Count of traits re-enabled
     harmClocksRecovered: number; // Count of harm clocks recovered
     addictionClocksRecovered: number; // Count of addiction clocks recovered
+    equipmentUnlocked: number; // Count of locked items unlocked
+    consumablesReplenished: number; // Count of consumables replenished
+    itemsAutoEquipped: number; // Count of items with autoEquip flag re-equipped
   }[];
 }
 
@@ -276,6 +172,10 @@ export interface MomentumResetResult {
  * 3. All disabled traits re-enabled for all characters
  * 4. All harm clocks recovered (full: -1 segment, partial: -2 segments, 0: deleted)
  * 5. All addiction clocks (per-character) recovered (full: -1 segment, partial: -2 segments, 0: deleted)
+ * 6. Equipment lifecycle reset for all characters:
+ *    - All locked items unlocked (locked: false)
+ *    - All consumables replenished (depleted: false)
+ *    - All items with autoEquip: true re-equipped (equipped: true, locked: false)
  *
  * @param store - Redux store
  * @param params - Reset parameters
@@ -415,12 +315,44 @@ export function performMomentumReset(
       }
     });
 
+    // Equipment lifecycle reset
+    const lockedItems = character.equipment.filter((e: Equipment) => e.locked);
+    const depletedConsumables = character.equipment.filter((e: Equipment) => e.depleted);
+    const autoEquipItemsList = character.equipment.filter((e: Equipment) => e.autoEquip);
+
+    // Unlock all equipment
+    store.dispatch(
+      unlockAllEquipment({
+        characterId,
+        userId,
+      })
+    );
+
+    // Replenish consumables
+    store.dispatch(
+      replenishConsumables({
+        characterId,
+        userId,
+      })
+    );
+
+    // Auto-equip flagged items
+    store.dispatch(
+      autoEquipItems({
+        characterId,
+        userId,
+      })
+    );
+
     return {
       characterId,
       rallyReset: true,
       traitsReEnabled: disabledTraits.length,
       harmClocksRecovered,
       addictionClocksRecovered,
+      equipmentUnlocked: lockedItems.length,
+      consumablesReplenished: depletedConsumables.length,
+      itemsAutoEquipped: autoEquipItemsList.length,
     };
   });
 

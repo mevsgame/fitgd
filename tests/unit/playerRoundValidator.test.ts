@@ -21,7 +21,7 @@ describe('playerRoundValidator', () => {
         stateEnteredAt: Date.now(),
       };
 
-      const result = validateActionSelection(playerState, 'shoot');
+      const result = validateActionSelection(playerState, 'force');
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
@@ -33,7 +33,7 @@ describe('playerRoundValidator', () => {
         stateEnteredAt: Date.now(),
       };
 
-      const result = validateActionSelection(playerState, 'shoot');
+      const result = validateActionSelection(playerState, 'force');
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.includes('Cannot select'))).toBe(true);
     });
@@ -51,7 +51,7 @@ describe('playerRoundValidator', () => {
     });
 
     it('should reject undefined player state', () => {
-      const result = validateActionSelection(undefined, 'shoot');
+      const result = validateActionSelection(undefined, 'force');
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.includes('not found'))).toBe(true);
     });
@@ -62,7 +62,7 @@ describe('playerRoundValidator', () => {
       const playerState: PlayerRoundState = {
         characterId: 'char-123',
         state: 'DECISION_PHASE',
-        selectedAction: 'shoot',
+        selectedApproach: 'force',
         stateEnteredAt: Date.now(),
       };
 
@@ -80,14 +80,14 @@ describe('playerRoundValidator', () => {
 
       const result = validatePositionEffect(playerState, 'risky', 'standard');
       expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.includes('action'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('approach'))).toBe(true);
     });
 
     it('should reject invalid position', () => {
       const playerState: PlayerRoundState = {
         characterId: 'char-123',
         state: 'DECISION_PHASE',
-        selectedAction: 'shoot',
+        selectedApproach: 'force',
         stateEnteredAt: Date.now(),
       };
 
@@ -100,7 +100,7 @@ describe('playerRoundValidator', () => {
       const playerState: PlayerRoundState = {
         characterId: 'char-123',
         state: 'DECISION_PHASE',
-        selectedAction: 'shoot',
+        selectedApproach: 'force',
         stateEnteredAt: Date.now(),
       };
 
@@ -113,7 +113,7 @@ describe('playerRoundValidator', () => {
       const playerState: PlayerRoundState = {
         characterId: 'char-123',
         state: 'DECISION_PHASE',
-        selectedAction: 'shoot',
+        selectedApproach: 'force',
         stateEnteredAt: Date.now(),
       };
 
@@ -128,7 +128,7 @@ describe('playerRoundValidator', () => {
       const playerState: PlayerRoundState = {
         characterId: 'char-123',
         state: 'DECISION_PHASE',
-        selectedAction: 'shoot',
+        selectedApproach: 'force',
         stateEnteredAt: Date.now(),
       };
 
@@ -145,7 +145,7 @@ describe('playerRoundValidator', () => {
       const playerState: PlayerRoundState = {
         characterId: 'char-123',
         state: 'DECISION_PHASE',
-        selectedAction: 'shoot',
+        selectedApproach: 'force',
         position: 'risky',
         effect: 'standard',
         stateEnteredAt: Date.now(),
@@ -160,7 +160,7 @@ describe('playerRoundValidator', () => {
       const playerState: PlayerRoundState = {
         characterId: 'char-123',
         state: 'DECISION_PHASE',
-        selectedAction: 'shoot',
+        selectedApproach: 'force',
         position: 'risky',
         effect: 'standard',
         stateEnteredAt: Date.now(),
@@ -180,14 +180,14 @@ describe('playerRoundValidator', () => {
 
       const result = validateRollEligibility(playerState, 5, 1);
       expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.includes('action'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('approach'))).toBe(true);
     });
 
     it('should reject without position set', () => {
       const playerState: PlayerRoundState = {
         characterId: 'char-123',
         state: 'DECISION_PHASE',
-        selectedAction: 'shoot',
+        selectedApproach: 'force',
         stateEnteredAt: Date.now(),
       };
 
@@ -200,7 +200,7 @@ describe('playerRoundValidator', () => {
       const playerState: PlayerRoundState = {
         characterId: 'char-123',
         state: 'DECISION_PHASE',
-        selectedAction: 'shoot',
+        selectedApproach: 'force',
         position: 'risky',
         stateEnteredAt: Date.now(),
       };
@@ -214,7 +214,7 @@ describe('playerRoundValidator', () => {
       const playerState: PlayerRoundState = {
         characterId: 'char-123',
         state: 'DECISION_PHASE',
-        selectedAction: 'shoot',
+        selectedApproach: 'force',
         position: 'risky',
         effect: 'standard',
         stateEnteredAt: Date.now(),
@@ -419,7 +419,7 @@ describe('playerRoundValidator', () => {
       const playerState: PlayerRoundState = {
         characterId: 'char-123',
         state: 'DECISION_PHASE',
-        selectedAction: 'shoot',
+        selectedApproach: 'force',
         position: 'risky',
         effect: 'standard',
         stateEnteredAt: Date.now(),
@@ -483,7 +483,7 @@ describe('playerRoundValidator', () => {
 
       const result = validateStateConsistency(playerState);
       expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.includes('action'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('approach'))).toBe(true);
     });
   });
 
@@ -492,7 +492,7 @@ describe('playerRoundValidator', () => {
       const playerState: PlayerRoundState = {
         characterId: 'char-123',
         state: 'DECISION_PHASE',
-        selectedAction: 'shoot',
+        selectedApproach: 'force',
         position: 'risky',
         effect: 'standard',
         stateEnteredAt: Date.now(),
@@ -518,3 +518,6 @@ describe('playerRoundValidator', () => {
     });
   });
 });
+
+
+

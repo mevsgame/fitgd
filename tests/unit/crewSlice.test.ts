@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore } from '../../src/store';
 import crewReducer, {
   createCrew,
   addCharacterToCrew,
@@ -15,11 +15,7 @@ describe('crewSlice', () => {
   let store: ReturnType<typeof configureStore>;
 
   beforeEach(() => {
-    store = configureStore({
-      reducer: {
-        crews: crewReducer,
-      },
-    });
+    store = configureStore();
   });
 
   describe('createCrew', () => {
@@ -218,3 +214,6 @@ describe('crewSlice', () => {
     });
   });
 });
+
+
+

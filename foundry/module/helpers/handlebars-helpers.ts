@@ -35,9 +35,36 @@ interface HelperOptions {
 }
 
 /**
- * Register all Handlebars helpers
+ * Register all Handlebars helpers and partials
  */
-export function registerHandlebarsHelpers(): void {
+export async function registerHandlebarsHelpers(): Promise<void> {
+  // Register partials manually using Handlebars.registerPartial
+  // This ensures the partial is available by name in templates
+  const partials = [
+    'equipment-grid',
+  ];
+
+  try {
+    // Load each partial template and register it
+    for (const partial of partials) {
+      const path = `systems/forged-in-the-grimdark/templates/partials/${partial}.html`;
+      console.log(`FitGD | Loading partial: ${partial} from ${path}`);
+
+      // Fetch the template file
+      const response = await fetch(path);
+      if (!response.ok) {
+        console.error(`FitGD | Failed to load partial ${partial}: ${response.status}`);
+        continue;
+      }
+
+      const templateSource = await response.text();
+      // Register with Handlebars using just the partial name (no .html extension)
+      Handlebars.registerPartial(partial, templateSource);
+      console.log(`FitGD | Registered Handlebars partial: ${partial}`);
+    }
+  } catch (error) {
+    console.error('FitGD | Error registering partials:', error);
+  }
   // Times helper (for loops)
   Handlebars.registerHelper('times', function(n: number, block: HelperOptions) {
     let accum = '';

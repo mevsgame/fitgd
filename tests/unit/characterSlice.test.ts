@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore } from '../../src/store';
 import characterReducer, {
   createCharacter,
   addTrait,
   disableTrait,
   enableTrait,
-  setActionDots,
+  setApproach,
   addEquipment,
   removeEquipment,
   addUnallocatedDots,
@@ -13,17 +13,13 @@ import characterReducer, {
   resetRally,
 } from '../../src/slices/characterSlice';
 import { DEFAULT_CONFIG } from '../../src/config';
-import type { Character, Trait, ActionDots, Equipment } from '../../src/types';
+import type { Character, Trait, Approaches, Equipment } from '../../src/types';
 
 describe('characterSlice', () => {
   let store: ReturnType<typeof configureStore>;
 
   beforeEach(() => {
-    store = configureStore({
-      reducer: {
-        characters: characterReducer,
-      },
-    });
+    store = configureStore();
   });
 
   describe('createCharacter', () => {
@@ -45,26 +41,18 @@ describe('characterSlice', () => {
         },
       ];
 
-      const actionDots: ActionDots = {
-        shoot: 2,
-        skirmish: 2,
-        skulk: 1,
-        wreck: 1,
-        finesse: 1,
-        survey: 1,
-        study: 1,
-        tech: 1,
-        attune: 0,
-        command: 1,
-        consort: 1,
-        sway: 0,
+      const approaches: Approaches = {
+        force: 2,
+        guile: 1,
+        focus: 1,
+        spirit: 0,
       };
 
       store.dispatch(
         createCharacter({
           name: 'Test Character',
           traits,
-          actionDots,
+          approaches,
         })
       );
 
@@ -90,19 +78,11 @@ describe('characterSlice', () => {
         },
       ];
 
-      const actionDots: ActionDots = {
-        shoot: 2,
-        skirmish: 2,
-        skulk: 1,
-        wreck: 1,
-        finesse: 1,
-        survey: 1,
-        study: 1,
-        tech: 1,
-        attune: 0,
-        command: 1,
-        consort: 1,
-        sway: 0,
+      const approaches: Approaches = {
+        force: 2,
+        guile: 1,
+        focus: 1,
+        spirit: 0,
       };
 
       expect(() => {
@@ -110,7 +90,7 @@ describe('characterSlice', () => {
           createCharacter({
             name: 'Invalid Character',
             traits,
-            actionDots,
+            approaches,
           })
         );
       }).toThrow();
@@ -134,19 +114,11 @@ describe('characterSlice', () => {
         },
       ];
 
-      const actionDots: ActionDots = {
-        shoot: 3,
-        skirmish: 3,
-        skulk: 2,
-        wreck: 2, // Total = 13 (invalid)
-        finesse: 1,
-        survey: 1,
-        study: 1,
-        tech: 0,
-        attune: 0,
-        command: 0,
-        consort: 0,
-        sway: 0,
+      const approaches: Approaches = {
+        force: 4,
+        guile: 4,
+        focus: 4,
+        spirit: 4, // Total = 16 (invalid)
       };
 
       expect(() => {
@@ -154,7 +126,7 @@ describe('characterSlice', () => {
           createCharacter({
             name: 'Invalid Character',
             traits,
-            actionDots,
+            approaches,
           })
         );
       }).toThrow();
@@ -178,19 +150,11 @@ describe('characterSlice', () => {
         },
       ];
 
-      const actionDots: ActionDots = {
-        shoot: 4, // Invalid: max 3 at creation
-        skirmish: 2,
-        skulk: 2,
-        wreck: 1,
-        finesse: 1,
-        survey: 1,
-        study: 1,
-        tech: 0,
-        attune: 0,
-        command: 0,
-        consort: 0,
-        sway: 0,
+      const approaches: Approaches = {
+        force: 4, // Invalid: max 3 at creation
+        guile: 1,
+        focus: 1,
+        spirit: 0,
       };
 
       expect(() => {
@@ -198,7 +162,7 @@ describe('characterSlice', () => {
           createCharacter({
             name: 'Invalid Character',
             traits,
-            actionDots,
+            approaches,
           })
         );
       }).toThrow();
@@ -226,26 +190,18 @@ describe('characterSlice', () => {
         },
       ];
 
-      const actionDots: ActionDots = {
-        shoot: 2,
-        skirmish: 2,
-        skulk: 1,
-        wreck: 1,
-        finesse: 1,
-        survey: 1,
-        study: 1,
-        tech: 1,
-        attune: 0,
-        command: 1,
-        consort: 1,
-        sway: 0,
+      const approaches: Approaches = {
+        force: 2,
+        guile: 1,
+        focus: 1,
+        spirit: 0,
       };
 
       store.dispatch(
         createCharacter({
           name: 'Test Character',
           traits,
-          actionDots,
+          approaches,
         })
       );
 
@@ -314,26 +270,18 @@ describe('characterSlice', () => {
         },
       ];
 
-      const actionDots: ActionDots = {
-        shoot: 2,
-        skirmish: 2,
-        skulk: 1,
-        wreck: 1,
-        finesse: 1,
-        survey: 1,
-        study: 1,
-        tech: 1,
-        attune: 0,
-        command: 1,
-        consort: 1,
-        sway: 0,
+      const approaches: Approaches = {
+        force: 2,
+        guile: 1,
+        focus: 1,
+        spirit: 1,
       };
 
       store.dispatch(
         createCharacter({
           name: 'Test Character',
           traits,
-          actionDots,
+          approaches,
         })
       );
 
@@ -341,25 +289,25 @@ describe('characterSlice', () => {
     });
 
     it('should set action dots during advancement (up to 4)', () => {
-      // Character starts with shoot: 2, needs 2 more to reach 4
+      // Character starts with force: 2, needs 2 more to reach 4
       // Grant 2 unallocated dots first
       store.dispatch(
         addUnallocatedDots({ characterId, amount: 2 })
       );
 
       store.dispatch(
-        setActionDots({ characterId, action: 'shoot', dots: 4 })
+        setApproach({ characterId, approach: 'force', dots: 4 })
       );
 
       const character = store.getState().characters.byId[characterId];
-      expect(character.actionDots.shoot).toBe(4);
-      expect(character.unallocatedActionDots).toBe(0); // All used up
+      expect(character.approaches.force).toBe(4);
+      expect(character.unallocatedApproachDots).toBe(0); // All used up
     });
 
     it('should reject setting action dots above 4', () => {
       expect(() => {
         store.dispatch(
-          setActionDots({ characterId, action: 'shoot', dots: 5 })
+          setApproach({ characterId, approach: 'force', dots: 5 })
         );
       }).toThrow();
     });
@@ -367,7 +315,7 @@ describe('characterSlice', () => {
     it('should reject setting negative action dots', () => {
       expect(() => {
         store.dispatch(
-          setActionDots({ characterId, action: 'shoot', dots: -1 })
+          setApproach({ characterId, approach: 'force', dots: -1 })
         );
       }).toThrow();
     });
@@ -394,26 +342,18 @@ describe('characterSlice', () => {
         },
       ];
 
-      const actionDots: ActionDots = {
-        shoot: 2,
-        skirmish: 2,
-        skulk: 1,
-        wreck: 1,
-        finesse: 1,
-        survey: 1,
-        study: 1,
-        tech: 1,
-        attune: 0,
-        command: 1,
-        consort: 1,
-        sway: 0,
+      const approaches: Approaches = {
+        force: 2,
+        guile: 1,
+        focus: 1,
+        spirit: 0,
       };
 
       store.dispatch(
         createCharacter({
           name: 'Test Character',
           traits,
-          actionDots,
+          approaches,
         })
       );
 
@@ -424,8 +364,14 @@ describe('characterSlice', () => {
       const equipment: Equipment = {
         id: 'equip-1',
         name: 'Las Rifle',
-        tier: 'accessible',
+        tier: 'common',
         category: 'weapon',
+        description: 'Standard issue laser rifle',
+        passive: false,
+        equipped: true,
+        locked: false,
+        depleted: false,
+        acquiredAt: Date.now(),
       };
 
       store.dispatch(addEquipment({ characterId, equipment }));
@@ -439,8 +385,14 @@ describe('characterSlice', () => {
       const equipment: Equipment = {
         id: 'equip-1',
         name: 'Las Rifle',
-        tier: 'accessible',
+        tier: 'common',
         category: 'weapon',
+        description: 'Standard issue laser rifle',
+        passive: false,
+        equipped: true,
+        locked: false,
+        depleted: false,
+        acquiredAt: Date.now(),
       };
 
       store.dispatch(addEquipment({ characterId, equipment }));
@@ -472,26 +424,18 @@ describe('characterSlice', () => {
         },
       ];
 
-      const actionDots: ActionDots = {
-        shoot: 2,
-        skirmish: 2,
-        skulk: 1,
-        wreck: 1,
-        finesse: 1,
-        survey: 1,
-        study: 1,
-        tech: 1,
-        attune: 0,
-        command: 1,
-        consort: 1,
-        sway: 0,
+      const approaches: Approaches = {
+        force: 2,
+        guile: 1,
+        focus: 1,
+        spirit: 0,
       };
 
       store.dispatch(
         createCharacter({
           name: 'Test Character',
           traits,
-          actionDots,
+          approaches,
         })
       );
 
@@ -518,3 +462,6 @@ describe('characterSlice', () => {
     });
   });
 });
+
+
+

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore } from '../../src/store';
 import characterReducer, { createCharacter, disableTrait } from '../../src/slices/characterSlice';
 import {
   selectAllCharacters,
@@ -7,22 +7,18 @@ import {
   selectEnabledTraits,
   selectDisabledTraits,
   selectCanUseRally,
-  selectTotalActionDots,
+  selectTotalApproachDots,
   selectHasTraitByName,
   selectTraitsByCategory,
 } from '../../src/selectors/characterSelectors';
-import type { Trait, ActionDots } from '../../src/types';
+import type { Trait, Approaches } from '../../src/types';
 
 describe('characterSelectors', () => {
   let store: ReturnType<typeof configureStore>;
   let characterId: string;
 
   beforeEach(() => {
-    store = configureStore({
-      reducer: {
-        characters: characterReducer,
-      },
-    });
+    store = configureStore();
 
     const traits: Trait[] = [
       {
@@ -41,26 +37,18 @@ describe('characterSelectors', () => {
       },
     ];
 
-    const actionDots: ActionDots = {
-      shoot: 2,
-      skirmish: 2,
-      skulk: 1,
-      wreck: 1,
-      finesse: 1,
-      survey: 1,
-      study: 1,
-      tech: 1,
-      attune: 0,
-      command: 1,
-      consort: 1,
-      sway: 0,
+    const approaches: Approaches = {
+      force: 2,
+      guile: 1,
+      focus: 1,
+      spirit: 0,
     };
 
     store.dispatch(
       createCharacter({
         name: 'Test Character',
         traits,
-        actionDots,
+        approaches,
       })
     );
 
@@ -102,9 +90,9 @@ describe('characterSelectors', () => {
     expect(canRally).toBe(true);
   });
 
-  it('should calculate total action dots', () => {
-    const total = selectTotalActionDots(store.getState(), characterId);
-    expect(total).toBe(12);
+  it('should calculate total approach dots', () => {
+    const total = selectTotalApproachDots(store.getState(), characterId);
+    expect(total).toBe(4); // 2 + 1 + 1 + 0 = 4
   });
 
   it('should check if character has trait by name', () => {
@@ -141,3 +129,6 @@ describe('characterSelectors', () => {
     expect(backgroundTraits[0].name).toBe('Survived Hive Gang Wars');
   });
 });
+
+
+

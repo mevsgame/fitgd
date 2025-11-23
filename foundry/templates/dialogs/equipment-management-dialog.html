@@ -1,0 +1,127 @@
+<div class="equipment-management-dialog">
+  {{!-- Header --}}
+  <div class="dialog-header">
+    <h2>Manage Equipment</h2>
+    <div class="header-stats">
+      <div class="load-display">
+        📦 <strong>Load:</strong> <span class="load-value">{{currentLoad}}/{{maxLoad}}</span>
+        {{#if isAtMaxLoad}}
+        <span class="load-warning">(At Capacity)</span>
+        {{/if}}
+      </div>
+      <div class="momentum-display">
+        💎 <strong>Momentum:</strong> <span class="momentum-value">{{momentum}}/{{maxMomentum}}</span>
+      </div>
+    </div>
+  </div>
+
+  {{!-- Instructions --}}
+  <div class="instructions">
+    <p class="help-text">
+      Click items to equip/unequip. <strong>Accessible</strong> items are free, <strong>Inaccessible</strong> items cost
+      1 Momentum each.
+      Locked items (used in rolls) cannot be unequipped.
+    </p>
+  </div>
+
+  {{!-- Search/Filter --}}
+  <div class="search-section">
+    <input type="text" class="equipment-search" placeholder="🔍 Search by name, category, or tier..."
+      value="{{searchQuery}}" />
+  </div>
+
+  {{!-- Body: Equipment Grid --}}
+  <div class="dialog-body">
+    {{!-- Equipped Items Section --}}
+    {{#if equippedItems.length}}
+    <div class="equipment-section equipped-section">
+      <h3 class="section-header">✓ Equipped Items</h3>
+      {{> equipment-grid items=equippedItems isManagementDialog=true}}
+    </div>
+    {{/if}}
+
+    {{!-- Unequipped Items Section --}}
+    {{#if unequippedItems.length}}
+    <div class="equipment-section unequipped-section">
+      <h3 class="section-header">📦 Available Equipment</h3>
+      {{> equipment-grid items=unequippedItems isManagementDialog=true}}
+    </div>
+    {{/if}}
+
+    {{!-- Augmentations Section --}}
+    {{#if augmentations.length}}
+    <div class="equipment-section augmentations-section">
+      <h3 class="section-header">⚙️ Augmentations (Don't Count Toward Load)</h3>
+      {{> equipment-grid items=augmentations isManagementDialog=false}}
+    </div>
+    {{/if}}
+
+    {{!-- Depleted Consumables Section --}}
+    {{#if depletedConsumables.length}}
+    <div class="equipment-section depleted-section">
+      <h3 class="section-header">🔋 Depleted Consumables (Replenish at Reset)</h3>
+      {{> equipment-grid items=depletedConsumables isManagementDialog=false}}
+    </div>
+    {{/if}}
+
+    {{!-- No Equipment Message --}}
+    {{#if (not (or equippedItems.length unequippedItems.length augmentations.length depletedConsumables.length))}}
+    <p class="no-equipment">No equipment available. Use "Create Flashback Item" to add equipment.</p>
+    {{/if}}
+  </div>
+
+  {{!-- Momentum Cost Summary --}}
+  <div class="cost-summary">
+    {{#if momentumCost}}
+    <p>
+      💎 <strong>Momentum Cost:</strong>
+      <span class="momentum-cost">{{momentumCost}}M</span>
+      (for equipping {{momentumCost}} inaccessible item{{#if (gt momentumCost 1)}}s{{/if}})
+    </p>
+    {{#if (gte momentum momentumCost)}}
+    <p class="cost-ok">✓ You have sufficient Momentum</p>
+    {{else}}
+    <p class="cost-insufficient">✗ Not enough Momentum (need {{momentumCost}}, have {{momentum}})</p>
+    {{/if}}
+    {{else}}
+    {{#if (gt stagedChanges.size 0)}}
+    <p class="cost-ok">✓ <strong>No Momentum cost</strong> (accessible items and unequipping)</p>
+    {{/if}}
+    {{/if}}
+  </div>
+
+  {{!-- Action Buttons --}}
+  <div class="dialog-buttons">
+    {{!-- Flashback Equipment Button --}}
+    {{#if (not isAtMaxLoad)}}
+    <button type="button" data-action="flashback" class="tertiary">
+      <i class="fas fa-history"></i> Create Flashback Item
+    </button>
+    {{else}}
+    <button type="button" class="tertiary" disabled title="Equipment load is full">
+      <i class="fas fa-history"></i> Create Flashback Item
+    </button>
+    {{/if}}
+
+    {{!-- Cancel Button --}}
+    <button type="button" data-action="cancel" class="secondary">Cancel</button>
+
+    {{!-- Accept Button --}}
+    {{#if canAcceptChanges}}
+    <button type="button" data-action="accept" class="primary">
+      Accept Changes
+      {{#if momentumCost}}
+      (Spend {{momentumCost}}M)
+      {{/if}}
+    </button>
+    {{else}}
+    <button type="button" class="primary" disabled>
+      {{#if (not (gt stagedChanges.size 0))}}
+      No Changes
+      {{else if (not (gte momentum momentumCost))}}
+      Insufficient Momentum
+      {{/if}}
+    </button>
+    {{/if}}
+  </div>
+</div>

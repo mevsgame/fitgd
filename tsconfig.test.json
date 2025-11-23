@@ -1,0 +1,15 @@
+{
+    "extends": "./tsconfig.json",
+    "include": [
+        "src",
+        "tests",
+        "foundry/types"
+    ],
+    "compilerOptions": {
+        "types": [
+            "vitest/globals"
+        ],
+        "noUnusedLocals": false,
+        "noUnusedParameters": false
+    }
+}
