@@ -5,7 +5,7 @@
  * On selection, copies all data to Redux (no reference kept).
  */
 
-import type { Equipment } from '@/types/character';
+import type { Equipment } from '@/types/equipment';
 
 interface EquipmentTemplate {
   id: string;
@@ -270,6 +270,29 @@ export class EquipmentBrowserDialog extends Dialog {
     // Generate unique ID for this equipment instance
     const equipmentId = foundry.utils.randomID();
 
+    // Get the source item to extract slots and modifiers
+    let slots = 1; // Default slot cost
+    let modifiers = {}; // Default empty modifiers
+
+    // Find the source item to extract additional data
+    let sourceItem: Item | null = null;
+
+    if (this.items.find(t => t.id === selectedId)?.source === 'compendium') {
+      const compendium = game.packs.get('forged-in-the-grimdark.equipment');
+      if (compendium) {
+        sourceItem = (await compendium.getDocument(selectedId)) as Item | null;
+      }
+    } else {
+      sourceItem = game.items.get(selectedId) as Item | null;
+    }
+
+    // Extract slots and modifiers from source item
+    if (sourceItem) {
+      const system = sourceItem.system as any;
+      if (system?.slots) slots = system.slots;
+      if (system?.modifiers) modifiers = system.modifiers;
+    }
+
     // Copy template data to Redux (full duplication, no reference!)
     await game.fitgd.bridge.execute({
       type: 'characters/addEquipment',
@@ -282,7 +305,12 @@ export class EquipmentBrowserDialog extends Dialog {
           category: template.category,
           description: template.description,
           img: template.img,
+          slots,
           equipped: false,
+          locked: false,
+          consumed: false,
+          modifiers,
+          acquiredAt: Date.now(),
           acquiredVia: 'creation',
           sourceItemId: template.sourceItemId, // Optional: track where it came from
         },
