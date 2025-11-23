@@ -4,6 +4,8 @@
  * Registers custom Handlebars helpers for the system templates
  */
 
+import { getConfigForContext } from './equipmentTemplateConfig';
+
 /**
  * Clock data structure for clockSVG helper
  */
@@ -42,6 +44,7 @@ export async function registerHandlebarsHelpers(): Promise<void> {
   // This ensures the partial is available by name in templates
   const partials = [
     'equipment-grid',
+    'equipment-row-view',
   ];
 
   try {
@@ -201,5 +204,21 @@ export async function registerHandlebarsHelpers(): Promise<void> {
   Handlebars.registerHelper('max', function(arr: unknown) {
     if (!Array.isArray(arr) || arr.length === 0) return 0;
     return Math.max(...arr);
+  });
+
+  // Check if equipment array has items of a given category
+  Handlebars.registerHelper('hasEquipmentByCategory', function(equipment: unknown, category: string) {
+    if (!Array.isArray(equipment)) return false;
+    return (equipment as any[]).some((item) => item.category === category);
+  });
+
+  // Get equipment template config for a given context
+  Handlebars.registerHelper('getConfigForContext', function(context: string) {
+    try {
+      return getConfigForContext(context as any);
+    } catch (error) {
+      console.error('FitGD | Error getting equipment config:', error);
+      return {};
+    }
   });
 }

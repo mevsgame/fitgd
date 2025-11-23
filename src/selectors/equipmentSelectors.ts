@@ -181,3 +181,64 @@ export function selectDepletedConsumables(character: Character): Equipment[] {
 export function selectUsableEquipment(character: Character): Equipment[] {
   return character.equipment.filter((item) => !item.consumed);
 }
+
+/**
+ * Check if equipment is consumable category
+ *
+ * @param equipment - Equipment item to check
+ * @returns True if equipment category is consumable
+ */
+export function isEquipmentConsumable(equipment: Equipment): boolean {
+  return equipment.category === 'consumable';
+}
+
+/**
+ * Get current load used by character (alias for selectLoadUsed)
+ *
+ * @param character - Character entity
+ * @returns Total slots used by equipped items
+ */
+export function selectCurrentLoad(character: Character): number {
+  return selectLoadUsed(character);
+}
+
+/**
+ * Get equipment effect bonuses/penalties
+ *
+ * @param equipment - Equipment item
+ * @returns Equipment modifiers (bonuses/penalties)
+ */
+export function selectEquipmentEffect(equipment: Equipment) {
+  return equipment.modifiers || {};
+}
+
+/**
+ * Check if equipment can be equipped by character
+ *
+ * @param character - Character entity
+ * @param item - Equipment item to check
+ * @returns true if item can be equipped without exceeding load
+ */
+export function selectCanEquipItem(character: Character, item: Equipment): boolean {
+  const currentLoad = selectLoadUsed(character);
+  return currentLoad + item.slots <= character.loadLimit;
+}
+
+/**
+ * Get momentum cost for equipment tier
+ *
+ * Only Rare and Epic items cost momentum on first lock.
+ * This returns cost for locking a single item.
+ *
+ * @param tier - Equipment tier
+ * @returns Momentum cost (0 for common, 1 for rare/epic)
+ */
+export function selectMomentumCostForTier(tier: string): number {
+  switch (tier) {
+    case 'rare':
+    case 'epic':
+      return 1;
+    default:
+      return 0;
+  }
+}

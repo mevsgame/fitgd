@@ -740,12 +740,77 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.fitgd .equipment-header h2 {
+  margin: 0;
+  flex: 1;
+}
+
+.fitgd .equipment-header-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.fitgd .load-display {
+  font-size: 13px;
+  color: #bbb;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fitgd .load-value {
+  font-weight: bold;
+  color: #fff;
+}
+
+.fitgd .load-limit {
+  color: #999;
+}
+
+.fitgd .equipment-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.fitgd .equipment-category-section {
+  border-left: 4px solid #444;
+  padding-left: 12px;
+}
+
+.fitgd .equipment-category-section.active-section {
+  border-left-color: #4da6ff;
+}
+
+.fitgd .equipment-category-section.passive-section {
+  border-left-color: #99cc33;
+}
+
+.fitgd .equipment-category-section.consumable-section {
+  border-left-color: #ff9933;
+}
+
+.fitgd .category-label {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #999;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .fitgd .equipment-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .fitgd .equipment-item {
@@ -875,6 +940,14 @@
 .fitgd .delete-equipment-btn:hover {
   opacity: 1;
   background: rgba(255, 99, 71, 0.1);
+}
+
+.fitgd .equipment-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 /* Tier badges */
