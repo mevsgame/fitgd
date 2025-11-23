@@ -243,11 +243,11 @@ All equipment falls into exactly three categories:
 
 ##### **Acquisition Tiers**
 
-- **Common:** Standard gear for your role. Declare freely.
+- **Common:** Standard gear for your role. Declare freely. No momentum cost when used.
 
-- **Rare:** Specialized gear. Requires a **1 Momentum Flashback** justified by a Trait to acquire. You can establish a new Trait through this flashback.
+- **Rare:** Specialized gear. Should be narratively justified by a Trait when acquired. Costs **1 Momentum** on first use (when locked in a roll).
 
-- **Epic:** Legendary gear. Must be earned as a story reward and cannot be acquired through flashbacks.
+- **Epic:** Legendary gear. Must be earned as a story reward. Costs **1 Momentum** on first use (when locked in a roll).
 
 ##### **Load & Slots**
 
