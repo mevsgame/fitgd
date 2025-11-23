@@ -18,10 +18,10 @@ Equipment in *Forged in the Grimdark* uses a **slot-based load system** with thr
 - `selectLockedItems(characterId)`: Returns items locked since last Reset
 
 ### UI Components
-- **Equipment Row View Template**: Reusable Handlebars partial for displaying items (see below)
-- **Character Sheet Equipment Section**: Primary interface for equipping/unequipping
-- **Player Action Widget**: Active selection dropdown + GM Passive approval grid
-- **Equipment Sheet (Foundry Item Sheet)**: Editor for item properties (GM/Player access)
+- **Equipment Row View Template**: Reusable Handlebars partial for displaying items (*See: [Equipment Row View Template](./equipment-row-view-template.md)*)
+- **Character Sheet Equipment Section**: Primary interface for equipping/unequipping (*See: [Character Sheet](./character-sheet.md)*)
+- **Player Action Widget**: Active selection dropdown + GM Passive approval grid (*See: [Player Action Widget](./player-action-widget.md)*)
+- **Equipment Sheet Dialog**: Editor for item properties (GM/Player access) (*See: [Equipment Sheet Dialog](./equipment-sheet-dialog.md)*)
 
 ## Equipment Categories
 
@@ -46,60 +46,16 @@ All equipment falls into exactly three categories:
 - **Depletion**: Remains equipped (occupies slots) but becomes unusable until Reset
 - **Examples**: Frag Grenade, Combat Stim, Emergency Medkit
 
-## Equipment Row View Template
+## Equipment Display
 
-### Purpose
-A reusable Handlebars partial used consistently across all equipment displays. Different contexts use different visibility configurations to show/hide elements as needed.
+Equipment is displayed using the **Equipment Row View Template**, a reusable component with context-specific visibility configurations.
 
-### Visual Elements
+*Full documentation: [Equipment Row View Template](./equipment-row-view-template.md)*
 
-| Element | Display | Notes |
-|---------|---------|-------|
-| **Name** | Text | Item name, always visible |
-| **Category Icon** | Icon | Active/Passive/Consumable indicator, always visible |
-| **Tier Label** | Label/Badge | Common/Rare/Epic, styled distinctly |
-| **Bonuses** | Label/Chip | e.g., "+2d", "+1 Position", "+1 Effect" |
-| **Locked Icon** | Icon | Appears when item is locked |
-| **Equipped Icon** | Icon/Checkbox | Indicates equipped status |
-| **Slots** | Text | e.g., "2 slots" (configurable visibility) |
-| **Description** | Text | Flavor text (configurable visibility) |
-
-**Note**: No image thumbnails. Removed from all contexts.
-
-### Context Configurations
-
-#### Character Sheet (Full View)
-```
-✓ Name
-✓ Category Icon
-✓ Tier Label
-✓ Bonuses
-✓ Locked Icon (if locked)
-✓ Equipped Checkbox
-✓ Slots (toggleable - user can show/hide)
-✓ Description (toggleable - user can show/hide)
-```
-
-#### Player Action Widget Dropdown (Active Selection)
-```
-✓ Name
-✓ Category Icon
-✓ Bonuses
-✗ Tier, Locked Icon, Slots, Description hidden
-```
-Display format: `"Chainsword +2d"` or `"Auspex Scanner +1 Effect"`
-
-#### GM Passive Grid (Approval View)
-```
-✓ Name
-✓ Category Icon
-✓ Tier Label
-✓ Bonuses
-✓ Locked Icon (if locked)
-✓ Description (toggleable)
-✓ Radio Button (for selection)
-✗ Slots hidden
-```
+**Key Contexts**:
+- **Character Sheet**: Full view with all elements (name, category, tier, bonuses, locked/equipped icons, toggleable slots/description)
+- **Player Action Widget Dropdown**: Condensed view (name, category, bonuses only)
+- **GM Passive Grid**: Approval view (name, category, tier, bonuses, locked icon, toggleable description, radio button)
 
 ## Character Sheet Equipment Management
 
@@ -243,41 +199,20 @@ When a Consumable locks, it also sets a **consumed flag**:
 - Unavailable in dropdowns (filtered out)
 - Replenishes at Momentum Reset (consumed flag clears)
 
-## Equipment Item Editor (Foundry Item Sheet)
+## Equipment Item Creation & Editing
 
-### Item Properties
+Equipment items are created and edited using the **Equipment Sheet Dialog**, a reusable interface integrated with Foundry VTT's Item system.
 
-| Field | Type | Options | Notes |
-|-------|------|---------|-------|
-| **Name** | Text | - | Display name |
-| **Description** | Text | - | Flavor text |
-| **Category** | Dropdown | Active / Passive / Consumable | Determines usage pattern |
-| **Tier** | Dropdown | Common / Rare / Epic | Affects momentum cost |
-| **Slots** | Number | Default: 1 | Load cost |
-| **Bonuses** | Multi-select | Dice (+Xd), Position (+X), Effect (+X) | Can combine multiple |
+*Full documentation: [Equipment Sheet Dialog](./equipment-sheet-dialog.md)*
 
-**Bonus Examples**:
-- Chainsword: +2d
-- Heavy Bolter: +2d, -1 Position (unwieldy)
-- Flak Armor: +1 Position
-- Auspex Scanner: +1 Effect
-
-### Access Control
-
-**GM**:
-- Full edit access to all fields
-- No restrictions or costs
-- Can override item tier for specific characters (e.g., make Rare item Common for veteran soldier)
-
-**Player**:
-- Can create new items (Common tier recommended)
-- Cannot edit properties of existing items
-- Can add/remove items from their Character Sheet
-
-### Item Storage
-- Items are Foundry VTT Items (standard Foundry data model)
-- Can be stored in Compendia for reuse
-- Added to character via drag-drop or item creation dialog
+**Key Features**:
+- **Foundry Items Integration**: Equipment stored as Foundry Items (type: "equipment")
+- **Create/Edit**: Same dialog for creating new items and editing existing ones
+- **Role-Based Access**:
+  - Players: Create/edit Common items only (if unlocked)
+  - GM: Full access to all items, can change tier/category/bonuses/slots
+- **Compendium Compatible**: Items can be saved to compendium for reuse
+- **Fields**: Name, Description, Category, Tier, Slots, Bonuses (Dice/Position/Effect)
 
 ## Reset Behavior
 

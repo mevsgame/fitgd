@@ -30,8 +30,37 @@ The sheet features an explicit **Edit Mode** for Action Dots.
 ### Sub-Features
 
 #### Equipment Management
-- **Loadout**: Toggling the "Equipped" checkbox updates the character's current load.
-- **Browser**: Opens `EquipmentBrowserDialog` to add new items from the compendium or custom creation.
+
+*See also: [Equipment Mechanics](./mechanics-equipment.md) | [Equipment Row View Template](./equipment-row-view-template.md) | [Equipment Sheet Dialog](./equipment-sheet-dialog.md)*
+
+**Visual Layout**:
+- **Header**: Shows current load ("3/5 slots") and "Show Equipped Only" filter checkbox
+- **Equipment List**: Uses Equipment Row View Template (full configuration)
+  - Sort order: Passive → Consumable → Active (alphabetical within groups)
+  - All elements visible (name, category icon, tier, bonuses, locked icon, equipped checkbox, toggleable slots/description)
+  - No image thumbnails
+
+**Item Management**:
+- **Add Items**:
+  - Drag-drop from compendium to Character Sheet
+  - Click "Add Equipment" button → Opens Equipment Sheet Dialog (create mode)
+  - Players can create Common items, GM can create any tier
+- **Edit Items**:
+  - Double-click item → Opens Equipment Sheet Dialog (edit mode)
+  - Player: Can edit unlocked Common items only
+  - GM: Can edit any item (tier, category, bonuses, slots) without restrictions
+
+**Equipping/Unequipping**:
+- **Unlocked Items**: Click checkbox to equip/unequip
+- **Locked Items**: Checkbox replaced by lock icon (cannot unequip until Reset)
+- **Load Validation**:
+  - Prevents equipping if exceeds load limit (default 5 slots)
+  - Shows message: "Cannot equip: exceeds load limit (X/5 slots)"
+  - Visual feedback on load display in header
+
+**Removal Restrictions**:
+- Player cannot remove locked items (enforced at Redux level)
+- GM can remove any item without restrictions
 
 #### Clock Integration
 - **Harm Clocks**: Created via `ClockCreationDialog`.
@@ -45,5 +74,6 @@ The sheet supports the `dragstart` event to create Macro hotbar shortcuts for:
 
 ## Rules Integration
 - **Action Ratings**: Enforces the 0-4 dot limit per action.
-- **Load Limits**: While the sheet allows over-equipping, it provides visual feedback (via the Widget) when load is exceeded.
+- **Load Limits**: Sheet enforces load limit (default 5 slots). Characters can own unlimited items but only equip up to load limit. Validation prevents over-equipping.
+- **Equipment Categories**: Three categories (Active/Passive/Consumable) with distinct usage patterns.
 - **Trauma**: Harm clocks are the primary representation of long-term consequences.
