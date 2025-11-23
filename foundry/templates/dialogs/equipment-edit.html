@@ -78,29 +78,34 @@
       <p class="help-text">Configure how this equipment affects rolls when used</p>
       <div class="modifiers-grid">
         <div class="modifier-field">
-          <label>Position</label>
-          <select name="modifiers.position">
-            <option value="none" {{#if (eq equipment.modifiers.position "none" )}}selected{{/if}}>None</option>
-            <option value="plus_one_step" {{#if (eq equipment.modifiers.position "plus_one_step" )}}selected{{/if}}>+1
-              Step (Desperate→Risky or Risky→Controlled)</option>
-            <option value="minus_one_step" {{#if (eq equipment.modifiers.position "minus_one_step" )}}selected{{/if}}>-1
-              Step (Controlled→Risky or Risky→Desperate)</option>
-          </select>
+          <label>Dice Bonus</label>
+          <input type="number" name="modifiers.diceBonus" value="{{equipment.modifiers.diceBonus}}" placeholder="0" min="0" />
+          <p class="help-text-small">Additional dice in pool (default 1)</p>
         </div>
         <div class="modifier-field">
-          <label>Effect</label>
-          <select name="modifiers.effect">
-            <option value="none" {{#if (eq equipment.modifiers.effect "none" )}}selected{{/if}}>None</option>
-            <option value="plus_one_level" {{#if (eq equipment.modifiers.effect "plus_one_level" )}}selected{{/if}}>+1
-              Level (Limited→Standard or Standard→Great)</option>
-            <option value="minus_one_level" {{#if (eq equipment.modifiers.effect "minus_one_level" )}}selected{{/if}}>-1
-              Level (Great→Standard or Standard→Limited)</option>
-          </select>
+          <label>Dice Penalty</label>
+          <input type="number" name="modifiers.dicePenalty" value="{{equipment.modifiers.dicePenalty}}" placeholder="0" min="0" />
+          <p class="help-text-small">Dice to remove from pool</p>
         </div>
         <div class="modifier-field">
-          <label>Dice Pool</label>
-          <input type="number" name="modifiers.dicePool" value="{{equipment.modifiers.dicePool}}" placeholder="0" />
-          <p class="help-text-small">Additional dice (e.g., +1 for fine weapons)</p>
+          <label>Position Bonus</label>
+          <input type="number" name="modifiers.positionBonus" value="{{equipment.modifiers.positionBonus}}" placeholder="0" min="0" max="1" />
+          <p class="help-text-small">Improve position by N steps</p>
+        </div>
+        <div class="modifier-field">
+          <label>Position Penalty</label>
+          <input type="number" name="modifiers.positionPenalty" value="{{equipment.modifiers.positionPenalty}}" placeholder="0" min="0" max="1" />
+          <p class="help-text-small">Worsen position by N steps</p>
+        </div>
+        <div class="modifier-field">
+          <label>Effect Bonus</label>
+          <input type="number" name="modifiers.effectBonus" value="{{equipment.modifiers.effectBonus}}" placeholder="0" min="0" max="1" />
+          <p class="help-text-small">Improve effect by N levels</p>
+        </div>
+        <div class="modifier-field">
+          <label>Effect Penalty</label>
+          <input type="number" name="modifiers.effectPenalty" value="{{equipment.modifiers.effectPenalty}}" placeholder="0" min="0" max="1" />
+          <p class="help-text-small">Reduce effect by N levels</p>
         </div>
       </div>
     </div>

@@ -3596,3 +3596,48 @@
   background: #5a5a5a;
 }
 
+
+/* Improved Equipment Dialog Layout */
+.equipment-edit-dialog .form-group:not(:last-of-type) {
+  margin-bottom: 2rem;
+}
+
+.equipment-edit-dialog .modifiers-grid {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.equipment-edit-dialog .modifier-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.equipment-edit-dialog .modifier-field label {
+  margin-bottom: 0.5rem;
+}
+
+.equipment-edit-dialog .modifier-field input {
+  width: 100%;
+}
+
+/* Dropdown/Select styling fix - ensure proper contrast */
+.equipment-edit-dialog select {
+  background: #2a2a2a !important;
+  color: #fff !important;
+  border: 1px solid #555 !important;
+}
+
+.equipment-edit-dialog select option {
+  background: #2a2a2a;
+  color: #fff;
+}
+
+.fitgd.dialog select {
+  background: #2a2a2a !important;
+  color: #fff !important;
+}
+
+.fitgd.dialog select option {
+  background: #2a2a2a;
+  color: #fff;
+}
+

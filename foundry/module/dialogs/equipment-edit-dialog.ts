@@ -124,7 +124,7 @@ export class EquipmentEditDialog extends FormApplication {
         locked: false,
         consumed: false,
         modifiers: {
-          diceBonus: formData['modifiers.diceBonus'] ? parseInt(formData['modifiers.diceBonus'] as string, 10) : undefined,
+          diceBonus: formData['modifiers.diceBonus'] ? parseInt(formData['modifiers.diceBonus'] as string, 10) : 1, // Default 1 dice bonus
           dicePenalty: formData['modifiers.dicePenalty'] ? parseInt(formData['modifiers.dicePenalty'] as string, 10) : undefined,
           positionBonus: formData['modifiers.positionBonus'] ? parseInt(formData['modifiers.positionBonus'] as string, 10) : undefined,
           positionPenalty: formData['modifiers.positionPenalty'] ? parseInt(formData['modifiers.positionPenalty'] as string, 10) : undefined,
