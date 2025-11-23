@@ -3641,3 +3641,92 @@
   color: #fff;
 }
 
+
+/* Equipment Item Sheet Styling */
+.equipment-sheet .form-group {
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.equipment-sheet .form-group label {
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 0.5rem;
+  font-family: "Signika", sans-serif;
+  font-size: 0.95rem;
+}
+
+.equipment-sheet .form-group input[type="text"],
+.equipment-sheet .form-group input[type="number"],
+.equipment-sheet .form-group textarea,
+.equipment-sheet .form-group select {
+  background: #2a2a2a;
+  color: #fff;
+  border: 1px solid #555;
+  padding: 0.75rem;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-family: "Signika", sans-serif;
+}
+
+.equipment-sheet .form-group input[type="text"]:focus,
+.equipment-sheet .form-group input[type="number"]:focus,
+.equipment-sheet .form-group textarea:focus,
+.equipment-sheet .form-group select:focus {
+  outline: none;
+  border-color: #42a5f5;
+  box-shadow: 0 0 8px rgba(66, 165, 245, 0.3);
+}
+
+.equipment-sheet .form-group textarea {
+  resize: vertical;
+  min-height: 60px;
+  line-height: 1.5;
+}
+
+.equipment-sheet .help-text,
+.equipment-sheet .help-text-small {
+  color: #b0b0b0;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  line-height: 1.4;
+}
+
+.equipment-sheet .help-text strong {
+  color: #fff;
+}
+
+.equipment-sheet .required {
+  color: #ff6b6b;
+  margin-left: 4px;
+}
+
+.equipment-sheet .modifiers-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.equipment-sheet .modifier-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.equipment-sheet .modifier-field label {
+  margin-bottom: 0.5rem;
+}
+
+.equipment-sheet .modifier-field input {
+  width: 100%;
+}
+
+.equipment-sheet .template-note {
+  background: #1a1a1a;
+  border-left: 4px solid #42a5f5;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-top: 2rem;
+}
+
