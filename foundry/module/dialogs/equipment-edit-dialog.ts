@@ -74,6 +74,14 @@ export class EquipmentEditDialog extends FormApplication {
     };
   }
 
+  override activateListeners(html: JQuery): void {
+    super.activateListeners(html);
+
+    // Wire up custom buttons
+    html.find('.cancel-btn').click(() => this.close());
+    html.find('.save-btn').click(() => this._onSubmit(new Event('submit')));
+  }
+
   protected async _updateObject(_event: Event, formData: Record<string, any>): Promise<void> {
     const equipment = this.object as Partial<Equipment>;
     const isGM = game.user!.isGM;
