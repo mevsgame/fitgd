@@ -11,6 +11,7 @@ Each feature should have a dedicated document linked below.
 - [Crew Sheet](./crew-sheet.md) - Managing crew resources, momentum, and clocks.
 - [Action Roll Dialog](./action-roll-dialog.md) - A lighter alternative for quick rolls.
 - [Take Harm Dialog](./take-harm-dialog.md) - Interface for applying harm and consequences.
+- [Equipment Sheet Dialog](./equipment-sheet-dialog.md) - Creating and editing equipment items.
 
 ## Game Mechanics
 
@@ -22,3 +23,4 @@ Each feature should have a dedicated document linked below.
 ## UI/UX Standards
 
 - [Dialog Style Guidelines](./dialog-style-guidelines.md) - Comprehensive UI/UX standards for all dialog templates.
+- [Equipment Row View Template](./equipment-row-view-template.md) - Reusable component for displaying equipment items.

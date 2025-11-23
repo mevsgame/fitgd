@@ -1,165 +1,289 @@
 # Mechanic: Equipment Management
 
 ## Overview
-Equipment in *Forged in the Grimdark* is not just a static inventory but a dynamic resource managed through **Load**, **Tiers**, and **Momentum**. This system allows players to adapt their loadout to the mission while enforcing strategic constraints.
+Equipment in *Forged in the Grimdark* uses a **slot-based load system** with three distinct categories. Players manage their loadout on the Character Sheet, selecting Active equipment during rolls and having Passive equipment approved by the GM. Items lock when used and may cost Momentum (for Rare/Epic first use).
 
 ## Architecture & State
 
 ### State Slices
-- **`characterSlice`**: Stores the character's current `loadout` (list of item IDs) and `equipped` status.
-- **`crewSlice`**: Stores **Momentum**, which is required for acquiring Rare items or using Flashback items.
+- **`characterSlice`**: Stores equipped items (list of item IDs), locked status per item, consumed flags for Consumables
+- **`crewSlice`**: Stores Momentum and load limit setting (default 5 slots, configurable per crew)
+
+### Selectors
+- `selectEquippedItems(characterId)`: Returns all equipped items
+- `selectActiveEquipment(characterId)`: Returns equipped Active items
+- `selectPassiveEquipment(characterId)`: Returns equipped Passive items
+- `selectConsumableEquipment(characterId)`: Returns equipped Consumable items
+- `selectLoadUsed(characterId)`: Calculates total slots occupied
+- `selectLockedItems(characterId)`: Returns items locked since last Reset
 
 ### UI Components
-- **`EquipmentManagementDialog`**: The primary interface for modifying loadout during a mission or downtime.
-- **`EquipmentGridTemplate`**: A reusable Handlebars partial for displaying items in a grid (used in Character Sheet and Dialog).
-- **`EquipmentSheet`**: The editor for defining item stats (Type, Tier, Modifiers).
+- **Equipment Row View Template**: Reusable Handlebars partial for displaying items (*See: [Equipment Row View Template](./equipment-row-view-template.md)*)
+- **Character Sheet Equipment Section**: Primary interface for equipping/unequipping (*See: [Character Sheet](./character-sheet.md)*)
+- **Player Action Widget**: Active selection dropdown + GM Passive approval grid (*See: [Player Action Widget](./player-action-widget.md)*)
+- **Equipment Sheet Dialog**: Editor for item properties (GM/Player access) (*See: [Equipment Sheet Dialog](./equipment-sheet-dialog.md)*)
 
-## UI/UX Design
+## Equipment Categories
 
-### 1. Equipment Grid Template
-A standardized grid view used across the application to display items.
-- **Visuals**:
-    - **Equipped Items**: Shown at the top, highlighted.
-    - **Unequipped Items**: Shown below, dimmed.
-    - **Locked**: Icon indicating the item cannot be unequipped (mission in progress).
-    - **Depleted**: Visual state for used consumables (still takes load, but grayed out/crossed off).
-- **Interactions**:
-    - **Hover**: Shows item details (Tier, Modifiers, Description).
-    - **Click**: Toggles equipped state (if in Management Dialog).
+All equipment falls into exactly three categories:
 
-### 2. Equipment Management Dialog
-The central hub for deciding loadout. Accessible via **Character Sheet** and **Player Action Widget**.
-- **Header**: Shows current **Load** (e.g., "3/5") and **Momentum** (e.g., "4M").
-- **Body**: Uses the **Equipment Grid Template** to list all available items.
-- **Search**: Filter items by name or tag.
-- **Flashback Creation**: Button to "Create Flashback Item" (creates new item + equips it immediately).
-- **Footer**:
-    - **Momentum Cost**: Displays total cost of changes (e.g., "Cost: 1M" for equipping a Rare item).
-    - **Actions**: "Cancel" (revert changes) and "Accept" (commit changes and spend Momentum).
+### Active Equipment
+- **Purpose**: Gear used directly in actions (weapons, tools, devices)
+- **Usage**: Player selects from dropdown in Player Action Widget as "other thing" influencing the dice pool
+- **Locks**: When selected in dice pool and roll committed
+- **Examples**: Chainsword, Auspex Scanner, Lockpicks, Heavy Bolter
 
-### 3. Equipment Sheet (Item Editor)
-Refined interface for defining item properties.
-- **Fields**:
-    - **Name & Description**.
-    - **Type**: Equipment, Consumable, or Augmentation.
-    - **Tier**: Common, Rare (1M cost), Epic.
-    - **Modifiers**:
-        - **Position**: Bonus/Penalty (e.g., +1 Step).
-        - **Effect**: Bonus/Penalty (e.g., +1 Level).
-        - **Dice Pool**: Bonus dice (e.g., +1d).
+### Passive Equipment
+- **Purpose**: Always-on gear (armor, implants, augmentations)
+- **Usage**: GM approves one Passive per roll if narratively applicable during roll conversation
+- **Locks**: When GM approves and roll committed
+- **Examples**: Flak Armor, Cybernetic Limbs, Psy-Ward Implant, Stealth Cloak
 
-### 4. Character Sheet Integration
-- **Display**: Shows accessible items using the Grid Template.
-- **GM Override**: GM can toggle equip state directly on the sheet without Momentum costs or dialogs.
-- **Player Access**: "Manage Equipment" button opens the Management Dialog.
+### Consumable Equipment
+- **Purpose**: Single-use items (grenades, stims, medkits)
+- **Usage**: Can be selected like Active equipment, but depletes after use
+- **Locks**: When activated and roll committed
+- **Depletion**: Remains equipped (occupies slots) but becomes unusable until Reset
+- **Examples**: Frag Grenade, Combat Stim, Emergency Medkit
 
-## Implementation Details
+## Equipment Display
 
-### Load Management
-- **Load Limit**: Characters have a maximum load (default: **5**).
-- **Locking**: Once an item is equipped during a mission, it is **locked** until the next **Momentum Reset**.
-- **Validation**: The UI prevents equipping items if it would exceed the max load.
+Equipment is displayed using the **Equipment Row View Template**, a reusable component with context-specific visibility configurations.
 
-### Item Tiers & Acquisition
-1.  **Common**: Standard gear. Can be equipped freely if within load limits.
-2.  **Rare**: Specialized gear. Requires spending **1 Momentum** to equip (representing a Flashback to acquiring it).
-3.  **Epic**: Legendary gear. Cannot be acquired via Flashback; must be earned in-game.
+*Full documentation: [Equipment Row View Template](./equipment-row-view-template.md)*
 
-### Flashback Items
-- **Goal**: Acquire a specific item *now* that wasn't equipped at the start.
-- **Cost**: **1 Momentum** (plus the item's load cost).
-# Mechanic: Equipment Management
+**Key Contexts**:
+- **Character Sheet**: Full view with all elements (name, category, tier, bonuses, locked/equipped icons, toggleable slots/description)
+- **Player Action Widget Dropdown**: Condensed view (name, category, bonuses only)
+- **GM Passive Grid**: Approval view (name, category, tier, bonuses, locked icon, toggleable description, radio button)
 
-## Overview
-Equipment in *Forged in the Grimdark* is not just a static inventory but a dynamic resource managed through **Load**, **Tiers**, and **Momentum**. This system allows players to adapt their loadout to the mission while enforcing strategic constraints.
+## Character Sheet Equipment Management
 
-## Architecture & State
+*See also: [Character Sheet](./character-sheet.md) for full Character Sheet documentation*
 
-### State Slices
-- **`characterSlice`**: Stores the character's current `loadout` (list of item IDs) and `equipped` status.
-- **`crewSlice`**: Stores **Momentum**, which is required for acquiring Rare items or using Flashback items.
+### Player Capabilities
+- **Equip/Unequip**: Toggle equipped status on unlocked items
+- **Add Items**: Add new Foundry Items to character (Common recommended for player-created items)
+- **Remove Items**: Remove items from character
+- **Cannot Edit**: Item properties (category, tier, bonuses, slots) are read-only for players
 
-### UI Components
-- **`EquipmentManagementDialog`**: The primary interface for modifying loadout during a mission or downtime.
-- **`EquipmentGridTemplate`**: A reusable Handlebars partial for displaying items in a grid (used in Character Sheet and Dialog).
-- **`EquipmentSheet`**: The editor for defining item stats (Type, Tier, Modifiers).
+### GM Capabilities
+- **Edit Items**: Full access to edit any item property without restrictions or costs
+- **Override States**: Can change tier (e.g., Rare → Common for specific character), category, bonuses
+- **No Costs**: GM edits never trigger momentum costs or validation
 
-## UI/UX Design
+### Equipment List Display
 
-### 1. Equipment Grid Template
-A standardized grid view used across the application to display items.
-- **Visuals**:
-    - **Equipped Items**: Shown at the top, highlighted.
-    - **Unequipped Items**: Shown below, dimmed.
-    - **Locked**: Icon indicating the item cannot be unequipped (mission in progress).
-    - **Depleted**: Visual state for used consumables (still takes load, but grayed out/crossed off).
-- **Interactions**:
-    - **Hover**: Shows item details (Tier, Modifiers, Description).
-    - **Click**: Toggles equipped state (if in Management Dialog).
+**Sort Order**: Passive → Consumable → Active (within each group, alphabetical by name)
 
-### 2. Equipment Management Dialog
-The central hub for deciding loadout. Accessible via **Character Sheet** and **Player Action Widget**.
-- **Header**: Shows current **Load** (e.g., "3/5") and **Momentum** (e.g., "4M").
-- **Body**: Uses the **Equipment Grid Template** to list all available items.
-- **Search**: Filter items by name or tag.
-- **Flashback Creation**: Button to "Create Flashback Item" (creates new item + equips it immediately).
-- **Footer**:
-    - **Momentum Cost**: Displays total cost of changes (e.g., "Cost: 1M" for equipping a Rare item).
-    - **Actions**: "Cancel" (revert changes) and "Accept" (commit changes and spend Momentum).
+**Filter Option**: "Show Equipped Only" checkbox to hide unequipped items
 
-### 3. Equipment Sheet (Item Editor)
-Refined interface for defining item properties.
-- **Fields**:
-    - **Name & Description**.
-    - **Type**: Equipment, Consumable, or Augmentation.
-    - **Tier**: Common, Rare (1M cost), Epic.
-    - **Modifiers**:
-        - **Position**: Bonus/Penalty (e.g., +1 Step).
-        - **Effect**: Bonus/Penalty (e.g., +1 Level).
-        - **Dice Pool**: Bonus dice (e.g., +1d).
+**Load Display**: Shows current slots used vs. max (e.g., "3/5 slots")
 
-### 4. Character Sheet Integration
-- **Display**: Shows accessible items using the Grid Template.
-- **GM Override**: GM can toggle equip state directly on the sheet without Momentum costs or dialogs.
-- **Player Access**: "Manage Equipment" button opens the Management Dialog.
+**Visual States**:
+- Equipped items: Checkbox checked, equipped icon visible
+- Locked items: Lock icon visible, checkbox disabled
+- Depleted Consumables: Grayed out, crossed-off visual style
 
-## Implementation Details
+### Load Validation
 
-### Load Management
-- **Load Limit**: Characters have a maximum load (default: **5**).
-- **Equipped**: Items marked as "Equipped" are part of your current loadout. They appear in the Player Action Widget dropdowns and are available for use. You can freely unequip them *unless* they are locked.
-- **Locked**: Once an item is **used** in a roll (or acquired via Flashback), it becomes **Locked**. Locked items cannot be unequipped until the next **Momentum Reset**:
-    - **When Locking Occurs**: Items are locked when the roll is committed (in the `_onRoll` handler), not when selected in the dropdown
-    - **Visual Indication**: Locked items show a lock icon and have their checkbox disabled in the Character Sheet
-    - **Enforcement**: The Character Sheet's `_onToggleEquipped` handler validates that locked items cannot be unequipped:
-        - If a player attempts to unequip a locked item, they see a warning: "This item is locked until Momentum Reset"
-        - The checkbox is automatically reverted to the checked state
-    - **Purpose**: This allows you to "auto-equip" a standard loadout but change your mind about unused gear during the mission. Once committed to using an item, you cannot swap it out.
-- **Validation**: The UI prevents equipping items if it would exceed the max load.
+When player attempts to equip an item that would exceed load limit:
+- **Prevent Action**: Checkbox click does not toggle
+- **Show Message**: "Cannot equip: exceeds load limit (6/5 slots)"
+- **Visual Feedback**: Brief highlight or shake animation on load display
 
-### Item Tiers & Acquisition
-1.  **Common**: Standard gear. Can be equipped freely if within load limits.
-2.  **Rare**: Specialized gear. Requires spending **1 Momentum** to equip (representing a Flashback to acquiring it).
-3.  **Epic**: Legendary gear. Cannot be acquired via Flashback; must be earned in-game.
+### Locking Enforcement
 
-### Flashback Items
-- **Goal**: Acquire a specific item *now* that wasn't equipped at the start.
-- **Cost**: **1 Momentum** (plus the item's load cost).
-- **Mechanic**: Creates a temporary item and immediately equips it.
-- **Constraint**: Cannot exceed max load. If full, the player cannot use a Flashback Item without first finding a way to free up load (rare).
+When player attempts to unequip a locked item:
+- **Prevent Action**: Checkbox does not uncheck
+- **Show Message**: "This item is locked until Momentum Reset"
+- **Revert State**: Checkbox automatically reverts to checked
 
-### Consumables
-- **Usage**: Single-use items (grenades, stims).
-- **State**: When used, they remain "equipped" (taking up load) but are marked as **depleted**.
-- **Reset**: Consumables are removed or replenished during a Momentum Reset.
+## Equipment in Player Action Widget
 
-### Augmentations
-- **Nature**: Permanent cybernetic or biological enhancements.
-- **Usage**: Count towards Load like any other equipment.
-- **Activation**: Always equipped. Can be explicitly enabled for a specific roll via the Player Action Widget if relevant.
-- **Effect**: When enabled, they provide their defined bonuses (Position, Effect, or Dice) to the current roll transaction.
+*See also: [Player Action Widget](./player-action-widget.md) for full roll flow documentation*
+
+### Active Equipment Selection (Dropdown)
+
+**Location**: "Other Thing" dropdown, appears after Primary Approach selection
+
+**Dropdown Order**:
+1. Secondary Approaches (Force, Guile, Focus, Spirit - minus the primary Approach selected)
+2. **Visual Separator** (horizontal line)
+3. Equipped Active items (using Equipment Row View Template - condensed config)
+
+**Display Format**: Uses Equipment Row View Template showing Name + Bonuses + Category Icon
+
+**Selection Behavior**:
+- Selecting an Active item adds its bonus to the dice pool
+- If item is Rare/Epic and unlocked, will trigger 1 Momentum cost on roll commit
+- Selected item appears in Current Plan transaction preview
+
+### Passive Equipment Approval (GM Grid)
+
+**Location**: Below Position and Effect dropdowns in Player Action Widget
+
+**Visibility**: GM view only (player cannot see the grid, only the result)
+
+**Display**: Two-column grid:
+- Column 1: Equipment Row View Template (approval config)
+- Column 2: Radio button (single selection only)
+
+**Equipment Shown**: All equipped Passive items (locked or unlocked)
+
+**GM Workflow**:
+1. GM reviews roll conversation with player
+2. GM determines if any Passive equipment is narratively applicable
+3. GM selects ONE Passive item via radio button (or none)
+4. Approved Passive appears in Current Plan (visible to player)
+5. Approved Passive locks on roll commit
+
+**Mechanical Effect**: Approved Passive provides its defined bonus (dice/position/effect) to the roll
+
+## Load & Slots
+
+### Load Limit
+- **Default**: 5 slots per character
+- **Future**: Configurable per crew (crew-level setting)
+- **Display**: "current/max" format (e.g., "3/5 slots")
+
+### Slot Costs
+- **Default**: 1 slot per item
+- **Custom**: GM can set higher slot costs (e.g., Heavy Bolter = 2 slots)
+- **All Categories**: Active, Passive, and Consumable all count toward load limit
+
+### Load Calculation
+Sum of slot costs for all equipped items (locked or unlocked).
+
+## Locking & Momentum
+
+### Locking Behavior
+
+**When Items Lock**:
+- **Active**: Selected in dice pool and roll committed
+- **Passive**: GM approves and roll committed
+- **Consumable**: Activated and roll committed
+
+**Lock State**:
+- Locked items cannot be unequipped on Character Sheet
+- Lock icon appears in Equipment Row View Template
+- Lock persists until Momentum Reset
+
+**Purpose**: Prevents reality-bending mid-mission. Once committed to using equipment, it stays equipped.
+
+### Momentum Cost
+
+**Trigger**: First time a Rare or Epic item locks between Resets
+
+**Cost by Tier**:
+- Common: **0 Momentum** (free)
+- Rare: **1 Momentum**
+- Epic: **1 Momentum**
+
+**Timing**: Part of Player Action Widget transaction on roll commit
+
+**One-Time Cost**: If same item locks, unlocks (at Reset), then locks again, pay again. But multiple uses of already-locked item cost nothing additional.
+
+**Example Flow**:
+1. Player equips Rare Chainsword (unlocked, no cost)
+2. Player selects Chainsword in roll, commits → **Locks, pay 1 Momentum**
+3. Player uses Chainsword in another roll → Already locked, **no additional cost**
+4. Momentum Reset occurs → Chainsword unlocks
+5. Player uses Chainsword again → Locks again, **pay 1 Momentum again**
+
+### Consumable Depletion
+
+When a Consumable locks, it also sets a **consumed flag**:
+- Remains equipped (still occupies slots)
+- Visual state: grayed out, crossed off, or similar indication of depletion
+- Unavailable in dropdowns (filtered out)
+- Replenishes at Momentum Reset (consumed flag clears)
+
+## Equipment Item Creation & Editing
+
+Equipment items are created and edited using the **Equipment Sheet Dialog**, a reusable interface integrated with Foundry VTT's Item system.
+
+*Full documentation: [Equipment Sheet Dialog](./equipment-sheet-dialog.md)*
+
+**Key Features**:
+- **Foundry Items Integration**: Equipment stored as Foundry Items (type: "equipment")
+- **Create/Edit**: Same dialog for creating new items and editing existing ones
+- **Role-Based Access**:
+  - Players: Create/edit Common items only (if unlocked)
+  - GM: Full access to all items, can change tier/category/bonuses/slots
+- **Compendium Compatible**: Items can be saved to compendium for reuse
+- **Fields**: Name, Description, Category, Tier, Slots, Bonuses (Dice/Position/Effect)
+
+## Reset Behavior
+
+### On Momentum Reset
+
+**All Equipment**:
+- **Locked flag** removed (items stay equipped but become unlocked)
+- **Consumable consumed flag** removed (Consumables become usable again)
+- Items remain on character, loadout unchanged
+
+**Player Workflow**:
+1. Momentum Reset occurs (GM initiates or team requests)
+2. All equipped items unlock
+3. All Consumables replenish
+4. Player reviews loadout (optional)
+5. Player can freely swap unlocked items before next roll
+6. First use of Rare/Epic items after Reset may trigger momentum cost again
+
+### Natural Timing
+Players typically review/adjust loadout just before their next roll. The system allows this flexibility rather than forcing reorganization at Reset.
+
+## Transaction Flow (Roll Commit)
+
+When a roll is committed in the Player Action Widget:
+
+1. **Build Transaction**:
+   - Primary Approach selected
+   - Active Equipment selected (optional)
+   - Passive Equipment approved by GM (optional)
+   - Consumables activated (optional)
+
+2. **Apply Transaction** (atomic, via Bridge API):
+   - Lock all equipment used in roll (Active + Passive + Consumables)
+   - Set consumed flag on Consumables
+   - Calculate momentum cost (1M per Rare/Epic first-lock)
+   - Spend momentum
+   - Apply roll results
+   - Update character state
+
+3. **Broadcast & Refresh**:
+   - State changes broadcast to all clients
+   - Character Sheets auto-refresh
+   - Lock icons appear immediately
+
+### Edge Cases & Pitfalls
+
+**Insufficient Momentum for Rare/Epic Lock**:
+- If player has 0 Momentum and commits roll with unlocked Rare item, the transaction fails
+- Show error: "Insufficient Momentum to lock [Item Name] (Rare, 1M required)"
+- Player must either deselect the item or gain Momentum first
+
+**Equipment Changes During Active Mission**:
+- Unlocked items can be swapped freely on Character Sheet mid-mission
+- Locked items cannot be unequipped until Reset
+- This allows "I grab my backup pistol" flexibility for unused gear
+
+**GM Changing Item Tier**:
+- GM can set a Rare item to Common for a specific character
+- This makes first-lock cost 0M for that character only
+- Useful for character-appropriate gear (e.g., medic always has medkit access)
 
 ## Rules Integration
-- **Momentum Cost**: Enforces the 1 Momentum cost for Rare items and Flashback items.
-- **Load Hard Cap**: The 5-item limit is a hard constraint to force difficult choices.
-- **Reset Cycle**: Equipment locks are only cleared during a specific "Momentum Reset" event, not automatically after every scene.
+
+*Primary Source: [vault/rules_primer.md - Equipment](../vault/rules_primer.md#equipment)*
+
+**Three Categories**: Enforces clear equipment roles (Active for player agency, Passive for GM narrative control, Consumable for resource tension)
+
+**Slot-Based Load**: Forces strategic choices (bring heavy weapon or multiple tools?)
+
+**Lock on Use**: Prevents mid-mission reality-bending ("I actually had X equipped all along")
+
+**Momentum Cost on First Lock**: Represents flashback/narrative justification for Rare/Epic gear availability
+
+**Reset Cycle**: Natural reorganization point for loadout without constant micromanagement
