@@ -221,4 +221,19 @@ export async function registerHandlebarsHelpers(): Promise<void> {
       return {};
     }
   });
+
+  // Format timestamp as human-readable date
+  Handlebars.registerHelper('formatTimestamp', function(timestamp: unknown) {
+    if (!timestamp || typeof timestamp !== 'number') return 'Unknown date';
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return 'Invalid date';
+    }
+  });
 }

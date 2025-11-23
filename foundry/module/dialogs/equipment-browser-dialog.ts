@@ -137,10 +137,20 @@ export class EquipmentBrowserDialog extends Dialog {
       category = categoryMap[category];
     }
 
+    // Normalize tier from old system (accessible/inaccessible) to new system (common/rare/epic)
+    let tier = system.tier || 'common';
+    const tierMap: Record<string, string> = {
+      accessible: 'common',
+      inaccessible: 'rare',
+    };
+    if (tierMap[tier]) {
+      tier = tierMap[tier];
+    }
+
     return {
       id: item.id || foundry.utils.randomID(),
       name: item.name || 'Unknown',
-      tier: (system.tier || 'common') as Equipment['tier'],
+      tier: tier as Equipment['tier'],
       category,
       description: system.description || '',
       img: item.img || '',
