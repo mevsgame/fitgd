@@ -137,6 +137,11 @@ interface ClearStimsUsedPayload {
   characterId: string;
 }
 
+interface SetApprovedPassivePayload {
+  characterId: string;
+  equipmentId: string | null;
+}
+
 /**
  * Player Round State Slice
  */
@@ -499,6 +504,23 @@ const playerRoundStateSlice = createSlice({
       state.byCharacterId[characterId] = {
         ...currentState,
         stimsUsedThisAction: undefined,
+      };
+    },
+
+    /**
+     * Set approved Passive equipment (GM only)
+     */
+    setApprovedPassive: (state, action: PayloadAction<SetApprovedPassivePayload>) => {
+      const { characterId, equipmentId } = action.payload;
+      const currentState = state.byCharacterId[characterId];
+
+      if (!currentState) {
+        throw new Error(`No state found for character ${characterId}`);
+      }
+
+      state.byCharacterId[characterId] = {
+        ...currentState,
+        approvedPassiveId: equipmentId,
       };
     },
 

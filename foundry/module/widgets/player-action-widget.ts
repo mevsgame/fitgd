@@ -22,6 +22,7 @@ import { selectDicePool, selectMomentumCost, selectHarmClocksWithStatus, selectI
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
 
 import { calculateOutcome } from '@/utils/diceRules';
+import { getEquipmentToLock, getConsumablesToDeplete } from '@/utils/equipmentRules';
 
 import { FlashbackTraitsDialog } from '../dialogs/FlashbackTraitsDialog';
 import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog, RallyDialog } from '../dialogs/index';
@@ -65,6 +66,8 @@ interface PlayerActionWidgetData {
   equippedItems: Equipment[];
   activeEquipmentItem?: Equipment;
   passiveEquipment: Equipment[];
+  selectedPassiveId?: string | null;
+  approvedPassiveEquipment?: Equipment;
 
   // Equipment effects from selected items
   equipmentEffects?: {
@@ -442,6 +445,14 @@ export class PlayerActionWidget extends Application {
       // Passive equipment for display
       passiveEquipment: selectPassiveEquipment(this.character),
 
+      // Selected passive equipment ID (GM only)
+      selectedPassiveId: this.playerState?.approvedPassiveId,
+
+      // Approved passive equipment object (for display)
+      approvedPassiveEquipment: this.playerState?.approvedPassiveId
+        ? this.character?.equipment.find(e => e.id === this.playerState!.approvedPassiveId)
+        : undefined,
+
       // Equipment effects from selected items (using new selectors)
       equipmentEffects: selectEquipmentEffects(state, this.characterId),
 
@@ -469,6 +480,9 @@ export class PlayerActionWidget extends Application {
     // Active Equipment selection
     html.find('.active-equipment-select').change(this._onActiveEquipmentChange.bind(this));
     html.find('[data-action="add-flashback-item"]').click(this._onAddFlashbackItem.bind(this));
+
+    // GM Passive Equipment selection
+    html.find('.passive-equipment-radio').change(this._onPassiveEquipmentChange.bind(this));
 
     // GM position/effect controls
     html.find('.position-select').change(this._onPositionChange.bind(this));
@@ -686,6 +700,36 @@ export class PlayerActionWidget extends Application {
       actions,
       { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
     );
+  }
+
+  /**
+   * Handle GM Passive equipment approval
+   */
+  private async _onPassiveEquipmentChange(event: JQuery.ChangeEvent): Promise<void> {
+    const equipmentId = (event.currentTarget as HTMLInputElement).value || null;
+
+    // Use Bridge API to dispatch and broadcast
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/setApprovedPassive',
+        payload: {
+          characterId: this.characterId,
+          equipmentId,
+        },
+      },
+      { affectedReduxIds: [asReduxId(this.characterId)], silent: true } // Silent: subscription handles render
+    );
+
+    // Post chat message if passive was selected
+    if (equipmentId && this.character) {
+      const passive = this.character.equipment.find(e => e.id === equipmentId);
+      if (passive) {
+        ChatMessage.create({
+          content: `GM approved Passive equipment for ${this.character!.name}: <strong>${passive.name}</strong>`,
+          speaker: ChatMessage.getSpeaker(),
+        });
+      }
+    }
   }
 
   /**
@@ -1102,11 +1146,30 @@ export class PlayerActionWidget extends Application {
       // Execute all roll outcome actions as batch
       const rollBatch = this.diceRollingHandler.createRollOutcomeBatch(dicePool, rollResult, outcome);
 
-      // Lock equipment used in this roll
-      if (playerState?.equippedForAction?.length) {
-        playerState.equippedForAction.forEach((equipmentId) => {
+      // Lock equipment used in this roll (active + approved passive)
+      const equipmentToLock = getEquipmentToLock(
+        playerState?.equippedForAction,
+        playerState?.approvedPassiveId
+      );
+
+      if (equipmentToLock.length > 0) {
+        equipmentToLock.forEach((equipmentId) => {
           rollBatch.push({
             type: 'characters/markEquipmentUsed',
+            payload: {
+              characterId: this.characterId,
+              equipmentId,
+            },
+          });
+        });
+      }
+
+      // Mark consumables as depleted
+      const consumablesToDeplete = getConsumablesToDeplete(this.character!, playerState?.equippedForAction || []);
+      if (consumablesToDeplete.length > 0) {
+        consumablesToDeplete.forEach((equipmentId) => {
+          rollBatch.push({
+            type: 'characters/markEquipmentDepleted',
             payload: {
               characterId: this.characterId,
               equipmentId,

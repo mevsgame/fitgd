@@ -152,6 +152,9 @@ export interface PlayerRoundState {
   /** Equipment IDs being used for this action */
   equippedForAction?: string[];
 
+  /** GM-approved Passive equipment ID (GM control only) */
+  approvedPassiveId?: string | null;
+
   /** Augmentation IDs enabled for this roll (GM control only) */
   enabledAugmentationIds?: string[];
 

@@ -175,6 +175,9 @@
           <option value="spectacular" {{#if (eq playerState.effect "spectacular" )}}selected{{/if}}>Spectacular</option>
         </select>
       </div>
+
+      <!-- GM Passive Equipment Grid -->
+      {{> gm-passive-grid passiveEquipment=passiveEquipment selectedPassiveId=selectedPassiveId isGM=true}}
     </div>
     {{/if}}
 
@@ -204,6 +207,19 @@
         {{else}}
         <div class="plan-line">Approach: {{capitalize playerState.selectedApproach}} ({{lookup character.approaches
           playerState.selectedApproach}}d)</div>
+        {{/if}}
+
+        <!-- Approved Passive Equipment (if selected by GM) -->
+        {{#if approvedPassiveEquipment}}
+        <div class="plan-line passive-info">
+          <strong>Passive:</strong> {{approvedPassiveEquipment.name}}
+          {{#if approvedPassiveEquipment.modifiers.diceBonus}}
+          (+{{approvedPassiveEquipment.modifiers.diceBonus}}d)
+          {{/if}}
+          {{#if approvedPassiveEquipment.modifiers.dicePenalty}}
+          (-{{approvedPassiveEquipment.modifiers.dicePenalty}}d)
+          {{/if}}
+        </div>
         {{/if}}
 
         <!-- Position with Equipment Modifiers -->

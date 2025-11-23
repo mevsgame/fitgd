@@ -512,6 +512,7 @@ git push
 - [ ] No new TypeScript errors introduced
 - [ ] Tested with GM + Player clients (for Foundry changes)
 - [ ] Used Bridge API for state changes
+- [ ] **User Code review requested and approved** - Mandatory If the user requested it before during session
 
 ### Common Commands
 
