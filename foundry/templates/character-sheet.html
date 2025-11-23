@@ -200,7 +200,7 @@
         <div class="equipment-header-info">
           <span class="load-display">
             <i class="fas fa-weight"></i>
-            Load: <span class="load-value">{{loadUsed}}</span>/<span class="load-limit">{{system.loadLimit}}</span> slots
+            Load: <span class="load-value">{{loadUsed}}</span>/<span class="load-limit">{{#if system.loadLimit}}{{system.loadLimit}}{{else}}5{{/if}}</span> slots
           </span>
           <button class="add-equipment-btn" type="button">
             <i class="fas fa-plus"></i> Add Equipment
