@@ -1,8 +1,8 @@
 <form class="{{cssClass}}" autocomplete="off">
   <header class="sheet-header">
-    <img class="profile-img" src="{{item.img}}" data-edit="img" title="{{item.name}}" height="64" width="64"/>
+    <img class="profile-img" src="{{item.img}}" data-edit="img" title="{{item.name}}" height="64" width="64" />
     <div class="header-fields">
-      <h1 class="charname"><input name="name" type="text" value="{{item.name}}" placeholder="Equipment Name"/></h1>
+      <h1 class="charname"><input name="name" type="text" value="{{item.name}}" placeholder="Equipment Name" /></h1>
     </div>
   </header>
 
@@ -10,43 +10,46 @@
     <div class="form-group">
       <label>Tier</label>
       <select name="system.tier">
-        <option value="accessible" {{#if (eq system.tier "accessible")}}selected{{/if}}>Accessible</option>
-        <option value="inaccessible" {{#if (eq system.tier "inaccessible")}}selected{{/if}}>Inaccessible</option>
-        <option value="epic" {{#if (eq system.tier "epic")}}selected{{/if}}>Epic</option>
+        <option value="accessible" {{#if (eq system.tier "accessible" )}}selected{{/if}}>Accessible</option>
+        <option value="inaccessible" {{#if (eq system.tier "inaccessible" )}}selected{{/if}}>Inaccessible</option>
+        <option value="epic" {{#if (eq system.tier "epic" )}}selected{{/if}}>Epic</option>
       </select>
-      <p class="notes">
-        <strong>Accessible:</strong> Standard gear, freely available<br/>
-        <strong>Inaccessible:</strong> Requires flashback (1 Momentum + trait)<br/>
-        <strong>Epic:</strong> Must be earned through story
+      <p class="help-text">
+        📦 <strong>Accessible:</strong> Standard gear, freely available<br />
+        💎 <strong>Inaccessible:</strong> Requires flashback (1 Momentum + trait)<br />
+        ⭐ <strong>Epic:</strong> Must be earned through story
       </p>
     </div>
 
     <div class="form-group">
       <label>Category</label>
       <select name="system.category">
-        <option value="weapon" {{#if (eq system.category "weapon")}}selected{{/if}}>Weapon</option>
-        <option value="armor" {{#if (eq system.category "armor")}}selected{{/if}}>Armor</option>
-        <option value="tool" {{#if (eq system.category "tool")}}selected{{/if}}>Tool</option>
-        <option value="consumable" {{#if (eq system.category "consumable")}}selected{{/if}}>Consumable</option>
-        <option value="misc" {{#if (eq system.category "misc")}}selected{{/if}}>Miscellaneous</option>
+        <option value="weapon" {{#if (eq system.category "weapon" )}}selected{{/if}}>Weapon</option>
+        <option value="armor" {{#if (eq system.category "armor" )}}selected{{/if}}>Armor</option>
+        <option value="tool" {{#if (eq system.category "tool" )}}selected{{/if}}>Tool</option>
+        <option value="consumable" {{#if (eq system.category "consumable" )}}selected{{/if}}>Consumable</option>
+        <option value="misc" {{#if (eq system.category "misc" )}}selected{{/if}}>Miscellaneous</option>
       </select>
-      <p class="notes">Choose the primary type of this equipment.</p>
+      <p class="help-text">Choose the primary type of this equipment.</p>
     </div>
 
     <div class="form-group">
       <label>Description</label>
-      <textarea name="system.description" rows="8" placeholder="Describe the equipment and its effects on Position/Effect...">{{system.description}}</textarea>
-      <p class="notes">Include how this equipment affects Position and Effect in narrative context.</p>
+      <textarea name="system.description" rows="8"
+        placeholder="Describe the equipment and its effects on Position/Effect...">{{system.description}}</textarea>
+      <p class="help-text">Include how this equipment affects Position and Effect in narrative context.</p>
     </div>
 
     <div class="form-group">
       <label>Image Path</label>
-      <input type="text" name="img" value="{{item.img}}" placeholder="icons/weapons/..."/>
-      <p class="notes">Path to item image. Click the image above to browse, or enter a path manually.</p>
+      <input type="text" name="img" value="{{item.img}}" placeholder="icons/weapons/..." />
+      <p class="help-text">Path to item image. Click the image above to browse, or enter a path manually.</p>
     </div>
 
     <div class="form-group template-note">
-      <p class="notes"><strong>Template Factory Pattern:</strong> This item serves as a <em>template</em>. When a character acquires this equipment, all data is copied to their Redux state. The character's copy is fully independent and editable.</p>
+      <p class="help-text"><strong>📋 Template Factory Pattern:</strong> This item serves as a <em>template</em>. When a
+        character acquires this equipment, all data is copied to their Redux state. The character's copy is fully
+        independent and editable.</p>
     </div>
   </div>
 </form>

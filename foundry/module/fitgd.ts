@@ -314,8 +314,8 @@ Hooks.once('init', async function () {
   // Register sheet classes
   registerSheetClasses();
 
-  // Register Handlebars helpers
-  registerHandlebarsHelpers();
+  // Register Handlebars helpers and partials
+  await registerHandlebarsHelpers();
 
   // Register hooks
   registerCombatHooks();

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Player Action Widget
  *
  * A persistent widget that appears when it's a player's turn in an encounter.
@@ -982,133 +982,25 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
+  /**
    * Handle Equipment button
+   * Opens Equipment Management Dialog which provides access to:
+   * - Equipment management (equip/unequip)
+   * - Flashback Equipment Dialog (create new items)
    */
   private _onEquipment(event: JQuery.ClickEvent): void {
     event.preventDefault();
 
-    const equipment = this.character?.equipment || [];
-    // character.equipped is not a set of IDs, we must derive it from equipment list
-    const equippedIds = new Set(equipment.filter(e => e.equipped).map(e => e.id));
+    if (!this.crewId) {
+      ui.notifications?.warn('Crew not found - equipment management requires a crew');
+      return;
+    }
 
-    // Calculate load based on count (1 item = 1 load for now, as per slice logic)
-    const currentLoad = selectCurrentLoad(this.character!);
-    const maxLoad = DEFAULT_CONFIG.character.maxLoad;
-
-    const content = `
-      <div class="equipment-manager">
-        <p><strong>Load:</strong> ${currentLoad}/${maxLoad}</p>
-        <form>
-          <ul style="list-style: none; padding: 0;">
-            ${equipment.map(item => {
-      const isEquipped = equippedIds.has(item.id);
-      const loadCost = 1; // Default to 1 load per item
-      // Disable if not equipped and at max load
-      const disabled = !isEquipped && currentLoad + loadCost > maxLoad;
-
-      const isBonus = item.tags?.includes('bonus');
-      return `
-                <li style="margin-bottom: 5px; display: flex; align-items: center;">
-                  <input type="checkbox" name="equipped" value="${item.id}" 
-                    ${isEquipped ? 'checked' : ''} 
-                    ${disabled ? 'disabled' : ''}
-                    style="margin-right: 8px;">
-                  <span style="${disabled ? 'opacity: 0.5' : ''}">
-                    ${item.name} (${loadCost} load) ${isBonus ? '<span class="tag" style="font-size:0.8em; background:#333; color:#fff; padding:1px 4px; border-radius:3px;">Bonus</span>' : ''}
-                  </span>
-                </li>
-              `;
-    }).join('')}
-          </ul>
-        </form>
-        ${equipment.length === 0 ? '<p>No equipment available.</p>' : ''}
-      </div>
-    `;
-
-    new Dialog({
-      title: "Manage Loadout",
-      content: content,
-      buttons: {
-        save: {
-          icon: '<i class="fas fa-save"></i>',
-          label: "Save Loadout",
-          callback: async (html: JQuery | HTMLElement | undefined) => {
-            if (!html) return;
-            const $html = $(html as HTMLElement);
-            const checkboxes = $html.find('input[name="equipped"]');
-            const newEquippedIds = new Set<string>();
-
-            checkboxes.each((_, el) => {
-              if ((el as HTMLInputElement).checked) {
-                newEquippedIds.add((el as HTMLInputElement).value);
-              }
-            });
-
-            // Calculate changes
-            const toEquip = [...newEquippedIds].filter(id => !equippedIds.has(id));
-            const toUnequip = [...equippedIds].filter(id => !newEquippedIds.has(id));
-
-            const actions: any[] = [];
-
-            // Unequip first to free up load
-            toUnequip.forEach(itemId => {
-              actions.push({
-                type: 'characters/toggleEquipped',
-                payload: {
-                  characterId: this.characterId,
-                  equipmentId: itemId,
-                  equipped: false
-                }
-              });
-            });
-
-            // Then equip
-            toEquip.forEach(itemId => {
-              actions.push({
-                type: 'characters/toggleEquipped',
-                payload: {
-                  characterId: this.characterId,
-                  equipmentId: itemId,
-                  equipped: true
-                }
-              });
-            });
-
-            if (actions.length > 0) {
-              await game.fitgd.bridge.executeBatch(
-                actions,
-                { affectedReduxIds: [asReduxId(this.characterId)] }
-              );
-              ui.notifications?.info(`Updated loadout`);
-            }
-
-            // After equipping items, set roll mode to "equipment" and select first equipped item
-            if (newEquippedIds.size > 0) {
-              const firstEquippedId = [...newEquippedIds][0];
-              await game.fitgd.bridge.execute(
-                {
-                  type: 'playerRoundState/setActionPlan',
-                  payload: {
-                    characterId: this.characterId,
-                    approach: this.playerState?.selectedApproach || 'force',
-                    rollMode: 'equipment',
-                    equippedForAction: [firstEquippedId],
-                    position: this.playerState?.position || 'risky',
-                    effect: this.playerState?.effect || 'standard',
-                  },
-                },
-                { affectedReduxIds: [asReduxId(this.characterId)] }
-              );
-            }
-          }
-        },
-        cancel: {
-          icon: '<i class="fas fa-times"></i>',
-          label: "Cancel"
-        }
-      },
-      default: "save"
-    }).render(true);
+    // Import and open Equipment Management Dialog
+    // This dialog provides access to both equipment management and flashback item creation
+    import('../dialogs/EquipmentManagementDialog').then(({ EquipmentManagementDialog }) => {
+      new EquipmentManagementDialog(this.characterId, this.crewId!).render(true);
+    });
   }
   private async _onTogglePushDie(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();

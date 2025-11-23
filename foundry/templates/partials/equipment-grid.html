@@ -20,9 +20,7 @@ Context Parameters:
 <div class="equipment-grid">
   {{#if items.length}}
     {{#each items}}
-      {{#set isAugmentation this.type="augmentation"}}
-
-      <div class="equipment-item {{this.tier}} {{#if this.equipped}}equipped{{/if}} {{#if this.locked}}locked{{/if}} {{#if this.depleted}}depleted{{/if}} {{#if isAugmentation}}augmentation{{/if}}" {{#if @root.isManagementDialog}}data-equipment-id="{{this.id}}"{{/if}}>
+      <div class="equipment-item {{this.tier}} {{#if this.equipped}}equipped{{/if}} {{#if this.locked}}locked{{/if}} {{#if this.depleted}}depleted{{/if}} {{#if (eq this.type 'augmentation')}}augmentation{{/if}}" {{#if @root.isManagementDialog}}data-equipment-id="{{this.id}}"{{/if}}>
 
         {{!-- Equipment Icon/Image --}}
         <div class="equipment-icon">
@@ -64,7 +62,7 @@ Context Parameters:
             </span>
           {{/if}}
 
-          {{#if isAugmentation}}
+          {{#if (eq this.type 'augmentation')}}
             <span class="equipment-badge augmentation" title="Augmentation (doesn't count toward load)">
               <i class="fas fa-microchip"></i>
             </span>

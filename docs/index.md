@@ -18,3 +18,7 @@ Each feature should have a dedicated document linked below.
 - [Rally](./mechanics-rally.md) - Teamwork mechanic for low momentum.
 - [Traits & Flashbacks](./mechanics-traits.md) - Using traits for positioning and flashbacks.
 - [Equipment Management](./mechanics-equipment.md) - Load, Tiers, and Flashback Items.
+
+## UI/UX Standards
+
+- [Dialog Style Guidelines](./dialog-style-guidelines.md) - Comprehensive UI/UX standards for all dialog templates.
