@@ -1,0 +1,161 @@
+{{!--
+Equipment Row View Template
+
+A reusable partial for displaying a single equipment item with configurable visibility.
+Used in three contexts: Character Sheet, Player Action Widget dropdown, GM Passive Grid.
+
+No image thumbnails - text + icons only for consistency and performance.
+
+Context Parameters:
+- item: Equipment object {id, name, category, tier, slots, description, equipped, locked, consumed, modifiers}
+- config: Visibility configuration object
+  * showTier: Boolean - show tier badge (Common/Rare/Epic)
+  * showBonuses: Boolean - show modifier chips
+  * showSlots: Boolean - show slot cost
+  * showDescription: Boolean - show flavor text
+  * showLocked: Boolean - show locked icon
+  * showEquipped: Boolean - show equipped checkbox/icon
+  * interactiveEquipped: Boolean - checkbox (true) vs radio button (false) for selection
+  * expandableDescription: Boolean - allow expand/collapse of description
+
+--}}
+
+<div class="equipment-row {{item.category}}" data-equipment-id="{{item.id}}">
+
+  {{!-- Primary Content: Name + Category Icon + Bonuses --}}
+  <div class="equipment-primary">
+
+    {{!-- Category Icon --}}
+    <div class="equipment-category-icon" title="{{capitalize item.category}}">
+      {{#eq item.category 'active'}}
+        <i class="fas fa-crossed-swords"></i>
+      {{else if (eq item.category 'passive')}}
+        <i class="fas fa-shield-alt"></i>
+      {{else if (eq item.category 'consumable')}}
+        <i class="fas fa-vial"></i>
+      {{/eq}}
+    </div>
+
+    {{!-- Equipment Name (always visible) --}}
+    <div class="equipment-name">{{item.name}}</div>
+
+    {{!-- Tier Badge (conditional) --}}
+    {{#if config.showTier}}
+      <div class="tier-badge tier-{{item.tier}}" title="{{capitalize item.tier}}">
+        {{capitalize item.tier}}
+      </div>
+    {{/if}}
+
+    {{!-- Bonuses (conditional) --}}
+    {{#if config.showBonuses}}
+      <div class="equipment-bonuses">
+        {{#if item.modifiers}}
+          {{#if item.modifiers.diceBonus}}
+            <span class="bonus-chip bonus-positive" title="Dice Bonus">
+              +{{item.modifiers.diceBonus}}d
+            </span>
+          {{/if}}
+          {{#if item.modifiers.dicePenalty}}
+            <span class="bonus-chip bonus-negative" title="Dice Penalty">
+              -{{item.modifiers.dicePenalty}}d
+            </span>
+          {{/if}}
+          {{#if item.modifiers.positionBonus}}
+            <span class="bonus-chip bonus-positive" title="Position Bonus">
+              +{{item.modifiers.positionBonus}} Pos
+            </span>
+          {{/if}}
+          {{#if item.modifiers.positionPenalty}}
+            <span class="bonus-chip bonus-negative" title="Position Penalty">
+              -{{item.modifiers.positionPenalty}} Pos
+            </span>
+          {{/if}}
+          {{#if item.modifiers.effectBonus}}
+            <span class="bonus-chip bonus-positive" title="Effect Bonus">
+              +{{item.modifiers.effectBonus}} Eff
+            </span>
+          {{/if}}
+          {{#if item.modifiers.effectPenalty}}
+            <span class="bonus-chip bonus-negative" title="Effect Penalty">
+              -{{item.modifiers.effectPenalty}} Eff
+            </span>
+          {{/if}}
+        {{/if}}
+      </div>
+    {{/if}}
+
+  </div>
+
+  {{!-- Secondary Content: State Indicators + Slots --}}
+  <div class="equipment-secondary">
+
+    {{!-- Locked Icon (conditional, shows if item is locked) --}}
+    {{#if config.showLocked}}
+      {{#if item.locked}}
+        <div class="equipment-locked-icon" title="Locked - cannot unequip until reset">
+          <i class="fas fa-lock"></i>
+        </div>
+      {{/if}}
+    {{/if}}
+
+    {{!-- Equipped Indicator (conditional) --}}
+    {{#if config.showEquipped}}
+      {{#if item.locked}}
+        {{!-- Locked items don't get checkbox/radio --}}
+      {{else if config.interactiveEquipped}}
+        {{!-- Character Sheet: Interactive Checkbox --}}
+        <input
+          type="checkbox"
+          class="equipment-checkbox"
+          {{#if item.equipped}}checked{{/if}}
+          data-equipment-id="{{item.id}}"
+          title="{{#if item.equipped}}Unequip{{else}}Equip{{/if}}"
+        />
+      {{else}}
+        {{!-- Dropdown/Grid: Radio Button or Icon --}}
+        {{#if (eq config.selectionType 'radio')}}
+          <input
+            type="radio"
+            class="equipment-radio"
+            name="{{config.radioGroupName}}"
+            value="{{item.id}}"
+            data-equipment-id="{{item.id}}"
+          />
+        {{else if (eq config.selectionType 'icon')}}
+          {{#if item.equipped}}
+            <i class="fas fa-check" title="Equipped"></i>
+          {{/if}}
+        {{/if}}
+      {{/if}}
+    {{/if}}
+
+    {{!-- Slots (conditional) --}}
+    {{#if config.showSlots}}
+      <div class="equipment-slots" title="Slots occupied">
+        {{item.slots}} {{#if (eq item.slots 1)}}slot{{else}}slots{{/if}}
+      </div>
+    {{/if}}
+
+  </div>
+
+</div>
+
+{{!-- Description (conditional, can be expandable) --}}
+{{#if config.showDescription}}
+  {{#if item.description}}
+    {{#if config.expandableDescription}}
+      <div class="equipment-description-expandable">
+        <button class="description-toggle" data-equipment-id="{{item.id}}" title="Toggle description">
+          <i class="fas fa-chevron-down"></i>
+        </button>
+        <div class="equipment-description" style="display: none;">
+          {{item.description}}
+        </div>
+      </div>
+    {{else}}
+      <div class="equipment-description">
+        {{item.description}}
+      </div>
+    {{/if}}
+  {{/if}}
+{{/if}}
