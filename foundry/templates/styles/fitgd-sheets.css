@@ -3453,3 +3453,146 @@
   line-height: 1.5;
   min-height: 30px;
 }
+
+/* Equipment Edit Dialog Form Styling */
+.equipment-edit-dialog .form-group {
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.equipment-edit-dialog .form-group label {
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 0.5rem;
+  font-family: "Signika", sans-serif;
+  font-size: 0.95rem;
+}
+
+.equipment-edit-dialog .form-group input[type="text"],
+.equipment-edit-dialog .form-group input[type="number"],
+.equipment-edit-dialog .form-group textarea,
+.equipment-edit-dialog .form-group select {
+  background: #2a2a2a;
+  color: #fff;
+  border: 1px solid #555;
+  padding: 0.75rem;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-family: "Signika", sans-serif;
+}
+
+.equipment-edit-dialog .form-group input[type="text"]:focus,
+.equipment-edit-dialog .form-group input[type="number"]:focus,
+.equipment-edit-dialog .form-group textarea:focus,
+.equipment-edit-dialog .form-group select:focus {
+  outline: none;
+  border-color: #42a5f5;
+  box-shadow: 0 0 8px rgba(66, 165, 245, 0.3);
+}
+
+.equipment-edit-dialog .form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+}
+
+.equipment-edit-dialog .help-text,
+.equipment-edit-dialog .help-text-small {
+  color: #b0b0b0;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  line-height: 1.4;
+}
+
+.equipment-edit-dialog .help-text strong {
+  color: #fff;
+}
+
+.equipment-edit-dialog .required {
+  color: #ff6b6b;
+  margin-left: 4px;
+}
+
+.equipment-edit-dialog .modifiers-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.equipment-edit-dialog .modifiers-grid .modifier-field label {
+  margin-bottom: 0.5rem;
+}
+
+.equipment-edit-dialog .dialog-header {
+  padding: 1rem;
+  background: linear-gradient(135deg, #1a1a1a 0%, #242424 100%);
+  border-bottom: 2px solid #555;
+  margin-bottom: 1.5rem;
+  border-radius: 4px 4px 0 0;
+}
+
+.equipment-edit-dialog .dialog-header h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.3rem;
+  color: #fff;
+}
+
+.equipment-edit-dialog .dialog-header .info-notice {
+  margin: 0;
+  color: #b0b0b0;
+  font-size: 0.9rem;
+}
+
+.equipment-edit-dialog .warning-notice {
+  background: #664400;
+  border-left: 4px solid #ff9800;
+  color: #ffe0b2;
+  padding: 0.75rem;
+  margin: 0.5rem 0 0 0;
+  border-radius: 3px;
+  font-size: 0.9rem;
+}
+
+.equipment-edit-dialog .dialog-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #555;
+}
+
+.equipment-edit-dialog .dialog-buttons button {
+  flex: 1;
+  padding: 0.75rem;
+  font-size: 0.95rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-family: "Signika", sans-serif;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.equipment-edit-dialog .dialog-buttons button.primary {
+  background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+  color: #fff;
+  border: 2px solid #42a5f5;
+}
+
+.equipment-edit-dialog .dialog-buttons button.primary:hover {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  box-shadow: 0 0 15px rgba(66, 165, 245, 0.6);
+}
+
+.equipment-edit-dialog .dialog-buttons button.secondary {
+  background: #4a4a4a;
+  color: #e0e0e0;
+  border: 1px solid #666;
+}
+
+.equipment-edit-dialog .dialog-buttons button.secondary:hover {
+  background: #5a5a5a;
+}
+

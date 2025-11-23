@@ -105,32 +105,6 @@
       </div>
     </div>
 
-    <div class="form-group">
-      <label>Image Path</label>
-      <input type="text" name="img" value="{{equipment.img}}"
-        placeholder="systems/forged-in-the-grimdark/assets/items/..." />
-      <p class="help-text">Path to item image (or leave empty for default icon)</p>
-    </div>
-
-    {{#if equipment.sourceItemId}}
-    <div class="form-group">
-      <label>📋 Source Template</label>
-      <input type="text" value="{{equipment.sourceItemId}}" disabled />
-      <p class="help-text">Original template ID (for reference only)</p>
-    </div>
-    {{/if}}
-
-    {{#if equipment.acquiredAt}}
-    <div class="form-group">
-      <label>📅 Acquired</label>
-      <p class="equipment-meta">
-        {{#if equipment.acquiredVia}}
-        Via <strong>{{equipment.acquiredVia}}</strong>
-        {{/if}}
-        on <time datetime="{{equipment.acquiredAt}}">{{formatTimestamp equipment.acquiredAt}}</time>
-      </p>
-    </div>
-    {{/if}}
   </form>
 
   {{!-- Action Buttons --}}
