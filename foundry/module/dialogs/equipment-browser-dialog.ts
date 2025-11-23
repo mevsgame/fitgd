@@ -118,12 +118,31 @@ export class EquipmentBrowserDialog extends Dialog {
    * Convert Foundry Item to equipment template data
    */
   private _templateFromItem(item: Item, fromCompendium = false): EquipmentTemplate {
+    const system = (item.system as any) || {};
+
+    // Normalize category to new system (active/passive/consumable) if using old categories
+    let category = system.category || 'active';
+    const categoryMap: Record<string, string> = {
+      weapon: 'active',
+      armor: 'passive',
+      tool: 'active',
+      device: 'active',
+      implant: 'passive',
+      augmentation: 'passive',
+      grenade: 'consumable',
+      medkit: 'consumable',
+      stim: 'consumable',
+    };
+    if (categoryMap[category]) {
+      category = categoryMap[category];
+    }
+
     return {
       id: item.id || foundry.utils.randomID(),
       name: item.name || 'Unknown',
-      tier: (item.system as any).tier as Equipment['tier'],
-      category: (item.system as any).category as string,
-      description: (item.system as any).description || '',
+      tier: (system.tier || 'common') as Equipment['tier'],
+      category,
+      description: system.description || '',
       img: item.img || '',
       source: fromCompendium ? 'compendium' : 'world',
       sourceItemId: item.id || '', // Track source for reference
@@ -146,9 +165,9 @@ export class EquipmentBrowserDialog extends Dialog {
 
           <select class="category-filter">
             <option value="all" ${!this.categoryFilter ? 'selected' : ''}>All Categories</option>
-            <option value="weapon" ${this.categoryFilter === 'weapon' ? 'selected' : ''}>Weapons</option>
-            <option value="armor" ${this.categoryFilter === 'armor' ? 'selected' : ''}>Armor</option>
-            <option value="tool" ${this.categoryFilter === 'tool' ? 'selected' : ''}>Tools</option>
+            <option value="active" ${this.categoryFilter === 'active' ? 'selected' : ''}>Active (Weapons/Tools)</option>
+            <option value="passive" ${this.categoryFilter === 'passive' ? 'selected' : ''}>Passive (Armor/Implants)</option>
+            <option value="consumable" ${this.categoryFilter === 'consumable' ? 'selected' : ''}>Consumable (Grenades/Stims)</option>
           </select>
 
           <input type="text" class="equipment-search" placeholder="Search by name..."/>
