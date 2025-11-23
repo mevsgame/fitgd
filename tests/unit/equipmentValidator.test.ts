@@ -5,6 +5,7 @@
  * Covers load limits, locking, first-lock costs, and item validation.
  */
 
+import { describe, it, expect } from 'vitest';
 import {
   calculateLoadUsed,
   canEquipItem,
@@ -12,7 +13,8 @@ import {
   calculateFirstLockCost,
   validateEquipment,
 } from '../../src/validators/equipmentValidator';
-import type { Character, Equipment } from '../../src/types';
+import type { Character } from '../../src/types/character';
+import type { Equipment } from '../../src/types/equipment';
 
 // Test fixtures
 const createCharacter = (overrides?: Partial<Character>): Character => ({

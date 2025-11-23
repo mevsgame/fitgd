@@ -5,7 +5,8 @@
  * Drives the action resolution flow through the state machine.
  */
 
-import type { Character, Equipment } from '@/types/character';
+import type { Character } from '@/types/character';
+import type { Equipment } from '@/types/equipment';
 import type { Crew } from '@/types/crew';
 import type { Clock } from '@/types/clock';
 import type { RootState } from '@/store';
@@ -15,13 +16,12 @@ import type { TraitTransaction, ConsequenceTransaction } from '@/types/playerRou
 import { selectCanUseRally } from '@/selectors/characterSelectors';
 import { selectStimsAvailable } from '@/selectors/clockSelectors';
 
-import { selectActiveEquipment, selectPassiveEquipment, selectCurrentLoad, selectEquipmentEffect, isEquipmentConsumable } from '@/selectors/equipmentSelectors';
+import { selectActiveEquipment, selectPassiveEquipment, selectCurrentLoad, isEquipmentConsumable } from '@/selectors/equipmentSelectors';
 import { selectDicePool, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect, selectEquipmentEffects, selectEquipmentModifiedPosition, selectEquipmentModifiedEffect } from '@/selectors/playerRoundStateSelectors';
 
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
 
 import { calculateOutcome } from '@/utils/diceRules';
-import { improvePosition, worsenPosition, improveEffect, worsenEffect } from '@/utils/positionEffectHelpers';
 
 import { FlashbackTraitsDialog } from '../dialogs/FlashbackTraitsDialog';
 import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog, RallyDialog } from '../dialogs/index';
@@ -399,9 +399,9 @@ export class PlayerActionWidget extends Application {
       // Available approaches
       approaches: Object.keys(this.character.approaches),
 
-      // Equipment for selection (excluding depleted consumables - they cannot be used once consumed)
+      // Equipment for selection (excluding consumed consumables - they cannot be used once consumed)
       equippedItems: selectActiveEquipment(this.character).filter(
-        item => !item.depleted // Depleted consumables cannot be selected
+        item => !item.consumed // Consumed consumables cannot be selected
       ),
       activeEquipmentItem: this.playerState?.equippedForAction?.[0]
         ? this.character.equipment.find(e => e.id === this.playerState!.equippedForAction![0])
@@ -901,7 +901,7 @@ export class PlayerActionWidget extends Application {
 
             // Check Load Limit
             const currentLoad = selectCurrentLoad(this.character!);
-            const maxLoad = DEFAULT_CONFIG.character.maxLoad;
+            const maxLoad = this.character!.loadLimit;
             if (currentLoad >= maxLoad) {
               ui.notifications?.error(`Cannot equip item: Load limit reached (${currentLoad}/${maxLoad})`);
               return;

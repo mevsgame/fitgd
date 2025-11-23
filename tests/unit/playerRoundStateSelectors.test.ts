@@ -174,11 +174,15 @@ describe('playerRoundStateSelectors', () => {
         id: 'equip-bonus',
         name: 'Bonus Item',
         tier: 'common' as const,
-        category: 'weapon',
-        rarity: 'common' as const,
+        category: 'active' as const,
         description: 'Bonus',
-        tags: ['bonus'],
+        slots: 1,
         equipped: true,
+        locked: false,
+        consumed: false,
+        modifiers: {
+          diceBonus: 1,
+        },
         acquiredAt: Date.now(),
       };
 
@@ -1012,12 +1016,15 @@ describe('playerRoundStateSelectors', () => {
         id: 'equip-weapon',
         name: 'Las Rifle',
         tier: 'common' as const,
-        category: 'weapon',
+        category: 'active' as const,
         description: 'Standard weapon',
-        passive: false,
+        slots: 1,
         equipped: true,
         locked: false,
-        depleted: false,
+        consumed: false,
+        modifiers: {
+          diceBonus: 1,
+        },
         acquiredAt: Date.now(),
       };
 

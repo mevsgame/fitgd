@@ -4,9 +4,9 @@
  * End-to-end tests verifying complete equipment workflows:
  * 1. Equipping/unequipping regular equipment
  * 2. Acquiring rare equipment via flashback (1M cost)
- * 3. Load management and enforcement
- * 4. Augmentation system (no load counting, GM control)
- * 5. Consumable depletion and replenishment
+ * 3. Load management and enforcement (all categories count)
+ * 4. Passive equipment system (armor, implants, augmentations - GM approved)
+ * 5. Consumable consumption and replenishment
  * 6. Equipment locking/unlocking at Momentum Reset
  * 7. Equipment state transitions across game phases
  */
@@ -15,7 +15,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import type { Character, Equipment } from '../../src/types/character';
 import type { Crew } from '../../src/types/crew';
 import type { PlayerRoundState } from '../../src/types/playerRoundState';
-import { selectCurrentLoad, selectCanEquipItem, selectConsumables, selectAugmentations } from '../../src/selectors/equipmentSelectors';
+import { selectCurrentLoad, selectCanEquipItem, selectConsumableEquipment, selectPassiveEquipment } from '../../src/selectors/equipmentSelectors';
 
 describe('Equipment Workflows - Integration Tests', () => {
   let character: Character;
@@ -42,69 +42,65 @@ describe('Equipment Workflows - Integration Tests', () => {
         {
           id: 'equip-common-1',
           name: 'Basic Rifle',
-          type: 'equipment',
+          category: 'active',
           tier: 'common',
-          category: 'weapon',
+          slots: 1,
           description: 'Standard weapon',
-          passive: false,
           equipped: true,
           locked: false,
-          depleted: false,
+          consumed: false,
           acquiredAt: Date.now(),
         },
         {
           id: 'equip-common-2',
           name: 'Combat Armor',
-          type: 'equipment',
+          category: 'passive',
           tier: 'common',
-          category: 'armor',
+          slots: 1,
           description: 'Basic protection',
-          passive: false,
           equipped: true,
           locked: false,
-          depleted: false,
+          consumed: false,
           acquiredAt: Date.now(),
         },
         {
           id: 'equip-rare-1',
           name: 'Plasma Rifle',
-          type: 'equipment',
+          category: 'active',
           tier: 'rare',
-          category: 'weapon',
+          slots: 1,
           description: 'Advanced weapon',
-          passive: false,
           equipped: false,
           locked: false,
-          depleted: false,
+          consumed: false,
           acquiredAt: Date.now(),
         },
         {
           id: 'cons-1',
           name: 'Stim Pack',
-          type: 'consumable',
+          category: 'consumable',
           tier: 'common',
-          category: 'stim',
+          slots: 1,
           description: 'Single-use stim',
-          passive: false,
           equipped: false,
           locked: false,
-          depleted: false,
+          consumed: false,
           acquiredAt: Date.now(),
         },
         {
           id: 'aug-1',
           name: 'Cybernetic Limb',
-          type: 'augmentation',
+          category: 'passive',
           tier: 'common',
-          category: 'cybernetic',
-          description: 'Enhanced limb',
-          passive: true,
+          slots: 1,
+          description: 'Enhanced limb (passive augmentation)',
           equipped: true,
           locked: false,
-          depleted: false,
+          consumed: false,
           acquiredAt: Date.now(),
         },
       ],
+      loadLimit: 5,
       rallyAvailable: true,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -120,7 +116,7 @@ describe('Equipment Workflows - Integration Tests', () => {
       const item = character.equipment.find((e) => e.id === 'equip-common-2');
 
       expect(item?.equipped).toBe(true);
-      expect(initialLoad).toBe(2); // Two common items equipped
+      expect(initialLoad).toBe(3); // Three items equipped: 1 active + 2 passive
     });
 
     it('should prevent exceeding load limit when equipping', () => {
@@ -133,43 +129,40 @@ describe('Equipment Workflows - Integration Tests', () => {
           {
             id: 'equip-3',
             name: 'Item 3',
-            type: 'equipment',
+            category: 'active',
             tier: 'common',
-            category: 'gear',
+            slots: 1,
             description: 'Test',
-            passive: false,
             equipped: true,
             locked: false,
-            depleted: false,
+            consumed: false,
             acquiredAt: Date.now(),
           },
           {
             id: 'equip-4',
             name: 'Item 4',
-            type: 'equipment',
+            category: 'active',
             tier: 'common',
-            category: 'gear',
+            slots: 1,
             description: 'Test',
-            passive: false,
             equipped: true,
             locked: false,
-            depleted: false,
+            consumed: false,
             acquiredAt: Date.now(),
           },
           {
             id: 'equip-5',
             name: 'Item 5',
-            type: 'equipment',
+            category: 'active',
             tier: 'common',
-            category: 'gear',
+            slots: 1,
             description: 'Test',
-            passive: false,
             equipped: true,
             locked: false,
-            depleted: false,
+            consumed: false,
             acquiredAt: Date.now(),
           },
-          { ...character.equipment[4], equipped: true }, // Augmentation (doesn't count)
+          { ...character.equipment[4], equipped: true }, // Passive item (counts toward load)
         ],
       };
 
@@ -189,8 +182,8 @@ describe('Equipment Workflows - Integration Tests', () => {
       };
 
       const newLoad = selectCurrentLoad(modChar);
-      expect(initialLoad).toBe(2);
-      expect(newLoad).toBe(1); // One less
+      expect(initialLoad).toBe(3);
+      expect(newLoad).toBe(2); // One less
     });
   });
 
@@ -230,14 +223,13 @@ describe('Equipment Workflows - Integration Tests', () => {
       const flashbackRare: Equipment = {
         id: 'flashback-rare-1',
         name: 'Flashback Rifle',
-        type: 'equipment',
+        category: 'active',
         tier: 'rare',
-        category: 'weapon',
+        slots: 1,
         description: 'Acquired via flashback',
-        passive: false,
         equipped: true, // Immediately equipped
         locked: true, // Locked until reset
-        depleted: false,
+        consumed: false,
         acquiredVia: 'flashback',
         acquiredAt: Date.now(),
       };
@@ -248,83 +240,81 @@ describe('Equipment Workflows - Integration Tests', () => {
   });
 
   /**
-   * Workflow 3: Augmentation system (no load counting, GM control)
+   * Workflow 3: Passive Equipment System (armor, implants, augmentations)
    */
-  describe('Workflow 3: Augmentation System', () => {
-    it('should not count augmentations toward load limit', () => {
-      const regularLoad = character.equipment
-        .filter((e) => e.type !== 'augmentation' && e.equipped)
-        .length;
-      const augmentationCount = character.equipment
-        .filter((e) => e.type === 'augmentation')
-        .length;
+  describe('Workflow 3: Passive Equipment System', () => {
+    it('should count passive items toward load limit', () => {
+      const activeLoad = character.equipment
+        .filter((e) => e.category === 'active' && e.equipped)
+        .reduce((sum, e) => sum + e.slots, 0);
+      const passiveLoad = character.equipment
+        .filter((e) => e.category === 'passive' && e.equipped)
+        .reduce((sum, e) => sum + e.slots, 0);
 
-      expect(regularLoad).toBe(2);
-      expect(augmentationCount).toBe(1);
-      // Total load is 2, not 3
-      expect(selectCurrentLoad(character)).toBe(2);
+      expect(activeLoad).toBe(1); // Basic Rifle
+      expect(passiveLoad).toBe(2); // Combat Armor + Cybernetic Limb
+      // Total load is 3 (all categories count)
+      expect(selectCurrentLoad(character)).toBe(3);
     });
 
-    it('should allow unlimited augmentations', () => {
-      const augChar = {
+    it('should track multiple passive items', () => {
+      const passiveChar = {
         ...character,
         equipment: [
           ...character.equipment,
           {
-            id: 'aug-2',
+            id: 'passive-2',
             name: 'Biological Enhancement',
-            type: 'augmentation',
+            category: 'passive',
             tier: 'rare',
-            category: 'biological',
+            slots: 1,
             description: 'Bio aug',
-            passive: true,
             equipped: true,
             locked: false,
-            depleted: false,
+            consumed: false,
             acquiredAt: Date.now(),
           },
           {
-            id: 'aug-3',
+            id: 'passive-3',
             name: 'Psionic Attunement',
-            type: 'augmentation',
+            category: 'passive',
             tier: 'epic',
-            category: 'psionic',
+            slots: 1,
             description: 'Psi aug',
-            passive: true,
             equipped: true,
             locked: false,
-            depleted: false,
+            consumed: false,
             acquiredAt: Date.now(),
           },
         ],
       };
 
-      const augs = selectAugmentations(augChar);
-      expect(augs).toHaveLength(3);
-      expect(selectCurrentLoad(augChar)).toBe(2); // Still just 2 (regular items)
+      const passives = selectPassiveEquipment(passiveChar);
+      expect(passives).toHaveLength(4); // 2 initial + 2 new = 4 passive items
+      expect(selectCurrentLoad(passiveChar)).toBe(5); // 1 active + 4 passive = 5 slots used
     });
 
-    it('should track enabled augmentations in player round state', () => {
+    it('should track enabled passive equipment in player round state', () => {
       const playerRoundState: Partial<PlayerRoundState> = {
         characterId: character.id,
-        enabledAugmentationIds: ['aug-1'], // GM enables this augmentation
+        enabledAugmentationIds: ['aug-1'], // GM approves this passive equipment for the roll
       };
 
       expect(playerRoundState.enabledAugmentationIds).toContain('aug-1');
       expect(playerRoundState.enabledAugmentationIds).toHaveLength(1);
     });
 
-    it('should allow GM to toggle augmentations per roll', () => {
-      let enabledAugIds: string[] = ['aug-1'];
+    it('should allow GM to approve passive equipment per roll', () => {
+      let enabledPassiveIds: string[] = ['aug-1'];
 
-      // GM enables another
-      enabledAugIds.push('aug-2');
-      expect(enabledAugIds).toHaveLength(2);
+      // GM approves another
+      enabledPassiveIds.push('passive-2');
+      expect(enabledPassiveIds).toHaveLength(2);
 
-      // GM disables first
-      enabledAugIds = enabledAugIds.filter((id) => id !== 'aug-1');
-      expect(enabledAugIds).toContain('aug-2');
-      expect(enabledAugIds).not.toContain('aug-1');
+      // GM removes approval for first
+      enabledPassiveIds = enabledPassiveIds.filter((id) => id !== 'aug-1');
+      expect(enabledPassiveIds).toContain('passive-2');
+      expect(enabledPassiveIds).not.toContain('aug-1');
     });
   });
 
@@ -333,53 +323,52 @@ describe('Equipment Workflows - Integration Tests', () => {
    */
   describe('Workflow 4: Consumable Management', () => {
     it('should identify consumable items', () => {
-      const consumables = selectConsumables(character);
+      const consumables = character.equipment.filter((e) => e.category === 'consumable');
       expect(consumables).toHaveLength(1);
       expect(consumables[0].id).toBe('cons-1');
     });
 
-    it('should mark consumable as depleted when used', () => {
+    it('should mark consumable as consumed when used', () => {
       const modChar = {
         ...character,
         equipment: character.equipment.map((e) =>
-          e.id === 'cons-1' ? { ...e, equipped: true, depleted: true } : e
+          e.id === 'cons-1' ? { ...e, equipped: true, consumed: true } : e
         ),
       };
 
       const consumable = modChar.equipment.find((e) => e.id === 'cons-1');
-      expect(consumable?.depleted).toBe(true);
+      expect(consumable?.consumed).toBe(true);
       expect(consumable?.equipped).toBe(true); // Still takes load
     });
 
-    it('should prevent using depleted consumables', () => {
+    it('should prevent using consumed consumables', () => {
       const modChar = {
         ...character,
         equipment: character.equipment.map((e) =>
-          e.id === 'cons-1' ? { ...e, equipped: true, depleted: true } : e
+          e.id === 'cons-1' ? { ...e, equipped: true, consumed: true } : e
         ),
       };
 
-      const equippedActive = modChar.equipment.filter(
-        (e) => e.equipped && !e.depleted && e.type !== 'augmentation'
-      );
+      // Get available consumables (not consumed)
+      const availableConsumables = selectConsumableEquipment(modChar);
 
-      // Depleted consumable should not be available for selection
-      expect(equippedActive.find((e) => e.id === 'cons-1')).toBeUndefined();
+      // Consumed consumable should not be available for selection
+      expect(availableConsumables.find((e) => e.id === 'cons-1')).toBeUndefined();
     });
 
     it('should replenish consumables at Momentum Reset', () => {
       // Before reset
       const depleted = character.equipment.map((e) =>
-        e.id === 'cons-1' ? { ...e, depleted: true } : e
+        e.id === 'cons-1' ? { ...e, consumed: true } : e
       );
 
       // Simulate reset: replenish all consumables
       const replenished = depleted.map((e) =>
-        e.type === 'consumable' ? { ...e, depleted: false } : e
+        e.category === 'consumable' ? { ...e, consumed: false } : e
       );
 
       const replenishedConsumable = replenished.find((e) => e.id === 'cons-1');
-      expect(replenishedConsumable?.depleted).toBe(false);
+      expect(replenishedConsumable?.consumed).toBe(false);
     });
   });
 
@@ -460,11 +449,11 @@ describe('Equipment Workflows - Integration Tests', () => {
    */
   describe('Workflow 6: Complex Load Management Scenario', () => {
     it('should handle mixed equipment types correctly', () => {
-      // Scenario: 2 common equipped, 1 rare unequipped, 1 consumable unequipped, 1 augmentation
-      // Current load should be 2 (only regular equipped items count)
+      // Scenario: 1 active equipped, 2 passive equipped, 1 rare unequipped, 1 consumable unequipped
+      // Current load should be 3 (all equipped items count)
 
       const load = selectCurrentLoad(character);
-      expect(load).toBe(2);
+      expect(load).toBe(3);
 
       // Add consumable to equipped
       const modChar = {
@@ -475,7 +464,7 @@ describe('Equipment Workflows - Integration Tests', () => {
       };
 
       const newLoad = selectCurrentLoad(modChar);
-      expect(newLoad).toBe(3); // Now 2 common + 1 consumable
+      expect(newLoad).toBe(4); // Now 1 active + 2 passive + 1 consumable
     });
 
     it('should calculate correct momentum cost for batch changes', () => {
@@ -491,7 +480,7 @@ describe('Equipment Workflows - Integration Tests', () => {
     });
 
     it('should validate load after all changes applied', () => {
-      // Batch: unequip 1 common, equip 1 rare, equip 1 consumable
+      // Batch: unequip 1 active, equip 1 rare active, equip 1 consumable
       const batchChar = {
         ...character,
         equipment: character.equipment.map((e) => {
@@ -503,7 +492,7 @@ describe('Equipment Workflows - Integration Tests', () => {
       };
 
       const finalLoad = selectCurrentLoad(batchChar);
-      expect(finalLoad).toBe(3); // 1 common + 1 rare + 1 consumable
+      expect(finalLoad).toBe(4); // 2 passive + 1 rare active + 1 consumable
     });
   });
 
@@ -521,22 +510,22 @@ describe('Equipment Workflows - Integration Tests', () => {
       expect(playerState.equippedForAction).toContain('equip-common-1');
     });
 
-    it('should mark consumable as depleted when selected for action', () => {
+    it('should mark consumable as consumed when selected for action', () => {
       // Consumable selected for action
       const equippedForAction = ['cons-1'];
 
-      // After action resolution: mark depleted
+      // After action resolution: mark consumed
       const modChar = {
         ...character,
         equipment: character.equipment.map((e) =>
-          equippedForAction.includes(e.id) && e.type === 'consumable'
-            ? { ...e, depleted: true }
+          equippedForAction.includes(e.id) && e.category === 'consumable'
+            ? { ...e, consumed: true }
             : e
         ),
       };
 
-      const depletedConsumable = modChar.equipment.find((e) => e.id === 'cons-1');
-      expect(depletedConsumable?.depleted).toBe(true);
+      const consumedConsumable = modChar.equipment.find((e) => e.id === 'cons-1');
+      expect(consumedConsumable?.consumed).toBe(true);
     });
 
     it('should lock all equipped items when action completes (mission context)', () => {
@@ -574,12 +563,12 @@ describe('Equipment Workflows - Integration Tests', () => {
       // Rolling phase: state unchanged
       const rollingChar = { ...decisionChar };
 
-      // Resolution phase: consumables depleted, rare locked
+      // Resolution phase: consumables consumed, rare locked
       const resolutionChar = {
         ...rollingChar,
         equipment: rollingChar.equipment.map((e) => {
-          if (e.type === 'consumable' && e.equipped) {
-            return { ...e, depleted: true };
+          if (e.category === 'consumable' && e.equipped) {
+            return { ...e, consumed: true };
           }
           return e;
         }),
