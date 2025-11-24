@@ -179,6 +179,7 @@ class FitGDEquipmentSheet extends ItemSheet {
 
     // CRITICAL: Explicitly save the item to Foundry database
     // The parent _updateObject only updates in-memory data, not persistent storage
+    console.log('FitGD | Saving equipment item to database:', this.item!.name, 'with modifiers:', modifiers);
     return this.item!.update(formData as any);
   }
 }
