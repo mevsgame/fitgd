@@ -21,49 +21,55 @@
 
   {{!-- Equipment Form --}}
   <form class="equipment-form">
-    <div class="form-group">
-      <label>Name <span class="required">*</span></label>
-      <input type="text" name="name" value="{{equipment.name}}" maxlength="50" required />
-      <p class="help-text">Equipment name (max 50 characters)</p>
+    {{!-- Name and Tier side-by-side --}}
+    <div class="form-row">
+      <div class="form-group">
+        <label>Name <span class="required">*</span></label>
+        <input type="text" name="name" value="{{equipment.name}}" maxlength="50" required />
+        <p class="help-text">Equipment name (max 50 characters)</p>
+      </div>
+
+      <div class="form-group">
+        <label>Tier <span class="required">*</span></label>
+        <select name="tier" {{#unless canEditTier}}disabled{{/unless}}>
+          {{#each tiers}}
+          <option value="{{this}}" {{#if (eq this ../equipment.tier)}}selected{{/if}}>{{capitalize this}}</option>
+          {{/each}}
+        </select>
+        <p class="help-text">
+          <strong>Common:</strong> Standard gear<br />
+          <strong>Rare:</strong> Requires 1M on first use<br />
+          <strong>Epic:</strong> Must be earned through story
+          {{#unless isGM}}
+          {{#unless canEditTier}}
+          <br /><strong>⚠️ Players: Common only</strong>
+          {{/unless}}
+          {{/unless}}
+        </p>
+      </div>
     </div>
 
-    <div class="form-group">
-      <label>Tier <span class="required">*</span></label>
-      <select name="tier" {{#unless canEditTier}}disabled{{/unless}}>
-        {{#each tiers}}
-        <option value="{{this}}" {{#if (eq this ../equipment.tier)}}selected{{/if}}>{{capitalize this}}</option>
-        {{/each}}
-      </select>
-      <p class="help-text">
-        <strong>Common:</strong> Standard gear, freely available<br />
-        <strong>Rare:</strong> Requires 1M on first use (between Resets)<br />
-        <strong>Epic:</strong> Must be earned through story
-        {{#unless isGM}}
-        {{#unless canEditTier}}
-        <br /><strong>⚠️ Players can only create Common tier equipment</strong>
-        {{/unless}}
-        {{/unless}}
-      </p>
-    </div>
+    {{!-- Category and Slots side-by-side --}}
+    <div class="form-row">
+      <div class="form-group">
+        <label>Category <span class="required">*</span></label>
+        <select name="category" required>
+          {{#each categories}}
+          <option value="{{this}}" {{#if (eq this ../equipment.category)}}selected{{/if}}>{{capitalize this}}</option>
+          {{/each}}
+        </select>
+        <p class="help-text">
+          <strong>Active:</strong> Player selects (weapons, tools)<br />
+          <strong>Passive:</strong> GM approves (armor, implants)<br />
+          <strong>Consumable:</strong> Single-use items (stims, grenades)
+        </p>
+      </div>
 
-    <div class="form-group">
-      <label>Category <span class="required">*</span></label>
-      <select name="category" required>
-        {{#each categories}}
-        <option value="{{this}}" {{#if (eq this ../equipment.category)}}selected{{/if}}>{{capitalize this}}</option>
-        {{/each}}
-      </select>
-      <p class="help-text">
-        <strong>Active:</strong> Player selects in roll (weapons, tools, devices)<br />
-        <strong>Passive:</strong> GM approves during roll (armor, implants, augmentations)<br />
-        <strong>Consumable:</strong> Single-use items (grenades, stims, medkits)
-      </p>
-    </div>
-
-    <div class="form-group">
-      <label>Slots <span class="required">*</span></label>
-      <input type="number" name="slots" value="{{equipment.slots}}" min="1" required />
-      <p class="help-text">Load slots occupied (minimum 1, default 5 slots per character)</p>
+      <div class="form-group">
+        <label>Slots <span class="required">*</span></label>
+        <input type="number" name="slots" value="{{equipment.slots}}" min="1" required />
+        <p class="help-text">Load slots occupied (minimum 1, default 5 slots per character)</p>
+      </div>
     </div>
 
     <div class="form-group">
@@ -75,37 +81,23 @@
 
     <div class="form-group">
       <label>Modifiers</label>
-      <p class="help-text">Configure how this equipment affects rolls when used</p>
+      <p class="help-text">Configure how this equipment affects rolls when used (use negative values for penalties)</p>
       <div class="modifiers-grid">
         <div class="modifier-field">
-          <label>Dice Bonus</label>
-          <input type="number" name="modifiers.diceBonus" value="{{equipment.modifiers.diceBonus}}" placeholder="0" min="0" />
-          <p class="help-text-small">Additional dice in pool (default 1)</p>
+          <label>Dice Modifier</label>
+          <input type="number" name="modifiers.dice" value="{{modifiers.dice}}" placeholder="0" />
+          <p class="help-text-small">Additional dice in pool (positive = bonus, negative = penalty)</p>
         </div>
         <div class="modifier-field">
-          <label>Dice Penalty</label>
-          <input type="number" name="modifiers.dicePenalty" value="{{equipment.modifiers.dicePenalty}}" placeholder="0" min="0" />
-          <p class="help-text-small">Dice to remove from pool</p>
+          <label>Position Modifier</label>
+          <input type="number" name="modifiers.position" value="{{modifiers.position}}" placeholder="0" min="-1"
+            max="1" />
+          <p class="help-text-small">Position steps (positive = improve, negative = worsen)</p>
         </div>
         <div class="modifier-field">
-          <label>Position Bonus</label>
-          <input type="number" name="modifiers.positionBonus" value="{{equipment.modifiers.positionBonus}}" placeholder="0" min="0" max="1" />
-          <p class="help-text-small">Improve position by N steps</p>
-        </div>
-        <div class="modifier-field">
-          <label>Position Penalty</label>
-          <input type="number" name="modifiers.positionPenalty" value="{{equipment.modifiers.positionPenalty}}" placeholder="0" min="0" max="1" />
-          <p class="help-text-small">Worsen position by N steps</p>
-        </div>
-        <div class="modifier-field">
-          <label>Effect Bonus</label>
-          <input type="number" name="modifiers.effectBonus" value="{{equipment.modifiers.effectBonus}}" placeholder="0" min="0" max="1" />
-          <p class="help-text-small">Improve effect by N levels</p>
-        </div>
-        <div class="modifier-field">
-          <label>Effect Penalty</label>
-          <input type="number" name="modifiers.effectPenalty" value="{{equipment.modifiers.effectPenalty}}" placeholder="0" min="0" max="1" />
-          <p class="help-text-small">Reduce effect by N levels</p>
+          <label>Effect Modifier</label>
+          <input type="number" name="modifiers.effect" value="{{modifiers.effect}}" placeholder="0" min="-1" max="1" />
+          <p class="help-text-small">Effect levels (positive = improve, negative = reduce)</p>
         </div>
       </div>
     </div>

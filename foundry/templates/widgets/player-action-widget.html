@@ -173,23 +173,19 @@
           = <strong>{{dicePool}}d</strong>
         </div>
 
-        <!-- Position with Equipment Modifiers -->
+        <!-- Position with Equipment + Trait Modifiers -->
         <div class="plan-line">
           Position: {{uppercase (default playerState.position "risky")}}
-          {{#if equipmentModifiedPosition}}
-          → <span class="modified">{{uppercase equipmentModifiedPosition}}</span>
-          {{else}}
-          → <span class="{{#if playerState.traitTransaction}}improved{{/if}}">{{uppercase improvedPosition}}</span>
+          {{#if (ne improvedPosition playerState.position)}}
+          → <span class="{{#if (or (ne equipmentModifiedPosition playerState.position) playerState.traitTransaction)}}improved{{/if}}">{{uppercase improvedPosition}}</span>
           {{/if}}
         </div>
 
-        <!-- Effect with Equipment Modifiers -->
+        <!-- Effect with Equipment + Push Modifiers -->
         <div class="plan-line">
           Effect: {{uppercase (default playerState.effect "standard")}}
-          {{#if equipmentModifiedEffect}}
-          → <span class="modified">{{uppercase equipmentModifiedEffect}}</span>
-          {{else}}
-          → <span class="{{#if (and playerState.pushed (eq playerState.pushType 'improved-effect'))}}improved{{/if}}">{{uppercase improvedEffect}}</span>
+          {{#if (ne improvedEffect playerState.effect)}}
+          → <span class="{{#if (or (ne equipmentModifiedEffect playerState.effect) (and playerState.pushed (eq playerState.pushType 'improved-effect')))}}improved{{/if}}">{{uppercase improvedEffect}}</span>
           {{/if}}
         </div>
 
