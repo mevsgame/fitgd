@@ -16,7 +16,7 @@ import type { TraitTransaction, ConsequenceTransaction } from '@/types/playerRou
 import { selectCanUseRally } from '@/selectors/characterSelectors';
 import { selectStimsAvailable } from '@/selectors/clockSelectors';
 
-import { selectActiveEquipment, selectPassiveEquipment, selectCurrentLoad, isEquipmentConsumable, selectConsumableEquipment } from '@/selectors/equipmentSelectors';
+import { selectActiveEquipment, selectPassiveEquipment, selectCurrentLoad, isEquipmentConsumable, selectConsumableEquipment, selectFirstLockCost } from '@/selectors/equipmentSelectors';
 import { selectDicePool, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect, selectEquipmentEffects, selectEquipmentModifiedPosition, selectEquipmentModifiedEffect } from '@/selectors/playerRoundStateSelectors';
 
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
@@ -643,6 +643,43 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
+   * Calculate total momentum cost including equipment first-lock costs
+   *
+   * Equipment first-lock costs: 1M per unlocked Rare/Epic item used
+   * Includes: equippedForAction items + approvedPassiveId
+   */
+  private _calculateTotalMomentumCost(playerState: PlayerRoundState | null | undefined, character: Character | null): number {
+    if (!playerState || !character) return 0;
+
+    // Get base costs (push, trait, flashback)
+    const baseCost = selectMomentumCost(playerState);
+
+    // Get equipment items that will be locked in this roll
+    const equipmentToLock: Equipment[] = [];
+
+    // Add selected active/consumable equipment
+    if (playerState.equippedForAction?.[0]) {
+      const equipment = character.equipment.find(e => e.id === playerState.equippedForAction![0]);
+      if (equipment) {
+        equipmentToLock.push(equipment);
+      }
+    }
+
+    // Add approved passive equipment
+    if (playerState.approvedPassiveId) {
+      const passive = character.equipment.find(e => e.id === playerState.approvedPassiveId);
+      if (passive) {
+        equipmentToLock.push(passive);
+      }
+    }
+
+    // Calculate first-lock costs for equipment
+    const equipmentCost = selectFirstLockCost(equipmentToLock);
+
+    return baseCost + equipmentCost;
+  }
+
+  /**
    * Compute improvements preview text
    */
   private _computeImprovements(): string[] {
@@ -1260,11 +1297,41 @@ export class PlayerActionWidget extends Application {
         return;
       }
 
+      // Calculate total momentum cost including equipment first-lock costs
+      const totalMomentumCost = this._calculateTotalMomentumCost(playerState, this.character);
+
+      // Validate sufficient momentum for all costs
+      const availableMomentum = this.crew?.currentMomentum || 0;
+      if (totalMomentumCost > availableMomentum) {
+        const equippedForAction = playerState?.equippedForAction?.[0];
+        const approvedPassiveId = playerState?.approvedPassiveId;
+        const itemsNeedingLock: string[] = [];
+
+        if (equippedForAction && this.character) {
+          const item = this.character.equipment.find(e => e.id === equippedForAction);
+          if (item && (item.tier === 'rare' || item.tier === 'epic') && !item.locked) {
+            itemsNeedingLock.push(item.name);
+          }
+        }
+
+        if (approvedPassiveId && this.character) {
+          const item = this.character.equipment.find(e => e.id === approvedPassiveId);
+          if (item && (item.tier === 'rare' || item.tier === 'epic') && !item.locked) {
+            itemsNeedingLock.push(item.name);
+          }
+        }
+
+        const itemsList = itemsNeedingLock.length > 0 ? ` [${itemsNeedingLock.join(', ')}]` : '';
+        ui.notifications?.error(
+          `Insufficient Momentum to lock equipment! Need ${totalMomentumCost}M, have ${availableMomentum}M${itemsList}`
+        );
+        return;
+      }
+
       // Spend momentum NOW (before rolling)
-      const momentumCost = this.diceRollingHandler.calculateMomentumCost(playerState);
-      if (this.crewId && momentumCost > 0) {
+      if (this.crewId && totalMomentumCost > 0) {
         try {
-          game.fitgd.api.crew.spendMomentum({ crewId: this.crewId, amount: momentumCost });
+          game.fitgd.api.crew.spendMomentum({ crewId: this.crewId, amount: totalMomentumCost });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           ui.notifications?.error(`Failed to spend Momentum: ${errorMessage} `);
