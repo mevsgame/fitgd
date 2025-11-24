@@ -4,7 +4,6 @@
  * Foundry VTT Actor Sheet for crew entities
  */
 
-import type { Clock } from '@/types/clock';
 import { AddClockDialog } from '../dialogs/index';
 import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 import {
@@ -25,8 +24,19 @@ interface CrewSheetData extends ActorSheet.Data {
       name: string;
       foundryActorId: string;
     }>;
-    addictionClock: Clock | null;
-    progressClocks: Clock[];
+    addictionClock: {
+      id: string;
+      segments: number;
+      maxSegments: number;
+    } | null;
+    progressClocks: Array<{
+      id: string;
+      name: string;
+      segments: number;
+      maxSegments: number;
+      category?: string;
+      isCountdown?: boolean;
+    }>;
   };
   reduxId?: string;
 }
@@ -262,23 +272,20 @@ class FitGDCrewSheet extends ActorSheet {
       const segment = getDatasetInt(target, 'segment', 0);
       const currentSegments = getDatasetInt(target, 'currentSegments', 0);
 
-      const clock = game.fitgd.api.clock.getClock(clockId);
-      if (!clock) return;
-
       // Toggle segment: if clicking on filled segment, reduce; otherwise increase
       if (segment < currentSegments) {
         // Reduce to this segment
         const toRemove = currentSegments - segment;
-        game.fitgd.api.clock.clearSegments({ clockId, segments: toRemove });
+        game.fitgd.api.clock.reduce({ clockId, segments: toRemove });
         ui.notifications?.info(`Clock reduced to ${segment} segments`);
       } else if (segment === currentSegments) {
         // Reduce by 1
-        game.fitgd.api.clock.clearSegments({ clockId, segments: 1 });
+        game.fitgd.api.clock.reduce({ clockId, segments: 1 });
         ui.notifications?.info(`Clock reduced by 1 segment`);
       } else {
         // Add to this segment
         const toAdd = segment - currentSegments + 1;
-        game.fitgd.api.clock.addSegments({ clockId, segments: toAdd });
+        game.fitgd.api.clock.advance({ clockId, segments: toAdd });
         ui.notifications?.info(`Clock advanced to ${segment + 1} segments`);
       }
 

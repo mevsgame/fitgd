@@ -64,10 +64,11 @@ export class BaseSelectionDialog extends Application {
   protected data: DialogData;
 
   constructor(options: BaseSelectionDialogOptions) {
+    const height = options.height;
     super({
-      classes: ['fitgd-selection-dialog', 'dialog'],
+      classes: ['fitgd-selection-dialog', 'dialog'] as string[],
       width: options.width || 400,
-      height: options.height || 'auto',
+      height: typeof height === 'string' ? undefined : height,
       resizable: true,
     });
 
@@ -92,15 +93,14 @@ export class BaseSelectionDialog extends Application {
   static override get defaultOptions(): ApplicationOptions {
     return foundry.utils.mergeObject(super.defaultOptions, {
       template: 'systems/forged-in-the-grimdark/templates/dialogs/base-selection-dialog.html',
-      classes: ['fitgd-selection-dialog', 'dialog'],
+      classes: ['fitgd-selection-dialog', 'dialog'] as string[],
       width: 400,
-      height: 'auto',
+      height: undefined,
       resizable: true,
     });
   }
 
-  /** @override */
-  override get title(): string {
+  get title(): string {
     return this._dialogTitle || 'Select Item';
   }
 
@@ -186,7 +186,7 @@ export class BaseSelectionDialog extends Application {
     const query = ((event.target as HTMLInputElement).value || '').toLowerCase();
     const items = this.element.find('[data-action="select-item"]');
 
-    items.each((i: number, el: HTMLElement) => {
+    items.each((_i: number, el: HTMLElement) => {
       const text = el.textContent?.toLowerCase() || '';
       const matches = text.includes(query);
 

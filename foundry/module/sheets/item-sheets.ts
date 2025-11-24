@@ -59,17 +59,17 @@ class FitGDEquipmentSheet extends ItemSheet {
    * Ensures modifiers object exists with proper defaults
    */
   override async getData(options: any = {}): Promise<any> {
-    const data = await super.getData(options);
+    const data = (await super.getData(options)) as any;
 
     // Foundry v11+ structure: data.data.system contains the actual system data
     // But we need to expose it at data.system for the template
-    if (!data.system && data.data?.system) {
-      data.system = data.data.system;
+    if (!data.system && (data as any).data?.system) {
+      data.system = (data as any).data.system;
     }
 
     // Alternatively, if system is in the document
-    if (!data.system && data.document?.system) {
-      data.system = data.document.system;
+    if (!data.system && (data as any).document?.system) {
+      data.system = (data as any).document.system;
     }
 
     // Fallback: create empty system if still missing
@@ -101,8 +101,8 @@ class FitGDEquipmentSheet extends ItemSheet {
   /**
    * Override form submission to manually collect modifier fields
    */
-  protected override async _onSubmit(event: Event, options: any = {}): Promise<void> {
-    const form = (event.target?.closest('form') || this.form) as HTMLFormElement;
+  protected override async _onSubmit(event: Event, options: any = {}): Promise<any> {
+    const form = ((event.target as any)?.closest('form') || this.form) as HTMLFormElement;
 
     // Manually ensure modifier fields are collected, even if Foundry skips them
     if (form) {
@@ -123,10 +123,10 @@ class FitGDEquipmentSheet extends ItemSheet {
   }
 
   /**
-   * Override form data collection to ensure modifier fields are included
+   * Collect form data to ensure modifier fields are included
    */
-  protected override _getFormData(form?: HTMLFormElement): Record<string, any> {
-    const formData = super._getFormData(form);
+  protected _getFormData(form?: HTMLFormElement): Record<string, any> {
+    const formData = (super as any)._getFormData?.(form) || {};
 
     // If no form provided, try to get it from the element
     const actualForm = form || (this.element?.[0] as HTMLFormElement)?.querySelector('form') || this.form;

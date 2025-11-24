@@ -99,7 +99,9 @@ export class ClockCreationDialog extends Dialog {
       create: {
         icon: '<i class="fas fa-clock"></i>',
         label: 'Create Clock',
-        callback: (html?: JQuery) => this._onApply(html!, onCreate, clockType)
+        callback: async (html?: JQuery<HTMLElement>) => {
+          await this._onApply(html!, onCreate, clockType);
+        }
       },
       cancel: {
         icon: '<i class="fas fa-times"></i>',

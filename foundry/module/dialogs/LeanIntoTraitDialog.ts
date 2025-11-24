@@ -50,10 +50,10 @@ export class LeanIntoTraitDialog extends Application {
 
   static override get defaultOptions(): ApplicationOptions {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ['fitgd', 'lean-into-trait-dialog'],
+      classes: ['fitgd', 'lean-into-trait-dialog'] as string[],
       template: 'systems/forged-in-the-grimdark/templates/dialogs/lean-into-trait-dialog.html',
       width: 500,
-      height: 'auto',
+      height: undefined,
       title: 'Lean Into Trait',
       resizable: false,
     });

@@ -12,6 +12,7 @@ export * from './config';
 export * from './equipment';
 export * from './resolution';
 export * from './playerRoundState';
+export * from './foundry';
 
 /**
  * Redux Action Union Type

@@ -5,10 +5,8 @@
  */
 
 import { PlayerActionWidget } from "../widgets/player-action-widget";
+import { createReduxId } from '@/types/foundry';
 
-/**
- * Register all combat-related hooks
- */
 export function registerCombatHooks(): void {
 /* -------------------------------------------- */
 /*  Combat Tracker Hooks                        */
@@ -51,7 +49,7 @@ Hooks.on('combatStart', async function(combat: Combat, _updateData: object) {
     }));
 
     await game.fitgd!.bridge.executeBatch(actions, {
-      affectedReduxIds: characterIds,
+      affectedReduxIds: characterIds.map(createReduxId),
       silent: true // Silent: no sheets to refresh for player round state
     });
   }
@@ -96,7 +94,7 @@ Hooks.on('updateCombat', async function(combat: Combat, updateData: any, _option
       type: 'playerRoundState/setActivePlayer',
       payload: { characterId },
     },
-    { affectedReduxIds: [characterId], silent: true } // Silent: we'll show widget manually below
+    { affectedReduxIds: [createReduxId(characterId)], silent: true } // Silent: we'll show widget manually below
   );
 
   // Show the Player Action Widget for this character

@@ -76,7 +76,9 @@ export class TakeHarmDialog extends Dialog {
       apply: {
         icon: '<i class="fas fa-check"></i>',
         label: "Take Harm",
-        callback: (html: JQuery) => this._onApply(html, characterId, crewId)
+        callback: async (html?: JQuery<HTMLElement>) => {
+          await this._onApply(html!, characterId, crewId);
+        }
       },
       cancel: {
         icon: '<i class="fas fa-times"></i>',

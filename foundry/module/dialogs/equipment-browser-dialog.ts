@@ -41,7 +41,9 @@ export class EquipmentBrowserDialog extends Dialog {
           add: {
             icon: '<i class="fas fa-plus"></i>',
             label: 'Add Equipment',
-            callback: (html: JQuery) => this._onAddEquipment(html),
+            callback: async (html?: JQuery<HTMLElement>) => {
+              await this._onAddEquipment(html!);
+            },
           },
           cancel: {
             icon: '<i class="fas fa-times"></i>',
@@ -49,7 +51,9 @@ export class EquipmentBrowserDialog extends Dialog {
           },
         },
         default: 'add',
-        render: (html: JQuery) => this._onRender(html),
+        render: async (html: JQuery) => {
+          await this._onRender(html);
+        },
       },
       {
         ...options,
@@ -92,7 +96,7 @@ export class EquipmentBrowserDialog extends Dialog {
     }
 
     // Compendium items
-    const compendium = game.packs.get('forged-in-the-grimdark.equipment');
+    const compendium = (game.packs as any).get('forged-in-the-grimdark.equipment');
     if (compendium) {
       const index = await compendium.getIndex({ fields: ['name', 'type', 'system', 'img'] });
 
@@ -151,7 +155,7 @@ export class EquipmentBrowserDialog extends Dialog {
       id: item.id || foundry.utils.randomID(),
       name: item.name || 'Unknown',
       tier: tier as Equipment['tier'],
-      category,
+      category: String(category || 'active'),
       description: system.description || '',
       img: item.img || '',
       source: fromCompendium ? 'compendium' : 'world',
@@ -234,15 +238,15 @@ export class EquipmentBrowserDialog extends Dialog {
    * Activate event listeners
    */
   private _activateListeners(html: JQuery): void {
-    html.find('.tier-filter').change((e) => this._onFilterChange(e, html));
-    html.find('.category-filter').change((e) => this._onFilterChange(e, html));
-    html.find('.equipment-search').on('input', (e) => this._onSearch(e, html));
+    html.find('.tier-filter').change((e) => this._onFilterChange(e as any, html));
+    html.find('.category-filter').change((e) => this._onFilterChange(e as any, html));
+    html.find('.equipment-search').on('input', (e) => this._onSearch(e as any, html));
   }
 
   /**
    * Handle filter change
    */
-  private _onFilterChange(event: JQuery.ChangeEvent, html: JQuery): void {
+  private _onFilterChange(_event: JQuery.ChangeEvent, html: JQuery): void {
     const tierFilter = html.find('.tier-filter').val() as string;
     const categoryFilter = html.find('.category-filter').val() as string;
 
@@ -255,8 +259,8 @@ export class EquipmentBrowserDialog extends Dialog {
   /**
    * Handle search input
    */
-  private _onSearch(event: JQuery.InputEvent, html: JQuery): void {
-    const query = (event.target as HTMLInputElement).value.toLowerCase();
+  private _onSearch(event: Event, html: JQuery): void {
+    const query = ((event.target as HTMLInputElement) || (event as any).currentTarget).value.toLowerCase();
 
     html.find('.browser-equipment-item').each(function () {
       const name = $(this).data('name') as string;
@@ -283,13 +287,13 @@ export class EquipmentBrowserDialog extends Dialog {
     }
 
     // Check tier restrictions (players can only add common items)
-    if (!game.user.isGM && template.tier === 'rare') {
+    if (game.user && !game.user.isGM && template.tier === 'rare') {
       ui.notifications.warn('Rare equipment requires a flashback (1 Momentum + trait)');
       // TODO: Open flashback dialog
       return;
     }
 
-    if (!game.user.isGM && template.tier === 'epic') {
+    if (game.user && !game.user.isGM && template.tier === 'epic') {
       ui.notifications.error(
         'Epic equipment cannot be acquired through flashbacks - must be earned'
       );

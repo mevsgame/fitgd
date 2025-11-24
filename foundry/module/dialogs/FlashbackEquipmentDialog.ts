@@ -5,7 +5,8 @@
  * Epic tier cannot be acquired via flashback and must be earned as story rewards
  */
 
-import type { Character, Equipment } from '@/types/character';
+import type { Character } from '@/types/character';
+import type { Equipment } from '@/types/equipment';
 import type { Crew } from '@/types/crew';
 
 interface FlashbackEquipmentData {
@@ -195,17 +196,15 @@ export class FlashbackEquipmentDialog extends Application {
     const equipment: Equipment = {
       id: equipmentId,
       name: this.selectedItemName,
-      type: 'equipment', // Flashback equipment is always regular equipment
       tier: this.selectedTier,
-      category: 'flashback', // Mark as flashback acquisition
+      category: 'active', // Flashback equipment defaults to active
       description: this.selectedItemDescription,
-      passive: false,
+      slots: 1,
       equipped: true, // Immediately equip flashback items
       locked: true, // Locked until next Momentum Reset
-      depleted: false,
+      consumed: false,
       acquiredAt: Date.now(),
       acquiredVia: 'flashback',
-      metadata: {},
     };
 
     // Dispatch actions in batch if Momentum cost applies

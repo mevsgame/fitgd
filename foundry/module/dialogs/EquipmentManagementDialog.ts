@@ -13,9 +13,10 @@
  * - Transaction pattern for atomic updates
  */
 
-import type { Character, Equipment } from '@/types/character';
+import type { Character } from '@/types/character';
+import type { Equipment } from '@/types/equipment';
 import type { Crew } from '@/types/crew';
-import { selectCurrentLoad, selectCanEquipItem, selectMomentumCostForTier } from '@/selectors/equipmentSelectors';
+import { selectMomentumCostForTier } from '@/selectors/equipmentSelectors';
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
 
 interface EquipmentManagementData {
@@ -108,14 +109,14 @@ export class EquipmentManagementDialog extends Application {
       }
     }
 
-    const maxLoad = DEFAULT_CONFIG.character.maxLoad;
+    const maxLoad = DEFAULT_CONFIG.character.defaultLoadLimit;
     const currentLoad = this._calculateLoad();
 
     // Organize equipment by state
-    const equippedItems = this.character.equipment.filter((e) => e.equipped && e.type !== 'augmentation');
-    const unequippedItems = this.character.equipment.filter((e) => !e.equipped && e.type !== 'augmentation');
-    const augmentations = this.character.equipment.filter((e) => e.type === 'augmentation');
-    const depletedConsumables = this.character.equipment.filter((e) => e.depleted && e.type === 'consumable');
+    const equippedItems = this.character.equipment.filter((e) => e.equipped && e.category !== 'consumable');
+    const unequippedItems = this.character.equipment.filter((e) => !e.equipped && e.category !== 'consumable');
+    const augmentations = this.character.equipment.filter((e) => e.category === 'passive');
+    const depletedConsumables = this.character.equipment.filter((e) => e.consumed && e.category === 'consumable');
 
     // Calculate momentum cost of staged changes
     const momentumCost = this._calculateStagedMomentumCost();
@@ -194,7 +195,7 @@ export class EquipmentManagementDialog extends Application {
     // Check load limit if equipping
     if (!item.equipped) {
       const currentLoad = this._calculateLoad();
-      if (currentLoad >= DEFAULT_CONFIG.character.maxLoad) {
+      if (currentLoad >= DEFAULT_CONFIG.character.defaultLoadLimit) {
         ui.notifications?.warn('Equipment load is full - unequip something first');
         return;
       }
@@ -314,7 +315,7 @@ export class EquipmentManagementDialog extends Application {
 
       // Only charge for equipping rare items (not unequipping)
       if (newEquippedState && !item.equipped && item.tier === 'rare') {
-        cost += selectMomentumCostForTier(item);
+        cost += selectMomentumCostForTier(item.tier);
       }
     }
 

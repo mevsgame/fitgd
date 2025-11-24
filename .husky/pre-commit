@@ -1,0 +1,23 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Pre-commit hook that validates code quality before allowing commits
+# Phases:
+# 1. Type checking (core + foundry)
+# 2. Test suite
+# 3. Build verification
+# If any phase fails, the commit is aborted
+
+echo "🔍 Phase 1: Type checking..."
+npm run type-check:all || (echo "❌ Type check failed! Commit aborted."; exit 1)
+
+echo ""
+echo "🧪 Phase 2: Running tests..."
+npm test -- --run || (echo "❌ Tests failed! Commit aborted."; exit 1)
+
+echo ""
+echo "🔨 Phase 3: Building..."
+npm run build:all || (echo "❌ Build failed! Commit aborted."; exit 1)
+
+echo ""
+echo "✅ All checks passed! Commit allowed."

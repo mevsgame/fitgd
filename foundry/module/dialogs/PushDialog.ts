@@ -9,8 +9,6 @@ import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 type PushType = 'extra-die' | 'improved-effect' | 'improved-position';
 
 export class PushDialog extends Dialog {
-  private crewId!: string;
-
   /**
    * Create a new Push Yourself Dialog
    *
@@ -45,7 +43,9 @@ export class PushDialog extends Dialog {
       push: {
         icon: '<i class="fas fa-bolt"></i>',
         label: "Push Yourself",
-        callback: (html: JQuery) => this._onApply(html, crewId)
+        callback: async (html?: JQuery<HTMLElement>) => {
+          await this._onApply(html!, crewId);
+        }
       },
       cancel: {
         icon: '<i class="fas fa-times"></i>',
@@ -60,8 +60,6 @@ export class PushDialog extends Dialog {
       default: "push",
       ...options
     });
-
-    this.crewId = crewId;
   }
 
   private async _onApply(html: JQuery, crewId: string): Promise<void> {

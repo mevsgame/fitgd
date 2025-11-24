@@ -6,6 +6,7 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
+    "prepare": "husky install",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
@@ -42,6 +43,7 @@
     "@league-of-foundry-developers/foundry-vtt-types": "13.346.0-beta.20251110213629",
     "@types/node": "^24.9.2",
     "@vitest/ui": "^4.0.6",
+    "husky": "^9.1.7",
     "tsx": "^4.20.6",
     "typedoc": "^0.28.14",
     "typescript": "^5.9.3",

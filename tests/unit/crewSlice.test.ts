@@ -61,14 +61,19 @@ describe('crewSlice', () => {
       expect(crew.characters).toHaveLength(0);
     });
 
-    it('should not add duplicate character IDs', () => {
+    it('should be idempotent when adding duplicate character IDs', () => {
       const characterId = 'char-123';
 
       store.dispatch(addCharacterToCrew({ crewId, characterId }));
+      const crewAfterFirst = store.getState().crews.byId[crewId];
+      expect(crewAfterFirst.characters).toHaveLength(1);
 
-      expect(() => {
-        store.dispatch(addCharacterToCrew({ crewId, characterId }));
-      }).toThrow();
+      // Adding same character again should be idempotent - no error, no duplicate
+      store.dispatch(addCharacterToCrew({ crewId, characterId }));
+      const crewAfterSecond = store.getState().crews.byId[crewId];
+
+      expect(crewAfterSecond.characters).toHaveLength(1);
+      expect(crewAfterSecond.characters[0]).toBe(characterId);
     });
   });
 

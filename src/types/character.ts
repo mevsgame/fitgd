@@ -4,6 +4,7 @@
  * Low-change entity stored with full snapshot + command history.
  */
 
+export type { Equipment } from "./equipment";
 import type { Equipment } from "./equipment";
 
 /**

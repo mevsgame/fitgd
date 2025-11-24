@@ -63,10 +63,10 @@ export class FlashbackTraitsDialog extends Application {
 
   static override get defaultOptions(): ApplicationOptions {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ['fitgd', 'flashback-traits-dialog'],
+      classes: ['fitgd', 'flashback-traits-dialog'] as string[],
       template: 'systems/forged-in-the-grimdark/templates/dialogs/flashback-traits-dialog.html',
       width: 500,
-      height: 'auto',
+      height: undefined,
       title: 'Use Trait / Flashback',
       resizable: false,
     });
