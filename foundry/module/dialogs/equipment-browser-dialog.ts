@@ -152,14 +152,14 @@ export class EquipmentBrowserDialog extends Dialog {
     }
 
     return {
-      id: item.id || foundry.utils.randomID(),
-      name: item.name || 'Unknown',
+      id: String(item.id || foundry.utils.randomID()),
+      name: String(item.name || 'Unknown'),
       tier: tier as Equipment['tier'],
       category: String(category || 'active'),
-      description: system.description || '',
-      img: item.img || '',
+      description: String(system.description || ''),
+      img: String(item.img || ''),
       source: fromCompendium ? 'compendium' : 'world',
-      sourceItemId: item.id || '', // Track source for reference
+      sourceItemId: String(item.id || ''), // Track source for reference
     };
   }
 
@@ -311,12 +311,12 @@ export class EquipmentBrowserDialog extends Dialog {
     let sourceItem: Item | null = null;
 
     if (this.items.find(t => t.id === selectedId)?.source === 'compendium') {
-      const compendium = game.packs.get('forged-in-the-grimdark.equipment');
+      const compendium = (game.packs as any).get('forged-in-the-grimdark.equipment');
       if (compendium) {
         sourceItem = (await compendium.getDocument(selectedId)) as Item | null;
       }
     } else {
-      sourceItem = game.items.get(selectedId) as Item | null;
+      sourceItem = (game.items as any).get(selectedId) as Item | null;
     }
 
     // Extract slots and modifiers from source item

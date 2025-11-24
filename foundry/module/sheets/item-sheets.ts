@@ -126,7 +126,8 @@ class FitGDEquipmentSheet extends ItemSheet {
    * Collect form data to ensure modifier fields are included
    */
   protected _getFormData(form?: HTMLFormElement): Record<string, any> {
-    const formData = (super as any)._getFormData?.(form) || {};
+    // Try to call parent _getFormData if it exists
+    const formData: Record<string, any> = {};
 
     // If no form provided, try to get it from the element
     const actualForm = form || (this.element?.[0] as HTMLFormElement)?.querySelector('form') || this.form;
@@ -150,7 +151,7 @@ class FitGDEquipmentSheet extends ItemSheet {
    * but doesn't reconstruct them automatically. This override rebuilds the modifiers
    * object from the flattened form data.
    */
-  protected override async _updateObject(event: Event, formData: Record<string, unknown>): Promise<void> {
+  protected override async _updateObject(_event: Event, formData: Record<string, unknown>): Promise<any> {
     // Get current item's modifiers to preserve existing values
     const currentModifiers = (this.item as any).system.modifiers || {};
 

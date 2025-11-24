@@ -31,8 +31,8 @@ Hooks.on('combatStart', async function(combat: Combat, _updateData: object) {
 
   // Initialize player states for all combatants
   const characterIds: string[] = [];
-  for (const combatant of combat.combatants) {
-    const actor = combatant.actor;
+  for (const combatant of (combat.combatants as unknown as any[])) {
+    const actor = (combatant as any).actor;
     if (!actor) continue;
 
     const characterId = actor.id; // Unified IDs
