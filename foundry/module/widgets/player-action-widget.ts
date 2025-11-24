@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Player Action Widget
  *
  * A persistent widget that appears when it's a player's turn in an encounter.
@@ -56,7 +56,6 @@ interface PlayerActionWidgetData {
   isStimsRolling: boolean;
   isStimsLocked: boolean;
   isSuccess: boolean;
-  isConsequenceChoice: boolean;
   isGMResolvingConsequence: boolean;
 
   // Available approaches
@@ -325,6 +324,11 @@ export class PlayerActionWidget extends Application {
     this.playerState = state.playerRoundState.byCharacterId[this.characterId];
 
     console.log('FitGD | Widget getData() - Current state:', this.playerState?.state, 'isGM:', game.user?.isGM);
+    console.log('FitGD | Widget getData() - Approved Passive ID:', this.playerState?.approvedPassiveId);
+    if (this.playerState?.approvedPassiveId) {
+      const passive = this.character.equipment.find(e => e.id === this.playerState!.approvedPassiveId);
+      console.log('FitGD | Widget getData() - Found Passive Item:', passive);
+    }
 
     // Initialize handlers
     this.consequenceHandler = new ConsequenceResolutionHandler({
@@ -402,7 +406,6 @@ export class PlayerActionWidget extends Application {
       isStimsLocked: this.playerState?.state === 'STIMS_LOCKED',
       isSuccess: this.playerState?.state === 'SUCCESS_COMPLETE',
       isGMResolvingConsequence: this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE',
-      isConsequenceChoice: this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE',
 
       // Available approaches
       approaches: Object.keys(this.character.approaches),
@@ -514,7 +517,6 @@ export class PlayerActionWidget extends Application {
 
     // Consequence buttons
     html.find('[data-action="use-stims"]').click(this._onUseStims.bind(this));
-    html.find('[data-action="accept-consequences"]').click(this._onAcceptConsequences.bind(this));
 
     // GM consequence configuration buttons
     html.find('[data-action="select-consequence-type"]').click(this._onSelectConsequenceType.bind(this));
@@ -807,6 +809,7 @@ export class PlayerActionWidget extends Application {
             approach: this.playerState?.selectedApproach || 'force',
             secondaryApproach: selectedValue,
             equippedForAction: [], // Clear equipment if synergy selected
+            rollMode: 'synergy', // Explicitly set mode to synergy
             position: this.playerState?.position || 'risky',
             effect: this.playerState?.effect || 'standard',
           },
@@ -1480,29 +1483,6 @@ export class PlayerActionWidget extends Application {
     await this._useStims();
   }
 
-  /**
-   * Handle Accept Consequences button (GM_RESOLVING_CONSEQUENCE flow)
-   */
-  private async _onAcceptConsequences(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-
-    console.log('FitGD | Player accepted consequences, transitioning to APPLYING_EFFECTS');
-
-    // Transition to APPLYING_EFFECTS state (next step after accepting consequences)
-    await game.fitgd.bridge.execute(
-      {
-        type: 'playerRoundState/transitionState',
-        payload: {
-          characterId: this.characterId,
-          newState: 'APPLYING_EFFECTS',
-        },
-      },
-      { affectedReduxIds: [asReduxId(this.characterId)], force: true } // Force re-render
-    );
-
-    console.log('FitGD | Transitioned to APPLYING_EFFECTS');
-  }
-
   /* -------------------------------------------- */
   /*  GM Consequence Configuration Handlers       */
   /* -------------------------------------------- */
@@ -1587,12 +1567,15 @@ export class PlayerActionWidget extends Application {
                 try {
                   // Use handler to create clock action
                   const createClockAction = this.consequenceHandler!.createNewHarmClockAction(clockData);
+                  console.log(`FitGD | Creating new harm clock via Bridge:`, createClockAction);
 
                   // Execute clock creation
                   await game.fitgd.bridge.execute(
                     createClockAction,
                     { affectedReduxIds: [asReduxId(targetCharacterId)], silent: true }
                   );
+
+                  console.log(`FitGD | Clock creation executed, should be broadcast now`);
 
                   // Update transaction with new clock
                   const updateAction = this.consequenceHandler!.createUpdateHarmClockInTransactionAction(
@@ -1715,6 +1698,7 @@ export class PlayerActionWidget extends Application {
     if (!this.consequenceApplicationHandler) return;
 
     const transaction = this.playerState?.consequenceTransaction;
+    console.log('FitGD | _onApproveConsequence - Transaction:', JSON.stringify(transaction, null, 2));
 
     // Validate transaction is complete
     const validation = this.consequenceApplicationHandler.validateConsequence(transaction);
@@ -1725,41 +1709,51 @@ export class PlayerActionWidget extends Application {
 
     const state = game.fitgd.store.getState();
 
+    // Check if clock exists in store
+    if (transaction?.harmClockId) {
+      const clock = state.clocks.byId[transaction.harmClockId];
+      console.log('FitGD | Clock exists in store?', !!clock, 'ClockId:', transaction.harmClockId);
+      if (clock) {
+        console.log('FitGD | Clock details:', JSON.stringify(clock, null, 2));
+      }
+    }
+
     // Get workflow with all actions and metadata
     const workflow = this.consequenceApplicationHandler.createConsequenceApplicationWorkflow(state, transaction!);
+    console.log('FitGD | Consequence action:', JSON.stringify(workflow.applyConsequenceAction, null, 2));
 
-    // Transition to APPLYING_EFFECTS
-    await game.fitgd.bridge.execute(workflow.transitionToApplyingAction as any, {
-      affectedReduxIds: [asReduxId(this.characterId)],
-      silent: true,
+    // Build batch of all consequence actions
+    const actions: any[] = [
+      workflow.transitionToApplyingAction,
+      workflow.applyConsequenceAction,
+      workflow.clearTransactionAction,
+      workflow.transitionToTurnCompleteAction,
+    ];
+
+    // Add momentum gain if applicable
+    if (this.crewId && workflow.momentumGain > 0) {
+      actions.push({
+        type: 'crews/addMomentum',
+        payload: { crewId: this.crewId, amount: workflow.momentumGain },
+      });
+    }
+
+    console.log('FitGD | Executing batch of', actions.length, 'consequence actions');
+
+    // Execute all actions as atomic batch (single broadcast)
+    await game.fitgd.bridge.executeBatch(actions, {
+      affectedReduxIds: [
+        asReduxId(this.characterId),
+        ...(workflow.characterIdToNotify ? [asReduxId(workflow.characterIdToNotify)] : []),
+        ...(this.crewId ? [asReduxId(this.crewId)] : []),
+      ],
+      silent: false, // Allow sheet refresh after entire batch
     });
 
-    // Apply the consequence (harm or clock)
-    await game.fitgd.bridge.execute(workflow.applyConsequenceAction as any, {
-      affectedReduxIds: [workflow.characterIdToNotify ? asReduxId(workflow.characterIdToNotify) : asReduxId(this.characterId)],
-      silent: true,
-    });
+    console.log('FitGD | Batch executed, consequences applied');
 
     // Show notification
     ui.notifications?.info(workflow.notificationMessage);
-
-    // Add momentum gain
-    if (this.crewId && workflow.momentumGain > 0) {
-      game.fitgd.api.crew.addMomentum({ crewId: this.crewId, amount: workflow.momentumGain });
-      await game.fitgd.saveImmediate();
-    }
-
-    // Clear transaction
-    await game.fitgd.bridge.execute(workflow.clearTransactionAction as any, {
-      affectedReduxIds: [asReduxId(this.characterId)],
-      silent: true,
-    });
-
-    // Transition to IDLE_WAITING (complete the turn)
-    await game.fitgd.bridge.execute(workflow.transitionToIdleAction as any, {
-      affectedReduxIds: [asReduxId(this.characterId)],
-      silent: true,
-    });
 
     // Close widget after brief delay
     setTimeout(() => this.close(), 500);

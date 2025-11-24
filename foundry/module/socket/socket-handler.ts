@@ -45,6 +45,7 @@ interface PlayerRoundState {
   dicePool?: number;
   consequenceTransaction?: any;
   stimsUsedThisAction?: boolean;
+  approvedPassiveId?: string;
 }
 
 /**
@@ -160,10 +161,10 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
         // Check if this is a fresh/reset state (IDLE_WAITING with minimal data)
         // Note: DECISION_PHASE is a valid active state (player choosing action), not a reset!
         if (receivedPlayerState.state === 'IDLE_WAITING' &&
-            !receivedPlayerState.selectedAction &&
-            !receivedPlayerState.rollResult &&
-            !receivedPlayerState.traitTransaction &&
-            !receivedPlayerState.consequenceTransaction) {
+          !receivedPlayerState.selectedAction &&
+          !receivedPlayerState.rollResult &&
+          !receivedPlayerState.traitTransaction &&
+          !receivedPlayerState.consequenceTransaction) {
           console.log(`  Received state appears to be reset (IDLE_WAITING) - dispatching resetPlayerState`);
           game.fitgd!.store.dispatch({
             type: 'playerRoundState/resetPlayerState',
@@ -189,10 +190,10 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
 
         // Handle new approach-based action plan (selectedApproach, secondaryApproach, equippedForAction, rollMode)
         if (receivedPlayerState.selectedApproach &&
-            (receivedPlayerState.selectedApproach !== currentPlayerState?.selectedApproach ||
-             receivedPlayerState.secondaryApproach !== currentPlayerState?.secondaryApproach ||
-             JSON.stringify(receivedPlayerState.equippedForAction) !== JSON.stringify(currentPlayerState?.equippedForAction) ||
-             receivedPlayerState.rollMode !== currentPlayerState?.rollMode)) {
+          (receivedPlayerState.selectedApproach !== currentPlayerState?.selectedApproach ||
+            receivedPlayerState.secondaryApproach !== currentPlayerState?.secondaryApproach ||
+            JSON.stringify(receivedPlayerState.equippedForAction) !== JSON.stringify(currentPlayerState?.equippedForAction) ||
+            receivedPlayerState.rollMode !== currentPlayerState?.rollMode)) {
           game.fitgd!.store.dispatch({
             type: 'playerRoundState/setActionPlan',
             payload: {
@@ -211,6 +212,17 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
           game.fitgd!.store.dispatch({
             type: 'playerRoundState/setGmApproved',
             payload: { characterId, approved: receivedPlayerState.gmApproved || false }
+          });
+        }
+
+        // CRITICAL: Handle passive equipment approval (NEW)
+        if (receivedPlayerState.approvedPassiveId !== currentPlayerState?.approvedPassiveId) {
+          game.fitgd!.store.dispatch({
+            type: 'playerRoundState/setApprovedPassive',
+            payload: {
+              characterId,
+              equipmentId: receivedPlayerState.approvedPassiveId || null
+            }
           });
         }
 
@@ -234,7 +246,7 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
 
         // CRITICAL: Handle push improvements (pushed + pushType)
         if (receivedPlayerState.pushed !== currentPlayerState?.pushed ||
-            receivedPlayerState.pushType !== currentPlayerState?.pushType) {
+          receivedPlayerState.pushType !== currentPlayerState?.pushType) {
           game.fitgd!.store.dispatch({
             type: 'playerRoundState/setImprovements',
             payload: {
@@ -262,8 +274,8 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
         // CRITICAL: Handle roll results (dicePool, rollResult, outcome)
         if (receivedPlayerState.rollResult || receivedPlayerState.outcome || receivedPlayerState.dicePool !== undefined) {
           if (JSON.stringify(receivedPlayerState.rollResult) !== JSON.stringify(currentPlayerState?.rollResult) ||
-              receivedPlayerState.outcome !== currentPlayerState?.outcome ||
-              receivedPlayerState.dicePool !== currentPlayerState?.dicePool) {
+            receivedPlayerState.outcome !== currentPlayerState?.outcome ||
+            receivedPlayerState.dicePool !== currentPlayerState?.dicePool) {
             game.fitgd!.store.dispatch({
               type: 'playerRoundState/setRollResult',
               payload: {

@@ -288,36 +288,6 @@
   </div>
   {{/if}}
 
-  <!-- ==================== CONSEQUENCE CHOICE ==================== -->
-  {{#if isConsequenceChoice}}
-  <div class="widget-content consequence-choice">
-    <div class="roll-outcome">
-      {{#if (eq playerState.outcome "partial")}}
-      <h2 class="outcome-partial">⚠️ PARTIAL SUCCESS</h2>
-      {{else}}
-      <h2 class="outcome-failure">❌ FAILURE</h2>
-      {{/if}}
-      <div class="dice-display">
-        <div class="dice-result">Highest: {{max playerState.rollResult}}</div>
-        <div class="dice-rolled">Rolled: {{join playerState.rollResult ", "}}</div>
-      </div>
-    </div>
-    <p class="consequence-message">You face consequences...</p>
-
-    {{#unless isGM}}
-    <div class="action-buttons">
-      <button type="button" data-action="use-stims" {{#if playerState.stimsUsedThisAction}}disabled{{/if}}>
-        {{#if playerState.stimsUsedThisAction}}Stims Already Used{{else}}Use Stims & Reroll{{/if}}
-      </button>
-      <button type="button" data-action="accept-consequences" class="primary" {{#unless
-        consequenceConfigured}}disabled{{/unless}}>
-        {{#if consequenceConfigured}}Accept Consequences{{else}}Waiting for GM to configure consequence...{{/if}}
-      </button>
-    </div>
-    {{/unless}}
-  </div>
-  {{/if}}
-
   <!-- ==================== GM RESOLVING CONSEQUENCE ==================== -->
   {{#if isGMResolvingConsequence}}
   <div class="widget-content gm-resolving-consequence">
@@ -470,6 +440,7 @@
       </div>
       {{/if}}
     </div>
+    {{/if}}
 
     {{#unless isGM}}
     <!-- ==================== PLAYER ACTIONS ==================== -->
@@ -496,7 +467,6 @@
       </div>
     </div>
     {{/unless}}
-    {{/if}}
   </div>
   {{/if}}
 </div>

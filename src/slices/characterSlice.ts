@@ -149,7 +149,10 @@ const characterSlice = createSlice({
       reducer: (state, action: PayloadAction<Character>) => {
         const character = action.payload;
         state.byId[character.id] = character;
-        state.allIds.push(character.id);
+        // Only add to allIds if not already present (idempotent for replay)
+        if (!state.allIds.includes(character.id)) {
+          state.allIds.push(character.id);
+        }
 
         // Log command to history
         state.history.push({
@@ -213,7 +216,11 @@ const characterSlice = createSlice({
         // Validate trait addition
         validateTraitAddition(character, traitWithId);
 
-        character.traits.push(traitWithId);
+        // Only add if not already present (idempotent for replay)
+        const existingIndex = character.traits.findIndex(t => t.id === traitWithId.id);
+        if (existingIndex === -1) {
+          character.traits.push(traitWithId);
+        }
         character.updatedAt = Date.now();
 
         // Log command to history
@@ -539,7 +546,11 @@ const characterSlice = createSlice({
           equipment.id = generateId();
         }
 
-        character.equipment.push(equipment);
+        // Only add if not already present (idempotent for replay)
+        const existingIndex = character.equipment.findIndex(e => e.id === equipment.id);
+        if (existingIndex === -1) {
+          character.equipment.push(equipment);
+        }
         character.updatedAt = Date.now();
 
         // Log command to history

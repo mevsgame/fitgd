@@ -47,9 +47,9 @@ export interface ConsequenceApplicationResult {
     type: string;
     payload: { characterId: string };
   };
-  transitionToIdleAction: {
+  transitionToTurnCompleteAction: {
     type: string;
-    payload: { characterId: string; newState: 'IDLE_WAITING' };
+    payload: { characterId: string; newState: 'TURN_COMPLETE' };
   };
   notificationMessage: string;
   momentumGain: number;
@@ -157,7 +157,7 @@ export class ConsequenceApplicationHandler {
       type: 'clocks/addSegments',
       payload: {
         clockId: transaction.harmClockId,
-        segments,
+        amount: segments,
       },
     };
   }
@@ -180,7 +180,7 @@ export class ConsequenceApplicationHandler {
       type: 'clocks/addSegments',
       payload: {
         clockId: transaction.crewClockId,
-        segments,
+        amount: segments,
       },
     };
   }
@@ -201,19 +201,19 @@ export class ConsequenceApplicationHandler {
   }
 
   /**
-   * Create transition action to IDLE_WAITING state
+   * Create transition action to TURN_COMPLETE state
    *
    * @returns Redux action
    */
-  createTransitionToIdleAction(): {
+  createTransitionToTurnCompleteAction(): {
     type: string;
-    payload: { characterId: string; newState: 'IDLE_WAITING' };
+    payload: { characterId: string; newState: 'TURN_COMPLETE' };
   } {
     return {
       type: 'playerRoundState/transitionState',
       payload: {
         characterId: this.config.characterId,
-        newState: 'IDLE_WAITING',
+        newState: 'TURN_COMPLETE',
       },
     };
   }
@@ -243,18 +243,18 @@ export class ConsequenceApplicationHandler {
   /**
    * Generate notification message for consequence application
    *
+   * @param state - Redux state
    * @param transaction - Consequence transaction
+   * @param segments - Number of segments applied
    * @returns Human-readable notification message
    */
-  generateNotificationMessage(transaction: ConsequenceTransaction | null, _segments: number): string {
+  generateNotificationMessage(state: RootState, transaction: ConsequenceTransaction | null, segments: number): string {
     if (!transaction) return 'Consequence applied';
 
-    const severityText = selectConsequenceSeverity(
-      selectEffectivePosition({ characters: {}, crews: {}, clocks: {} } as any, this.config.characterId)
-    );
-    const consequenceType = transaction.consequenceType === 'harm' ? 'harm clock' : 'crew clock';
+    const position = selectEffectivePosition(state, this.config.characterId);
+    const consequenceType = transaction.consequenceType === 'harm' ? 'harm' : 'crew clock';
 
-    return `Applied ${severityText} harm (${consequenceType})`;
+    return `Applied ${segments} segments to ${consequenceType} (Position: ${position})`;
   }
 
   /**
@@ -300,8 +300,8 @@ export class ConsequenceApplicationHandler {
         ? this.createApplyHarmAction(transaction, segments)
         : this.createAdvanceCrewClockAction(transaction, segments),
       clearTransactionAction: this.createClearTransactionAction(),
-      transitionToIdleAction: this.createTransitionToIdleAction(),
-      notificationMessage: this.generateNotificationMessage(transaction, segments),
+      transitionToTurnCompleteAction: this.createTransitionToTurnCompleteAction(),
+      notificationMessage: this.generateNotificationMessage(state, transaction, segments),
       momentumGain,
       characterIdToNotify: isHarm ? transaction.harmTargetCharacterId : undefined,
       crewIdToNotify: this.config.crewId || undefined,

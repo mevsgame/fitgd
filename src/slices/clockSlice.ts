@@ -89,27 +89,33 @@ interface ChangeSubtypePayload {
 }
 
 /**
- * Helper: Add clock to indexes
+ * Helper: Add clock to indexes (idempotent - safe for replay)
  */
 function addToIndexes(state: ClockState, clock: Clock): void {
-  // Add to byEntityId
+  // Add to byEntityId (only if not already present)
   if (!state.byEntityId[clock.entityId]) {
     state.byEntityId[clock.entityId] = [];
   }
-  state.byEntityId[clock.entityId].push(clock.id);
+  if (!state.byEntityId[clock.entityId].includes(clock.id)) {
+    state.byEntityId[clock.entityId].push(clock.id);
+  }
 
-  // Add to byType
+  // Add to byType (only if not already present)
   if (!state.byType[clock.clockType]) {
     state.byType[clock.clockType] = [];
   }
-  state.byType[clock.clockType].push(clock.id);
+  if (!state.byType[clock.clockType].includes(clock.id)) {
+    state.byType[clock.clockType].push(clock.id);
+  }
 
-  // Add to byTypeAndEntity
+  // Add to byTypeAndEntity (only if not already present)
   const key = `${clock.clockType}:${clock.entityId}`;
   if (!state.byTypeAndEntity[key]) {
     state.byTypeAndEntity[key] = [];
   }
-  state.byTypeAndEntity[key].push(clock.id);
+  if (!state.byTypeAndEntity[key].includes(clock.id)) {
+    state.byTypeAndEntity[key].push(clock.id);
+  }
 }
 
 /**
@@ -226,8 +232,14 @@ const clockSlice = createSlice({
 
         // Add clock to store
         state.byId[clock.id] = clock;
-        state.allIds.push(clock.id);
+        // Only add to allIds if not already present (idempotent for replay)
+        if (!state.allIds.includes(clock.id)) {
+          state.allIds.push(clock.id);
+        }
         addToIndexes(state, clock);
+
+        console.log(`FitGD | clockSlice.createClock - Created clock:`, clock.id, clock.subtype, `for entity:`, clock.entityId);
+        console.log(`FitGD | clockSlice.createClock - Adding to history, current history length:`, state.history.length);
 
         // Log command to history
         state.history.push({
@@ -238,6 +250,8 @@ const clockSlice = createSlice({
           commandId: generateId(),
           userId: undefined,
         });
+
+        console.log(`FitGD | clockSlice.createClock - History length after push:`, state.history.length);
       },
       prepare: (payload: CreateClockPayload) => {
         const timestamp = Date.now();
@@ -290,6 +304,9 @@ const clockSlice = createSlice({
       reducer: (state, action: PayloadAction<AddSegmentsPayload>) => {
         const { clockId, amount } = action.payload;
         const clock = state.byId[clockId];
+
+        console.log(`FitGD | clockSlice.addSegments called - ClockId: ${clockId}, Amount: ${amount}`);
+        console.log(`FitGD | Clock before update:`, clock ? JSON.stringify(clock) : 'NOT FOUND');
 
         validateClockExists(clock, clockId);
         validateSegmentAmount(amount);

@@ -97,6 +97,18 @@ export function createQueryAPI(store: Store) {
       const harmClocks = selectHarmClocksByCharacter(state, characterId);
       console.log(`FitGD | queryApi.getHarmClocks(${characterId}): found ${harmClocks.length} clocks`, harmClocks);
 
+      // Log the index to check for duplicates
+      const key = `harm:${characterId}`;
+      const clockIds = state.clocks.byTypeAndEntity[key] || [];
+      console.log(`FitGD | byTypeAndEntity index for ${key}:`, clockIds);
+
+      // Check for duplicate IDs in the index
+      const uniqueIds = new Set(clockIds);
+      if (uniqueIds.size !== clockIds.length) {
+        console.error(`FitGD | DUPLICATE CLOCK IDS IN INDEX! ${clockIds.length} total, ${uniqueIds.size} unique`);
+        console.error(`FitGD | Duplicate IDs:`, clockIds);
+      }
+
       const result = harmClocks.map((clock) => ({
         id: clock.id,
         subtype: clock.subtype ?? 'Unknown',
