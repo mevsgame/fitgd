@@ -176,6 +176,10 @@ class FitGDEquipmentSheet extends ItemSheet {
 
     // Call parent to handle the update
     await super._updateObject(event, formData);
+
+    // CRITICAL: Explicitly save the item to Foundry database
+    // The parent _updateObject only updates in-memory data, not persistent storage
+    return this.item!.update(formData as any);
   }
 }
 
