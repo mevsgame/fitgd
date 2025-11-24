@@ -148,17 +148,22 @@ class FitGDEquipmentSheet extends ItemSheet {
 
     for (const [key, value] of Object.entries(formData)) {
       if (key.startsWith('system.modifiers.')) {
-        console.log(`FitGD |   Found modifier key: ${key} = ${value} (type: ${typeof value})`);
+        console.log(`FitGD |   Found modifier key: ${key} = ${JSON.stringify(value)} (type: ${typeof value})`);
         const modifierKey = key.replace('system.modifiers.', '');
 
-        // Parse the value: empty string or null = undefined, otherwise parse as number
+        // Parse the value: empty string, null, or undefined = undefined, otherwise parse as number
         let parsedValue: any = undefined;
 
+        // null happens when Foundry processes empty form fields
+        // We want to treat null/empty as undefined (no modifier)
         if (value !== '' && value !== null && value !== undefined) {
           if (typeof value === 'string') {
-            // Try to parse as number
-            const numValue = parseInt(value, 10);
-            parsedValue = isNaN(numValue) ? undefined : numValue;
+            const trimmed = String(value).trim();
+            if (trimmed !== '') {
+              // Try to parse as number
+              const numValue = parseInt(trimmed, 10);
+              parsedValue = isNaN(numValue) ? undefined : numValue;
+            }
           } else if (typeof value === 'number') {
             // Already a number, keep it
             parsedValue = value;
@@ -166,7 +171,7 @@ class FitGDEquipmentSheet extends ItemSheet {
         }
 
         modifiers[modifierKey] = parsedValue;
-        console.log(`FitGD |     → Parsed as: ${parsedValue}`);
+        console.log(`FitGD |     → Parsed as: ${parsedValue} (saved as: ${parsedValue === undefined ? 'undefined' : parsedValue})`);
         keysToDelete.push(key);
       }
     }
