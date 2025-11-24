@@ -16,7 +16,7 @@ import type { TraitTransaction, ConsequenceTransaction } from '@/types/playerRou
 import { selectCanUseRally } from '@/selectors/characterSelectors';
 import { selectStimsAvailable } from '@/selectors/clockSelectors';
 
-import { selectActiveEquipment, selectPassiveEquipment, selectCurrentLoad, isEquipmentConsumable } from '@/selectors/equipmentSelectors';
+import { selectActiveEquipment, selectPassiveEquipment, selectCurrentLoad, isEquipmentConsumable, selectConsumableEquipment } from '@/selectors/equipmentSelectors';
 import { selectDicePool, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect, selectEquipmentEffects, selectEquipmentModifiedPosition, selectEquipmentModifiedEffect } from '@/selectors/playerRoundStateSelectors';
 
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
@@ -68,6 +68,11 @@ interface PlayerActionWidgetData {
   passiveEquipment: Equipment[];
   selectedPassiveId?: string | null;
   approvedPassiveEquipment?: Equipment;
+
+  // Secondary approach unified dropdown options
+  secondaryOptions?: Array<{ type: 'approach' | 'separator' | 'active' | 'consumable', value?: string, name?: string, bonus?: string, locked?: boolean }>;
+  selectedSecondaryId?: string | null;
+  selectedSecondaryName?: string | null;
 
   // Equipment effects from selected items
   equipmentEffects?: {
@@ -460,6 +465,11 @@ export class PlayerActionWidget extends Application {
       equipmentModifiedPosition: selectEquipmentModifiedPosition(state, this.characterId),
       equipmentModifiedEffect: selectEquipmentModifiedEffect(state, this.characterId),
 
+      // Secondary approach unified dropdown options
+      secondaryOptions: this._buildSecondaryOptions(this.playerState?.selectedApproach, this.character),
+      selectedSecondaryId: this.playerState?.equippedForAction?.[0] || this.playerState?.secondaryApproach,
+      selectedSecondaryName: this._getSelectedSecondaryName(this.playerState, this.character),
+
       // Consequence transaction data (for GM_RESOLVING_CONSEQUENCE state)
       ...(this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE' ? this._getConsequenceData(state) : {}),
     };
@@ -541,6 +551,95 @@ export class PlayerActionWidget extends Application {
         force: true, // Force full re-render to show new traits
       });
     }
+  }
+
+  /**
+   * Build secondary approach options (unified dropdown)
+   *
+   * Format: [Approaches] [Separator] [Active Equipment] [Consumables]
+   * Each equipment shows: Name + Bonuses + Category Icon
+   */
+  private _buildSecondaryOptions(
+    selectedApproach: string | undefined,
+    character: Character
+  ): Array<{ type: 'approach' | 'separator' | 'active' | 'consumable', value?: string, name?: string, bonus?: string, locked?: boolean }> {
+    const options: Array<{ type: 'approach' | 'separator' | 'active' | 'consumable', value?: string, name?: string, bonus?: string, locked?: boolean }> = [];
+
+    // Add other approaches (excluding primary)
+    const otherApproaches = Object.keys(character.approaches).filter(
+      a => a !== selectedApproach?.toLowerCase()
+    );
+
+    otherApproaches.forEach(approach => {
+      options.push({
+        type: 'approach',
+        value: approach,
+        name: approach.charAt(0).toUpperCase() + approach.slice(1),
+        bonus: `${character.approaches[approach as keyof typeof character.approaches]}d`
+      });
+    });
+
+    // Add separator if there are equipment items
+    const activeItems = selectActiveEquipment(character);
+    const consumableItems = selectConsumableEquipment(character);
+
+    if (activeItems.length > 0 || consumableItems.length > 0) {
+      options.push({ type: 'separator' });
+    }
+
+    // Add active equipment (sorted alphabetically)
+    activeItems.sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
+      const bonuses: string[] = [];
+      if (item.modifiers?.diceBonus) bonuses.push(`+${item.modifiers.diceBonus}d`);
+      if (item.modifiers?.positionBonus) bonuses.push(`+${item.modifiers.positionBonus}pos`);
+      if (item.modifiers?.effectBonus) bonuses.push(`+${item.modifiers.effectBonus}eff`);
+
+      options.push({
+        type: 'active',
+        value: item.id,
+        name: item.name,
+        bonus: bonuses.join(' '),
+        locked: item.locked
+      });
+    });
+
+    // Add consumable equipment (sorted alphabetically)
+    consumableItems.sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
+      const bonuses: string[] = [];
+      if (item.modifiers?.diceBonus) bonuses.push(`+${item.modifiers.diceBonus}d`);
+      if (item.modifiers?.positionBonus) bonuses.push(`+${item.modifiers.positionBonus}pos`);
+      if (item.modifiers?.effectBonus) bonuses.push(`+${item.modifiers.effectBonus}eff`);
+
+      options.push({
+        type: 'consumable',
+        value: item.id,
+        name: item.name,
+        bonus: bonuses.join(' '),
+        locked: item.locked
+      });
+    });
+
+    return options;
+  }
+
+  /**
+   * Get the name of the selected secondary (approach or equipment)
+   */
+  private _getSelectedSecondaryName(playerState: PlayerRoundState | null | undefined, character: Character | null): string | null {
+    if (!playerState || !character) return null;
+
+    // Check if secondary approach is selected
+    if (playerState.secondaryApproach) {
+      return playerState.secondaryApproach.charAt(0).toUpperCase() + playerState.secondaryApproach.slice(1);
+    }
+
+    // Check if equipment is equipped
+    if (playerState.equippedForAction?.[0]) {
+      const equipment = character.equipment.find(e => e.id === playerState.equippedForAction![0]);
+      return equipment?.name || null;
+    }
+
+    return null;
   }
 
   /**
@@ -634,25 +733,84 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Handle secondary approach change
+   * Handle secondary approach/equipment change (unified dropdown)
+   * Can be either an approach name or equipment ID
    */
   private async _onSecondaryApproachChange(event: JQuery.ChangeEvent): Promise<void> {
-    const secondaryApproach = (event.currentTarget as HTMLSelectElement).value;
-
-    await game.fitgd.bridge.execute(
-      {
-        type: 'playerRoundState/setActionPlan',
-        payload: {
-          characterId: this.characterId,
-          approach: this.playerState?.selectedApproach || 'force',
-          secondaryApproach: secondaryApproach || undefined,
-          rollMode: 'synergy', // Ensure synergy mode stays active
-          position: this.playerState?.position || 'risky',
-          effect: this.playerState?.effect || 'standard',
+    const selectedValue = (event.currentTarget as HTMLSelectElement).value;
+    if (!selectedValue) {
+      // Deselected - clear both
+      await game.fitgd.bridge.execute(
+        {
+          type: 'playerRoundState/setActionPlan',
+          payload: {
+            characterId: this.characterId,
+            approach: this.playerState?.selectedApproach || 'force',
+            secondaryApproach: undefined,
+            equippedForAction: [],
+            position: this.playerState?.position || 'risky',
+            effect: this.playerState?.effect || 'standard',
+          },
         },
-      },
-      { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
-    );
+        { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
+      );
+      return;
+    }
+
+    // Determine if it's an approach or equipment by checking against approaches
+    const isApproach = Object.keys(this.character!.approaches).includes(selectedValue);
+
+    if (isApproach) {
+      // Selected an approach for secondary
+      await game.fitgd.bridge.execute(
+        {
+          type: 'playerRoundState/setActionPlan',
+          payload: {
+            characterId: this.characterId,
+            approach: this.playerState?.selectedApproach || 'force',
+            secondaryApproach: selectedValue,
+            equippedForAction: [], // Clear equipment if synergy selected
+            position: this.playerState?.position || 'risky',
+            effect: this.playerState?.effect || 'standard',
+          },
+        },
+        { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
+      );
+    } else {
+      // Selected an equipment item
+      const actions = [
+        {
+          type: 'playerRoundState/setActionPlan',
+          payload: {
+            characterId: this.characterId,
+            approach: this.playerState?.selectedApproach || 'force',
+            secondaryApproach: undefined, // Clear synergy if equipment selected
+            equippedForAction: [selectedValue],
+            position: this.playerState?.position || 'risky',
+            effect: this.playerState?.effect || 'standard',
+          },
+        } as any,
+      ];
+
+      // If consumable is selected, mark it as depleted
+      if (this.character) {
+        const equipment = this.character.equipment.find(e => e.id === selectedValue);
+        if (equipment && isEquipmentConsumable(equipment)) {
+          actions.push({
+            type: 'characters/markEquipmentDepleted',
+            payload: {
+              characterId: this.characterId,
+              equipmentId: selectedValue,
+            },
+          } as any);
+        }
+      }
+
+      await game.fitgd.bridge.executeBatch(
+        actions,
+        { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
+      );
+    }
   }
 
   /**
