@@ -57,11 +57,22 @@
       "templates": [
         "base"
       ],
-      "tier": "accessible",
-      "category": "weapon",
-      "rarity": "common",
-      "tags": [],
-      "equipped": false
+      "tier": "common",
+      "category": "active",
+      "slots": 1,
+      "modifiers": {
+        "diceBonus": null,
+        "dicePenalty": null,
+        "positionBonus": null,
+        "positionPenalty": null,
+        "effectBonus": null,
+        "effectPenalty": null
+      },
+      "equipped": false,
+      "locked": false,
+      "consumed": false,
+      "acquiredAt": 0,
+      "acquiredVia": "earned"
     }
   }
 }

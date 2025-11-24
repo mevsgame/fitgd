@@ -49,7 +49,8 @@ class FitGDEquipmentSheet extends ItemSheet {
       template: 'systems/forged-in-the-grimdark/templates/equipment-sheet.html',
       width: 520,
       height: 600,
-      submitOnChange: true  // Submit on every change
+      submitOnChange: true,  // Submit on every change
+      closeOnSubmit: false   // Don't close on submit (allows multiple edits)
     });
   }
 
@@ -60,17 +61,33 @@ class FitGDEquipmentSheet extends ItemSheet {
   override async getData(options: any = {}): Promise<any> {
     const data = await super.getData(options);
 
-    // Ensure modifiers object exists and has all expected fields
-    const item = this.item as any;
-    if (!item.system.modifiers) {
-      item.system.modifiers = {};
+    // Foundry v11+ structure: data.data.system contains the actual system data
+    // But we need to expose it at data.system for the template
+    if (!data.system && data.data?.system) {
+      data.system = data.data.system;
     }
 
-    // Ensure all modifier fields exist (with undefined for unset values)
+    // Alternatively, if system is in the document
+    if (!data.system && data.document?.system) {
+      data.system = data.document.system;
+    }
+
+    // Fallback: create empty system if still missing
+    if (!data.system) {
+      console.warn('FitGD | No system found, creating empty object');
+      data.system = {};
+    }
+
+    // Ensure modifiers object exists
+    if (!data.system.modifiers) {
+      data.system.modifiers = {};
+    }
+
+    // Ensure all modifier fields exist (templates use {{system.modifiers.diceBonus}})
     const expectedModifiers = ['diceBonus', 'dicePenalty', 'positionBonus', 'positionPenalty', 'effectBonus', 'effectPenalty'];
     for (const modifier of expectedModifiers) {
-      if (!(modifier in item.system.modifiers)) {
-        item.system.modifiers[modifier] = undefined;
+      if (!(modifier in data.system.modifiers)) {
+        data.system.modifiers[modifier] = undefined;
       }
     }
 
@@ -78,12 +95,6 @@ class FitGDEquipmentSheet extends ItemSheet {
   }
 
   override async _render(force: boolean = false, options: any = {}): Promise<void> {
-    // Ensure modifiers exist before rendering
-    const item = this.item as any;
-    if (!item.system.modifiers) {
-      item.system.modifiers = {};
-    }
-
     return super._render(force, options);
   }
 
@@ -117,9 +128,12 @@ class FitGDEquipmentSheet extends ItemSheet {
   protected override _getFormData(form?: HTMLFormElement): Record<string, any> {
     const formData = super._getFormData(form);
 
+    // If no form provided, try to get it from the element
+    const actualForm = form || (this.element?.[0] as HTMLFormElement)?.querySelector('form') || this.form;
+
     // Manually collect modifier fields because Foundry's _getFormData may skip them
-    if (form) {
-      const modifierInputs = form.querySelectorAll('input[name^="system.modifiers"]');
+    if (actualForm) {
+      const modifierInputs = actualForm.querySelectorAll('input[name^="system.modifiers"]');
       modifierInputs.forEach((input: any) => {
         // Add to formData even if empty
         formData[input.name] = input.value;
@@ -137,30 +151,39 @@ class FitGDEquipmentSheet extends ItemSheet {
    * object from the flattened form data.
    */
   protected override async _updateObject(event: Event, formData: Record<string, unknown>): Promise<void> {
-    // Collect all modifier fields into a single object
-    const modifiers: Record<string, any> = {};
+    // Get current item's modifiers to preserve existing values
+    const currentModifiers = (this.item as any).system.modifiers || {};
+
+    // Collect all modifier fields into a single object, preserving existing values when formData is empty
+    const modifiers: Record<string, any> = { ...currentModifiers }; // Start with existing values
     const keysToDelete: string[] = [];
 
     for (const [key, value] of Object.entries(formData)) {
       if (key.startsWith('system.modifiers.')) {
         const modifierKey = key.replace('system.modifiers.', '');
 
-        // Parse the value: empty string, null, or undefined = undefined, otherwise parse as number
-        let parsedValue: any = undefined;
+        // Parse the value: empty string = keep existing, otherwise parse as number or set to undefined
+        let parsedValue: any;
 
-        // empty string or null = undefined (no modifier), otherwise parse as number
-        if (value !== '' && value !== null && value !== undefined) {
-          if (typeof value === 'string') {
-            const trimmed = String(value).trim();
-            if (trimmed !== '') {
-              // Try to parse as number
-              const numValue = parseInt(trimmed, 10);
-              parsedValue = isNaN(numValue) ? undefined : numValue;
-            }
-          } else if (typeof value === 'number') {
-            // Already a number, keep it
-            parsedValue = value;
+        if (value === '' || value === null || value === undefined) {
+          // Empty/null/undefined: preserve existing value (don't overwrite)
+          parsedValue = currentModifiers[modifierKey];
+        } else if (typeof value === 'string') {
+          const trimmed = String(value).trim();
+          if (trimmed === '') {
+            // Empty after trim: preserve existing value
+            parsedValue = currentModifiers[modifierKey];
+          } else {
+            // Non-empty string: parse as number
+            const numValue = parseInt(trimmed, 10);
+            parsedValue = isNaN(numValue) ? undefined : numValue;
           }
+        } else if (typeof value === 'number') {
+          // Already a number, keep it
+          parsedValue = value;
+        } else {
+          // Unknown type: preserve existing
+          parsedValue = currentModifiers[modifierKey];
         }
 
         modifiers[modifierKey] = parsedValue;
@@ -171,29 +194,13 @@ class FitGDEquipmentSheet extends ItemSheet {
     // Remove all flattened modifier keys from formData
     keysToDelete.forEach(key => delete formData[key]);
 
-    // Always set the modifiers object (even if empty) to ensure it's preserved
+    // Set the modifiers object (preserving existing values for empty inputs)
     (formData as any)['system.modifiers'] = modifiers;
 
-    // Call parent to handle the update
-    await super._updateObject(event, formData);
-
-    // CRITICAL: Explicitly save the item to Foundry database
-    // The parent _updateObject only updates in-memory data, not persistent storage
-    console.log('FitGD | Saving equipment item to database:', this.item!.name, 'with modifiers:', modifiers);
-    console.log('FitGD | Full formData being saved:', formData);
-    try {
-      const result = await this.item!.update(formData as any);
-      console.log('FitGD | Item update completed');
-      console.log('FitGD | Item after update - system.modifiers:', (this.item as any).system.modifiers);
-
-      // Force refresh the sheet to ensure it re-renders with saved data
-      await this.render(false);
-
-      return result;
-    } catch (error) {
-      console.error('FitGD | ERROR saving item:', error);
-      throw error;
-    }
+    // CRITICAL: Update the item directly (skip super._updateObject to avoid double-update)
+    // The parent ItemSheet._updateObject calls item.update() internally, so calling both
+    // super._updateObject AND item.update() causes a race condition where changes get overwritten
+    return this.item!.update(formData as any);
   }
 }
 

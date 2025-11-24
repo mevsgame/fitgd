@@ -67,11 +67,11 @@ The dice pool is built from up to three components:
   Focus
   Spirit
   ───────────────────────
-  🗡️ Chainsword +2d
+  ⚡ Chainsword +2d
   🔧 Auspex Scanner +1 Effect
   💊 Combat Stim +1d
 ```
-*(Icons: 🗡️ = Active, 🛡️ = Passive, 💊 = Consumable)*
+*(Icons: ⚡ = Active, 🛡️ = Passive, 💊 = Consumable)*
 
 3. **Passive Equipment** (optional, GM-only)
    - Separate UI section visible to GM only
@@ -110,7 +110,7 @@ Shows the complete action composition visible to both GM and Player:
 **Unified Dropdown**:
 - Active and Consumable equipment appear in the Secondary Approach dropdown (after approaches and separator)
 - Uses Equipment Row View Template (condensed config): Name + Bonuses + Category Icon
-- Category icon differentiates Active (🗡️) vs Consumable (💊) visually
+- Category icon differentiates Active (⚡) vs Consumable (💊) visually
 
 **Filtering**:
 - Only equipped items shown
