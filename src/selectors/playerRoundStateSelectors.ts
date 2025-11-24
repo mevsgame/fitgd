@@ -501,9 +501,11 @@ export { improvePosition, improveEffect } from '../utils/playerRoundRules';
 export const selectEffectivePosition = createSelector(
   [
     (state: RootState, characterId: string) => selectPlayerState(state, characterId),
+    (state: RootState, characterId: string) => selectEquipmentModifiedPosition(state, characterId),
   ],
-  (playerState): Position => {
-    const basePosition = playerState?.position || 'risky';
+  (playerState, equipmentModifiedPosition): Position => {
+    // Start from the position ALREADY modified by equipment
+    const basePosition = equipmentModifiedPosition;
 
     // Check if trait transaction improves position
     if (playerState?.traitTransaction?.positionImprovement) {
@@ -535,9 +537,11 @@ export const selectEffectivePosition = createSelector(
 export const selectEffectiveEffect = createSelector(
   [
     (state: RootState, characterId: string) => selectPlayerState(state, characterId),
+    (state: RootState, characterId: string) => selectEquipmentModifiedEffect(state, characterId),
   ],
-  (playerState): Effect => {
-    const baseEffect = playerState?.effect || 'standard';
+  (playerState, equipmentModifiedEffect): Effect => {
+    // Start from the effect ALREADY modified by equipment
+    const baseEffect = equipmentModifiedEffect;
 
     // Check if Push (Effect) is active
     if (playerState?.pushed && playerState?.pushType === 'improved-effect') {

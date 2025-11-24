@@ -410,7 +410,9 @@ async function handleTakeAction(data: { characterId: string; userId: string; use
 
     if (existingWidget) {
       console.log(`FitGD | Bringing existing Player Action Widget to front for character ${characterId}`);
-      existingWidget.bringToTop();
+      if ((existingWidget as any).rendered) {
+        existingWidget.bringToTop();
+      }
       existingWidget.render(true);
     } else {
       console.log(`FitGD | Creating new Player Action Widget for character ${characterId}`);

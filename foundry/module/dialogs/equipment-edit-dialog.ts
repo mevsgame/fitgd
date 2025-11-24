@@ -16,6 +16,11 @@ interface EquipmentEditData {
   categories: string[];
   isGM: boolean;
   canEditTier: boolean;
+  modifiers: {
+    dice: number;
+    position: number;
+    effect: number;
+  };
 }
 
 export class EquipmentEditDialog extends FormApplication {
@@ -64,6 +69,12 @@ export class EquipmentEditDialog extends FormApplication {
     const isCommon = (equipment as Equipment).tier === 'common' || this.mode === 'create';
     const canEditTier = isGM || isCommon;
 
+    // Calculate combined modifier values from bonus/penalty pairs
+    const mods = (equipment as Equipment).modifiers || {};
+    const diceModifier = (mods.diceBonus || 0) - (mods.dicePenalty || 0);
+    const positionModifier = (mods.positionBonus || 0) - (mods.positionPenalty || 0);
+    const effectModifier = (mods.effectBonus || 0) - (mods.effectPenalty || 0);
+
     return {
       equipment: equipment as Equipment,
       mode: this.mode,
@@ -71,6 +82,11 @@ export class EquipmentEditDialog extends FormApplication {
       categories: ['active', 'passive', 'consumable'],
       isGM,
       canEditTier,
+      modifiers: {
+        dice: diceModifier,
+        position: positionModifier,
+        effect: effectModifier,
+      },
     };
   }
 
@@ -78,7 +94,7 @@ export class EquipmentEditDialog extends FormApplication {
     super.activateListeners(html);
 
     // Wire up custom buttons
-    html.find('.cancel-btn').click(() => this.close());
+    html.find('.cancel-btn').click(() => (this as any).close());
     html.find('.save-btn').click(() => this._onSubmit(new Event('submit')));
   }
 
@@ -111,6 +127,21 @@ export class EquipmentEditDialog extends FormApplication {
       return;
     }
 
+    // Parse consolidated modifier fields
+    const diceModifier = formData['modifiers.dice'] ? parseInt(formData['modifiers.dice'] as string, 10) : 0;
+    const positionModifier = formData['modifiers.position'] ? parseInt(formData['modifiers.position'] as string, 10) : 0;
+    const effectModifier = formData['modifiers.effect'] ? parseInt(formData['modifiers.effect'] as string, 10) : 0;
+
+    // Split positive/negative values into bonus/penalty fields
+    const modifiers: Equipment['modifiers'] = {
+      diceBonus: diceModifier > 0 ? diceModifier : undefined,
+      dicePenalty: diceModifier < 0 ? Math.abs(diceModifier) : undefined,
+      positionBonus: positionModifier > 0 ? positionModifier : undefined,
+      positionPenalty: positionModifier < 0 ? Math.abs(positionModifier) : undefined,
+      effectBonus: effectModifier > 0 ? effectModifier : undefined,
+      effectPenalty: effectModifier < 0 ? Math.abs(effectModifier) : undefined,
+    };
+
     if (this.mode === 'create') {
       // Create mode: add new equipment to character
       const newEquipment: Equipment = {
@@ -123,14 +154,7 @@ export class EquipmentEditDialog extends FormApplication {
         equipped: false,
         locked: false,
         consumed: false,
-        modifiers: {
-          diceBonus: formData['modifiers.diceBonus'] ? parseInt(formData['modifiers.diceBonus'] as string, 10) : 1, // Default 1 dice bonus
-          dicePenalty: formData['modifiers.dicePenalty'] ? parseInt(formData['modifiers.dicePenalty'] as string, 10) : undefined,
-          positionBonus: formData['modifiers.positionBonus'] ? parseInt(formData['modifiers.positionBonus'] as string, 10) : undefined,
-          positionPenalty: formData['modifiers.positionPenalty'] ? parseInt(formData['modifiers.positionPenalty'] as string, 10) : undefined,
-          effectBonus: formData['modifiers.effectBonus'] ? parseInt(formData['modifiers.effectBonus'] as string, 10) : undefined,
-          effectPenalty: formData['modifiers.effectPenalty'] ? parseInt(formData['modifiers.effectPenalty'] as string, 10) : undefined,
-        },
+        modifiers,
         acquiredAt: Date.now(),
         acquiredVia: isGM ? 'earned' : 'earned',
       };
@@ -153,14 +177,7 @@ export class EquipmentEditDialog extends FormApplication {
         tier,
         slots,
         description: (formData.description as string) || '',
-        modifiers: {
-          diceBonus: formData['modifiers.diceBonus'] ? parseInt(formData['modifiers.diceBonus'] as string, 10) : undefined,
-          dicePenalty: formData['modifiers.dicePenalty'] ? parseInt(formData['modifiers.dicePenalty'] as string, 10) : undefined,
-          positionBonus: formData['modifiers.positionBonus'] ? parseInt(formData['modifiers.positionBonus'] as string, 10) : undefined,
-          positionPenalty: formData['modifiers.positionPenalty'] ? parseInt(formData['modifiers.positionPenalty'] as string, 10) : undefined,
-          effectBonus: formData['modifiers.effectBonus'] ? parseInt(formData['modifiers.effectBonus'] as string, 10) : undefined,
-          effectPenalty: formData['modifiers.effectPenalty'] ? parseInt(formData['modifiers.effectPenalty'] as string, 10) : undefined,
-        },
+        modifiers,
       };
 
       await game.fitgd.bridge.execute({
