@@ -54,32 +54,32 @@
       <div class="modifiers-grid">
         <div class="modifier-field">
           <label>Dice Bonus</label>
-          <input type="number" name="system.modifiers.diceBonus" value="{{system.modifiers.diceBonus}}" placeholder="1" min="0" />
-          <p class="help-text-small">Additional dice in pool (default 1)</p>
+          <input type="number" name="system.modifiers.diceBonus" value="{{default system.modifiers.diceBonus ''}}" placeholder="0" min="0" />
+          <p class="help-text-small">Additional dice in pool (default 1 if not specified)</p>
         </div>
         <div class="modifier-field">
           <label>Dice Penalty</label>
-          <input type="number" name="system.modifiers.dicePenalty" value="{{system.modifiers.dicePenalty}}" placeholder="0" min="0" />
+          <input type="number" name="system.modifiers.dicePenalty" value="{{default system.modifiers.dicePenalty ''}}" placeholder="0" min="0" />
           <p class="help-text-small">Dice to remove from pool</p>
         </div>
         <div class="modifier-field">
           <label>Position Bonus</label>
-          <input type="number" name="system.modifiers.positionBonus" value="{{system.modifiers.positionBonus}}" placeholder="0" min="0" max="1" />
+          <input type="number" name="system.modifiers.positionBonus" value="{{default system.modifiers.positionBonus ''}}" placeholder="0" min="0" max="1" />
           <p class="help-text-small">Improve position by N steps</p>
         </div>
         <div class="modifier-field">
           <label>Position Penalty</label>
-          <input type="number" name="system.modifiers.positionPenalty" value="{{system.modifiers.positionPenalty}}" placeholder="0" min="0" max="1" />
+          <input type="number" name="system.modifiers.positionPenalty" value="{{default system.modifiers.positionPenalty ''}}" placeholder="0" min="0" max="1" />
           <p class="help-text-small">Worsen position by N steps</p>
         </div>
         <div class="modifier-field">
           <label>Effect Bonus</label>
-          <input type="number" name="system.modifiers.effectBonus" value="{{system.modifiers.effectBonus}}" placeholder="0" min="0" max="1" />
+          <input type="number" name="system.modifiers.effectBonus" value="{{default system.modifiers.effectBonus ''}}" placeholder="0" min="0" max="1" />
           <p class="help-text-small">Improve effect by N levels</p>
         </div>
         <div class="modifier-field">
           <label>Effect Penalty</label>
-          <input type="number" name="system.modifiers.effectPenalty" value="{{system.modifiers.effectPenalty}}" placeholder="0" min="0" max="1" />
+          <input type="number" name="system.modifiers.effectPenalty" value="{{default system.modifiers.effectPenalty ''}}" placeholder="0" min="0" max="1" />
           <p class="help-text-small">Reduce effect by N levels</p>
         </div>
       </div>
