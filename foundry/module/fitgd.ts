@@ -185,6 +185,7 @@ Hooks.once('init', async function () {
         };
 
         console.log(`FitGD | Broadcasting ${newCommandCount} commands + playerRoundState via socketlib`);
+        console.log(`FitGD | PlayerRoundState being broadcast:`, JSON.stringify(playerRoundState, null, 2));
 
         try {
           // Use socketlib to broadcast to OTHER clients (not self)

@@ -244,6 +244,17 @@ export class PlayerActionWidget extends Application {
 
         const clocksChanged = currentState.clocks !== previousState.clocks;
 
+        // Log subscription changes
+        if (playerStateChanged || characterChanged || crewChanged || clocksChanged) {
+          console.log('FitGD | Widget subscription detected changes:', {
+            playerStateChanged,
+            characterChanged,
+            crewChanged,
+            clocksChanged,
+            currentPlayerState: currentState.playerRoundState.byCharacterId[this.characterId]?.state,
+          });
+        }
+
         // Re-render if any relevant state changed
         if (playerStateChanged || characterChanged || crewChanged || clocksChanged) {
           this.render(true); // Force full re-render to update template
@@ -1739,6 +1750,11 @@ export class PlayerActionWidget extends Application {
     }
 
     console.log('FitGD | Executing batch of', actions.length, 'consequence actions');
+    console.log('FitGD | Affected Redux IDs:', {
+      characterId: this.characterId,
+      characterIdToNotify: workflow.characterIdToNotify,
+      crewId: this.crewId,
+    });
 
     // Execute all actions as atomic batch (single broadcast)
     await game.fitgd.bridge.executeBatch(actions, {
@@ -1751,6 +1767,7 @@ export class PlayerActionWidget extends Application {
     });
 
     console.log('FitGD | Batch executed, consequences applied');
+    console.log('FitGD | Current playerRoundState after batch:', this.playerState?.state);
 
     // Show notification
     ui.notifications?.info(workflow.notificationMessage);

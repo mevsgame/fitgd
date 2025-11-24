@@ -153,6 +153,10 @@ export class ConsequenceApplicationHandler {
     type: string;
     payload: unknown;
   } {
+    console.log('FitGD | createApplyHarmAction:', {
+      clockId: transaction.harmClockId,
+      amount: segments,
+    });
     return {
       type: 'clocks/addSegments',
       payload: {
