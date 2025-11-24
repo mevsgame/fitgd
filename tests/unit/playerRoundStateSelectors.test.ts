@@ -174,11 +174,15 @@ describe('playerRoundStateSelectors', () => {
         id: 'equip-bonus',
         name: 'Bonus Item',
         tier: 'common' as const,
-        category: 'weapon',
-        rarity: 'common' as const,
+        category: 'active' as const,
         description: 'Bonus',
-        tags: ['bonus'],
+        slots: 1,
         equipped: true,
+        locked: false,
+        consumed: false,
+        modifiers: {
+          diceBonus: 1,
+        },
         acquiredAt: Date.now(),
       };
 
@@ -304,6 +308,199 @@ describe('playerRoundStateSelectors', () => {
 
       const result = selectDicePool(store.getState(), characterId);
       expect(result).toBe(0);
+    });
+
+    it('should add +1d for passive equipment (if approved)', () => {
+      // Add passive equipment with bonus tag to character
+      const equipment = {
+        id: 'equip-passive',
+        name: 'Passive Item',
+        tier: 'common' as const,
+        category: 'passive' as const,
+        description: 'Passive',
+        slots: 1,
+        equipped: true,
+        locked: false,
+        consumed: false,
+        modifiers: {
+          diceBonus: 1,
+        },
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addEquipment({ characterId, equipment }));
+
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'risky',
+          effect: 'standard',
+        })
+      );
+
+      // GM approves passive
+      store.dispatch({
+        type: 'playerRoundState/setApprovedPassive',
+        payload: {
+          characterId,
+          equipmentId: equipment.id,
+        },
+      });
+
+      const result = selectDicePool(store.getState(), characterId);
+      expect(result).toBe(3); // 2 + 1 (passive equipment)
+    });
+  });
+
+  describe('selectEquipmentEffects', () => {
+    beforeEach(() => {
+      store.dispatch(setActivePlayer({ characterId }));
+    });
+
+    it('should return empty object when no equipment selected', () => {
+      const result = selectEquipmentEffects(store.getState(), characterId);
+      expect(result).toEqual({});
+    });
+
+    it('should return effects for active equipment', () => {
+      const equipment = {
+        id: 'equip-active',
+        name: 'Active Item',
+        tier: 'common' as const,
+        category: 'active' as const,
+        description: 'Active',
+        slots: 1,
+        equipped: true,
+        locked: false,
+        consumed: false,
+        modifiers: {
+          diceBonus: 1,
+          positionBonus: 1,
+        },
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addEquipment({ characterId, equipment }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          equippedForAction: [equipment.id],
+          position: 'risky',
+          effect: 'standard',
+        })
+      );
+
+      const result = selectEquipmentEffects(store.getState(), characterId);
+      expect(result).toEqual({
+        diceBonus: 1,
+        positionBonus: 1,
+      });
+    });
+
+    it('should return effects for passive equipment (if approved)', () => {
+      const equipment = {
+        id: 'equip-passive',
+        name: 'Passive Item',
+        tier: 'common' as const,
+        category: 'passive' as const,
+        description: 'Passive',
+        slots: 1,
+        equipped: true,
+        locked: false,
+        consumed: false,
+        modifiers: {
+          effectBonus: 1,
+        },
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addEquipment({ characterId, equipment }));
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'risky',
+          effect: 'standard',
+        })
+      );
+
+      // GM approves passive
+      store.dispatch({
+        type: 'playerRoundState/setApprovedPassive',
+        payload: {
+          characterId,
+          equipmentId: equipment.id,
+        },
+      });
+
+      const result = selectEquipmentEffects(store.getState(), characterId);
+      expect(result).toEqual({
+        effectBonus: 1,
+      });
+    });
+
+    it('should combine effects from active and passive equipment', () => {
+      const activeItem = {
+        id: 'equip-active',
+        name: 'Active Item',
+        tier: 'common' as const,
+        category: 'active' as const,
+        description: 'Active',
+        slots: 1,
+        equipped: true,
+        locked: false,
+        consumed: false,
+        modifiers: {
+          diceBonus: 1,
+        },
+        acquiredAt: Date.now(),
+      };
+
+      const passiveItem = {
+        id: 'equip-passive',
+        name: 'Passive Item',
+        tier: 'common' as const,
+        category: 'passive' as const,
+        description: 'Passive',
+        slots: 1,
+        equipped: true,
+        locked: false,
+        consumed: false,
+        modifiers: {
+          positionBonus: 1,
+        },
+        acquiredAt: Date.now(),
+      };
+
+      store.dispatch(addEquipment({ characterId, equipment: activeItem }));
+      store.dispatch(addEquipment({ characterId, equipment: passiveItem }));
+
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          equippedForAction: [activeItem.id],
+          position: 'risky',
+          effect: 'standard',
+        })
+      );
+
+      // GM approves passive
+      store.dispatch({
+        type: 'playerRoundState/setApprovedPassive',
+        payload: {
+          characterId,
+          equipmentId: passiveItem.id,
+        },
+      });
+
+      const result = selectEquipmentEffects(store.getState(), characterId);
+      expect(result).toEqual({
+        diceBonus: 1,
+        positionBonus: 1,
+      });
     });
   });
 
@@ -1012,12 +1209,15 @@ describe('playerRoundStateSelectors', () => {
         id: 'equip-weapon',
         name: 'Las Rifle',
         tier: 'common' as const,
-        category: 'weapon',
+        category: 'active' as const,
         description: 'Standard weapon',
-        passive: false,
+        slots: 1,
         equipped: true,
         locked: false,
-        depleted: false,
+        consumed: false,
+        modifiers: {
+          diceBonus: 1,
+        },
         acquiredAt: Date.now(),
       };
 

@@ -4,7 +4,8 @@
  * Foundry VTT Actor Sheet for character entities
  */
 
-import type { Trait, Equipment, Approaches } from '@/types/character';
+import type { Trait, Approaches } from '@/types/character';
+import type { Equipment } from '@/types/equipment';
 
 import {
   AddTraitDialog
@@ -26,11 +27,13 @@ import {
 
 interface CharacterSheetData extends ActorSheet.Data {
   editMode: boolean;
+  loadUsed: number;
   system?: {
     approaches: Array<{ approach: string; dots: number }>;
     traits: Trait[];
     equipment: Equipment[];
     rallyAvailable: boolean;
+    loadLimit: number;
     harmClocks: any[]; // Using any to avoid strict Clock type mismatch for view-only data
     addictionClock: any | null;
     unallocatedApproachDots: number;
@@ -119,17 +122,25 @@ class FitGDCharacterSheet extends ActorSheet {
           clock => clock.entityId === reduxId && clock.clockType === 'addiction'
         );
 
+        // Calculate load used from equipped items
+        const loadUsed = character.equipment
+          .filter((e: Equipment) => e.equipped)
+          .reduce((sum: number, e: Equipment) => sum + (e.slots || 1), 0);
+
         context.system = {
           approaches: approachesArray,
           traits: character.traits,
           equipment: character.equipment,
           rallyAvailable: character.rallyAvailable,
+          loadLimit: character.loadLimit,
           harmClocks: game.fitgd.api.query.getHarmClocks(reduxId),
           addictionClock: addictionClock || null,
           unallocatedApproachDots: unallocatedDots,
           allocatedApproachDots: allocatedDots,
           totalApproachDots: totalDots
         };
+
+        context.loadUsed = loadUsed;
 
         // Find crew for this character
         context.crewId = this._getCrewId(reduxId);

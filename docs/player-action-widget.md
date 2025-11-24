@@ -38,6 +38,141 @@ The widget derives its UI state primarily from `playerRoundStateSlice`. The key 
 6.  **TURN_COMPLETE**:
     - Turn ends, widget closes or resets.
 
+### State Machine Rules (CRITICAL)
+
+> [!CAUTION]
+> **Batching Pitfall**: When batching multiple Redux actions, ALL actions validate against the SAME initial state. This means sequential state transitions CANNOT be batched together.
+
+**Valid State Transitions** ([playerRoundState.ts:227-243](file:///d:/GitHub/fitgd/src/types/playerRoundState.ts#L227-L243)):
+
+```typescript
+GM_RESOLVING_CONSEQUENCE: [
+  'APPLYING_EFFECTS',    // Player accepts consequences
+  'STIMS_ROLLING'        // Player interrupts with stims
+],
+APPLYING_EFFECTS: ['TURN_COMPLETE'],
+```
+
+#### ❌ ANTIPATTERN: Batching Sequential Transitions
+
+**THIS WILL FAIL**:
+```typescript
+const actions = [
+  { type: 'playerRoundState/transitionState', payload: { newState: 'APPLYING_EFFECTS' } },  // Transition 1
+  { type: 'clocks/addSegments', payload: { ... } },                                         // Apply harm
+  { type: 'playerRoundState/transitionState', payload: { newState: 'TURN_COMPLETE' } },    // ❌ Transition 2
+];
+await bridge.executeBatch(actions);  // ❌ FAILS: GM_RESOLVING_CONSEQUENCE -> TURN_COMPLETE is invalid
+```
+
+**Why It Fails**:
+1. All 3 actions validate against current state: `GM_RESOLVING_CONSEQUENCE`
+2. Action 1 validates: `GM_RESOLVING_CONSEQUENCE` → `APPLYING_EFFECTS` ✅ (valid)
+3. Action 3 validates: `GM_RESOLVING_CONSEQUENCE` → `TURN_COMPLETE` ❌ (invalid!)
+4. Batch throws error: "Invalid state transition"
+
+**What Happens When This Fails**:
+1. Socket handler catches error → falls back to full state reload
+2. Reloads entire command history (5000+ commands)
+3. Each command triggers store subscription
+4. Subscription auto-saves → creates MORE commands
+5. **Infinite loop** → 3000+ commands accumulated
+6. Circuit breaker blocks broadcasts (safety mechanism)
+7. GM never receives updates → changes revert on reload
+
+#### ✅ CORRECT PATTERN: Single Transition Per Batch
+
+**Option 1: Stop at Valid State**
+```typescript
+const actions = [
+  { type: 'playerRoundState/transitionState', payload: { newState: 'APPLYING_EFFECTS' } },  // ✅ Valid
+  { type: 'clocks/addSegments', payload: { ... } },                                         // ✅ Apply harm
+  { type: 'playerRoundState/clearConsequenceTransaction', payload: { ... } },               // ✅ Cleanup
+  // DO NOT add second transition - widget closes when it detects APPLYING_EFFECTS
+];
+```
+
+**Option 2: Separate Dispatches** (if you really need both transitions)
+```typescript
+// First batch: transition to intermediate state + apply effects
+await bridge.executeBatch([
+  { type: 'playerRoundState/transitionState', payload: { newState: 'APPLYING_EFFECTS' } },
+  { type: 'clocks/addSegments', payload: { ... } },
+]);
+
+// Second dispatch: transition to final state (after first batch completes)
+await bridge.execute(
+  { type: 'playerRoundState/transitionState', payload: { newState: 'TURN_COMPLETE' } }
+);
+```
+
+#### How Widgets Should Close
+
+Widgets should close based on detecting state changes, NOT by including a "close transition" in the consequence batch:
+
+```typescript
+// In widget handler
+if (!game.user?.isGM) {
+  // Player widget: close immediately (initiated action)
+  setTimeout(() => this.close(), 500);
+} else {
+  // GM widget: closes when store subscription detects APPLYING_EFFECTS state
+  // (happens automatically when socket broadcast arrives)
+}
+```
+
+#### Bug Prevention Checklist
+
+Before batching actions with state transitions:
+
+- [ ] Does batch contain MORE THAN ONE `transitionState` action?
+  - ❌ If yes: Split into separate dispatches or remove one
+- [ ] Check [playerRoundState.ts STATE_TRANSITIONS](file:///d:/GitHub/fitgd/src/types/playerRoundState.ts#L227) for valid paths
+- [ ] Run through sequence:
+  1. What is current state?
+  2. What does EACH transition action validate against?
+  3. Are BOTH transitions valid from current state?
+- [ ] Test consequence flow in multi-client environment (GM + Player)
+- [ ] Check console for "Invalid state transition" errors
+- [ ] Verify no command spam (circuit breaker warnings)
+
+#### State Machine Diagram
+
+```mermaid
+graph LR
+    IDLE[IDLE_WAITING] --> DECISION[DECISION_PHASE]
+    DECISION --> ROLLING[ROLLING]
+    ROLLING --> SUCCESS[SUCCESS_COMPLETE]
+    ROLLING --> GM_RESOLVING[GM_RESOLVING_CONSEQUENCE]
+    
+    GM_RESOLVING -->|Player Accepts| APPLYING[APPLYING_EFFECTS]
+    GM_RESOLVING -->|Player Uses Stims| STIMS[STIMS_ROLLING]
+    
+    APPLYING --> COMPLETE[TURN_COMPLETE]
+    SUCCESS --> COMPLETE
+    COMPLETE --> IDLE
+    
+    STIMS -->|Success| ROLLING
+    STIMS -->|Addiction Full| LOCKED[STIMS_LOCKED]
+    LOCKED --> GM_RESOLVING
+    
+    style GM_RESOLVING fill:#ff9
+    style APPLYING fill:#9f9
+    style COMPLETE fill:#ccf
+```
+
+**Critical Path** (Consequence Flow):
+```
+ROLLING → GM_RESOLVING_CONSEQUENCE → APPLYING_EFFECTS → TURN_COMPLETE
+          ↓ (player interrupt)
+          STIMS_ROLLING → ROLLING (reroll)
+```
+
+**Invalid Direct Transitions**:
+- ❌ `GM_RESOLVING_CONSEQUENCE` → `TURN_COMPLETE` (skip APPLYING_EFFECTS)
+- ❌ `ROLLING` → `APPLYING_EFFECTS` (skip GM_RESOLVING_CONSEQUENCE)
+- ❌ `DECISION_PHASE` → `SUCCESS_COMPLETE` (skip ROLLING)
+
 ### Dice Pool Construction
 
 *See also: [Equipment Mechanics](./mechanics-equipment.md) | [Equipment Row View Template](./equipment-row-view-template.md)*
@@ -67,11 +202,11 @@ The dice pool is built from up to three components:
   Focus
   Spirit
   ───────────────────────
-  🗡️ Chainsword +2d
+  ⚡ Chainsword +2d
   🔧 Auspex Scanner +1 Effect
   💊 Combat Stim +1d
 ```
-*(Icons: 🗡️ = Active, 🛡️ = Passive, 💊 = Consumable)*
+*(Icons: ⚡ = Active, 🛡️ = Passive, 💊 = Consumable)*
 
 3. **Passive Equipment** (optional, GM-only)
    - Separate UI section visible to GM only
@@ -110,7 +245,7 @@ Shows the complete action composition visible to both GM and Player:
 **Unified Dropdown**:
 - Active and Consumable equipment appear in the Secondary Approach dropdown (after approaches and separator)
 - Uses Equipment Row View Template (condensed config): Name + Bonuses + Category Icon
-- Category icon differentiates Active (🗡️) vs Consumable (💊) visually
+- Category icon differentiates Active (⚡) vs Consumable (💊) visually
 
 **Filtering**:
 - Only equipped items shown

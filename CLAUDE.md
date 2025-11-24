@@ -16,12 +16,14 @@
 
 ### 2. Entity Separation
 **High-change entities** (separate stores with full history):
-- `Clock` - Abstract entity for harm, consumables, addiction
+- `Clock` - Abstract entity for harm, addiction, progress tracking
 - `Momentum` - Crew-level shared resource
+- `PlayerRoundState` - Turn workflow and action resolution state
 
 **Low-change entities** (snapshot with history):
-- `Character` - Traits, action dots, equipment
+- `Character` - Traits, approaches, equipment, harm clocks
 - `Crew` - Metadata, campaign info
+- `Equipment` - Loot with state tracking (equipped, locked, consumed)
 
 **Design Principle:** Clocks are generic/reusable. Different clock types are instances of the same `Clock` entity with different metadata.
 
@@ -160,9 +162,9 @@ When adding game logic, ask:
 |-------|-----------|-----------|
 | State Management | Redux Toolkit | Excellent TS support, built-in Immer |
 | Language | TypeScript 5+ | Type safety, excellent tooling |
-| Testing | Jest + ts-jest | Industry standard, great TS support |
+| Testing | Vitest | Fast, modern, excellent TS support |
 | Build | Vite | Fast, modern, tree-shakeable |
-| Package Manager | **pnpm** | REQUIRED - lockfile incompatible with npm |
+| Package Manager | npm / pnpm | Both supported; pnpm preferred (lockfiles for both) |
 
 ---
 
@@ -185,10 +187,10 @@ interface Command<T = unknown> {
 #### Character
 ```typescript
 interface Character {
-  id: string;                      // UUID
+  id: string;                      // Foundry Actor ID
   name: string;
   traits: Trait[];
-  actionDots: ActionDots;          // 12 actions, 0-4 dots each
+  approaches: Approaches;          // 4 approaches (force, guile, focus, spirit), 0-4 dots each
   equipment: Equipment[];
   rallyAvailable: boolean;
   createdAt: number;
@@ -212,8 +214,8 @@ interface Crew {
 ```typescript
 interface Clock {
   id: string;
-  entityId: string;                // characterId, crewId, or itemType
-  clockType: 'harm' | 'consumable' | 'addiction';
+  entityId: string;                // characterId, crewId
+  clockType: 'harm' | 'addiction' | 'progress';
   subtype?: string;
   segments: number;
   maxSegments: number;
@@ -223,6 +225,22 @@ interface Clock {
     frozen?: boolean;
     [key: string]: unknown;
   };
+  createdAt: number;
+  updatedAt: number;
+}
+```
+
+#### Equipment
+```typescript
+interface Equipment {
+  id: string;
+  name: string;
+  category: 'active' | 'passive' | 'consumable';
+  tier: 'common' | 'rare' | 'epic';
+  slots: number;
+  equipped: boolean;
+  locked: boolean;
+  consumed: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -260,9 +278,8 @@ All game rules centralized in `src/config/gameConfig.ts`:
 export const DEFAULT_CONFIG: GameConfig = {
   character: {
     startingTraitCount: 2,
-    startingActionDots: 12,
-    maxActionDotsPerAction: 4,
-    maxActionDotsAtCreation: 3,
+    startingApproachDots: 5,
+    maxDotsPerApproach: 4,
   },
   crew: {
     startingMomentum: 5,
@@ -271,10 +288,8 @@ export const DEFAULT_CONFIG: GameConfig = {
   },
   clocks: {
     harm: { maxClocks: 3, segments: 6 },
-    consumable: {
-      segments: { common: 8, uncommon: 6, rare: 4 }
-    },
     addiction: { segments: 8, resetReduction: 2 },
+    progress: { segments: 4 },
   },
   rally: { maxMomentumToUse: 3 },
 };
@@ -286,7 +301,7 @@ export const DEFAULT_CONFIG: GameConfig = {
 
 ## Foundry-Redux Bridge API (CRITICAL)
 
-**Status:** ✅ **FULLY INTEGRATED**
+**Status:** ✅ **IMPLEMENTED** (56+ usages, ongoing adoption)
 
 ### The Problem
 
@@ -354,18 +369,22 @@ const character = state.characters.byId[actor.id];
 
 **Benefits:** No ID mapping, simpler code, better debugging, faster access.
 
-### 2. Package Manager: Use pnpm, NOT npm ✅
+### 2. Package Manager: npm or pnpm ✅
 
-**CRITICAL:** Always use `pnpm` for this project. The `pnpm-lock.yaml` lockfile is incompatible with npm.
+**Status:** Both npm and pnpm are supported. Project maintains both `package-lock.json` and `pnpm-lock.yaml`.
 
 ```bash
-# ✅ CORRECT
-pnpm install
-pnpm run build:foundry
-
-# ❌ WRONG - Will fail with 403 errors
+# ✅ Either works
 npm install
+pnpm install
+
+# Use your preferred manager consistently
+npm run build:foundry
+# or
+pnpm run build:foundry
 ```
+
+**Recommendation:** Use `pnpm` for faster installs, but npm works fine for this project.
 
 ### 3. Universal Broadcasting Pattern ✅
 
@@ -427,19 +446,22 @@ await saveImmediate();  // Single render cycle
 - Use `game.fitgd.bridge.executeBatch()` for multiple related changes
 - Let Redux subscriptions handle all rendering
 - Test with GM + Player clients before declaring done
-- Verify TypeScript builds before committing (`pnpm run type-check:all`)
-- Run `pnpm install` when starting work on fresh branch/session
+- Verify TypeScript builds before committing (`npm run type-check:all`)
+- Run `npm install` or `pnpm install` when starting work on fresh branch/session
 
 ### ❌ DO NOT
 - Call `game.fitgd.store.dispatch()` directly (except socket handlers)
 - Call `game.fitgd.saveImmediate()` manually
 - Call `refreshSheetsByReduxId()` manually
-- Touch socket handler bare dispatches (lines 984-1050 in `fitgd.mjs`)
-- Use npm instead of pnpm
+- Touch socket handler bare dispatches (socket message handlers)
 - Commit code without running type-check and build verification
+- **NEVER modify `vault/rules_primer.md` without explicit user consent** - This is the foundation document that defines the game system. Any changes must be approved before implementation.
 
 ### Exception
 Socket handlers in `receiveCommandsFromSocket()` intentionally use bare dispatch to prevent infinite broadcast loops.
+
+### Sacred Document
+**`vault/rules_primer.md` is the canonical game rules document.** It defines the core mechanics of Forged in the Grimdark and serves as the single source of truth for how the system works. This document should never be modified implicitly or as a side effect of other work. Any proposed changes to game rules must be explicitly reviewed and approved by the user before committing.
 
 ---
 
@@ -447,19 +469,20 @@ Socket handlers in `receiveCommandsFromSocket()` intentionally use bare dispatch
 
 ### ⚠️ FIRST STEP: Install Dependencies
 
-**CRITICAL:** Always run `pnpm install` on fresh branch or new session!
+**CRITICAL:** Always run `npm install` (or `pnpm install`) on fresh branch or new session!
 
 ```bash
 # ALWAYS run this first
-pnpm install
+npm install
+# or: pnpm install
 
 # Verify installation
-pnpm run build
+npm run build
 ```
 
 **When to run:**
 - Starting work on new branch
-- After pulling changes to `package.json` or `pnpm-lock.yaml`
+- After pulling changes to `package.json` or lockfiles
 - When encountering "Cannot find module" errors
 - At start of every Claude Code session
 
@@ -467,13 +490,13 @@ pnpm run build
 
 ```bash
 # 1. Type check
-pnpm run type-check:all
+npm run type-check:all
 
 # 2. Build verification
-pnpm run build
+npm run build
 
 # 3. Run tests
-pnpm test
+npm test
 
 # 4. Commit
 git add .
@@ -483,37 +506,34 @@ git push
 
 ### Pre-Commit Checklist
 
-- [ ] Dependencies installed (`pnpm install`)
-- [ ] Code compiles (`pnpm run build`)
-- [ ] Type check passes (`pnpm run type-check:all`)
+- [ ] Dependencies installed (`npm install` or `pnpm install`)
+- [ ] Code compiles (`npm run build`)
+- [ ] Type check passes (`npm run type-check:all`)
 - [ ] No new TypeScript errors introduced
 - [ ] Tested with GM + Player clients (for Foundry changes)
 - [ ] Used Bridge API for state changes
-
-### Type Error Policy
-
-- **242 type errors currently exist** (49% reduction from 476)
-- These are strictness checks, not blocking bugs
-- New code should not introduce new type errors
-- Prefer fixing existing errors when touching files
+- [ ] **User Code review requested and approved** - Mandatory If the user requested it before during session
 
 ### Common Commands
 
 ```bash
-# Install dependencies (ALWAYS use pnpm)
-pnpm install
+# Install dependencies
+npm install  # or: pnpm install
 
 # Type check specific file
-pnpm run type-check:foundry | grep "filename.ts"
+npm run type-check:foundry | grep "filename.ts"
 
 # Build and watch
-pnpm run build:watch
+npm run build:watch
 
 # Run tests
-pnpm test
+npm test
 
 # Type check core
-pnpm run type-check:core
+npm run type-check:core
+
+# Type check all
+npm run type-check:all
 ```
 
 ---
@@ -525,75 +545,46 @@ fitgd/
 ├── src/
 │   ├── api/              # High-level API layer
 │   ├── store/            # Configure store, middleware
-│   ├── slices/           # Redux slices (character, crew, clock)
+│   ├── slices/           # Redux slices (character, crew, clock, playerRoundState)
 │   ├── types/            # TypeScript interfaces
 │   ├── config/           # gameConfig.ts (DEFAULT_CONFIG)
 │   ├── validators/       # Business rule validation
 │   ├── selectors/        # Memoized selectors
+│   ├── resolution/       # Consequence resolution logic
+│   ├── resources/        # Resource management
 │   ├── adapters/         # Foundry Actor/Item mapping
 │   └── utils/            # Pure functions, command factory
 │
 ├── tests/
-│   ├── unit/             # Per-reducer tests
+│   ├── unit/             # Per-reducer and selector tests
 │   ├── integration/      # Cross-slice, API contract tests
 │   └── fixtures/         # Test data
 │
 ├── foundry/
 │   └── module/
 │       ├── foundry-redux-bridge.mjs  # Bridge API
-│       └── widgets/      # UI widgets
+│       ├── handlers/     # Business logic handlers
+│       ├── dialogs/      # Dialog implementations
+│       └── widgets/      # UI widgets & components
+│
+├── docs/                 # Architecture and implementation docs
+└── README.md             # Project overview
 ```
 
 --- 
 
 ## Testing Strategy
 
-### Unit Tests
-```typescript
-describe('character reducer', () => {
-  it('should create character with valid starting stats', () => {
-    const command = createCharacterCommand({...});
-    const state = characterReducer(initialState, command);
-    expect(state.byId[id].actionDots.shoot).toBe(2);
-  });
-});
-```
+**700+ tests** covering unit, integration, and selector scenarios.
 
-### Integration Tests
-```typescript
-describe('Momentum system', () => {
-  it('should cap Momentum at 10 and lose excess', () => {
-    // Set to 9, add 4, verify it's 10
-  });
-});
-```
+**Approach:** Test command → state transformations, not implementation details.
 
-### Property-Based Tests
-```typescript
-describe('invariants', () => {
-  it('character action dots never exceed 4', () => {
-    // Generate random command sequences, verify constraint
-  });
-});
-```
-  
-## API Layer
+- **Unit tests:** Per-reducer command handling
+- **Integration tests:** Cross-slice workflows (e.g., character creation + equipment)
+- **Selector tests:** Memoization and correctness
+- **Invariant tests:** Constraints always maintained (approaches 0-4, momentum 0-10, etc.)
 
-**Design Principle:** Never expose Redux store directly. Provide clean functional API.
-
-### Character API
-```typescript
-export interface CharacterAPI {
-  createCharacter(name: string, traits: Trait[], actionDots: ActionDots): string;
-  addTrait(characterId: string, trait: Trait): void;
-  setActionDots(characterId: string, action: keyof ActionDots, dots: number): void;
-  getCharacter(characterId: string): Character | null;
-  // ... more methods
-}
-```
-
-### Crew API, Clock API, GameState API
-Similar structure - see original doc for full interfaces.
+See `tests/` directory for examples.
 
 ---
 

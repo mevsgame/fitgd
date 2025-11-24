@@ -1,4 +1,4 @@
-<form class="{{cssClass}}" autocomplete="off">
+<form class="{{cssClass}} equipment-sheet" autocomplete="off">
   <header class="sheet-header">
     <img class="profile-img" src="{{item.img}}" data-edit="img" title="{{item.name}}" height="64" width="64" />
     <div class="header-fields">
@@ -6,44 +6,83 @@
     </div>
   </header>
 
-  <div class="sheet-body">
+  <div class="sheet-body equipment-sheet-body">
     <div class="form-group">
-      <label>Tier</label>
-      <select name="system.tier">
-        <option value="accessible" {{#if (eq system.tier "accessible" )}}selected{{/if}}>Accessible</option>
-        <option value="inaccessible" {{#if (eq system.tier "inaccessible" )}}selected{{/if}}>Inaccessible</option>
+      <label>Tier <span class="required">*</span></label>
+      <select name="system.tier" required>
+        <option value="common" {{#if (eq system.tier "common" )}}selected{{/if}}>Common</option>
+        <option value="rare" {{#if (eq system.tier "rare" )}}selected{{/if}}>Rare</option>
         <option value="epic" {{#if (eq system.tier "epic" )}}selected{{/if}}>Epic</option>
       </select>
       <p class="help-text">
-        📦 <strong>Accessible:</strong> Standard gear, freely available<br />
-        💎 <strong>Inaccessible:</strong> Requires flashback (1 Momentum + trait)<br />
-        ⭐ <strong>Epic:</strong> Must be earned through story
+        <strong>Common:</strong> Standard gear, freely available<br />
+        <strong>Rare:</strong> Requires 1M on first use (between Resets)<br />
+        <strong>Epic:</strong> Must be earned through story
       </p>
     </div>
 
     <div class="form-group">
-      <label>Category</label>
-      <select name="system.category">
-        <option value="weapon" {{#if (eq system.category "weapon" )}}selected{{/if}}>Weapon</option>
-        <option value="armor" {{#if (eq system.category "armor" )}}selected{{/if}}>Armor</option>
-        <option value="tool" {{#if (eq system.category "tool" )}}selected{{/if}}>Tool</option>
-        <option value="consumable" {{#if (eq system.category "consumable" )}}selected{{/if}}>Consumable</option>
-        <option value="misc" {{#if (eq system.category "misc" )}}selected{{/if}}>Miscellaneous</option>
+      <label>Category <span class="required">*</span></label>
+      <select name="system.category" required>
+        <option value="active" {{#if (eq system.category "active" )}}selected{{/if}}>Active (Weapons/Tools)</option>
+        <option value="passive" {{#if (eq system.category "passive" )}}selected{{/if}}>Passive (Armor/Implants)</option>
+        <option value="consumable" {{#if (eq system.category "consumable" )}}selected{{/if}}>Consumable (Grenades/Stims)</option>
       </select>
-      <p class="help-text">Choose the primary type of this equipment.</p>
+      <p class="help-text">
+        <strong>Active:</strong> Player selects in roll (weapons, tools, devices)<br />
+        <strong>Passive:</strong> GM approves during roll (armor, implants, augmentations)<br />
+        <strong>Consumable:</strong> Single-use items (grenades, stims, medkits)
+      </p>
+    </div>
+
+    <div class="form-group">
+      <label>Slots <span class="required">*</span></label>
+      <input type="number" name="system.slots" value="{{system.slots}}" min="1" required placeholder="1" />
+      <p class="help-text">Load slots occupied (minimum 1, default 5 slots per character)</p>
     </div>
 
     <div class="form-group">
       <label>Description</label>
-      <textarea name="system.description" rows="8"
-        placeholder="Describe the equipment and its effects on Position/Effect...">{{system.description}}</textarea>
-      <p class="help-text">Include how this equipment affects Position and Effect in narrative context.</p>
+      <textarea name="system.description" rows="4"
+        placeholder="Describe the equipment and how it affects gameplay...">{{system.description}}</textarea>
+      <p class="help-text">Include narrative details and mechanical effects on Position/Effect</p>
     </div>
 
     <div class="form-group">
-      <label>Image Path</label>
-      <input type="text" name="img" value="{{item.img}}" placeholder="icons/weapons/..." />
-      <p class="help-text">Path to item image. Click the image above to browse, or enter a path manually.</p>
+      <label>Modifiers</label>
+      <p class="help-text">Configure how this equipment affects rolls when used</p>
+      <div class="modifiers-grid">
+        <div class="modifier-field">
+          <label>Dice Bonus</label>
+          <input type="text" name="system.modifiers.diceBonus" value="{{#if system.modifiers.diceBonus}}{{system.modifiers.diceBonus}}{{/if}}" placeholder="0" />
+          <p class="help-text-small">Additional dice in pool (default 1 if not specified)</p>
+        </div>
+        <div class="modifier-field">
+          <label>Dice Penalty</label>
+          <input type="text" name="system.modifiers.dicePenalty" value="{{#if system.modifiers.dicePenalty}}{{system.modifiers.dicePenalty}}{{/if}}" placeholder="0" />
+          <p class="help-text-small">Dice to remove from pool</p>
+        </div>
+        <div class="modifier-field">
+          <label>Position Bonus</label>
+          <input type="text" name="system.modifiers.positionBonus" value="{{#if system.modifiers.positionBonus}}{{system.modifiers.positionBonus}}{{/if}}" placeholder="0" />
+          <p class="help-text-small">Improve position by N steps</p>
+        </div>
+        <div class="modifier-field">
+          <label>Position Penalty</label>
+          <input type="text" name="system.modifiers.positionPenalty" value="{{#if system.modifiers.positionPenalty}}{{system.modifiers.positionPenalty}}{{/if}}" placeholder="0" />
+          <p class="help-text-small">Worsen position by N steps</p>
+        </div>
+        <div class="modifier-field">
+          <label>Effect Bonus</label>
+          <input type="text" name="system.modifiers.effectBonus" value="{{#if system.modifiers.effectBonus}}{{system.modifiers.effectBonus}}{{/if}}" placeholder="0" />
+          <p class="help-text-small">Improve effect by N levels</p>
+        </div>
+        <div class="modifier-field">
+          <label>Effect Penalty</label>
+          <input type="text" name="system.modifiers.effectPenalty" value="{{#if system.modifiers.effectPenalty}}{{system.modifiers.effectPenalty}}{{/if}}" placeholder="0" />
+          <p class="help-text-small">Reduce effect by N levels</p>
+        </div>
+      </div>
     </div>
 
     <div class="form-group template-note">

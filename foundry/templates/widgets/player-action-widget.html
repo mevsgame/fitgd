@@ -24,52 +24,31 @@
         </select>
       </div>
 
-      <!-- Synergy/Equipment Mode Selection -->
+      <!-- Unified Secondary Approach/Equipment Selection -->
       {{#if playerState.selectedApproach}}
-      <div class="mode-selection">
-        <label style="display: block; margin-bottom: 8px;">Mode:</label>
-        <div class="button-row">
-          <button type="button" data-action="set-mode" data-mode="synergy"
-            class="{{#if (eq playerState.rollMode 'synergy')}}active{{/if}}">
-            Synergy
-          </button>
-          <button type="button" data-action="set-mode" data-mode="equipment"
-            class="{{#if (eq playerState.rollMode 'equipment')}}active{{/if}}">
-            Equipment
-          </button>
-        </div>
-
-        <!-- Secondary Approach (only in Synergy mode) -->
-        {{#if (eq playerState.rollMode 'synergy')}}
-        <div class="form-group">
-          <label>Secondary Approach:</label>
-          <select name="secondary-approach" class="secondary-approach-select approach-select">
-            <option value="">-- Select Secondary --</option>
-            {{#each approaches}}
-            {{#unless (eq this ../playerState.selectedApproach)}}
-            <option value="{{this}}" {{#if (eq ../playerState.secondaryApproach this)}}selected{{/if}}>
-              {{capitalize this}} ({{lookup ../character.approaches this}}d)
-            </option>
-            {{/unless}}
-            {{/each}}
-          </select>
-        </div>
-        {{/if}}
-
-        <!-- Equipment Selection (only in Equipment mode) -->
-        {{#if (eq playerState.rollMode 'equipment')}}
-        <div class="form-group">
-          <label>Active Equipment:</label>
-          <select name="active-equipment" class="active-equipment-select approach-select">
-            <option value="">-- Select Equipment --</option>
-            {{#each equippedItems}}
-            <option value="{{this.id}}" {{#if (eq ../activeEquipmentItem.id this.id)}}selected{{/if}}>
-              {{this.name}} ({{this.category}})
-            </option>
-            {{/each}}
-          </select>
-        </div>
-        {{/if}}
+      <div class="form-group secondary-selection">
+        <label>Secondary Approach or Equipment:</label>
+        <select name="secondary-approach" class="secondary-approach-select approach-select">
+          <option value="">-- Select Secondary (optional) --</option>
+          {{#each secondaryOptions}}
+          {{#if (eq this.type 'approach')}}
+          <option value="{{this.value}}" {{#if (eq ../selectedSecondaryId this.value)}}selected{{/if}}>
+            {{this.name}} ({{this.bonus}})
+          </option>
+          {{else if (eq this.type 'separator')}}
+          <option disabled>────────────────</option>
+          {{else if (eq this.type 'active')}}
+          <option value="{{this.value}}" {{#if (eq ../selectedSecondaryId this.value)}}selected{{/if}}>
+            🗡️ {{this.name}} {{#if this.bonus}}({{this.bonus}}){{/if}}{{#if this.locked}} 🔒{{/if}}
+          </option>
+          {{else if (eq this.type 'consumable')}}
+          <option value="{{this.value}}" {{#if (eq ../selectedSecondaryId this.value)}}selected{{/if}}>
+            💊 {{this.name}} {{#if this.bonus}}({{this.bonus}}){{/if}}{{#if this.locked}} 🔒{{/if}}
+          </option>
+          {{/if}}
+          {{/each}}
+        </select>
+        <p class="help-text">Choose another approach for Synergy, or select an equipped item for its bonus.</p>
       </div>
       {{/if}}
 
@@ -131,11 +110,6 @@
             (and (eq playerState.position "controlled" ) (lt momentum 1))}}disabled{{/if}}>
             Use Trait
           </button>
-          {{#unless (eq playerState.rollMode 'synergy')}}
-          <button type="button" data-action="equipment">
-            Equipment
-          </button>
-          {{/unless}}
           <button type="button" data-action="push-die"
             class="{{#if (and playerState.pushed (eq playerState.pushType 'extra-die'))}}active{{/if}}" {{#if (lt
             momentum 1)}}disabled{{/if}}>
@@ -175,6 +149,9 @@
           <option value="spectacular" {{#if (eq playerState.effect "spectacular" )}}selected{{/if}}>Spectacular</option>
         </select>
       </div>
+
+      <!-- GM Passive Equipment Grid -->
+      {{> gm-passive-grid passiveEquipment=passiveEquipment selectedPassiveId=selectedPassiveId isGM=true}}
     </div>
     {{/if}}
 
@@ -183,38 +160,24 @@
     <div class="action-plan-preview">
       <h4>📋 Current Plan:</h4>
       <div class="plan-box">
-        {{#if (eq playerState.rollMode 'synergy')}}
-        <div class="plan-line synergy-info">
-          <strong>Mode: Synergy</strong><br>
-          {{capitalize playerState.selectedApproach}} ({{lookup character.approaches playerState.selectedApproach}}d) +
-          {{capitalize playerState.secondaryApproach}} ({{lookup character.approaches playerState.secondaryApproach}}d)
-        </div>
-        {{else if (eq playerState.rollMode 'equipment')}}
-        <div class="plan-line equipment-info">
-          <strong>Mode: Equipment</strong><br>
-          {{capitalize playerState.selectedApproach}} ({{lookup character.approaches playerState.selectedApproach}}d) +
-          {{activeEquipmentItem.name}}
-          {{#if equipmentEffectPreview.diceBonus}}
-          (+{{equipmentEffectPreview.diceBonus}}d)
+        <!-- Primary + Secondary + Passive summary -->
+        <div class="plan-line action-composition">
+          <strong>Action:</strong>
+          {{capitalize playerState.selectedApproach}}
+          {{#if selectedSecondaryName}}
+          + {{selectedSecondaryName}}
           {{/if}}
-          {{#if equipmentEffectPreview.dicePenalty}}
-          (-{{equipmentEffectPreview.dicePenalty}}d)
+          {{#if approvedPassiveEquipment}}
+          + {{approvedPassiveEquipment.name}}
           {{/if}}
+          = <strong>{{dicePool}}d</strong>
         </div>
-        {{else}}
-        <div class="plan-line">Approach: {{capitalize playerState.selectedApproach}} ({{lookup character.approaches
-          playerState.selectedApproach}}d)</div>
-        {{/if}}
 
         <!-- Position with Equipment Modifiers -->
         <div class="plan-line">
           Position: {{uppercase (default playerState.position "risky")}}
-          {{#if equipmentEffectPreview.positionBonus}}
-          <span class="equipment-modifier positive">→ {{uppercase equipmentPositionProposal}} (equipment improves by
-            {{equipmentEffectPreview.positionBonus}})</span>
-          {{else if equipmentEffectPreview.positionPenalty}}
-          <span class="equipment-modifier negative">→ {{uppercase equipmentPositionProposal}} (equipment worsens by
-            {{equipmentEffectPreview.positionPenalty}})</span>
+          {{#if equipmentModifiedPosition}}
+          → <span class="modified">{{uppercase equipmentModifiedPosition}}</span>
           {{else}}
           → <span class="{{#if playerState.traitTransaction}}improved{{/if}}">{{uppercase improvedPosition}}</span>
           {{/if}}
@@ -223,16 +186,10 @@
         <!-- Effect with Equipment Modifiers -->
         <div class="plan-line">
           Effect: {{uppercase (default playerState.effect "standard")}}
-          {{#if equipmentEffectPreview.effectBonus}}
-          <span class="equipment-modifier positive">→ {{uppercase equipmentEffectProposal}} (equipment improves by
-            {{equipmentEffectPreview.effectBonus}})</span>
-          {{else if equipmentEffectPreview.effectPenalty}}
-          <span class="equipment-modifier negative">→ {{uppercase equipmentEffectProposal}} (equipment worsens by
-            {{equipmentEffectPreview.effectPenalty}})</span>
+          {{#if equipmentModifiedEffect}}
+          → <span class="modified">{{uppercase equipmentModifiedEffect}}</span>
           {{else}}
-          → <span
-            class="{{#if (and playerState.pushed (eq playerState.pushType 'improved-effect'))}}improved{{/if}}">{{uppercase
-            improvedEffect}}</span>
+          → <span class="{{#if (and playerState.pushed (eq playerState.pushType 'improved-effect'))}}improved{{/if}}">{{uppercase improvedEffect}}</span>
           {{/if}}
         </div>
 
@@ -247,9 +204,6 @@
         </div>
         {{/if}}
 
-        <div class="plan-line total">
-          <strong>TOTAL: {{dicePool}}d6</strong>
-        </div>
         {{#if momentumCost}}
         <div class="plan-line momentum-cost">
           Momentum Cost: -{{momentumCost}}M ({{momentum}}→{{subtract momentum momentumCost}})
@@ -331,36 +285,6 @@
     </div>
     <p class="success-message">You succeed without complications!</p>
     <p class="fade-text">Close this window when ready.</p>
-  </div>
-  {{/if}}
-
-  <!-- ==================== CONSEQUENCE CHOICE ==================== -->
-  {{#if isConsequenceChoice}}
-  <div class="widget-content consequence-choice">
-    <div class="roll-outcome">
-      {{#if (eq playerState.outcome "partial")}}
-      <h2 class="outcome-partial">⚠️ PARTIAL SUCCESS</h2>
-      {{else}}
-      <h2 class="outcome-failure">❌ FAILURE</h2>
-      {{/if}}
-      <div class="dice-display">
-        <div class="dice-result">Highest: {{max playerState.rollResult}}</div>
-        <div class="dice-rolled">Rolled: {{join playerState.rollResult ", "}}</div>
-      </div>
-    </div>
-    <p class="consequence-message">You face consequences...</p>
-
-    {{#unless isGM}}
-    <div class="action-buttons">
-      <button type="button" data-action="use-stims" {{#if playerState.stimsUsedThisAction}}disabled{{/if}}>
-        {{#if playerState.stimsUsedThisAction}}Stims Already Used{{else}}Use Stims & Reroll{{/if}}
-      </button>
-      <button type="button" data-action="accept-consequences" class="primary" {{#unless
-        consequenceConfigured}}disabled{{/unless}}>
-        {{#if consequenceConfigured}}Accept Consequences{{else}}Waiting for GM to configure consequence...{{/if}}
-      </button>
-    </div>
-    {{/unless}}
   </div>
   {{/if}}
 
@@ -516,6 +440,7 @@
       </div>
       {{/if}}
     </div>
+    {{/if}}
 
     {{#unless isGM}}
     <!-- ==================== PLAYER ACTIONS ==================== -->
@@ -542,7 +467,6 @@
       </div>
     </div>
     {{/unless}}
-    {{/if}}
   </div>
   {{/if}}
 </div>

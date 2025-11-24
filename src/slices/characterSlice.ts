@@ -37,6 +37,7 @@ interface CreateCharacterPayload {
   traits: Trait[];
   approaches: Approaches;
   equipment?: Equipment[];
+  loadLimit?: number;
   userId?: string;
 }
 
@@ -148,7 +149,10 @@ const characterSlice = createSlice({
       reducer: (state, action: PayloadAction<Character>) => {
         const character = action.payload;
         state.byId[character.id] = character;
-        state.allIds.push(character.id);
+        // Only add to allIds if not already present (idempotent for replay)
+        if (!state.allIds.includes(character.id)) {
+          state.allIds.push(character.id);
+        }
 
         // Log command to history
         state.history.push({
@@ -183,6 +187,7 @@ const characterSlice = createSlice({
           approaches: payload.approaches,
           unallocatedApproachDots: unallocated,
           equipment: payload.equipment || [],
+          loadLimit: payload.loadLimit || DEFAULT_CONFIG.character.defaultLoadLimit,
           rallyAvailable: true,
           createdAt: timestamp,
           updatedAt: timestamp,
@@ -211,7 +216,11 @@ const characterSlice = createSlice({
         // Validate trait addition
         validateTraitAddition(character, traitWithId);
 
-        character.traits.push(traitWithId);
+        // Only add if not already present (idempotent for replay)
+        const existingIndex = character.traits.findIndex(t => t.id === traitWithId.id);
+        if (existingIndex === -1) {
+          character.traits.push(traitWithId);
+        }
         character.updatedAt = Date.now();
 
         // Log command to history
@@ -537,7 +546,11 @@ const characterSlice = createSlice({
           equipment.id = generateId();
         }
 
-        character.equipment.push(equipment);
+        // Only add if not already present (idempotent for replay)
+        const existingIndex = character.equipment.findIndex(e => e.id === equipment.id);
+        if (existingIndex === -1) {
+          character.equipment.push(equipment);
+        }
         character.updatedAt = Date.now();
 
         // Log command to history
@@ -665,8 +678,8 @@ const characterSlice = createSlice({
 
         // If equipping, check load limit
         if (equipped && !equipment.equipped) {
-          const currentLoad = character.equipment.filter(e => e.equipped).length;
-          if (currentLoad >= DEFAULT_CONFIG.character.maxLoad) {
+          const currentLoad = character.equipment.filter(e => e.equipped).reduce((sum, e) => sum + e.slots, 0);
+          if (currentLoad + equipment.slots > character.loadLimit) {
             // Block equipping if load limit reached
             return;
           }
@@ -912,7 +925,7 @@ const characterSlice = createSlice({
           throw new Error(`Equipment ${equipmentId} not found`);
         }
 
-        equipment.depleted = true;
+        equipment.consumed = true;
         character.updatedAt = Date.now();
 
         state.history.push({
@@ -953,11 +966,10 @@ const characterSlice = createSlice({
           throw new Error(`Character ${characterId} not found`);
         }
 
-        // Reset depleted flag for all consumable-category items
-        const consumableCategories = DEFAULT_CONFIG.equipment.consumableCategories;
+        // Reset consumed flag for all consumable-category items
         character.equipment.forEach((equip) => {
-          if (consumableCategories.includes(equip.category)) {
-            equip.depleted = false;
+          if (equip.category === 'consumable') {
+            equip.consumed = false;
           }
         });
 
@@ -1050,12 +1062,9 @@ const characterSlice = createSlice({
           throw new Error(`Character ${characterId} not found`);
         }
 
-        // Auto-equip items with autoEquip flag
+        // Unlock all equipment after reset
         character.equipment.forEach((equip) => {
-          if (equip.autoEquip) {
-            equip.equipped = true;
-            equip.locked = false; // Fresh equip after reset
-          }
+          equip.locked = false;
         });
 
         character.updatedAt = Date.now();

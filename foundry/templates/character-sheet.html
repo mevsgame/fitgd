@@ -197,52 +197,96 @@
     <div class="tab equipment" data-group="primary" data-tab="equipment">
       <div class="equipment-header">
         <h2>Equipment</h2>
-        <button class="add-equipment-btn" type="button">
-          <i class="fas fa-plus"></i> Add Equipment
-        </button>
-      </div>
-
-      <div class="equipment-list">
-        {{#each system.equipment as |item|}}
-        <div class="equipment-item {{#if item.equipped}}equipped{{/if}} {{#if item.locked}}locked{{/if}}"
-          data-equipment-id="{{item.id}}">
-          <div class="equipment-main-row">
-            <div class="equipment-info">
-              <div class="equipment-name-wrapper">
-                <input type="checkbox" class="equip-toggle" data-equipment-id="{{item.id}}" {{checked item.equipped}}
-                  {{#if item.locked}}disabled{{/if}}
-                  title="{{#if item.locked}}Locked until Momentum Reset{{else}}Equip{{/if}}" />
-                <h4 class="equipment-name">{{item.name}}</h4>
-              </div>
-              <span class="category-badge">{{item.category}}</span>
-            </div>
-
-            <div class="equipment-controls">
-              <button class="edit-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Edit">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button class="delete-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Remove">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          </div>
-
-          {{#if item.description}}
-          <p class="equipment-description">{{item.description}}</p>
-          {{/if}}
-
-          {{#if (eq item.tier "inaccessible")}}
-          <p class="equipment-note">
-            <i class="fas fa-lock"></i> Requires flashback to acquire
-          </p>
-          {{/if}}
+        <div class="equipment-header-info">
+          <span class="load-display">
+            <i class="fas fa-weight"></i>
+            Load: <span class="load-value">{{loadUsed}}</span>/<span class="load-limit">{{#if system.loadLimit}}{{system.loadLimit}}{{else}}5{{/if}}</span> slots
+          </span>
+          <button class="add-equipment-btn" type="button">
+            <i class="fas fa-plus"></i> Add Equipment
+          </button>
         </div>
-        {{else}}
-        <p class="no-equipment">
-          No equipment yet. Click "Add Equipment" to browse available items.
-        </p>
-        {{/each}}
       </div>
+
+      {{#if system.equipment}}
+      <div class="equipment-categories">
+        {{!-- Active Equipment Section --}}
+        {{#if (hasEquipmentByCategory system.equipment "active")}}
+        <div class="equipment-category-section active-section">
+          <div class="category-label">
+            <i class="fas fa-crossed-swords"></i> Active Equipment
+          </div>
+          <div class="equipment-list">
+            {{#each system.equipment as |item|}}
+              {{#if (eq item.category "active")}}
+                {{> equipment-row-view item=item config=(getConfigForContext "character-sheet")}}
+                <div class="equipment-actions">
+                  <button class="edit-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Edit">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="delete-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Remove">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              {{/if}}
+            {{/each}}
+          </div>
+        </div>
+        {{/if}}
+
+        {{!-- Passive Equipment Section --}}
+        {{#if (hasEquipmentByCategory system.equipment "passive")}}
+        <div class="equipment-category-section passive-section">
+          <div class="category-label">
+            <i class="fas fa-shield-alt"></i> Passive Equipment
+          </div>
+          <div class="equipment-list">
+            {{#each system.equipment as |item|}}
+              {{#if (eq item.category "passive")}}
+                {{> equipment-row-view item=item config=(getConfigForContext "character-sheet")}}
+                <div class="equipment-actions">
+                  <button class="edit-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Edit">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="delete-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Remove">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              {{/if}}
+            {{/each}}
+          </div>
+        </div>
+        {{/if}}
+
+        {{!-- Consumable Equipment Section --}}
+        {{#if (hasEquipmentByCategory system.equipment "consumable")}}
+        <div class="equipment-category-section consumable-section">
+          <div class="category-label">
+            <i class="fas fa-vial"></i> Consumable Equipment
+          </div>
+          <div class="equipment-list">
+            {{#each system.equipment as |item|}}
+              {{#if (eq item.category "consumable")}}
+                {{> equipment-row-view item=item config=(getConfigForContext "character-sheet")}}
+                <div class="equipment-actions">
+                  <button class="edit-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Edit">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="delete-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Remove">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              {{/if}}
+            {{/each}}
+          </div>
+        </div>
+        {{/if}}
+      </div>
+      {{else}}
+      <p class="no-equipment">
+        <i class="fas fa-inbox"></i> No equipment yet. Click "Add Equipment" to browse available items.
+      </p>
+      {{/if}}
     </div>
 
   </section>

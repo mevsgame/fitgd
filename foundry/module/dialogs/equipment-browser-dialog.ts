@@ -5,7 +5,7 @@
  * On selection, copies all data to Redux (no reference kept).
  */
 
-import type { Equipment } from '@/types/character';
+import type { Equipment } from '@/types/equipment';
 
 interface EquipmentTemplate {
   id: string;
@@ -118,12 +118,41 @@ export class EquipmentBrowserDialog extends Dialog {
    * Convert Foundry Item to equipment template data
    */
   private _templateFromItem(item: Item, fromCompendium = false): EquipmentTemplate {
+    const system = (item.system as any) || {};
+
+    // Normalize category to new system (active/passive/consumable) if using old categories
+    let category = system.category || 'active';
+    const categoryMap: Record<string, string> = {
+      weapon: 'active',
+      armor: 'passive',
+      tool: 'active',
+      device: 'active',
+      implant: 'passive',
+      augmentation: 'passive',
+      grenade: 'consumable',
+      medkit: 'consumable',
+      stim: 'consumable',
+    };
+    if (categoryMap[category]) {
+      category = categoryMap[category];
+    }
+
+    // Normalize tier from old system (accessible/inaccessible) to new system (common/rare/epic)
+    let tier = system.tier || 'common';
+    const tierMap: Record<string, string> = {
+      accessible: 'common',
+      inaccessible: 'rare',
+    };
+    if (tierMap[tier]) {
+      tier = tierMap[tier];
+    }
+
     return {
       id: item.id || foundry.utils.randomID(),
       name: item.name || 'Unknown',
-      tier: (item.system as any).tier as Equipment['tier'],
-      category: (item.system as any).category as string,
-      description: (item.system as any).description || '',
+      tier: tier as Equipment['tier'],
+      category,
+      description: system.description || '',
       img: item.img || '',
       source: fromCompendium ? 'compendium' : 'world',
       sourceItemId: item.id || '', // Track source for reference
@@ -146,9 +175,9 @@ export class EquipmentBrowserDialog extends Dialog {
 
           <select class="category-filter">
             <option value="all" ${!this.categoryFilter ? 'selected' : ''}>All Categories</option>
-            <option value="weapon" ${this.categoryFilter === 'weapon' ? 'selected' : ''}>Weapons</option>
-            <option value="armor" ${this.categoryFilter === 'armor' ? 'selected' : ''}>Armor</option>
-            <option value="tool" ${this.categoryFilter === 'tool' ? 'selected' : ''}>Tools</option>
+            <option value="active" ${this.categoryFilter === 'active' ? 'selected' : ''}>Active (Weapons/Tools)</option>
+            <option value="passive" ${this.categoryFilter === 'passive' ? 'selected' : ''}>Passive (Armor/Implants)</option>
+            <option value="consumable" ${this.categoryFilter === 'consumable' ? 'selected' : ''}>Consumable (Grenades/Stims)</option>
           </select>
 
           <input type="text" class="equipment-search" placeholder="Search by name..."/>
@@ -270,6 +299,29 @@ export class EquipmentBrowserDialog extends Dialog {
     // Generate unique ID for this equipment instance
     const equipmentId = foundry.utils.randomID();
 
+    // Get the source item to extract slots and modifiers
+    let slots = 1; // Default slot cost
+    let modifiers = {}; // Default empty modifiers
+
+    // Find the source item to extract additional data
+    let sourceItem: Item | null = null;
+
+    if (this.items.find(t => t.id === selectedId)?.source === 'compendium') {
+      const compendium = game.packs.get('forged-in-the-grimdark.equipment');
+      if (compendium) {
+        sourceItem = (await compendium.getDocument(selectedId)) as Item | null;
+      }
+    } else {
+      sourceItem = game.items.get(selectedId) as Item | null;
+    }
+
+    // Extract slots and modifiers from source item
+    if (sourceItem) {
+      const system = sourceItem.system as any;
+      if (system?.slots) slots = system.slots;
+      if (system?.modifiers) modifiers = system.modifiers;
+    }
+
     // Copy template data to Redux (full duplication, no reference!)
     await game.fitgd.bridge.execute({
       type: 'characters/addEquipment',
@@ -282,7 +334,12 @@ export class EquipmentBrowserDialog extends Dialog {
           category: template.category,
           description: template.description,
           img: template.img,
+          slots,
           equipped: false,
+          locked: false,
+          consumed: false,
+          modifiers,
+          acquiredAt: Date.now(),
           acquiredVia: 'creation',
           sourceItemId: template.sourceItemId, // Optional: track where it came from
         },

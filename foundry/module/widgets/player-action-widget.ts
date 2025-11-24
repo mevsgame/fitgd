@@ -1,11 +1,12 @@
-﻿/**
+/**
  * Player Action Widget
  *
  * A persistent widget that appears when it's a player's turn in an encounter.
  * Drives the action resolution flow through the state machine.
  */
 
-import type { Character, Equipment } from '@/types/character';
+import type { Character } from '@/types/character';
+import type { Equipment } from '@/types/equipment';
 import type { Crew } from '@/types/crew';
 import type { Clock } from '@/types/clock';
 import type { RootState } from '@/store';
@@ -15,13 +16,13 @@ import type { TraitTransaction, ConsequenceTransaction } from '@/types/playerRou
 import { selectCanUseRally } from '@/selectors/characterSelectors';
 import { selectStimsAvailable } from '@/selectors/clockSelectors';
 
-import { selectActiveEquipment, selectPassiveEquipment, selectCurrentLoad, selectEquipmentEffect, isEquipmentConsumable } from '@/selectors/equipmentSelectors';
+import { selectActiveEquipment, selectPassiveEquipment, selectCurrentLoad, isEquipmentConsumable, selectConsumableEquipment, selectFirstLockCost } from '@/selectors/equipmentSelectors';
 import { selectDicePool, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect, selectEquipmentEffects, selectEquipmentModifiedPosition, selectEquipmentModifiedEffect } from '@/selectors/playerRoundStateSelectors';
 
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
 
 import { calculateOutcome } from '@/utils/diceRules';
-import { improvePosition, worsenPosition, improveEffect, worsenEffect } from '@/utils/positionEffectHelpers';
+import { getEquipmentToLock, getConsumablesToDeplete } from '@/utils/equipmentRules';
 
 import { FlashbackTraitsDialog } from '../dialogs/FlashbackTraitsDialog';
 import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog, RallyDialog } from '../dialogs/index';
@@ -55,7 +56,6 @@ interface PlayerActionWidgetData {
   isStimsRolling: boolean;
   isStimsLocked: boolean;
   isSuccess: boolean;
-  isConsequenceChoice: boolean;
   isGMResolvingConsequence: boolean;
 
   // Available approaches
@@ -65,6 +65,13 @@ interface PlayerActionWidgetData {
   equippedItems: Equipment[];
   activeEquipmentItem?: Equipment;
   passiveEquipment: Equipment[];
+  selectedPassiveId?: string | null;
+  approvedPassiveEquipment?: Equipment;
+
+  // Secondary approach unified dropdown options
+  secondaryOptions?: Array<{ type: 'approach' | 'separator' | 'active' | 'consumable', value?: string, name?: string, bonus?: string, locked?: boolean }>;
+  selectedSecondaryId?: string | null;
+  selectedSecondaryName?: string | null;
 
   // Equipment effects from selected items
   equipmentEffects?: {
@@ -237,6 +244,17 @@ export class PlayerActionWidget extends Application {
 
         const clocksChanged = currentState.clocks !== previousState.clocks;
 
+        // Log subscription changes
+        if (playerStateChanged || characterChanged || crewChanged || clocksChanged) {
+          console.log('FitGD | Widget subscription detected changes:', {
+            playerStateChanged,
+            characterChanged,
+            crewChanged,
+            clocksChanged,
+            currentPlayerState: currentState.playerRoundState.byCharacterId[this.characterId]?.state,
+          });
+        }
+
         // Re-render if any relevant state changed
         if (playerStateChanged || characterChanged || crewChanged || clocksChanged) {
           this.render(true); // Force full re-render to update template
@@ -317,6 +335,11 @@ export class PlayerActionWidget extends Application {
     this.playerState = state.playerRoundState.byCharacterId[this.characterId];
 
     console.log('FitGD | Widget getData() - Current state:', this.playerState?.state, 'isGM:', game.user?.isGM);
+    console.log('FitGD | Widget getData() - Approved Passive ID:', this.playerState?.approvedPassiveId);
+    if (this.playerState?.approvedPassiveId) {
+      const passive = this.character.equipment.find(e => e.id === this.playerState!.approvedPassiveId);
+      console.log('FitGD | Widget getData() - Found Passive Item:', passive);
+    }
 
     // Initialize handlers
     this.consequenceHandler = new ConsequenceResolutionHandler({
@@ -394,14 +417,13 @@ export class PlayerActionWidget extends Application {
       isStimsLocked: this.playerState?.state === 'STIMS_LOCKED',
       isSuccess: this.playerState?.state === 'SUCCESS_COMPLETE',
       isGMResolvingConsequence: this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE',
-      isConsequenceChoice: this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE',
 
       // Available approaches
       approaches: Object.keys(this.character.approaches),
 
-      // Equipment for selection (excluding depleted consumables - they cannot be used once consumed)
+      // Equipment for selection (excluding consumed consumables - they cannot be used once consumed)
       equippedItems: selectActiveEquipment(this.character).filter(
-        item => !item.depleted // Depleted consumables cannot be selected
+        item => !item.consumed // Consumed consumables cannot be selected
       ),
       activeEquipmentItem: this.playerState?.equippedForAction?.[0]
         ? this.character.equipment.find(e => e.id === this.playerState!.equippedForAction![0])
@@ -442,12 +464,25 @@ export class PlayerActionWidget extends Application {
       // Passive equipment for display
       passiveEquipment: selectPassiveEquipment(this.character),
 
+      // Selected passive equipment ID (GM only)
+      selectedPassiveId: this.playerState?.approvedPassiveId,
+
+      // Approved passive equipment object (for display)
+      approvedPassiveEquipment: this.playerState?.approvedPassiveId
+        ? this.character?.equipment.find(e => e.id === this.playerState!.approvedPassiveId)
+        : undefined,
+
       // Equipment effects from selected items (using new selectors)
       equipmentEffects: selectEquipmentEffects(state, this.characterId),
 
       // Equipment-modified position and effect (using new selectors)
       equipmentModifiedPosition: selectEquipmentModifiedPosition(state, this.characterId),
       equipmentModifiedEffect: selectEquipmentModifiedEffect(state, this.characterId),
+
+      // Secondary approach unified dropdown options
+      secondaryOptions: this._buildSecondaryOptions(this.playerState?.selectedApproach, this.character),
+      selectedSecondaryId: this.playerState?.equippedForAction?.[0] || this.playerState?.secondaryApproach,
+      selectedSecondaryName: this._getSelectedSecondaryName(this.playerState, this.character),
 
       // Consequence transaction data (for GM_RESOLVING_CONSEQUENCE state)
       ...(this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE' ? this._getConsequenceData(state) : {}),
@@ -470,6 +505,9 @@ export class PlayerActionWidget extends Application {
     html.find('.active-equipment-select').change(this._onActiveEquipmentChange.bind(this));
     html.find('[data-action="add-flashback-item"]').click(this._onAddFlashbackItem.bind(this));
 
+    // GM Passive Equipment selection
+    html.find('.passive-equipment-radio').change(this._onPassiveEquipmentChange.bind(this));
+
     // GM position/effect controls
     html.find('.position-select').change(this._onPositionChange.bind(this));
     html.find('.effect-select').change(this._onEffectChange.bind(this));
@@ -490,14 +528,13 @@ export class PlayerActionWidget extends Application {
 
     // Consequence buttons
     html.find('[data-action="use-stims"]').click(this._onUseStims.bind(this));
-    html.find('[data-action="accept-consequences"]').click(this._onAcceptConsequences.bind(this));
 
     // GM consequence configuration buttons
     html.find('[data-action="select-consequence-type"]').click(this._onSelectConsequenceType.bind(this));
     html.find('[data-action="select-harm-target"]').click(this._onSelectHarmTarget.bind(this));
     html.find('[data-action="select-harm-clock"]').click(this._onSelectHarmClock.bind(this));
     html.find('[data-action="select-crew-clock"]').click(this._onSelectCrewClock.bind(this));
-    html.find('[data-action="approve-consequence"]').click(this._onApproveConsequence.bind(this));
+    html.find('[data-action="approve-consequence"]').click(this._onPlayerAcceptConsequence.bind(this));
 
     // Player stims button (from GM phase)
     html.find('[data-action="use-stims-gm-phase"]').click(this._onUseStimsGMPhase.bind(this));
@@ -527,6 +564,132 @@ export class PlayerActionWidget extends Application {
         force: true, // Force full re-render to show new traits
       });
     }
+  }
+
+  /**
+   * Build secondary approach options (unified dropdown)
+   *
+   * Format: [Approaches] [Separator] [Active Equipment] [Consumables]
+   * Each equipment shows: Name + Bonuses + Category Icon
+   */
+  private _buildSecondaryOptions(
+    selectedApproach: string | undefined,
+    character: Character
+  ): Array<{ type: 'approach' | 'separator' | 'active' | 'consumable', value?: string, name?: string, bonus?: string, locked?: boolean }> {
+    const options: Array<{ type: 'approach' | 'separator' | 'active' | 'consumable', value?: string, name?: string, bonus?: string, locked?: boolean }> = [];
+
+    // Add other approaches (excluding primary)
+    const otherApproaches = Object.keys(character.approaches).filter(
+      a => a !== selectedApproach?.toLowerCase()
+    );
+
+    otherApproaches.forEach(approach => {
+      options.push({
+        type: 'approach',
+        value: approach,
+        name: approach.charAt(0).toUpperCase() + approach.slice(1),
+        bonus: `${character.approaches[approach as keyof typeof character.approaches]}d`
+      });
+    });
+
+    // Add separator if there are equipment items
+    const activeItems = selectActiveEquipment(character);
+    const consumableItems = selectConsumableEquipment(character);
+
+    if (activeItems.length > 0 || consumableItems.length > 0) {
+      options.push({ type: 'separator' });
+    }
+
+    // Add active equipment (sorted alphabetically)
+    activeItems.sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
+      const bonuses: string[] = [];
+      if (item.modifiers?.diceBonus) bonuses.push(`+${item.modifiers.diceBonus}d`);
+      if (item.modifiers?.positionBonus) bonuses.push(`+${item.modifiers.positionBonus}pos`);
+      if (item.modifiers?.effectBonus) bonuses.push(`+${item.modifiers.effectBonus}eff`);
+
+      options.push({
+        type: 'active',
+        value: item.id,
+        name: item.name,
+        bonus: bonuses.join(' '),
+        locked: item.locked
+      });
+    });
+
+    // Add consumable equipment (sorted alphabetically)
+    consumableItems.sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
+      const bonuses: string[] = [];
+      if (item.modifiers?.diceBonus) bonuses.push(`+${item.modifiers.diceBonus}d`);
+      if (item.modifiers?.positionBonus) bonuses.push(`+${item.modifiers.positionBonus}pos`);
+      if (item.modifiers?.effectBonus) bonuses.push(`+${item.modifiers.effectBonus}eff`);
+
+      options.push({
+        type: 'consumable',
+        value: item.id,
+        name: item.name,
+        bonus: bonuses.join(' '),
+        locked: item.locked
+      });
+    });
+
+    return options;
+  }
+
+  /**
+   * Get the name of the selected secondary (approach or equipment)
+   */
+  private _getSelectedSecondaryName(playerState: PlayerRoundState | null | undefined, character: Character | null): string | null {
+    if (!playerState || !character) return null;
+
+    // Check if secondary approach is selected
+    if (playerState.secondaryApproach) {
+      return playerState.secondaryApproach.charAt(0).toUpperCase() + playerState.secondaryApproach.slice(1);
+    }
+
+    // Check if equipment is equipped
+    if (playerState.equippedForAction?.[0]) {
+      const equipment = character.equipment.find(e => e.id === playerState.equippedForAction![0]);
+      return equipment?.name || null;
+    }
+
+    return null;
+  }
+
+  /**
+   * Calculate total momentum cost including equipment first-lock costs
+   *
+   * Equipment first-lock costs: 1M per unlocked Rare/Epic item used
+   * Includes: equippedForAction items + approvedPassiveId
+   */
+  private _calculateTotalMomentumCost(playerState: PlayerRoundState | null | undefined, character: Character | null): number {
+    if (!playerState || !character) return 0;
+
+    // Get base costs (push, trait, flashback)
+    const baseCost = selectMomentumCost(playerState);
+
+    // Get equipment items that will be locked in this roll
+    const equipmentToLock: Equipment[] = [];
+
+    // Add selected active/consumable equipment
+    if (playerState.equippedForAction?.[0]) {
+      const equipment = character.equipment.find(e => e.id === playerState.equippedForAction![0]);
+      if (equipment) {
+        equipmentToLock.push(equipment);
+      }
+    }
+
+    // Add approved passive equipment
+    if (playerState.approvedPassiveId) {
+      const passive = character.equipment.find(e => e.id === playerState.approvedPassiveId);
+      if (passive) {
+        equipmentToLock.push(passive);
+      }
+    }
+
+    // Calculate first-lock costs for equipment
+    const equipmentCost = selectFirstLockCost(equipmentToLock);
+
+    return baseCost + equipmentCost;
   }
 
   /**
@@ -620,25 +783,85 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Handle secondary approach change
+   * Handle secondary approach/equipment change (unified dropdown)
+   * Can be either an approach name or equipment ID
    */
   private async _onSecondaryApproachChange(event: JQuery.ChangeEvent): Promise<void> {
-    const secondaryApproach = (event.currentTarget as HTMLSelectElement).value;
-
-    await game.fitgd.bridge.execute(
-      {
-        type: 'playerRoundState/setActionPlan',
-        payload: {
-          characterId: this.characterId,
-          approach: this.playerState?.selectedApproach || 'force',
-          secondaryApproach: secondaryApproach || undefined,
-          rollMode: 'synergy', // Ensure synergy mode stays active
-          position: this.playerState?.position || 'risky',
-          effect: this.playerState?.effect || 'standard',
+    const selectedValue = (event.currentTarget as HTMLSelectElement).value;
+    if (!selectedValue) {
+      // Deselected - clear both
+      await game.fitgd.bridge.execute(
+        {
+          type: 'playerRoundState/setActionPlan',
+          payload: {
+            characterId: this.characterId,
+            approach: this.playerState?.selectedApproach || 'force',
+            secondaryApproach: undefined,
+            equippedForAction: [],
+            position: this.playerState?.position || 'risky',
+            effect: this.playerState?.effect || 'standard',
+          },
         },
-      },
-      { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
-    );
+        { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
+      );
+      return;
+    }
+
+    // Determine if it's an approach or equipment by checking against approaches
+    const isApproach = Object.keys(this.character!.approaches).includes(selectedValue);
+
+    if (isApproach) {
+      // Selected an approach for secondary
+      await game.fitgd.bridge.execute(
+        {
+          type: 'playerRoundState/setActionPlan',
+          payload: {
+            characterId: this.characterId,
+            approach: this.playerState?.selectedApproach || 'force',
+            secondaryApproach: selectedValue,
+            equippedForAction: [], // Clear equipment if synergy selected
+            rollMode: 'synergy', // Explicitly set mode to synergy
+            position: this.playerState?.position || 'risky',
+            effect: this.playerState?.effect || 'standard',
+          },
+        },
+        { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
+      );
+    } else {
+      // Selected an equipment item
+      const actions = [
+        {
+          type: 'playerRoundState/setActionPlan',
+          payload: {
+            characterId: this.characterId,
+            approach: this.playerState?.selectedApproach || 'force',
+            secondaryApproach: undefined, // Clear synergy if equipment selected
+            equippedForAction: [selectedValue],
+            position: this.playerState?.position || 'risky',
+            effect: this.playerState?.effect || 'standard',
+          },
+        } as any,
+      ];
+
+      // If consumable is selected, mark it as depleted
+      if (this.character) {
+        const equipment = this.character.equipment.find(e => e.id === selectedValue);
+        if (equipment && isEquipmentConsumable(equipment)) {
+          actions.push({
+            type: 'characters/markEquipmentDepleted',
+            payload: {
+              characterId: this.characterId,
+              equipmentId: selectedValue,
+            },
+          } as any);
+        }
+      }
+
+      await game.fitgd.bridge.executeBatch(
+        actions,
+        { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
+      );
+    }
   }
 
   /**
@@ -686,6 +909,36 @@ export class PlayerActionWidget extends Application {
       actions,
       { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
     );
+  }
+
+  /**
+   * Handle GM Passive equipment approval
+   */
+  private async _onPassiveEquipmentChange(event: JQuery.ChangeEvent): Promise<void> {
+    const equipmentId = (event.currentTarget as HTMLInputElement).value || null;
+
+    // Use Bridge API to dispatch and broadcast
+    await game.fitgd.bridge.execute(
+      {
+        type: 'playerRoundState/setApprovedPassive',
+        payload: {
+          characterId: this.characterId,
+          equipmentId,
+        },
+      },
+      { affectedReduxIds: [asReduxId(this.characterId)], silent: true } // Silent: subscription handles render
+    );
+
+    // Post chat message if passive was selected
+    if (equipmentId && this.character) {
+      const passive = this.character.equipment.find(e => e.id === equipmentId);
+      if (passive) {
+        ChatMessage.create({
+          content: `GM approved Passive equipment for ${this.character!.name}: <strong>${passive.name}</strong>`,
+          speaker: ChatMessage.getSpeaker(),
+        });
+      }
+    }
   }
 
   /**
@@ -901,7 +1154,7 @@ export class PlayerActionWidget extends Application {
 
             // Check Load Limit
             const currentLoad = selectCurrentLoad(this.character!);
-            const maxLoad = DEFAULT_CONFIG.character.maxLoad;
+            const maxLoad = this.character!.loadLimit;
             if (currentLoad >= maxLoad) {
               ui.notifications?.error(`Cannot equip item: Load limit reached (${currentLoad}/${maxLoad})`);
               return;
@@ -1058,11 +1311,41 @@ export class PlayerActionWidget extends Application {
         return;
       }
 
+      // Calculate total momentum cost including equipment first-lock costs
+      const totalMomentumCost = this._calculateTotalMomentumCost(playerState, this.character);
+
+      // Validate sufficient momentum for all costs
+      const availableMomentum = this.crew?.currentMomentum || 0;
+      if (totalMomentumCost > availableMomentum) {
+        const equippedForAction = playerState?.equippedForAction?.[0];
+        const approvedPassiveId = playerState?.approvedPassiveId;
+        const itemsNeedingLock: string[] = [];
+
+        if (equippedForAction && this.character) {
+          const item = this.character.equipment.find(e => e.id === equippedForAction);
+          if (item && (item.tier === 'rare' || item.tier === 'epic') && !item.locked) {
+            itemsNeedingLock.push(item.name);
+          }
+        }
+
+        if (approvedPassiveId && this.character) {
+          const item = this.character.equipment.find(e => e.id === approvedPassiveId);
+          if (item && (item.tier === 'rare' || item.tier === 'epic') && !item.locked) {
+            itemsNeedingLock.push(item.name);
+          }
+        }
+
+        const itemsList = itemsNeedingLock.length > 0 ? ` [${itemsNeedingLock.join(', ')}]` : '';
+        ui.notifications?.error(
+          `Insufficient Momentum to lock equipment! Need ${totalMomentumCost}M, have ${availableMomentum}M${itemsList}`
+        );
+        return;
+      }
+
       // Spend momentum NOW (before rolling)
-      const momentumCost = this.diceRollingHandler.calculateMomentumCost(playerState);
-      if (this.crewId && momentumCost > 0) {
+      if (this.crewId && totalMomentumCost > 0) {
         try {
-          game.fitgd.api.crew.spendMomentum({ crewId: this.crewId, amount: momentumCost });
+          game.fitgd.api.crew.spendMomentum({ crewId: this.crewId, amount: totalMomentumCost });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           ui.notifications?.error(`Failed to spend Momentum: ${errorMessage} `);
@@ -1102,11 +1385,30 @@ export class PlayerActionWidget extends Application {
       // Execute all roll outcome actions as batch
       const rollBatch = this.diceRollingHandler.createRollOutcomeBatch(dicePool, rollResult, outcome);
 
-      // Lock equipment used in this roll
-      if (playerState?.equippedForAction?.length) {
-        playerState.equippedForAction.forEach((equipmentId) => {
+      // Lock equipment used in this roll (active + approved passive)
+      const equipmentToLock = getEquipmentToLock(
+        playerState?.equippedForAction,
+        playerState?.approvedPassiveId
+      );
+
+      if (equipmentToLock.length > 0) {
+        equipmentToLock.forEach((equipmentId) => {
           rollBatch.push({
             type: 'characters/markEquipmentUsed',
+            payload: {
+              characterId: this.characterId,
+              equipmentId,
+            },
+          });
+        });
+      }
+
+      // Mark consumables as depleted
+      const consumablesToDeplete = getConsumablesToDeplete(this.character!, playerState?.equippedForAction || []);
+      if (consumablesToDeplete.length > 0) {
+        consumablesToDeplete.forEach((equipmentId) => {
+          rollBatch.push({
+            type: 'characters/markEquipmentDepleted',
             payload: {
               characterId: this.characterId,
               equipmentId,
@@ -1190,29 +1492,6 @@ export class PlayerActionWidget extends Application {
   private async _onUseStims(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
     await this._useStims();
-  }
-
-  /**
-   * Handle Accept Consequences button (GM_RESOLVING_CONSEQUENCE flow)
-   */
-  private async _onAcceptConsequences(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-
-    console.log('FitGD | Player accepted consequences, transitioning to APPLYING_EFFECTS');
-
-    // Transition to APPLYING_EFFECTS state (next step after accepting consequences)
-    await game.fitgd.bridge.execute(
-      {
-        type: 'playerRoundState/transitionState',
-        payload: {
-          characterId: this.characterId,
-          newState: 'APPLYING_EFFECTS',
-        },
-      },
-      { affectedReduxIds: [asReduxId(this.characterId)], force: true } // Force re-render
-    );
-
-    console.log('FitGD | Transitioned to APPLYING_EFFECTS');
   }
 
   /* -------------------------------------------- */
@@ -1299,12 +1578,15 @@ export class PlayerActionWidget extends Application {
                 try {
                   // Use handler to create clock action
                   const createClockAction = this.consequenceHandler!.createNewHarmClockAction(clockData);
+                  console.log(`FitGD | Creating new harm clock via Bridge:`, createClockAction);
 
                   // Execute clock creation
                   await game.fitgd.bridge.execute(
                     createClockAction,
                     { affectedReduxIds: [asReduxId(targetCharacterId)], silent: true }
                   );
+
+                  console.log(`FitGD | Clock creation executed, should be broadcast now`);
 
                   // Update transaction with new clock
                   const updateAction = this.consequenceHandler!.createUpdateHarmClockInTransactionAction(
@@ -1419,14 +1701,17 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Handle GM approve consequence button
+   * Handle player accepting consequences
+   * Called when PLAYER clicks "Accept Consequences" button
    */
-  private async _onApproveConsequence(event: JQuery.ClickEvent): Promise<void> {
+  private async _onPlayerAcceptConsequence(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
 
     if (!this.consequenceApplicationHandler) return;
 
     const transaction = this.playerState?.consequenceTransaction;
+    console.log('FitGD | _onPlayerAcceptConsequence - Transaction:', JSON.stringify(transaction, null, 2));
+    console.log('FitGD | _onPlayerAcceptConsequence - Called by user:', game.user?.name, 'isGM:', game.user?.isGM);
 
     // Validate transaction is complete
     const validation = this.consequenceApplicationHandler.validateConsequence(transaction);
@@ -1437,44 +1722,71 @@ export class PlayerActionWidget extends Application {
 
     const state = game.fitgd.store.getState();
 
+    // Check if clock exists in store
+    if (transaction?.harmClockId) {
+      const clock = state.clocks.byId[transaction.harmClockId];
+      console.log('FitGD | Clock exists in store?', !!clock, 'ClockId:', transaction.harmClockId);
+      if (clock) {
+        console.log('FitGD | Clock details:', JSON.stringify(clock, null, 2));
+      }
+    }
+
     // Get workflow with all actions and metadata
     const workflow = this.consequenceApplicationHandler.createConsequenceApplicationWorkflow(state, transaction!);
+    console.log('FitGD | Consequence action:', JSON.stringify(workflow.applyConsequenceAction, null, 2));
 
-    // Transition to APPLYING_EFFECTS
-    await game.fitgd.bridge.execute(workflow.transitionToApplyingAction as any, {
-      affectedReduxIds: [asReduxId(this.characterId)],
-      silent: true,
+    // Build batch of all consequence actions
+    // NOTE: Do NOT transition to TURN_COMPLETE here!
+    // The valid sequence is: GM_RESOLVING_CONSEQUENCE → APPLYING_EFFECTS
+    // GM and Player widgets will close when they detect APPLYING_EFFECTS state
+    const actions: any[] = [
+      workflow.transitionToApplyingAction,  // GM_RESOLVING_CONSEQUENCE → APPLYING_EFFECTS
+      workflow.applyConsequenceAction,      // Apply harm clock advancement
+      workflow.clearTransactionAction,       // Clear consequence transaction
+      // REMOVED: workflow.transitionToTurnCompleteAction - causes invalid transition error!
+    ];
+
+    // Add momentum gain if applicable
+    if (this.crewId && workflow.momentumGain > 0) {
+      actions.push({
+        type: 'crews/addMomentum',
+        payload: { crewId: this.crewId, amount: workflow.momentumGain },
+      });
+    }
+
+    console.log('FitGD | Executing batch of', actions.length, 'consequence actions');
+    console.log('FitGD | Affected Redux IDs:', {
+      characterId: this.characterId,
+      characterIdToNotify: workflow.characterIdToNotify,
+      crewId: this.crewId,
+    });
+    console.log('FitGD | Actions:', JSON.stringify(actions, null, 2));
+
+    // Execute all actions as atomic batch (single broadcast)
+    console.log('FitGD | Calling bridge.executeBatch...');
+    await game.fitgd.bridge.executeBatch(actions, {
+      affectedReduxIds: [
+        asReduxId(this.characterId),
+        ...(workflow.characterIdToNotify ? [asReduxId(workflow.characterIdToNotify)] : []),
+        ...(this.crewId ? [asReduxId(this.crewId)] : []),
+      ],
+      silent: false, // Allow sheet refresh after entire batch
     });
 
-    // Apply the consequence (harm or clock)
-    await game.fitgd.bridge.execute(workflow.applyConsequenceAction as any, {
-      affectedReduxIds: [workflow.characterIdToNotify ? asReduxId(workflow.characterIdToNotify) : asReduxId(this.characterId)],
-      silent: true,
-    });
+    console.log('FitGD | Batch executed, consequences applied');
+    console.log('FitGD | Current playerRoundState after batch:', this.playerState?.state);
 
     // Show notification
     ui.notifications?.info(workflow.notificationMessage);
 
-    // Add momentum gain
-    if (this.crewId && workflow.momentumGain > 0) {
-      game.fitgd.api.crew.addMomentum({ crewId: this.crewId, amount: workflow.momentumGain });
-      await game.fitgd.saveImmediate();
+    // Only close widget if NOT the GM
+    // GM widget will close when state transition is received via socket
+    if (!game.user?.isGM) {
+      console.log('FitGD | Closing player widget after accepting consequences');
+      setTimeout(() => this.close(), 500);
+    } else {
+      console.log('FitGD | NOT closing GM widget - waiting for socket state update');
     }
-
-    // Clear transaction
-    await game.fitgd.bridge.execute(workflow.clearTransactionAction as any, {
-      affectedReduxIds: [asReduxId(this.characterId)],
-      silent: true,
-    });
-
-    // Transition to IDLE_WAITING (complete the turn)
-    await game.fitgd.bridge.execute(workflow.transitionToIdleAction as any, {
-      affectedReduxIds: [asReduxId(this.characterId)],
-      silent: true,
-    });
-
-    // Close widget after brief delay
-    setTimeout(() => this.close(), 500);
   }
 
   /**

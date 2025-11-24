@@ -1,0 +1,78 @@
+{{!--
+GM Passive Equipment Grid
+
+Allows GM to approve one Passive equipment item per player action.
+Displays all equipped Passive items with radio buttons for selection.
+
+Context Parameters:
+- passiveEquipment: Array of Equipment objects (all equipped Passives)
+- selectedPassiveId: Currently selected passive ID (or null)
+- isGM: Boolean - only GM sees this grid
+
+Data Flow:
+1. GM sees grid of all equipped Passive items
+2. GM selects one via radio button (or none)
+3. Selected passive appears in Current Plan
+4. On roll commit, selected passive locks and provides bonus
+--}}
+
+{{#if isGM}}
+{{#if passiveEquipment.length}}
+<div class="gm-passive-grid-container">
+  <h4>⚙️ GM Passive Equipment Approval:</h4>
+
+  <div class="passive-grid">
+    {{#each passiveEquipment}}
+    <div class="passive-grid-row">
+      <!-- Column 1: Equipment Row View (approval config) -->
+      <div class="passive-grid-equipment">
+        {{> equipment-row-view
+          item=this
+          config=(object
+            showTier=true
+            showBonuses=true
+            showSlots=false
+            showDescription=false
+            showLocked=true
+            showEquipped=false
+          )
+        }}
+      </div>
+
+      <!-- Column 2: Radio Button Selection -->
+      <div class="passive-grid-selection">
+        <input
+          type="radio"
+          class="passive-equipment-radio"
+          name="approved-passive"
+          value="{{this.id}}"
+          data-equipment-id="{{this.id}}"
+          {{#if (eq ../selectedPassiveId this.id)}}checked{{/if}}
+        />
+      </div>
+    </div>
+    {{/each}}
+
+    <!-- Option to select no passive -->
+    <div class="passive-grid-row">
+      <div class="passive-grid-equipment">
+        <div class="equipment-row none">
+          <div class="equipment-primary">
+            <div class="equipment-name">-- No Passive --</div>
+          </div>
+        </div>
+      </div>
+      <div class="passive-grid-selection">
+        <input
+          type="radio"
+          class="passive-equipment-radio"
+          name="approved-passive"
+          value=""
+          {{#unless selectedPassiveId}}checked{{/unless}}
+        />
+      </div>
+    </div>
+  </div>
+</div>
+{{/if}}
+{{/if}}

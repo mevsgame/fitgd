@@ -89,11 +89,21 @@ export const selectDicePool = createSelector(
         const item = character.equipment.find(e => e.id === equipmentId);
 
         if (item && item.equipped) {
-          // Get equipment effect from config based on category
-          const { diceBonus = 0, dicePenalty = 0 } = DEFAULT_CONFIG.equipment.categories[item.category]?.effect || {};
+          // Get equipment modifiers
+          const { diceBonus = 0, dicePenalty = 0 } = item.modifiers || {};
           pool += diceBonus;
           pool -= dicePenalty;
         }
+      }
+    }
+
+    // 2.5 Add Passive Equipment (if approved by GM)
+    if (playerState.approvedPassiveId) {
+      const item = character.equipment.find(e => e.id === playerState.approvedPassiveId);
+      if (item && item.equipped) {
+        const { diceBonus = 0, dicePenalty = 0 } = item.modifiers || {};
+        pool += diceBonus;
+        pool -= dicePenalty;
       }
     }
 
@@ -139,7 +149,7 @@ export const selectEquipmentEffects = createSelector(
     (state: RootState, characterId: string) => selectPlayerState(state, characterId),
   ],
   (character, playerState): EquipmentEffect => {
-    if (!character || !playerState?.equippedForAction || playerState.equippedForAction.length === 0) {
+    if (!character || !playerState) {
       return {};
     }
 
@@ -155,24 +165,29 @@ export const selectEquipmentEffects = createSelector(
       criticalEffectBonus: 0,
     };
 
-    playerState.equippedForAction.forEach((equipmentId) => {
-      const item = character.equipment.find(e => e.id === equipmentId);
-
+    // Helper to apply item modifiers
+    const applyItemModifiers = (itemId: string) => {
+      const item = character.equipment.find(e => e.id === itemId);
       if (item && item.equipped) {
-        const categoryConfig = DEFAULT_CONFIG.equipment.categories[item.category];
-        const itemEffect = categoryConfig?.effect || {};
-
-        // Accumulate all effect modifiers
-        if (itemEffect.diceBonus) effects.diceBonus! += itemEffect.diceBonus;
-        if (itemEffect.dicePenalty) effects.dicePenalty! += itemEffect.dicePenalty;
-        if (itemEffect.effectBonus) effects.effectBonus! += itemEffect.effectBonus;
-        if (itemEffect.effectPenalty) effects.effectPenalty! += itemEffect.effectPenalty;
-        if (itemEffect.positionBonus) effects.positionBonus! += itemEffect.positionBonus;
-        if (itemEffect.positionPenalty) effects.positionPenalty! += itemEffect.positionPenalty;
-        if (itemEffect.criticalDiceBonus) effects.criticalDiceBonus! += itemEffect.criticalDiceBonus;
-        if (itemEffect.criticalEffectBonus) effects.criticalEffectBonus! += itemEffect.criticalEffectBonus;
+        const itemModifiers = item.modifiers || {};
+        if (itemModifiers.diceBonus) effects.diceBonus! += itemModifiers.diceBonus;
+        if (itemModifiers.dicePenalty) effects.dicePenalty! += itemModifiers.dicePenalty;
+        if (itemModifiers.effectBonus) effects.effectBonus! += itemModifiers.effectBonus;
+        if (itemModifiers.effectPenalty) effects.effectPenalty! += itemModifiers.effectPenalty;
+        if (itemModifiers.positionBonus) effects.positionBonus! += itemModifiers.positionBonus;
+        if (itemModifiers.positionPenalty) effects.positionPenalty! += itemModifiers.positionPenalty;
       }
-    });
+    };
+
+    // 1. Active/Consumable Equipment
+    if (playerState.equippedForAction) {
+      playerState.equippedForAction.forEach(applyItemModifiers);
+    }
+
+    // 2. Passive Equipment (if approved)
+    if (playerState.approvedPassiveId) {
+      applyItemModifiers(playerState.approvedPassiveId);
+    }
 
     // Return only non-zero effects
     const result: EquipmentEffect = {};

@@ -185,6 +185,7 @@ Hooks.once('init', async function () {
         };
 
         console.log(`FitGD | Broadcasting ${newCommandCount} commands + playerRoundState via socketlib`);
+        console.log(`FitGD | PlayerRoundState being broadcast:`, JSON.stringify(playerRoundState, null, 2));
 
         try {
           // Use socketlib to broadcast to OTHER clients (not self)
@@ -324,6 +325,16 @@ Hooks.once('init', async function () {
 
   // Register developer console commands
   registerDevCommands();
+
+  // Manually load equipment-row-view.css if not loaded (workaround for system.json hot reload)
+  const cssPath = 'systems/forged-in-the-grimdark/templates/styles/equipment-row-view.css';
+  if (!document.querySelector(`link[href="${cssPath}"]`)) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = cssPath;
+    document.head.appendChild(link);
+    console.log('FitGD | Manually loaded equipment-row-view.css');
+  }
 
   console.log('FitGD | Initialization complete');
 });

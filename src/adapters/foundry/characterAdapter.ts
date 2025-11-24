@@ -54,9 +54,10 @@ export function exportCharacterToFoundry(
       category: equipment.category,
       description: equipment.description,
       tier: equipment.tier,
-      passive: equipment.passive,
+      slots: equipment.slots,
+      equipped: equipment.equipped,
       locked: equipment.locked,
-      depleted: equipment.depleted,
+      consumed: equipment.consumed,
       acquiredVia: equipment.acquiredVia,
     },
   }));
@@ -124,16 +125,15 @@ export function importCharacterFromFoundry(
       return {
         id: item._id,
         name: item.name,
-        type: equipData.equipmentType || 'equipment',  // equipmentType from item, default to 'equipment'
         tier: equipData.tier || 'common',
         category: equipData.category,
+        slots: equipData.slots || 1,
         description: equipData.description,
-        passive: equipData.passive || false,
-        equipped: false,
+        equipped: equipData.equipped || false,
         locked: equipData.locked || false,
-        depleted: equipData.depleted || false,
+        consumed: equipData.consumed || false,
         acquiredVia: equipData.acquiredVia,
-        acquiredAt: Date.now()
+        acquiredAt: equipData.acquiredAt || Date.now()
       };
     });
 
@@ -149,6 +149,7 @@ export function importCharacterFromFoundry(
     },
     unallocatedApproachDots: system.unallocatedActionDots ?? 0,
     equipment,
+    loadLimit: system.loadLimit ?? 5,
     rallyAvailable: system.rally.available,
     createdAt: system.createdAt,
     updatedAt: system.updatedAt,

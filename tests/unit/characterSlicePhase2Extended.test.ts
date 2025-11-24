@@ -68,12 +68,12 @@ describe('characterSlice - Phase 2 Extended (Equipment Usage & Auto-Equip)', () 
           id: 'weapon-1',
           name: 'Bolter',
           tier: 'common',
-          category: 'weapon',
+          category: 'active',
           description: 'Standard weapon',
-          passive: false,
+          slots: 1,
           equipped: true,
           locked: false,
-          depleted: false,
+          consumed: false,
           acquiredAt: Date.now(),
         },
       ];
@@ -102,12 +102,12 @@ describe('characterSlice - Phase 2 Extended (Equipment Usage & Auto-Equip)', () 
           id: 'tool-1',
           name: 'Precision Tool',
           tier: 'common',
-          category: 'tool',
+          category: 'active',
           description: 'Specialized tool',
-          passive: false,
+          slots: 1,
           equipped: true,
           locked: false,
-          depleted: false,
+          consumed: false,
           acquiredAt: Date.now(),
         },
       ];
@@ -135,12 +135,12 @@ describe('characterSlice - Phase 2 Extended (Equipment Usage & Auto-Equip)', () 
           id: 'armor-1',
           name: 'Armor',
           tier: 'common',
-          category: 'armor',
+          category: 'passive',
           description: 'Protective gear',
-          passive: false,
+          slots: 1,
           equipped: true,
           locked: false,
-          depleted: false,
+          consumed: false,
           acquiredAt: Date.now(),
         },
       ];
@@ -184,12 +184,12 @@ describe('characterSlice - Phase 2 Extended (Equipment Usage & Auto-Equip)', () 
           id: 'weapon-1',
           name: 'Bolter',
           tier: 'common',
-          category: 'weapon',
+          category: 'active',
           description: 'Standard weapon',
-          passive: false,
+          slots: 1,
           equipped: true,
           locked: false,
-          depleted: false,
+          consumed: false,
           acquiredAt: Date.now(),
         },
       ];
@@ -212,24 +212,24 @@ describe('characterSlice - Phase 2 Extended (Equipment Usage & Auto-Equip)', () 
           id: 'weapon-1',
           name: 'Bolter',
           tier: 'common',
-          category: 'weapon',
+          category: 'active',
           description: 'Standard weapon',
-          passive: false,
+          slots: 1,
           equipped: true,
           locked: false,
-          depleted: false,
+          consumed: false,
           acquiredAt: Date.now(),
         },
         {
           id: 'armor-1',
           name: 'Armor',
           tier: 'common',
-          category: 'armor',
+          category: 'passive',
           description: 'Protective gear',
-          passive: false,
+          slots: 1,
           equipped: true,
           locked: false,
-          depleted: false,
+          consumed: false,
           acquiredAt: Date.now(),
         },
       ];
@@ -269,12 +269,12 @@ describe('characterSlice - Phase 2 Extended (Equipment Usage & Auto-Equip)', () 
           id: 'weapon-1',
           name: 'Bolter',
           tier: 'common',
-          category: 'weapon',
+          category: 'active',
           description: 'Standard weapon',
-          passive: false,
+          slots: 1,
           equipped: true,
           locked: false,
-          depleted: false,
+          consumed: false,
           acquiredAt: Date.now(),
         },
       ];
@@ -297,100 +297,18 @@ describe('characterSlice - Phase 2 Extended (Equipment Usage & Auto-Equip)', () 
   });
 
   describe('autoEquipItems', () => {
-    it('should equip items with autoEquip flag set to true', () => {
-      const equipment: Equipment[] = [
-        {
-          id: 'weapon-1',
-          name: 'Bolter',
-          tier: 'common',
-          category: 'weapon',
-          description: 'Standard weapon',
-          passive: false,
-          equipped: false,
-          locked: false,
-          depleted: false,
-          autoEquip: true,
-          acquiredAt: Date.now(),
-        },
-        {
-          id: 'armor-1',
-          name: 'Armor',
-          tier: 'common',
-          category: 'armor',
-          description: 'Protective gear',
-          passive: false,
-          equipped: false,
-          locked: false,
-          depleted: false,
-          autoEquip: false,
-          acquiredAt: Date.now(),
-        },
-      ];
-
-      const characterId = createTestCharacter(equipment);
-
-      // Action: Auto-equip flagged items (at Momentum Reset)
-      store.dispatch(
-        autoEquipItems({
-          characterId,
-        })
-      );
-
-      // Verify: Only autoEquip: true items are equipped
-      const state = store.getState().characters;
-      const character = state.byId[characterId];
-
-      expect(character.equipment.find((e) => e.id === 'weapon-1')?.equipped).toBe(true);
-      expect(character.equipment.find((e) => e.id === 'armor-1')?.equipped).toBe(false);
-    });
-
-    it('should unlock items when auto-equipping them', () => {
-      const equipment: Equipment[] = [
-        {
-          id: 'weapon-1',
-          name: 'Bolter',
-          tier: 'common',
-          category: 'weapon',
-          description: 'Standard weapon',
-          passive: false,
-          equipped: false,
-          locked: true, // Locked from previous session
-          depleted: false,
-          autoEquip: true,
-          acquiredAt: Date.now(),
-        },
-      ];
-
-      const characterId = createTestCharacter(equipment);
-
-      // Action: Auto-equip at Momentum Reset
-      store.dispatch(
-        autoEquipItems({
-          characterId,
-        })
-      );
-
-      // Verify: Item is both equipped and unlocked
-      const state = store.getState().characters;
-      const character = state.byId[characterId];
-      const weapon = character.equipment.find((e) => e.id === 'weapon-1');
-
-      expect(weapon?.equipped).toBe(true);
-      expect(weapon?.locked).toBe(false);
-    });
-
     it('should ignore items without autoEquip flag', () => {
       const equipment: Equipment[] = [
         {
           id: 'weapon-1',
           name: 'Bolter',
           tier: 'common',
-          category: 'weapon',
+          category: 'active',
           description: 'Standard weapon',
-          passive: false,
+          slots: 1,
           equipped: false,
           locked: false,
-          depleted: false,
+          consumed: false,
           // No autoEquip flag (undefined)
           acquiredAt: Date.now(),
         },
@@ -413,111 +331,18 @@ describe('characterSlice - Phase 2 Extended (Equipment Usage & Auto-Equip)', () 
       expect(weapon?.equipped).toBe(false);
     });
 
-    it('should handle mixed autoEquip states in single action', () => {
-      const equipment: Equipment[] = [
-        {
-          id: 'weapon-1',
-          name: 'Bolter',
-          tier: 'common',
-          category: 'weapon',
-          description: 'Standard weapon',
-          passive: false,
-          equipped: false,
-          locked: true,
-          depleted: false,
-          autoEquip: true,
-          acquiredAt: Date.now(),
-        },
-        {
-          id: 'armor-1',
-          name: 'Armor',
-          tier: 'common',
-          category: 'armor',
-          description: 'Protective gear',
-          passive: false,
-          equipped: false,
-          locked: false,
-          depleted: false,
-          autoEquip: true,
-          acquiredAt: Date.now(),
-        },
-        {
-          id: 'tool-1',
-          name: 'Tool',
-          tier: 'common',
-          category: 'tool',
-          description: 'A tool',
-          passive: false,
-          equipped: false,
-          locked: false,
-          depleted: false,
-          autoEquip: false,
-          acquiredAt: Date.now(),
-        },
-        {
-          id: 'consumable-1',
-          name: 'Stim',
-          tier: 'common',
-          category: 'consumable',
-          description: 'Single-use item',
-          passive: false,
-          equipped: false,
-          locked: false,
-          depleted: true,
-          // autoEquip not set
-          acquiredAt: Date.now(),
-        },
-      ];
-
-      const characterId = createTestCharacter(equipment);
-
-      store.dispatch(
-        autoEquipItems({
-          characterId,
-        })
-      );
-
-      const state = store.getState().characters;
-      const character = state.byId[characterId];
-
-      // autoEquip: true should be equipped and unlocked
-      expect(character.equipment.find((e) => e.id === 'weapon-1')).toMatchObject({
-        equipped: true,
-        locked: false,
-      });
-
-      expect(character.equipment.find((e) => e.id === 'armor-1')).toMatchObject({
-        equipped: true,
-        locked: false,
-      });
-
-      // autoEquip: false should remain unchanged
-      expect(character.equipment.find((e) => e.id === 'tool-1')).toMatchObject({
-        equipped: false,
-        locked: false,
-      });
-
-      // No autoEquip flag should remain unchanged
-      expect(character.equipment.find((e) => e.id === 'consumable-1')).toMatchObject({
-        equipped: false,
-        locked: false,
-        depleted: true,
-      });
-    });
-
     it('should update character updatedAt timestamp', () => {
       const equipment: Equipment[] = [
         {
           id: 'weapon-1',
           name: 'Bolter',
           tier: 'common',
-          category: 'weapon',
+          category: 'active',
           description: 'Standard weapon',
-          passive: false,
+          slots: 1,
           equipped: false,
           locked: false,
-          depleted: false,
-          autoEquip: true,
+          consumed: false,
           acquiredAt: Date.now(),
         },
       ];
@@ -544,13 +369,12 @@ describe('characterSlice - Phase 2 Extended (Equipment Usage & Auto-Equip)', () 
           id: 'weapon-1',
           name: 'Bolter',
           tier: 'common',
-          category: 'weapon',
+          category: 'active',
           description: 'Standard weapon',
-          passive: false,
+          slots: 1,
           equipped: false,
           locked: false,
-          depleted: false,
-          autoEquip: true,
+          consumed: false,
           acquiredAt: Date.now(),
         },
       ];
@@ -589,13 +413,12 @@ describe('characterSlice - Phase 2 Extended (Equipment Usage & Auto-Equip)', () 
           id: 'weapon-1',
           name: 'Bolter',
           tier: 'common',
-          category: 'weapon',
+          category: 'active',
           description: 'Standard weapon',
-          passive: false,
+          slots: 1,
           equipped: false,
           locked: false,
-          depleted: false,
-          autoEquip: true,
+          consumed: false,
           acquiredAt: Date.now(),
         },
       ];
@@ -615,73 +438,25 @@ describe('characterSlice - Phase 2 Extended (Equipment Usage & Auto-Equip)', () 
       expect(lastCommand.userId).toBe('gm-user-456');
     });
 
-    it('should be idempotent - can be called multiple times safely', () => {
+    it('should not affect already-equipped items', () => {
       const equipment: Equipment[] = [
         {
           id: 'weapon-1',
           name: 'Bolter',
           tier: 'common',
-          category: 'weapon',
+          category: 'active',
           description: 'Standard weapon',
-          passive: false,
-          equipped: false,
-          locked: false,
-          depleted: false,
-          autoEquip: true,
-          acquiredAt: Date.now(),
-        },
-      ];
-
-      const characterId = createTestCharacter(equipment);
-
-      // First call
-      store.dispatch(
-        autoEquipItems({
-          characterId,
-        })
-      );
-
-      let state = store.getState().characters;
-      let character = state.byId[characterId];
-      const firstResult = character.equipment.find((e) => e.id === 'weapon-1');
-
-      // Second call (idempotent)
-      store.dispatch(
-        autoEquipItems({
-          characterId,
-        })
-      );
-
-      state = store.getState().characters;
-      character = state.byId[characterId];
-      const secondResult = character.equipment.find((e) => e.id === 'weapon-1');
-
-      // Results should be identical
-      expect(firstResult).toEqual(secondResult);
-      expect(secondResult?.equipped).toBe(true);
-      expect(secondResult?.locked).toBe(false);
-    });
-
-    it('should not affect already-equipped items with autoEquip flag', () => {
-      const equipment: Equipment[] = [
-        {
-          id: 'weapon-1',
-          name: 'Bolter',
-          tier: 'common',
-          category: 'weapon',
-          description: 'Standard weapon',
-          passive: false,
+          slots: 1,
           equipped: true, // Already equipped
           locked: true, // And locked
-          depleted: false,
-          autoEquip: true,
+          consumed: false,
           acquiredAt: Date.now(),
         },
       ];
 
       const characterId = createTestCharacter(equipment);
 
-      // Auto-equip (should ensure equipped and unlock)
+      // Auto-equip (should unlock items)
       store.dispatch(
         autoEquipItems({
           characterId,
@@ -692,40 +467,38 @@ describe('characterSlice - Phase 2 Extended (Equipment Usage & Auto-Equip)', () 
       const character = state.byId[characterId];
       const weapon = character.equipment.find((e) => e.id === 'weapon-1');
 
-      // Should remain equipped and be unlocked (fresh equip)
+      // Should remain equipped and be unlocked
       expect(weapon?.equipped).toBe(true);
       expect(weapon?.locked).toBe(false);
     });
   });
 
   describe('Integration: markEquipmentUsed + autoEquipItems', () => {
-    it('should complete equipment lifecycle: equip -> use (lock) -> reset (unlock + auto-equip)', () => {
+    it('should complete equipment lifecycle: equip -> use (lock) -> reset (unlock)', () => {
       const equipment: Equipment[] = [
         {
           id: 'weapon-1',
           name: 'Bolter',
           tier: 'common',
-          category: 'weapon',
+          category: 'active',
           description: 'Standard weapon',
-          passive: false,
+          slots: 1,
           equipped: true,
           locked: false,
-          depleted: false,
-          autoEquip: true,
+          consumed: false,
           acquiredAt: Date.now(),
         },
       ];
 
       const characterId = createTestCharacter(equipment);
 
-      // Step 1: Initial state - equipped, unlocked, will auto-equip
+      // Step 1: Initial state - equipped, unlocked
       let state = store.getState().characters;
       let character = state.byId[characterId];
       let weapon = character.equipment.find((e) => e.id === 'weapon-1');
       expect(weapon).toMatchObject({
         equipped: true,
         locked: false,
-        autoEquip: true,
       });
 
       // Step 2: Player uses equipment in action
@@ -742,7 +515,6 @@ describe('characterSlice - Phase 2 Extended (Equipment Usage & Auto-Equip)', () 
       expect(weapon).toMatchObject({
         equipped: true,
         locked: true, // Now locked
-        autoEquip: true,
       });
 
       // Step 3: Momentum Reset happens (would be called by crew reducer)
@@ -758,7 +530,6 @@ describe('characterSlice - Phase 2 Extended (Equipment Usage & Auto-Equip)', () 
       expect(weapon).toMatchObject({
         equipped: true,
         locked: false, // Unlocked at reset
-        autoEquip: true,
       });
     });
   });

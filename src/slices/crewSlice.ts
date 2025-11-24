@@ -82,7 +82,10 @@ const crewSlice = createSlice({
       reducer: (state, action: PayloadAction<Crew>) => {
         const crew = action.payload;
         state.byId[crew.id] = crew;
-        state.allIds.push(crew.id);
+        // Only add to allIds if not already present (idempotent for replay)
+        if (!state.allIds.includes(crew.id)) {
+          state.allIds.push(crew.id);
+        }
 
         // Log command to history
         state.history.push({
@@ -118,10 +121,12 @@ const crewSlice = createSlice({
           throw new Error(`Crew ${crewId} not found`);
         }
 
-        // Validate character not already in crew
-        validateCharacterNotInCrew(crew, characterId);
-
-        crew.characters.push(characterId);
+        // Only add if not already present (idempotent for replay)
+        if (!crew.characters.includes(characterId)) {
+          // Validate character not already in crew (redundant check, but keeps validation)
+          validateCharacterNotInCrew(crew, characterId);
+          crew.characters.push(characterId);
+        }
         crew.updatedAt = Date.now();
 
         // Log command to history

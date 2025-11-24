@@ -29,7 +29,8 @@
     "dist/fitgd.mjs"
   ],
   "styles": [
-    "templates/styles/fitgd-sheets.css"
+    "templates/styles/fitgd-sheets.css",
+    "templates/styles/equipment-row-view.css"
   ],
   "packs": [
     {
@@ -53,24 +54,36 @@
   "documentTypes": {
     "Actor": {
       "character": {
-        "htmlFields": ["description"],
+        "htmlFields": [
+          "description"
+        ],
         "filePathFields": {
-          "img": ["IMAGE"]
+          "img": [
+            "IMAGE"
+          ]
         }
       },
       "crew": {
-        "htmlFields": ["description"],
+        "htmlFields": [
+          "description"
+        ],
         "filePathFields": {
-          "img": ["IMAGE"]
+          "img": [
+            "IMAGE"
+          ]
         }
       }
     },
     "Item": {
       "trait": {
-        "htmlFields": ["description"]
+        "htmlFields": [
+          "description"
+        ]
       },
       "equipment": {
-        "htmlFields": ["description"]
+        "htmlFields": [
+          "description"
+        ]
       }
     }
   },

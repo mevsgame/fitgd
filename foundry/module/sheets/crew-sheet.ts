@@ -212,6 +212,8 @@ class FitGDCrewSheet extends ActorSheet {
           <li>Re-enable all disabled traits</li>
           <li>Reduce Addiction Clock by <strong>2 segments</strong></li>
           <li>Recover all dying (6/6) harm clocks to <strong>5/6</strong></li>
+          <li>Unlock all equipment for all crew members</li>
+          <li>Replenish all consumables for all crew members</li>
         </ul>
         <p>Continue?</p>
       `,

@@ -117,6 +117,25 @@ export class FoundryReduxBridge {
   async executeBatch(actions: ReduxAction[], options: ExecuteOptions = {}): Promise<void> {
     const { affectedReduxIds, force = false, silent = false } = options;
 
+    // VALIDATION: Prevent batching multiple state transitions
+    // All actions in a batch validate against the SAME initial state, so sequential
+    // transitions (e.g., A → B → C) will fail validation. See docs/redux-batching-rules.md
+    const transitionActions = actions.filter(a => a.type === 'playerRoundState/transitionState');
+
+    if (transitionActions.length > 1) {
+      const states = transitionActions
+        .map(a => (a.payload as any)?.newState)
+        .filter(Boolean)
+        .join(' → ');
+
+      throw new Error(
+        `Cannot batch ${transitionActions.length} state transitions (${states}). ` +
+        `All actions validate against the SAME initial state. ` +
+        `Split into separate dispatches or use a single transition. ` +
+        `See docs/redux-batching-rules.md for details.`
+      );
+    }
+
     // Dispatch all actions synchronously (single Redux transaction)
     for (const action of actions) {
       this.store.dispatch(action);
@@ -296,7 +315,7 @@ export class FoundryReduxBridge {
 
     for (const app of Object.values(ui.windows)) {
       if (app.constructor.name === 'FitGDCharacterSheet' ||
-          app.constructor.name === 'FitGDCrewSheet') {
+        app.constructor.name === 'FitGDCrewSheet') {
 
         const actorId = (app as any).actor?.id as ReduxId | undefined; // Unified IDs: actor.id === Redux ID
 

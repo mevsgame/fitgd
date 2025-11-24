@@ -1,8 +1,8 @@
 /**
- * Equipment tier determines acquisition cost and availability (rules_primer.md)
- * - common: Free to equip, always available (declare freely)
- * - rare: Costs 1 Momentum to acquire via flashback (requires justifying Trait)
- * - epic: Cannot be acquired via flashback, must be earned as story reward
+ * Equipment tier determines momentum cost on first lock (rules_primer.md)
+ * - common: Free to lock, always available (declare freely)
+ * - rare: Costs 1 Momentum on first lock between Resets
+ * - epic: Costs 1 Momentum on first lock between Resets (must be earned as story reward)
  */
 export type EquipmentTier = 'common' | 'rare' | 'epic';
 
@@ -10,10 +10,18 @@ export type EquipmentTier = 'common' | 'rare' | 'epic';
  * Legacy alias for backwards compatibility during transition
  * @deprecated Use EquipmentTier instead
  */
-export type EquipmentRarity = 'common' | 'rare' | 'epic';
+export type EquipmentRarity = EquipmentTier;
 
 /**
- * Mechanical effects granted by equipment categories
+ * Equipment category determines usage pattern in rolls
+ * - active: Selected as secondary in dice pool (weapons, tools, devices)
+ * - passive: GM approves during roll conversation (armor, implants, augmentations)
+ * - consumable: Single-use items, depletes after use (grenades, stims, medkits)
+ */
+export type EquipmentCategory = 'active' | 'passive' | 'consumable';
+
+/**
+ * Mechanical effects granted by equipment items
  */
 export interface EquipmentEffect {
   // Dice modifiers
@@ -34,10 +42,59 @@ export interface EquipmentEffect {
 }
 
 /**
- * Equipment category configuration
+ * Equipment instance state (normalized in characterSlice)
+ *
+ * @example
+ * {
+ *   itemId: "item-123",
+ *   equipped: true,
+ *   locked: false,
+ *   consumed: false
+ * }
  */
-export interface EquipmentCategoryConfig {
+export interface EquipmentState {
+  itemId: string;             // ID of the equipment item
+  equipped: boolean;          // Is currently equipped?
+  locked: boolean;            // Cannot be unequipped until Reset (item was used in roll)
+  consumed: boolean;          // Consumable has been used (still occupies slots, unavailable)
+}
+
+/**
+ * Equipment item stored on Character
+ *
+ * Includes both data (name, category, tier, etc.) and state (equipped, locked, consumed flags).
+ * Fully editable by GM or player (for Common items).
+ */
+export interface Equipment {
+  // Instance identity
+  id: string;
+
+  // Core equipment data (editable by GM or player)
   name: string;
-  effect: EquipmentEffect;
-  description?: string;
+  category: EquipmentCategory;  // 'active' | 'passive' | 'consumable'
+  tier: EquipmentTier;          // 'common' | 'rare' | 'epic'
+  slots: number;                // Slots occupied (default 1)
+  description: string; 
+
+  // Instance state flags
+  equipped: boolean;            // Is currently equipped?
+  locked: boolean;              // Cannot be unequipped until Reset (item was used in roll)
+  consumed: boolean;            // Consumable has been used (still occupies slots, unavailable)
+
+  // Modifiers (bonuses provided to dice pool)
+  modifiers?: {
+    diceBonus?: number;
+    dicePenalty?: number;
+    positionBonus?: number;
+    positionPenalty?: number;
+    effectBonus?: number;
+    effectPenalty?: number;
+  };
+
+  // Provenance (event sourcing metadata)
+  acquiredAt: number;           // Timestamp when acquired
+  acquiredVia?: 'starting' | 'flashback' | 'earned';
+
+  // Flexible metadata
+  metadata?: Record<string, unknown>;
 }

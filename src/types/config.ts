@@ -6,7 +6,7 @@
  */
 
 import { ClockSize } from "./clock";
-import type { EquipmentCategoryConfig, EquipmentTier } from "./equipment";
+import type { EquipmentTier } from "./equipment";
 
 export interface GameConfig {
   character: {
@@ -15,7 +15,7 @@ export interface GameConfig {
     startingApproachDots: number;
     maxDotsPerApproach: number;
     maxDotsAtCreation: number;
-    maxLoad: number;
+    defaultLoadLimit: number; // Default max slots per character
   };
 
   crew: {
@@ -43,14 +43,8 @@ export interface GameConfig {
   };
 
   equipment: {
-    // Momentum cost to acquire equipment via flashback based on tier
+    // Momentum cost on first lock based on tier
     momentumCostByTier: Record<EquipmentTier, number>;
-    // Equipment categories and their mechanical effects
-    categories: Record<string, EquipmentCategoryConfig>;
-    // Categories that do not count toward load limit
-    augmentationCategories: string[];
-    // Categories that are replenished on Momentum Reset
-    consumableCategories: string[];
   };
 
   resolution: {

@@ -1,39 +1,69 @@
 <div class="equipment-edit-dialog">
   {{!-- Header --}}
   <div class="dialog-header">
+    {{#if (eq mode 'create')}}
+    <h2>Create Equipment</h2>
+    <p class="info-notice">📦 Create a new equipment item for this character</p>
+    {{else}}
     <h2>Edit Equipment</h2>
     <p class="info-notice">📦 Configure equipment stats and modifiers</p>
+    {{/if}}
+
+    {{!-- Player tier restriction warning --}}
+    {{#unless isGM}}
+    {{#unless canEditTier}}
+    <div class="warning-notice">
+      ⚠️ You can only create or edit Common tier equipment. Rare and Epic items are GM-controlled.
+    </div>
+    {{/unless}}
+    {{/unless}}
   </div>
 
   {{!-- Equipment Form --}}
   <form class="equipment-form">
     <div class="form-group">
-      <label>Name</label>
-      <input type="text" name="name" value="{{equipment.name}}" required />
+      <label>Name <span class="required">*</span></label>
+      <input type="text" name="name" value="{{equipment.name}}" maxlength="50" required />
+      <p class="help-text">Equipment name (max 50 characters)</p>
     </div>
 
     <div class="form-group">
-      <label>Tier</label>
-      <select name="tier">
+      <label>Tier <span class="required">*</span></label>
+      <select name="tier" {{#unless canEditTier}}disabled{{/unless}}>
         {{#each tiers}}
-        <option value="{{this}}" {{#if (eq this ../equipment.tier)}}selected{{/if}}>{{this}}</option>
+        <option value="{{this}}" {{#if (eq this ../equipment.tier)}}selected{{/if}}>{{capitalize this}}</option>
         {{/each}}
       </select>
       <p class="help-text">
-        <strong>Accessible:</strong> Standard gear, freely available<br />
-        <strong>Inaccessible:</strong> Requires flashback (1 Momentum + trait)<br />
+        <strong>Common:</strong> Standard gear, freely available<br />
+        <strong>Rare:</strong> Requires 1M on first use (between Resets)<br />
         <strong>Epic:</strong> Must be earned through story
+        {{#unless isGM}}
+        {{#unless canEditTier}}
+        <br /><strong>⚠️ Players can only create Common tier equipment</strong>
+        {{/unless}}
+        {{/unless}}
       </p>
     </div>
 
     <div class="form-group">
-      <label>Category</label>
-      <select name="category">
+      <label>Category <span class="required">*</span></label>
+      <select name="category" required>
         {{#each categories}}
-        <option value="{{this}}" {{#if (eq this ../equipment.category)}}selected{{/if}}>{{this}}</option>
+        <option value="{{this}}" {{#if (eq this ../equipment.category)}}selected{{/if}}>{{capitalize this}}</option>
         {{/each}}
       </select>
-      <p class="help-text">Choose the primary type of this equipment (Weapon, Armor, Tool, Consumable, Misc)</p>
+      <p class="help-text">
+        <strong>Active:</strong> Player selects in roll (weapons, tools, devices)<br />
+        <strong>Passive:</strong> GM approves during roll (armor, implants, augmentations)<br />
+        <strong>Consumable:</strong> Single-use items (grenades, stims, medkits)
+      </p>
+    </div>
+
+    <div class="form-group">
+      <label>Slots <span class="required">*</span></label>
+      <input type="number" name="slots" value="{{equipment.slots}}" min="1" required />
+      <p class="help-text">Load slots occupied (minimum 1, default 5 slots per character)</p>
     </div>
 
     <div class="form-group">
@@ -48,59 +78,38 @@
       <p class="help-text">Configure how this equipment affects rolls when used</p>
       <div class="modifiers-grid">
         <div class="modifier-field">
-          <label>Position</label>
-          <select name="modifiers.position">
-            <option value="none" {{#if (eq equipment.modifiers.position "none" )}}selected{{/if}}>None</option>
-            <option value="plus_one_step" {{#if (eq equipment.modifiers.position "plus_one_step" )}}selected{{/if}}>+1
-              Step (Desperate→Risky or Risky→Controlled)</option>
-            <option value="minus_one_step" {{#if (eq equipment.modifiers.position "minus_one_step" )}}selected{{/if}}>-1
-              Step (Controlled→Risky or Risky→Desperate)</option>
-          </select>
+          <label>Dice Bonus</label>
+          <input type="number" name="modifiers.diceBonus" value="{{equipment.modifiers.diceBonus}}" placeholder="0" min="0" />
+          <p class="help-text-small">Additional dice in pool (default 1)</p>
         </div>
         <div class="modifier-field">
-          <label>Effect</label>
-          <select name="modifiers.effect">
-            <option value="none" {{#if (eq equipment.modifiers.effect "none" )}}selected{{/if}}>None</option>
-            <option value="plus_one_level" {{#if (eq equipment.modifiers.effect "plus_one_level" )}}selected{{/if}}>+1
-              Level (Limited→Standard or Standard→Great)</option>
-            <option value="minus_one_level" {{#if (eq equipment.modifiers.effect "minus_one_level" )}}selected{{/if}}>-1
-              Level (Great→Standard or Standard→Limited)</option>
-          </select>
+          <label>Dice Penalty</label>
+          <input type="number" name="modifiers.dicePenalty" value="{{equipment.modifiers.dicePenalty}}" placeholder="0" min="0" />
+          <p class="help-text-small">Dice to remove from pool</p>
         </div>
         <div class="modifier-field">
-          <label>Dice Pool</label>
-          <input type="number" name="modifiers.dicePool" value="{{equipment.modifiers.dicePool}}" placeholder="0" />
-          <p class="help-text-small">Additional dice (e.g., +1 for fine weapons)</p>
+          <label>Position Bonus</label>
+          <input type="number" name="modifiers.positionBonus" value="{{equipment.modifiers.positionBonus}}" placeholder="0" min="0" max="1" />
+          <p class="help-text-small">Improve position by N steps</p>
+        </div>
+        <div class="modifier-field">
+          <label>Position Penalty</label>
+          <input type="number" name="modifiers.positionPenalty" value="{{equipment.modifiers.positionPenalty}}" placeholder="0" min="0" max="1" />
+          <p class="help-text-small">Worsen position by N steps</p>
+        </div>
+        <div class="modifier-field">
+          <label>Effect Bonus</label>
+          <input type="number" name="modifiers.effectBonus" value="{{equipment.modifiers.effectBonus}}" placeholder="0" min="0" max="1" />
+          <p class="help-text-small">Improve effect by N levels</p>
+        </div>
+        <div class="modifier-field">
+          <label>Effect Penalty</label>
+          <input type="number" name="modifiers.effectPenalty" value="{{equipment.modifiers.effectPenalty}}" placeholder="0" min="0" max="1" />
+          <p class="help-text-small">Reduce effect by N levels</p>
         </div>
       </div>
     </div>
 
-    <div class="form-group">
-      <label>Image Path</label>
-      <input type="text" name="img" value="{{equipment.img}}"
-        placeholder="systems/forged-in-the-grimdark/assets/items/..." />
-      <p class="help-text">Path to item image (or leave empty for default icon)</p>
-    </div>
-
-    {{#if equipment.sourceItemId}}
-    <div class="form-group">
-      <label>📋 Source Template</label>
-      <input type="text" value="{{equipment.sourceItemId}}" disabled />
-      <p class="help-text">Original template ID (for reference only)</p>
-    </div>
-    {{/if}}
-
-    {{#if equipment.acquiredAt}}
-    <div class="form-group">
-      <label>📅 Acquired</label>
-      <p class="equipment-meta">
-        {{#if equipment.acquiredVia}}
-        Via <strong>{{equipment.acquiredVia}}</strong>
-        {{/if}}
-        on <time datetime="{{equipment.acquiredAt}}">{{formatTimestamp equipment.acquiredAt}}</time>
-      </p>
-    </div>
-    {{/if}}
   </form>
 
   {{!-- Action Buttons --}}
@@ -109,7 +118,11 @@
       <i class="fas fa-times"></i> Cancel
     </button>
     <button type="submit" class="primary save-btn">
+      {{#if (eq mode 'create')}}
+      <i class="fas fa-plus"></i> Create Equipment
+      {{else}}
       <i class="fas fa-save"></i> Save Changes
+      {{/if}}
     </button>
   </div>
 </div>
