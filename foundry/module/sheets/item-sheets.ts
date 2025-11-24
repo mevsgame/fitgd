@@ -63,6 +63,7 @@ class FitGDEquipmentSheet extends ItemSheet {
     // Ensure modifiers object exists and has all expected fields
     const item = this.item as any;
     if (!item.system.modifiers) {
+      console.log('FitGD | Creating missing modifiers object on item:', item.name);
       item.system.modifiers = {};
     }
 
@@ -74,7 +75,19 @@ class FitGDEquipmentSheet extends ItemSheet {
       }
     }
 
+    console.log('FitGD | Equipment Sheet - getData() returning with modifiers:', item.system.modifiers);
+
     return data;
+  }
+
+  override async _render(force: boolean = false, options: any = {}): Promise<void> {
+    // Ensure modifiers exist before rendering
+    const item = this.item as any;
+    if (!item.system.modifiers) {
+      item.system.modifiers = {};
+    }
+
+    return super._render(force, options);
   }
 
   /**
@@ -89,8 +102,11 @@ class FitGDEquipmentSheet extends ItemSheet {
     const modifiers: Record<string, any> = {};
     const keysToDelete: string[] = [];
 
+    console.log('FitGD | Equipment Sheet - _updateObject called with formData keys:', Object.keys(formData));
+
     for (const [key, value] of Object.entries(formData)) {
       if (key.startsWith('system.modifiers.')) {
+        console.log(`FitGD |   Found modifier key: ${key} = ${value}`);
         const modifierKey = key.replace('system.modifiers.', '');
         // Convert empty strings to undefined, parse numbers
         if (value === '' || value === null) {
@@ -106,17 +122,24 @@ class FitGDEquipmentSheet extends ItemSheet {
       }
     }
 
+    console.log('FitGD | Equipment Sheet - Modifier keys found:', keysToDelete.length);
+
     // Remove all flattened modifier keys from formData
     keysToDelete.forEach(key => delete formData[key]);
 
     // Always set the modifiers object (even if empty) to ensure it's preserved
     (formData as any)['system.modifiers'] = modifiers;
 
-    console.log('FitGD | Equipment Sheet - Saving modifiers:', modifiers);
-    console.log('FitGD | Equipment Sheet - Full formData:', formData);
+    console.log('FitGD | Equipment Sheet - Before update:');
+    console.log('  Current item modifiers:', (this.item as any).system?.modifiers);
+    console.log('  Modifiers being saved:', modifiers);
+    console.log('  Updated formData:', formData);
 
     // Call parent to handle the update
     await super._updateObject(event, formData);
+
+    console.log('FitGD | Equipment Sheet - After update:');
+    console.log('  Item modifiers after save:', (this.item as any).system?.modifiers);
   }
 }
 
