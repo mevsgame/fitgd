@@ -95,7 +95,21 @@ class FitGDEquipmentSheet extends ItemSheet {
    */
   protected override _getFormData(form?: HTMLFormElement): Record<string, any> {
     const formData = super._getFormData(form);
-    console.log('FitGD | _getFormData collected:', Object.keys(formData));
+    console.log('FitGD | _getFormData - Foundry collected:', Object.keys(formData));
+
+    // Manually collect modifier fields because Foundry's _getFormData may skip them
+    if (form) {
+      console.log('FitGD | Manually collecting modifier inputs:');
+      const modifierInputs = form.querySelectorAll('input[name^="system.modifiers"]');
+      console.log(`FitGD | Found ${modifierInputs.length} modifier inputs in DOM`);
+      modifierInputs.forEach((input: any) => {
+        console.log(`FitGD |   ${input.name} = "${input.value}"`);
+        // Add to formData even if empty
+        formData[input.name] = input.value;
+      });
+    }
+
+    console.log('FitGD | formData after manual collection:', Object.keys(formData));
     return formData;
   }
 
