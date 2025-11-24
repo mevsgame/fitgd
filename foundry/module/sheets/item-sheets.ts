@@ -91,6 +91,25 @@ class FitGDEquipmentSheet extends ItemSheet {
   }
 
   /**
+   * Override form submission to manually inject modifier fields
+   */
+  protected override async _onSubmit(event: Event, options: any = {}): Promise<void> {
+    console.log('FitGD | _onSubmit called');
+    const form = (event.target?.closest('form') || this.form) as HTMLFormElement;
+
+    if (form) {
+      console.log('FitGD | Form found, checking for modifier inputs:');
+      const modifierInputs = form.querySelectorAll('input[name^="system.modifiers"]');
+      console.log(`FitGD | Found ${modifierInputs.length} modifier input(s) in DOM`);
+      modifierInputs.forEach((input: any) => {
+        console.log(`FitGD |   Input: ${input.name} = "${input.value}"`);
+      });
+    }
+
+    return super._onSubmit(event, options);
+  }
+
+  /**
    * Override form data collection to ensure modifier fields are included
    */
   protected override _getFormData(form?: HTMLFormElement): Record<string, any> {
