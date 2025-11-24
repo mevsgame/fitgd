@@ -48,32 +48,75 @@ class FitGDEquipmentSheet extends ItemSheet {
       classes: ['fitgd', 'sheet', 'item', 'equipment'],
       template: 'systems/forged-in-the-grimdark/templates/equipment-sheet.html',
       width: 520,
-      height: 600
+      height: 600,
+      submitOnChange: true  // Submit on every change
     });
   }
 
   /**
+   * Prepare data for rendering the sheet
+   * Ensures modifiers object exists with proper defaults
+   */
+  override async getData(options: any = {}): Promise<any> {
+    const data = await super.getData(options);
+
+    // Ensure modifiers object exists and has all expected fields
+    const item = this.item as any;
+    if (!item.system.modifiers) {
+      item.system.modifiers = {};
+    }
+
+    // Ensure all modifier fields exist (with undefined for unset values)
+    const expectedModifiers = ['diceBonus', 'dicePenalty', 'positionBonus', 'positionPenalty', 'effectBonus', 'effectPenalty'];
+    for (const modifier of expectedModifiers) {
+      if (!(modifier in item.system.modifiers)) {
+        item.system.modifiers[modifier] = undefined;
+      }
+    }
+
+    return data;
+  }
+
+  /**
    * Handle item updates and properly save nested modifier objects
+   *
+   * Foundry flattens nested objects with dot notation (system.modifiers.diceBonus),
+   * but doesn't reconstruct them automatically. This override rebuilds the modifiers
+   * object from the flattened form data.
    */
   protected override async _updateObject(event: Event, formData: Record<string, unknown>): Promise<void> {
-    // Handle nested modifiers object properly
-    const modifiers: Record<string, unknown> = {};
+    // Collect all modifier fields into a single object
+    const modifiers: Record<string, any> = {};
+    const keysToDelete: string[] = [];
 
     for (const [key, value] of Object.entries(formData)) {
       if (key.startsWith('system.modifiers.')) {
         const modifierKey = key.replace('system.modifiers.', '');
-        modifiers[modifierKey] = value;
-        delete formData[key];
+        // Convert empty strings to undefined, parse numbers
+        if (value === '' || value === null) {
+          modifiers[modifierKey] = undefined;
+        } else if (typeof value === 'string' && value.trim() !== '') {
+          // Try to parse as number
+          const numValue = parseInt(value, 10);
+          modifiers[modifierKey] = isNaN(numValue) ? value : numValue;
+        } else {
+          modifiers[modifierKey] = value;
+        }
+        keysToDelete.push(key);
       }
     }
 
-    // Set the modifiers object in formData
-    if (Object.keys(modifiers).length > 0) {
-      (formData as any)['system.modifiers'] = modifiers;
-    }
+    // Remove all flattened modifier keys from formData
+    keysToDelete.forEach(key => delete formData[key]);
+
+    // Always set the modifiers object (even if empty) to ensure it's preserved
+    (formData as any)['system.modifiers'] = modifiers;
+
+    console.log('FitGD | Equipment Sheet - Saving modifiers:', modifiers);
+    console.log('FitGD | Equipment Sheet - Full formData:', formData);
 
     // Call parent to handle the update
-    return super._updateObject(event, formData);
+    await super._updateObject(event, formData);
   }
 }
 
