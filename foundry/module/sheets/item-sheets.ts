@@ -35,11 +35,12 @@ class FitGDTraitSheet extends ItemSheet {
  *
  * Foundry VTT Item Sheet for equipment items. Displays equipment details:
  * - Equipment name
- * - Tier (accessible, inaccessible, epic)
- * - Category (weapon, armor, tool, etc.)
+ * - Tier (common, rare, epic)
+ * - Category (active, passive, consumable)
+ * - Slots and modifiers
  * - Description
  *
- * Equipment is stored in Redux but can be viewed as Foundry Items.
+ * Equipment is stored as Foundry Items and as templates for character equipment.
  */
 class FitGDEquipmentSheet extends ItemSheet {
   static override get defaultOptions(): ItemSheet.Options {
@@ -47,8 +48,32 @@ class FitGDEquipmentSheet extends ItemSheet {
       classes: ['fitgd', 'sheet', 'item', 'equipment'],
       template: 'systems/forged-in-the-grimdark/templates/equipment-sheet.html',
       width: 520,
-      height: 480
+      height: 600
     });
+  }
+
+  /**
+   * Handle item updates and properly save nested modifier objects
+   */
+  protected override async _updateObject(event: Event, formData: Record<string, unknown>): Promise<void> {
+    // Handle nested modifiers object properly
+    const modifiers: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(formData)) {
+      if (key.startsWith('system.modifiers.')) {
+        const modifierKey = key.replace('system.modifiers.', '');
+        modifiers[modifierKey] = value;
+        delete formData[key];
+      }
+    }
+
+    // Set the modifiers object in formData
+    if (Object.keys(modifiers).length > 0) {
+      (formData as any)['system.modifiers'] = modifiers;
+    }
+
+    // Call parent to handle the update
+    return super._updateObject(event, formData);
   }
 }
 
