@@ -91,6 +91,15 @@ class FitGDEquipmentSheet extends ItemSheet {
   }
 
   /**
+   * Override form data collection to ensure modifier fields are included
+   */
+  protected override _getFormData(form?: HTMLFormElement): Record<string, any> {
+    const formData = super._getFormData(form);
+    console.log('FitGD | _getFormData collected:', Object.keys(formData));
+    return formData;
+  }
+
+  /**
    * Handle item updates and properly save nested modifier objects
    *
    * Foundry flattens nested objects with dot notation (system.modifiers.diceBonus),
