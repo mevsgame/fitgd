@@ -115,18 +115,25 @@ class FitGDEquipmentSheet extends ItemSheet {
 
     for (const [key, value] of Object.entries(formData)) {
       if (key.startsWith('system.modifiers.')) {
-        console.log(`FitGD |   Found modifier key: ${key} = ${value}`);
+        console.log(`FitGD |   Found modifier key: ${key} = ${value} (type: ${typeof value})`);
         const modifierKey = key.replace('system.modifiers.', '');
-        // Convert empty strings to undefined, parse numbers
-        if (value === '' || value === null) {
-          modifiers[modifierKey] = undefined;
-        } else if (typeof value === 'string' && value.trim() !== '') {
-          // Try to parse as number
-          const numValue = parseInt(value, 10);
-          modifiers[modifierKey] = isNaN(numValue) ? value : numValue;
-        } else {
-          modifiers[modifierKey] = value;
+
+        // Parse the value: empty string or null = undefined, otherwise parse as number
+        let parsedValue: any = undefined;
+
+        if (value !== '' && value !== null && value !== undefined) {
+          if (typeof value === 'string') {
+            // Try to parse as number
+            const numValue = parseInt(value, 10);
+            parsedValue = isNaN(numValue) ? undefined : numValue;
+          } else if (typeof value === 'number') {
+            // Already a number, keep it
+            parsedValue = value;
+          }
         }
+
+        modifiers[modifierKey] = parsedValue;
+        console.log(`FitGD |     → Parsed as: ${parsedValue}`);
         keysToDelete.push(key);
       }
     }
