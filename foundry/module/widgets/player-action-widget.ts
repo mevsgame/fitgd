@@ -534,7 +534,7 @@ export class PlayerActionWidget extends Application {
     html.find('[data-action="select-harm-target"]').click(this._onSelectHarmTarget.bind(this));
     html.find('[data-action="select-harm-clock"]').click(this._onSelectHarmClock.bind(this));
     html.find('[data-action="select-crew-clock"]').click(this._onSelectCrewClock.bind(this));
-    html.find('[data-action="approve-consequence"]').click(this._onApproveConsequence.bind(this));
+    html.find('[data-action="approve-consequence"]').click(this._onPlayerAcceptConsequence.bind(this));
 
     // Player stims button (from GM phase)
     html.find('[data-action="use-stims-gm-phase"]').click(this._onUseStimsGMPhase.bind(this));
@@ -1701,15 +1701,17 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Handle GM approve consequence button
+   * Handle player accepting consequences
+   * Called when PLAYER clicks "Accept Consequences" button
    */
-  private async _onApproveConsequence(event: JQuery.ClickEvent): Promise<void> {
+  private async _onPlayerAcceptConsequence(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
 
     if (!this.consequenceApplicationHandler) return;
 
     const transaction = this.playerState?.consequenceTransaction;
-    console.log('FitGD | _onApproveConsequence - Transaction:', JSON.stringify(transaction, null, 2));
+    console.log('FitGD | _onPlayerAcceptConsequence - Transaction:', JSON.stringify(transaction, null, 2));
+    console.log('FitGD | _onPlayerAcceptConsequence - Called by user:', game.user?.name, 'isGM:', game.user?.isGM);
 
     // Validate transaction is complete
     const validation = this.consequenceApplicationHandler.validateConsequence(transaction);
@@ -1734,11 +1736,14 @@ export class PlayerActionWidget extends Application {
     console.log('FitGD | Consequence action:', JSON.stringify(workflow.applyConsequenceAction, null, 2));
 
     // Build batch of all consequence actions
+    // NOTE: Do NOT transition to TURN_COMPLETE here!
+    // The valid sequence is: GM_RESOLVING_CONSEQUENCE → APPLYING_EFFECTS
+    // GM and Player widgets will close when they detect APPLYING_EFFECTS state
     const actions: any[] = [
-      workflow.transitionToApplyingAction,
-      workflow.applyConsequenceAction,
-      workflow.clearTransactionAction,
-      workflow.transitionToTurnCompleteAction,
+      workflow.transitionToApplyingAction,  // GM_RESOLVING_CONSEQUENCE → APPLYING_EFFECTS
+      workflow.applyConsequenceAction,      // Apply harm clock advancement
+      workflow.clearTransactionAction,       // Clear consequence transaction
+      // REMOVED: workflow.transitionToTurnCompleteAction - causes invalid transition error!
     ];
 
     // Add momentum gain if applicable
@@ -1755,8 +1760,10 @@ export class PlayerActionWidget extends Application {
       characterIdToNotify: workflow.characterIdToNotify,
       crewId: this.crewId,
     });
+    console.log('FitGD | Actions:', JSON.stringify(actions, null, 2));
 
     // Execute all actions as atomic batch (single broadcast)
+    console.log('FitGD | Calling bridge.executeBatch...');
     await game.fitgd.bridge.executeBatch(actions, {
       affectedReduxIds: [
         asReduxId(this.characterId),
@@ -1772,8 +1779,14 @@ export class PlayerActionWidget extends Application {
     // Show notification
     ui.notifications?.info(workflow.notificationMessage);
 
-    // Close widget after brief delay
-    setTimeout(() => this.close(), 500);
+    // Only close widget if NOT the GM
+    // GM widget will close when state transition is received via socket
+    if (!game.user?.isGM) {
+      console.log('FitGD | Closing player widget after accepting consequences');
+      setTimeout(() => this.close(), 500);
+    } else {
+      console.log('FitGD | NOT closing GM widget - waiting for socket state update');
+    }
   }
 
   /**
