@@ -45,6 +45,7 @@ export async function registerHandlebarsHelpers(): Promise<void> {
   const partials = [
     'equipment-grid',
     'equipment-row-view',
+    'gm-passive-grid',
   ];
 
   try {
