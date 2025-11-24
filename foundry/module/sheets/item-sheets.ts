@@ -63,7 +63,6 @@ class FitGDEquipmentSheet extends ItemSheet {
     // Ensure modifiers object exists and has all expected fields
     const item = this.item as any;
     if (!item.system.modifiers) {
-      console.log('FitGD | Creating missing modifiers object on item:', item.name);
       item.system.modifiers = {};
     }
 
@@ -74,8 +73,6 @@ class FitGDEquipmentSheet extends ItemSheet {
         item.system.modifiers[modifier] = undefined;
       }
     }
-
-    console.log('FitGD | Equipment Sheet - getData() returning with modifiers:', item.system.modifiers);
 
     return data;
   }
@@ -91,18 +88,23 @@ class FitGDEquipmentSheet extends ItemSheet {
   }
 
   /**
-   * Override form submission to manually inject modifier fields
+   * Override form submission to manually collect modifier fields
    */
   protected override async _onSubmit(event: Event, options: any = {}): Promise<void> {
-    console.log('FitGD | _onSubmit called');
     const form = (event.target?.closest('form') || this.form) as HTMLFormElement;
 
+    // Manually ensure modifier fields are collected, even if Foundry skips them
     if (form) {
-      console.log('FitGD | Form found, checking for modifier inputs:');
       const modifierInputs = form.querySelectorAll('input[name^="system.modifiers"]');
-      console.log(`FitGD | Found ${modifierInputs.length} modifier input(s) in DOM`);
       modifierInputs.forEach((input: any) => {
-        console.log(`FitGD |   Input: ${input.name} = "${input.value}"`);
+        // Force Foundry to include these fields
+        if (!form.querySelector(`input[name="${input.name}"][value]`)) {
+          const hiddenInput = document.createElement('input');
+          hiddenInput.type = 'hidden';
+          hiddenInput.name = input.name;
+          hiddenInput.value = input.value;
+          form.appendChild(hiddenInput);
+        }
       });
     }
 
@@ -114,21 +116,16 @@ class FitGDEquipmentSheet extends ItemSheet {
    */
   protected override _getFormData(form?: HTMLFormElement): Record<string, any> {
     const formData = super._getFormData(form);
-    console.log('FitGD | _getFormData - Foundry collected:', Object.keys(formData));
 
     // Manually collect modifier fields because Foundry's _getFormData may skip them
     if (form) {
-      console.log('FitGD | Manually collecting modifier inputs:');
       const modifierInputs = form.querySelectorAll('input[name^="system.modifiers"]');
-      console.log(`FitGD | Found ${modifierInputs.length} modifier inputs in DOM`);
       modifierInputs.forEach((input: any) => {
-        console.log(`FitGD |   ${input.name} = "${input.value}"`);
         // Add to formData even if empty
         formData[input.name] = input.value;
       });
     }
 
-    console.log('FitGD | formData after manual collection:', Object.keys(formData));
     return formData;
   }
 
@@ -144,18 +141,14 @@ class FitGDEquipmentSheet extends ItemSheet {
     const modifiers: Record<string, any> = {};
     const keysToDelete: string[] = [];
 
-    console.log('FitGD | Equipment Sheet - _updateObject called with formData keys:', Object.keys(formData));
-
     for (const [key, value] of Object.entries(formData)) {
       if (key.startsWith('system.modifiers.')) {
-        console.log(`FitGD |   Found modifier key: ${key} = ${JSON.stringify(value)} (type: ${typeof value})`);
         const modifierKey = key.replace('system.modifiers.', '');
 
         // Parse the value: empty string, null, or undefined = undefined, otherwise parse as number
         let parsedValue: any = undefined;
 
-        // null happens when Foundry processes empty form fields
-        // We want to treat null/empty as undefined (no modifier)
+        // empty string or null = undefined (no modifier), otherwise parse as number
         if (value !== '' && value !== null && value !== undefined) {
           if (typeof value === 'string') {
             const trimmed = String(value).trim();
@@ -171,12 +164,9 @@ class FitGDEquipmentSheet extends ItemSheet {
         }
 
         modifiers[modifierKey] = parsedValue;
-        console.log(`FitGD |     → Parsed as: ${parsedValue} (saved as: ${parsedValue === undefined ? 'undefined' : parsedValue})`);
         keysToDelete.push(key);
       }
     }
-
-    console.log('FitGD | Equipment Sheet - Modifier keys found:', keysToDelete.length);
 
     // Remove all flattened modifier keys from formData
     keysToDelete.forEach(key => delete formData[key]);
@@ -184,16 +174,8 @@ class FitGDEquipmentSheet extends ItemSheet {
     // Always set the modifiers object (even if empty) to ensure it's preserved
     (formData as any)['system.modifiers'] = modifiers;
 
-    console.log('FitGD | Equipment Sheet - Before update:');
-    console.log('  Current item modifiers:', (this.item as any).system?.modifiers);
-    console.log('  Modifiers being saved:', modifiers);
-    console.log('  Updated formData:', formData);
-
     // Call parent to handle the update
     await super._updateObject(event, formData);
-
-    console.log('FitGD | Equipment Sheet - After update:');
-    console.log('  Item modifiers after save:', (this.item as any).system?.modifiers);
   }
 }
 
