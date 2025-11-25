@@ -1,7 +1,7 @@
 #  FORGED IN THE GRIMDARK
 ### **THE COMPLETE PLAYER PRIMER**
 
-This is a collaborative storytelling game. You describe what your character does, and the Game Master (GM) will tell you which of the 12 Actions to roll. The core of the game is taking risks to gain **Momentum**, a shared resource your team spends to overcome impossible odds.
+This is a collaborative storytelling game. You describe what your character does, and the Game Master (GM) will tell you which of the four Approaches to roll. The core of the game is taking risks to gain **Momentum**, a shared resource your team spends to overcome impossible odds.
 
 ---
 
@@ -25,7 +25,7 @@ This is a collaborative storytelling game. You describe what your character does
 
 - **Trait-Based Characters:** Progression comes from acquiring descriptive traits, not raising stats.
 
-- **Simplified Mechanics:** The 12 core actions are your only stats.
+- **Simplified Mechanics:** The four core Approaches are your only stats.
 
 - **Homeostatic Economy:** The Momentum system self-corrects toward equilibrium around 5 Momentum through spending (pushes, flashbacks) and generation (accepting consequences). This creates natural oscillation, not death spiral.
 
