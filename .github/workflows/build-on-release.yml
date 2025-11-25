@@ -47,7 +47,7 @@ jobs:
       - name: Build Foundry system
         run: pnpm run build
 
-      - name: Create release zip and prepare assets
+      - name: Create release assets
         run: |
           # Create distributable zip from foundry directory
           cd foundry
@@ -61,16 +61,21 @@ jobs:
             -x "*.map" || true
           cd ..
 
-          # Verify files exist
-          echo "=== Release Assets ==="
-          ls -lh foundry/system.json
-          ls -lh forged-in-the-grimdark.zip
-
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref_name || format('v{0}', github.run_number) }}
-          generate_release_notes: true
-          files: foundry/system.json,forged-in-the-grimdark.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [ -z "$TAG" ] || [ "$TAG" = "HEAD" ]; then
+            TAG="v$(date +%Y%m%d%H%M%S)"
+          fi
+
+          # Create release and upload only the two specified files
+          gh release create "$TAG" \
+            foundry/system.json \
+            forged-in-the-grimdark.zip \
+            --generate-notes \
+            2>/dev/null || gh release upload "$TAG" \
+              foundry/system.json \
+              forged-in-the-grimdark.zip \
+              --clobber
