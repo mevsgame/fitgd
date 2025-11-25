@@ -49,22 +49,23 @@ jobs:
 
       - name: Create release assets
         run: |
-          mkdir -p release-assets/dist
-          cp foundry/system.json release-assets/system.json
-          cp -r foundry/dist/* release-assets/dist/
-          cp -r foundry/templates release-assets/templates || true
-          cp -r foundry/lang release-assets/lang || true
-          cp -r foundry/packs release-assets/packs || true
-          cd release-assets && zip -r ../forged-in-the-grimdark.zip . && cd ..
+          # Create main zip with all assets
+          cd foundry
+          zip -r ../forged-in-the-grimdark.zip \
+            system.json \
+            dist/ \
+            templates/ \
+            lang/ \
+            packs/ \
+            assets/ \
+            -x "*.map" > /dev/null 2>&1 || true
+          cd ..
 
       - name: Create GitHub Release with Assets
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name || format('v{0}', github.run_number) }}
           generate_release_notes: true
-          files: |
-            release-assets/system.json
-            release-assets/dist/**
-            forged-in-the-grimdark.zip
+          files: forged-in-the-grimdark.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
