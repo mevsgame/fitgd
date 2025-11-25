@@ -60,6 +60,8 @@ jobs:
       - name: Create GitHub Release with Assets
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ github.ref_name || format('v{0}', github.run_number) }}
+          generate_release_notes: true
           files: |
             release-assets/system.json
             release-assets/dist/**
