@@ -1,5 +1,4 @@
 #!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
 
 # Pre-commit hook: type-check, test, build (silent unless failure)
 npm run type-check:all > /dev/null 2>&1 || (echo "❌ Type check failed"; exit 1)
