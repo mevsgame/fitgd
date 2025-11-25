@@ -47,10 +47,10 @@ jobs:
       - name: Build Foundry system
         run: pnpm run build
 
-      - name: Create release zip
+      - name: Create release zip and prepare assets
         run: |
+          # Create distributable zip from foundry directory
           cd foundry
-          # Create distributable zip (excludes source maps)
           zip -r ../forged-in-the-grimdark.zip \
             system.json \
             dist/ \
@@ -58,22 +58,20 @@ jobs:
             lang/ \
             packs/ \
             assets/ \
-            -x "*.map" "*/.*" > /dev/null 2>&1 || true
+            -x "*.map" || true
           cd ..
 
-      - name: Verify release assets exist
-        run: |
-          echo "Checking for release assets..."
-          ls -lh foundry/system.json || echo "ERROR: foundry/system.json not found"
-          ls -lh forged-in-the-grimdark.zip || echo "ERROR: forged-in-the-grimdark.zip not found"
-          echo "Assets ready for release."
+          # Verify files exist
+          echo "=== Release Assets ==="
+          ls -lh foundry/system.json
+          ls -lh forged-in-the-grimdark.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name || format('v{0}', github.run_number) }}
           generate_release_notes: true
-          files: |-
+          files: |
             foundry/system.json
             forged-in-the-grimdark.zip
         env:
