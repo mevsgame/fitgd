@@ -71,8 +71,6 @@ jobs:
         with:
           tag_name: ${{ github.ref_name || format('v{0}', github.run_number) }}
           generate_release_notes: true
-          files: |
-            foundry/system.json
-            forged-in-the-grimdark.zip
+          files: foundry/system.json,forged-in-the-grimdark.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
