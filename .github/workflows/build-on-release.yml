@@ -70,12 +70,9 @@ jobs:
             TAG="v$(date +%Y%m%d%H%M%S)"
           fi
 
-          # Create release and upload only the two specified files
-          gh release create "$TAG" \
-            foundry/system.json \
-            forged-in-the-grimdark.zip \
-            --generate-notes \
-            2>/dev/null || gh release upload "$TAG" \
-              foundry/system.json \
-              forged-in-the-grimdark.zip \
-              --clobber
+          # Create release with notes only (no files in create command)
+          gh release create "$TAG" --generate-notes 2>/dev/null || true
+
+          # Upload only the two specified files explicitly
+          gh release upload "$TAG" foundry/system.json --clobber
+          gh release upload "$TAG" forged-in-the-grimdark.zip --clobber
