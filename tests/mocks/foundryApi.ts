@@ -13,14 +13,14 @@
 
 import { vi } from 'vitest';
 import type { Store } from '@reduxjs/toolkit';
-import type { RootState } from '@/store';
-import type { Character } from '@/types/character';
-import type { Crew } from '@/types/crew';
+import type { RootState } from '../../src/store';
+import type { Character } from '../../src/types/character';
+import type { Crew } from '../../src/types/crew';
 import { configureStore } from '@reduxjs/toolkit';
-import { charactersReducer } from '@/slices/charactersSlice';
-import { crewsReducer } from '@/slices/crewsSlice';
-import { clocksReducer } from '@/slices/clocksSlice';
-import { playerRoundStateReducer } from '@/slices/playerRoundStateSlice';
+import characterReducer from '../../src/slices/characterSlice';
+import crewReducer from '../../src/slices/crewSlice';
+import clockReducer from '../../src/slices/clockSlice';
+import playerRoundStateReducer from '../../src/slices/playerRoundStateSlice';
 
 /* -------------------------------------------- */
 /*  Type Definitions                            */
@@ -144,9 +144,9 @@ export function createMockStore(initialState?: Partial<RootState>): Store<RootSt
 
   const store = configureStore({
     reducer: {
-      characters: charactersReducer,
-      crews: crewsReducer,
-      clocks: clocksReducer,
+      characters: characterReducer,
+      crews: crewReducer,
+      clocks: clockReducer,
       playerRoundState: playerRoundStateReducer,
     },
     preloadedState: defaultState,

@@ -22,11 +22,11 @@
  */
 
 import { vi, beforeEach, afterEach } from 'vitest';
-import type { RootState } from '@/store';
-import type { PlayerRoundState } from '@/types/playerRoundState';
-import type { Character } from '@/types/character';
-import type { Crew } from '@/types/crew';
-import type { Clock } from '@/types/clock';
+import type { RootState } from '../../src/store';
+import type { PlayerRoundState } from '../../src/types/playerRoundState';
+import type { Character } from '../../src/types/character';
+import type { Crew } from '../../src/types/crew';
+import type { Clock } from '../../src/types/clock';
 import {
   createMockFoundryGame,
   createMockCharacter,
