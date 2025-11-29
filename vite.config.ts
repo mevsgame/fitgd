@@ -21,7 +21,7 @@ export default defineConfig({
 
     // Sourcemaps are essential for debugging your TS code in the browser
     sourcemap: true,
-    
+
     // Do not minify, as requested
     minify: false,
 
@@ -38,7 +38,7 @@ export default defineConfig({
         // The name will be 'fitgd.mjs' because the input key is 'fitgd'.
         entryFileNames: '[name].mjs',
         format: 'es',
-        
+
         // Keep code readable
         compact: false,
       },
@@ -49,10 +49,21 @@ export default defineConfig({
   resolve: {
     alias: {
       // Allows you to use `import ... from '@/...'` in your foundry code
-      '@': path.resolve(__dirname, './src'), 
-      
+      '@': path.resolve(__dirname, './src'),
+
       // Allows you to use `import ... from '@foundry/...'`
       '@foundry': path.resolve(__dirname, './foundry/module'),
+    },
+  },
+
+  // Vitest Configuration
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./tests/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
     },
   },
 });

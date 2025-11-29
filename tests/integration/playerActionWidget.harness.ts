@@ -44,6 +44,8 @@ import {
   type MockChatMessageConstructor,
   type MockRollConstructor,
 } from '../mocks/uiMocks';
+import { createMockServices } from '../mocks/mockServices';
+import { PlayerActionWidget } from '../../foundry/module/widgets/player-action-widget';
 
 /* -------------------------------------------- */
 /*  Type Definitions                            */
@@ -260,13 +262,26 @@ export async function createWidgetHarness(
   // Inject mocks into global scope
   (global as any).game = game;
 
-  // NOTE: Widget creation will happen in Phase 1 when we add dependency injection
-  // For now, we'll create a placeholder
-  const widget = {
+  // Create mock services for widget
+  const mockServices = createMockServices();
+
+  // Set predetermined dice rolls if provided
+  if (rollResults && rollResults.length > 0) {
+    mockServices.diceService.setNextRolls(rollResults);
+  }
+
+  // Create real PlayerActionWidget with mock services
+  const widget = new PlayerActionWidget(
     characterId,
-    _initialized: false,
-    // Widget methods will be added when we refactor in Phase 1
-  };
+    {}, // options
+    mockServices.diceService,
+    mockServices.notificationService,
+    mockServices.dialogFactory
+  );
+
+  // Initialize handlers by calling getData
+  // This creates consequenceApplicationHandler and other handlers needed for widget logic
+  await widget.getData();
 
   /* -------------------------------------------- */
   /*  State Query Helpers                         */

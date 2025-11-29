@@ -287,7 +287,7 @@ export interface MockDialogInstance {
 }
 
 export interface MockDialogConstructor {
-  new (data: MockDialogData, options?: any): MockDialogInstance;
+  new(data: MockDialogData, options?: any): MockDialogInstance;
 }
 
 /**
@@ -502,11 +502,47 @@ export function setupUIMocks(options: {
   const Dialog = createMockDialog(autoCloseDialogs);
   const foundryUtils = createMockFoundryUtils();
 
+  // Mock Application base class (Foundry's base class for all apps/widgets)
+  const Application = class MockApplication {
+    constructor(options: any = {}) {
+      // Store options
+    }
+
+    async render(force?: boolean, options?: any): Promise<any> {
+      return this;
+    }
+
+    async close(options?: any): Promise<void> {
+      // No-op
+    }
+
+    async _render(force: boolean, options: any): Promise<void> {
+      // No-op
+    }
+
+    activateListeners(html: any): void {
+      // No-op
+    }
+
+    async getData(options?: any): Promise<any> {
+      return {};
+    }
+
+    static get defaultOptions(): any {
+      return {};
+    }
+
+    get id(): string {
+      return 'mock-app-id';
+    }
+  };
+
   // Inject into global scope
   (global as any).ui = ui;
   (global as any).ChatMessage = ChatMessage;
   (global as any).Roll = Roll;
   (global as any).Dialog = Dialog;
+  (global as any).Application = Application;
   (global as any).foundry = { utils: foundryUtils };
 
   return {
@@ -515,6 +551,7 @@ export function setupUIMocks(options: {
     ChatMessage,
     Roll,
     Dialog,
+    Application,
     foundryUtils,
   };
 }
@@ -529,5 +566,6 @@ export function cleanupUIMocks() {
   delete (global as any).ChatMessage;
   delete (global as any).Roll;
   delete (global as any).Dialog;
+  delete (global as any).Application;
   delete (global as any).foundry;
 }

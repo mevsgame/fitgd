@@ -66,9 +66,9 @@ describe('PlayerActionWidget - Consequence Flow', () => {
             // Verify single broadcast
             expect(harness.spy.data.broadcasts).toBe(1);
 
-            // TODO: Once harness uses real widget, verify harm clock advancement
-            // const clock = harness.game.fitgd.store.getState().clocks.byId['clock-harm-1'];
-            // expect(clock.segments).toBe(5);
+            // Verify harm clock advancement
+            const clock = harness.game.fitgd.store.getState().clocks.byId['clock-harm-1'];
+            expect(clock.segments).toBe(5); // 3 initial + 2 harm = 5
         });
     });
 });
