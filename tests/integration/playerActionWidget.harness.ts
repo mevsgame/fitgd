@@ -383,7 +383,7 @@ export async function createWidgetHarness(
     });
 
     // Simulate dice roll
-    const roll = await uiMocks.Roll.create('3d6').evaluate();
+    const roll = await (uiMocks.Roll.create as any)('3d6').evaluate();
 
     // Determine outcome
     const maxDie = Math.max(...roll.dice[0].results.map(r => r.result));
@@ -412,22 +412,28 @@ export async function createWidgetHarness(
 
   const clickPushDie = async (): Promise<void> => {
     const currentState = getPlayerState();
+    const isPushedDie = currentState?.pushed && currentState?.pushType === 'extra-die';
+
     await game.fitgd.bridge.execute({
-      type: 'playerRoundState/setPushed',
+      type: 'playerRoundState/setImprovements',
       payload: {
         characterId,
-        pushed: !(currentState?.pushed || false),
+        pushed: !isPushedDie,
+        pushType: !isPushedDie ? 'extra-die' : undefined,
       },
     });
   };
 
   const clickPushEffect = async (): Promise<void> => {
     const currentState = getPlayerState();
+    const isPushedEffect = currentState?.pushed && currentState?.pushType === 'improved-effect';
+
     await game.fitgd.bridge.execute({
-      type: 'playerRoundState/setPushEffect',
+      type: 'playerRoundState/setImprovements',
       payload: {
         characterId,
-        pushEffect: !(currentState?.pushEffect || false),
+        pushed: !isPushedEffect,
+        pushType: !isPushedEffect ? 'improved-effect' : undefined,
       },
     });
   };
@@ -510,6 +516,15 @@ export async function createWidgetHarness(
   };
 
   const advanceToState = async (state: string): Promise<void> => {
+    // Initialize player round state if it doesn't exist
+    const currentState = getPlayerState();
+    if (!currentState) {
+      await game.fitgd.bridge.execute({
+        type: 'playerRoundState/initializePlayerState',
+        payload: { characterId },
+      });
+    }
+
     await game.fitgd.bridge.execute({
       type: 'playerRoundState/transitionState',
       payload: { characterId, newState: state },
