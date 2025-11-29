@@ -568,6 +568,16 @@ export class PlayerActionEventCoordinator {
       // Roll dice
       const dicePool = diceRollingHandler.calculateDicePool(state);
       const rollResult = await this.context.getDiceService().roll(dicePool);
+
+      // Post the roll to chat with approach flavor
+      const approach = playerState.selectedApproach || 'unknown';
+      const characterName = character.name || 'Character';
+      await this.context.getDiceService().postRollToChat(
+        rollResult,
+        this.context.getCharacterId(),
+        `${characterName} - ${approach} approach`
+      );
+
       const { calculateOutcome } = await import('@/utils/diceRules');
       const outcome = calculateOutcome(rollResult);
 
@@ -936,6 +946,17 @@ export class PlayerActionEventCoordinator {
     // Reroll!
     const dicePool = diceRollingHandler.calculateDicePool(updatedState);
     const rollResult = await this.context.getDiceService().roll(dicePool);
+
+    // Post the reroll to chat
+    const character = this.context.getCharacter();
+    const characterName = character?.name || 'Character';
+    const approach = this.context.getPlayerState()?.selectedApproach || 'unknown';
+    await this.context.getDiceService().postRollToChat(
+      rollResult,
+      this.context.getCharacterId(),
+      `${characterName} - ${approach} approach (Stims Reroll)`
+    );
+
     const { calculateOutcome } = await import('@/utils/diceRules');
     const outcome = calculateOutcome(rollResult);
 
