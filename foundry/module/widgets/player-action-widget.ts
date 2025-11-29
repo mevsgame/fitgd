@@ -26,7 +26,9 @@ import { getEquipmentToLock, getConsumablesToDeplete } from '@/utils/equipmentRu
 
 import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog } from '../dialogs/index';
 import { asReduxId } from '../types/ids';
+import type { IPlayerActionWidgetContext } from '../types/widgetContext';
 import { PlayerActionHandlerFactory } from '../services/playerActionHandlerFactory';
+import { PlayerActionEventCoordinator } from '../services/playerActionEventCoordinator';
 import { DiceService, FoundryDiceService } from '../services/diceService';
 import { NotificationService, FoundryNotificationService } from '../services/notificationService';
 import { DialogFactory, FoundryDialogFactory } from '../services/dialogFactory';
@@ -162,9 +164,12 @@ interface ClockData {
  * The widget subscribes to Redux store changes for real-time updates across all clients
  * (GM sees player's decisions immediately, player sees GM's approval).
  *
+ * Implements IPlayerActionWidgetContext to provide event coordinator access to state and services.
+ *
  * @extends Application
+ * @implements IPlayerActionWidgetContext
  */
-export class PlayerActionWidget extends Application {
+export class PlayerActionWidget extends Application implements IPlayerActionWidgetContext {
   private characterId: string;
   private character: Character | null = null;
   private crew: Crew | null = null;
@@ -179,6 +184,10 @@ export class PlayerActionWidget extends Application {
   private diceService: DiceService;
   private notificationService: NotificationService;
   private dialogFactory: DialogFactory;
+
+  // Event coordinator (delegates all 24 event handlers)
+  // @ts-expect-error - Will be used in Step 4 when migrating event handlers
+  private coordinator: PlayerActionEventCoordinator;
 
   /**
    * Create a new Player Action Widget
@@ -205,6 +214,9 @@ export class PlayerActionWidget extends Application {
 
     // Initialize handler factory
     this.handlerFactory = new PlayerActionHandlerFactory(characterId, null);
+
+    // Initialize event coordinator (passes this widget as the context)
+    this.coordinator = new PlayerActionEventCoordinator(this);
   }
 
   async _render(force: boolean, options: any): Promise<void> {
@@ -292,6 +304,90 @@ export class PlayerActionWidget extends Application {
     return `player-action-widget-${this.characterId}`;
   }
 
+  /* ========================================
+     IPlayerActionWidgetContext Implementation
+     ======================================== */
+
+  /**
+   * Get the character ID this widget is for
+   * @implements IPlayerActionWidgetContext
+   */
+  getCharacterId(): string {
+    return this.characterId;
+  }
+
+  /**
+   * Get the character entity
+   * @implements IPlayerActionWidgetContext
+   */
+  getCharacter(): Character | null {
+    return this.character;
+  }
+
+  /**
+   * Get the crew entity
+   * @implements IPlayerActionWidgetContext
+   */
+  getCrew(): Crew | null {
+    return this.crew;
+  }
+
+  /**
+   * Get the crew ID (if character is in a crew)
+   * @implements IPlayerActionWidgetContext
+   */
+  getCrewId(): string | null {
+    return this.crewId;
+  }
+
+  /**
+   * Get the current player round state
+   * @implements IPlayerActionWidgetContext
+   */
+  getPlayerState(): PlayerRoundState | null {
+    return this.playerState;
+  }
+
+  /**
+   * Get the dice service for rolling
+   * @implements IPlayerActionWidgetContext
+   */
+  getDiceService(): DiceService {
+    return this.diceService;
+  }
+
+  /**
+   * Get the notification service
+   * @implements IPlayerActionWidgetContext
+   */
+  getNotificationService(): NotificationService {
+    return this.notificationService;
+  }
+
+  /**
+   * Get the dialog factory for creating dialogs
+   * @implements IPlayerActionWidgetContext
+   */
+  getDialogFactory(): DialogFactory {
+    return this.dialogFactory;
+  }
+
+  /**
+   * Get the handler factory for creating game handlers
+   * @implements IPlayerActionWidgetContext
+   */
+  getHandlerFactory(): PlayerActionHandlerFactory {
+    return this.handlerFactory;
+  }
+
+  /**
+   * Post a success message to the game chat
+   * @implements IPlayerActionWidgetContext
+   */
+  async postSuccessToChat(outcome: string, rollResult: number[]): Promise<void> {
+    return this._postSuccessToChat(outcome, rollResult);
+  }
+
   /**
    * Get template data for rendering the widget
    *
@@ -305,59 +401,34 @@ export class PlayerActionWidget extends Application {
   override async getData(options: any = {}): Promise<PlayerActionWidgetData> {
     const data = await super.getData(options) as Partial<PlayerActionWidgetData>;
 
-    // Null safety checks
+    // Null safety check
     if (!game.fitgd) {
       console.error('FitGD | FitGD not initialized');
       return data as PlayerActionWidgetData;
     }
 
-    // Get character from Redux store
-    this.character = game.fitgd.api.character.getCharacter(this.characterId);
-    if (!this.character) {
-      this.notificationService.error('Character not found');
-      return data as PlayerActionWidgetData;
-    }
-
-    // Get crew (assuming character is in a crew)
-    const state = game.fitgd.store.getState();
-    const crewId = Object.values(state.crews.byId)
-      .find(crew => crew.characters.includes(this.characterId))?.id;
-
-    if (crewId) {
-      this.crew = game.fitgd.api.crew.getCrew(crewId);
-      this.crewId = crewId; // Store crewId separately for easy access
-    } else {
-      this.crew = null;
-      this.crewId = null;
-    }
-
-    // Get player round state
-    this.playerState = state.playerRoundState.byCharacterId[this.characterId];
-
-    console.log('FitGD | Widget getData() - Current state:', this.playerState?.state, 'isGM:', game.user?.isGM);
-    console.log('FitGD | Widget getData() - Approved Passive ID:', this.playerState?.approvedPassiveId);
-    if (this.playerState?.approvedPassiveId) {
-      const passive = this.character.equipment.find(e => e.id === this.playerState!.approvedPassiveId);
-      console.log('FitGD | Widget getData() - Found Passive Item:', passive);
-    }
-
-    // Update factory with crew ID and character (if crew ID changed)
-    if (crewId && crewId !== this.crewId) {
-      this.crewId = crewId;
-      this.handlerFactory = new PlayerActionHandlerFactory(
-        this.characterId,
-        crewId,
-        this.character
-      );
-    }
-
+    // Load entities from Redux store
     const entities = await this._loadEntities();
-    if (!entities.character) return data as PlayerActionWidgetData;
+    if (!entities || !entities.character) return data as PlayerActionWidgetData;
 
-    const uiState = this._buildUIState(entities.state, entities.playerState);
-    const derivedData = this._computeDerivedData(entities.state, entities.playerState, entities.character, entities.crew, entities.crewId);
+    // Build UI state flags - character is guaranteed non-null from above null check
+    const uiState = this._buildUIState(entities as any);
 
-    return this._prepareTemplateData(data, entities, uiState, derivedData);
+    // Compute derived values from selectors
+    const derivedData = this._computeDerivedData(entities as any);
+
+    // Prepare template-specific data
+    const templateData = this._prepareTemplateData(entities, uiState, derivedData);
+
+    // Get state-specific data (consequence config, etc.)
+    const stateSpecificData = this._getStateSpecificData(entities);
+
+    // Combine all data for template
+    return {
+      ...data,
+      ...templateData,
+      ...stateSpecificData,
+    } as PlayerActionWidgetData;
   }
 
   /**
@@ -410,9 +481,28 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Build UI state flags
+   * Build UI state flags based on current playerRoundState
+   *
+   * These flags determine which sections of the template are rendered.
+   * Each flag corresponds to a phase in the action resolution state machine.
    */
-  private _buildUIState(state: RootState, playerState: PlayerRoundState | null): any {
+  private _buildUIState(entities: {
+    state: RootState;
+    character: Character;
+    playerState: PlayerRoundState | null;
+  }): {
+    isDecisionPhase: boolean;
+    isRolling: boolean;
+    isStimsRolling: boolean;
+    isStimsLocked: boolean;
+    isSuccess: boolean;
+    isGMResolvingConsequence: boolean;
+    isGM: boolean;
+    isDying: boolean;
+    stimsLocked: boolean;
+  } {
+    const { state, playerState } = entities;
+
     return {
       isDecisionPhase: playerState?.state === 'DECISION_PHASE',
       isRolling: playerState?.state === 'ROLLING',
@@ -427,15 +517,20 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
-   * Compute derived data (selectors, costs, etc.)
+   * Compute derived game values using Redux selectors
+   *
+   * This includes all selector evaluations, equipment data, harm clocks,
+   * momentum values, and computed bonuses.
    */
-  private _computeDerivedData(
-    state: RootState,
-    playerState: PlayerRoundState | null,
-    character: Character,
-    crew: Crew | null,
-    crewId: string | null
-  ): any {
+  private _computeDerivedData(entities: {
+    state: RootState;
+    character: Character;
+    crew: Crew | null;
+    crewId: string | null;
+    playerState: PlayerRoundState | null;
+  }): Record<string, any> {
+    const { state, character, crew, crewId, playerState } = entities;
+
     return {
       dicePool: selectDicePool(state, this.characterId),
       momentumCost: selectMomentumCost(playerState || undefined),
@@ -461,38 +556,52 @@ export class PlayerActionWidget extends Application {
       selectedSecondaryId: playerState?.equippedForAction?.[0] || playerState?.secondaryApproach,
       selectedSecondaryName: this._getSelectedSecondaryName(playerState, character),
       improvements: this._computeImprovements(),
-      consequenceData: playerState?.state === 'GM_RESOLVING_CONSEQUENCE' ? this._getConsequenceData(state) : {},
     };
   }
 
   /**
-   * Assemble final template data
+   * Prepare data specifically for Handlebars template rendering
+   *
+   * This method organizes all entity and derived data into the shape
+   * expected by the template. Serves as the "contract" between TypeScript
+   * and Handlebars.
    */
   private _prepareTemplateData(
-    baseData: any,
     entities: any,
     uiState: any,
     derivedData: any
-  ): PlayerActionWidgetData {
+  ): Partial<PlayerActionWidgetData> {
+    const { character, crew, crewId, playerState } = entities;
+
     return {
-      ...baseData,
-      character: entities.character,
-      crew: entities.crew,
-      crewId: entities.crewId,
-      playerState: entities.playerState,
-
-      // UI State
+      character,
+      crew,
+      crewId,
+      playerState,
       ...uiState,
-
-      // Derived Data
+      approaches: Object.keys(character.approaches),
       ...derivedData,
-
-      // Explicit mappings for template compatibility
-      approaches: Object.keys(entities.character.approaches),
-
-      // Spread consequence data directly
-      ...derivedData.consequenceData,
     };
+  }
+
+  /**
+   * Get state-specific data that's only needed in certain phases
+   *
+   * For example, consequence configuration data is only needed when
+   * playerState.state === 'GM_RESOLVING_CONSEQUENCE'.
+   */
+  private _getStateSpecificData(entities: {
+    state: RootState;
+    playerState: PlayerRoundState | null;
+  }): Partial<PlayerActionWidgetData> {
+    const { state, playerState } = entities;
+
+    // Only load consequence data if in GM_RESOLVING_CONSEQUENCE state
+    if (playerState?.state === 'GM_RESOLVING_CONSEQUENCE') {
+      return this._getConsequenceData(state);
+    }
+
+    return {};
   }
 
   override activateListeners(html: JQuery): void {
@@ -1568,7 +1677,6 @@ export class PlayerActionWidget extends Application {
     const consequenceType = (event.currentTarget as HTMLElement).dataset.type as 'harm' | 'crew-clock';
 
     const consequenceHandler = this.handlerFactory.getConsequenceHandler();
-    if (!consequenceHandler) return;
 
     // Use handler to create action
     const action = consequenceHandler.createSetConsequenceTypeAction(consequenceType);
