@@ -87,7 +87,7 @@ export interface BridgeSpy {
   getActionsByType: (type: string) => ReduxAction[];
 
   /** Get all state transitions */
-  getStateTransitions: () => Array<{ from?: string; to: string; characterId: string }>;
+  getStateTransitions: () => Array<{ characterId: string; from?: string; to: string }>;
 
   /** Check if an action was dispatched */
   hasAction: (type: string, payload?: Partial<any>) => boolean;
@@ -304,10 +304,22 @@ export function createBridgeSpy(store: Store<RootState>): BridgeSpyResult {
     getStateTransitions: () => {
       return data.dispatches
         .filter(a => a.type === 'playerRoundState/transitionState')
-        .map(a => ({
-          characterId: a.payload?.characterId,
-          to: a.payload?.newState,
-        }));
+        .map((a, index) => {
+          // Try to get previous state from the previous transition for the same character
+          let from: string | undefined;
+          for (let i = index - 1; i >= 0; i--) {
+            if (data.dispatches[i].type === 'playerRoundState/transitionState' &&
+                data.dispatches[i].payload?.characterId === a.payload?.characterId) {
+              from = data.dispatches[i].payload?.newState;
+              break;
+            }
+          }
+          return {
+            characterId: a.payload?.characterId,
+            from,
+            to: a.payload?.newState,
+          };
+        });
     },
 
     hasAction: (type: string, payload?: Partial<any>) => {
