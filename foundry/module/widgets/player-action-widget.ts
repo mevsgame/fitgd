@@ -351,93 +351,147 @@ export class PlayerActionWidget extends Application {
       );
     }
 
-    // Update factory with character
-    this.handlerFactory.setCharacter(this.character);
+    const entities = await this._loadEntities();
+    if (!entities.character) return data as PlayerActionWidgetData;
 
-    // Build data for template
+    const uiState = this._buildUIState(entities.state, entities.playerState);
+    const derivedData = this._computeDerivedData(entities.state, entities.playerState, entities.character, entities.crew, entities.crewId);
+
+    return this._prepareTemplateData(data, entities, uiState, derivedData);
+  }
+
+  /**
+   * Load character, crew, and state entities
+   */
+  private async _loadEntities(): Promise<{
+    character: Character | null;
+    crew: Crew | null;
+    crewId: string | null;
+    state: RootState;
+    playerState: PlayerRoundState | null;
+  }> {
+    const state = game.fitgd.store.getState();
+    const character = state.characters.byId[this.characterId];
+
+    if (!character) {
+      return { character: null, crew: null, crewId: null, state, playerState: null };
+    }
+
+    // Update local references
+    this.character = character;
+
+    // Find crew ID from crews that contain this character
+    const crewId = Object.values(state.crews.byId)
+      .find(crew => crew.characters.includes(this.characterId))?.id;
+
+    this.crewId = crewId || null;
+    this.crew = this.crewId ? state.crews.byId[this.crewId] : null;
+    this.playerState = state.playerRoundState.byCharacterId[this.characterId];
+
+    // Update factory context
+    if (this.crewId && this.crewId !== this.handlerFactory['crewId']) {
+      // Re-initialize factory if crew ID changes (rare but possible)
+      this.handlerFactory = new PlayerActionHandlerFactory(
+        this.characterId,
+        this.crewId,
+        this.character
+      );
+    } else {
+      this.handlerFactory.setCharacter(this.character);
+    }
+
     return {
-      ...data,
       character: this.character,
       crew: this.crew,
       crewId: this.crewId,
-      playerState: this.playerState,
+      state,
+      playerState: this.playerState
+    };
+  }
 
-      // State flags (ROLL_CONFIRM state removed)
-      isDecisionPhase: this.playerState?.state === 'DECISION_PHASE',
-      isRolling: this.playerState?.state === 'ROLLING',
-      isStimsRolling: this.playerState?.state === 'STIMS_ROLLING',
-      isStimsLocked: this.playerState?.state === 'STIMS_LOCKED',
-      isSuccess: this.playerState?.state === 'SUCCESS_COMPLETE',
-      isGMResolvingConsequence: this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE',
-
-      // Available approaches
-      approaches: Object.keys(this.character.approaches),
-
-      // Equipment for selection (excluding consumed consumables - they cannot be used once consumed)
-      equippedItems: selectActiveEquipment(this.character).filter(
-        item => !item.consumed // Consumed consumables cannot be selected
-      ),
-      activeEquipmentItem: this.playerState?.equippedForAction?.[0]
-        ? this.character.equipment.find(e => e.id === this.playerState!.equippedForAction![0])
-        : undefined,
-
-      // Harm clocks (for display) - using selector
-      harmClocks: selectHarmClocksWithStatus(state, this.characterId),
-      isDying: selectIsDying(state, this.characterId),
-
-      // Current momentum
-      momentum: this.crew?.currentMomentum || 0,
-      maxMomentum: DEFAULT_CONFIG.crew.maxMomentum,
-
-      // Rally availability - using selector
-      canRally: this.crewId ? selectCanUseRally(state, this.characterId) : false,
-
-      // Computed dice pool - using selector
-      dicePool: selectDicePool(state, this.characterId),
-
-      // Momentum cost - using selector
-      momentumCost: selectMomentumCost(this.playerState),
-
-      // Computed improvements preview
-      improvements: this._computeImprovements(),
-
-      // Improved position (if trait improves it) - using selector
-      improvedPosition: selectEffectivePosition(state, this.characterId),
-
-      // Improved effect (if Push Effect is active) - using selector
-      improvedEffect: selectEffectiveEffect(state, this.characterId),
-
-      // GM controls
+  /**
+   * Build UI state flags
+   */
+  private _buildUIState(state: RootState, playerState: PlayerRoundState | null): any {
+    return {
+      isDecisionPhase: playerState?.state === 'DECISION_PHASE',
+      isRolling: playerState?.state === 'ROLLING',
+      isStimsRolling: playerState?.state === 'STIMS_ROLLING',
+      isStimsLocked: playerState?.state === 'STIMS_LOCKED',
+      isSuccess: playerState?.state === 'SUCCESS_COMPLETE',
+      isGMResolvingConsequence: playerState?.state === 'GM_RESOLVING_CONSEQUENCE',
       isGM: game.user?.isGM || false,
-
-      // Stims availability (inverted: selector returns "available", template needs "locked")
+      isDying: selectIsDying(state, this.characterId),
       stimsLocked: !selectStimsAvailable(state),
+    };
+  }
 
-      // Passive equipment for display
-      passiveEquipment: selectPassiveEquipment(this.character),
-
-      // Selected passive equipment ID (GM only)
-      selectedPassiveId: this.playerState?.approvedPassiveId,
-
-      // Approved passive equipment object (for display)
-      approvedPassiveEquipment: this.playerState?.approvedPassiveId
-        ? this.character?.equipment.find(e => e.id === this.playerState!.approvedPassiveId)
-        : undefined,
-
-      // Equipment effects from selected items (using new selectors)
+  /**
+   * Compute derived data (selectors, costs, etc.)
+   */
+  private _computeDerivedData(
+    state: RootState,
+    playerState: PlayerRoundState | null,
+    character: Character,
+    crew: Crew | null,
+    crewId: string | null
+  ): any {
+    return {
+      dicePool: selectDicePool(state, this.characterId),
+      momentumCost: selectMomentumCost(playerState || undefined),
+      momentum: crew?.currentMomentum || 0,
+      maxMomentum: DEFAULT_CONFIG.crew.maxMomentum,
+      canRally: crewId ? selectCanUseRally(state, this.characterId) : false,
+      improvedPosition: selectEffectivePosition(state, this.characterId),
+      improvedEffect: selectEffectiveEffect(state, this.characterId),
       equipmentEffects: selectEquipmentEffects(state, this.characterId),
-
-      // Equipment-modified position and effect (using new selectors)
       equipmentModifiedPosition: selectEquipmentModifiedPosition(state, this.characterId),
       equipmentModifiedEffect: selectEquipmentModifiedEffect(state, this.characterId),
+      harmClocks: selectHarmClocksWithStatus(state, this.characterId),
+      activeEquipmentItem: playerState?.equippedForAction?.[0]
+        ? character.equipment.find(e => e.id === playerState!.equippedForAction![0])
+        : undefined,
+      equippedItems: selectActiveEquipment(character).filter(item => !item.consumed),
+      passiveEquipment: selectPassiveEquipment(character),
+      approvedPassiveEquipment: playerState?.approvedPassiveId
+        ? character.equipment.find(e => e.id === playerState!.approvedPassiveId)
+        : undefined,
+      selectedPassiveId: playerState?.approvedPassiveId,
+      secondaryOptions: this._buildSecondaryOptions(playerState?.selectedApproach, character),
+      selectedSecondaryId: playerState?.equippedForAction?.[0] || playerState?.secondaryApproach,
+      selectedSecondaryName: this._getSelectedSecondaryName(playerState, character),
+      improvements: this._computeImprovements(),
+      consequenceData: playerState?.state === 'GM_RESOLVING_CONSEQUENCE' ? this._getConsequenceData(state) : {},
+    };
+  }
 
-      // Secondary approach unified dropdown options
-      secondaryOptions: this._buildSecondaryOptions(this.playerState?.selectedApproach, this.character),
-      selectedSecondaryId: this.playerState?.equippedForAction?.[0] || this.playerState?.secondaryApproach,
-      selectedSecondaryName: this._getSelectedSecondaryName(this.playerState, this.character),
+  /**
+   * Assemble final template data
+   */
+  private _prepareTemplateData(
+    baseData: any,
+    entities: any,
+    uiState: any,
+    derivedData: any
+  ): PlayerActionWidgetData {
+    return {
+      ...baseData,
+      character: entities.character,
+      crew: entities.crew,
+      crewId: entities.crewId,
+      playerState: entities.playerState,
 
-      // Consequence transaction data (for GM_RESOLVING_CONSEQUENCE state)
-      ...(this.playerState?.state === 'GM_RESOLVING_CONSEQUENCE' ? this._getConsequenceData(state) : {}),
+      // UI State
+      ...uiState,
+
+      // Derived Data
+      ...derivedData,
+
+      // Explicit mappings for template compatibility
+      approaches: Object.keys(entities.character.approaches),
+
+      // Spread consequence data directly
+      ...derivedData.consequenceData,
     };
   }
 
