@@ -881,19 +881,6 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     return consequenceDataResolver.resolveConsequenceData(state, this.playerState);
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
   /**
    * Roll dice and return results using Foundry's Roll class
    */
@@ -914,7 +901,6 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
       throw error;
     }
   }
-
 
   /* -------------------------------------------- */
   /*  GM Consequence Configuration Handlers       */
@@ -939,15 +925,9 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     dialog.render(true);
   }
 
-
-
   /* -------------------------------------------- */
   /*  GM Consequence Configuration Handlers       */
   /* -------------------------------------------- */
-
-
-
-
 
   /**
    * Shared stims logic (called from GM_RESOLVING_CONSEQUENCE state)
