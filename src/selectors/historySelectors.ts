@@ -153,19 +153,19 @@ export const selectOrphanedCommands = createSelector(
     (state: RootState) => state.clocks,
   ],
   (characters, crews, clocks): OrphanedCommands => {
-    const characterIds = new Set(characters.allIds);
-    const crewIds = new Set(crews.allIds);
-    const clockIds = new Set(clocks.allIds);
+    const characterIds = new Set<string>(characters.allIds);
+    const crewIds = new Set<string>(crews.allIds);
+    const clockIds = new Set<string>(clocks.allIds);
 
-    const orphanedCharacterCommands = characters.history.filter((cmd) =>
+    const orphanedCharacterCommands = characters.history.filter((cmd: any) =>
       isOrphanedCommand(cmd, characterIds)
     );
 
-    const orphanedCrewCommands = crews.history.filter((cmd) =>
+    const orphanedCrewCommands = crews.history.filter((cmd: any) =>
       isOrphanedCommand(cmd, crewIds)
     );
 
-    const orphanedClockCommands = clocks.history.filter((cmd) =>
+    const orphanedClockCommands = clocks.history.filter((cmd: any) =>
       isOrphanedCommand(cmd, clockIds)
     );
 
