@@ -23,3 +23,4 @@ docs/api/
 package-lock.json
 /foundry/packs
 .claude/settings.local.json
+debug_output.json
