@@ -24,8 +24,7 @@ import { DEFAULT_CONFIG } from '@/config/gameConfig';
 import { calculateOutcome } from '@/utils/diceRules';
 import { getEquipmentToLock, getConsumablesToDeplete } from '@/utils/equipmentRules';
 
-import { FlashbackTraitsDialog } from '../dialogs/FlashbackTraitsDialog';
-import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog, RallyDialog } from '../dialogs/index';
+import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog } from '../dialogs/index';
 import { asReduxId } from '../types/ids';
 import { ConsequenceResolutionHandler } from '../handlers/consequenceResolutionHandler';
 import { StimsHandler } from '../handlers/stimsHandler';
@@ -39,6 +38,9 @@ import { UseTraitHandler } from '../handlers/useTraitHandler';
 import { PushHandler } from '../handlers/pushHandler';
 import { ConsequenceApplicationHandler } from '../handlers/consequenceApplicationHandler';
 import { StimsWorkflowHandler } from '../handlers/stimsWorkflowHandler';
+import { DiceService, FoundryDiceService } from '../services/diceService';
+import { NotificationService, FoundryNotificationService } from '../services/notificationService';
+import { DialogFactory, FoundryDialogFactory } from '../services/dialogFactory';
 
 /* -------------------------------------------- */
 /*  Types                                       */
@@ -198,16 +200,33 @@ export class PlayerActionWidget extends Application {
   private consequenceApplicationHandler: ConsequenceApplicationHandler | null = null;
   private stimsWorkflowHandler: StimsWorkflowHandler | null = null;
 
+  // Injectable services
+  private diceService: DiceService;
+  private notificationService: NotificationService;
+  private dialogFactory: DialogFactory;
+
   /**
    * Create a new Player Action Widget
    *
    * @param characterId - Redux ID of the character taking their turn
    * @param options - Additional options passed to Application constructor
+   * @param diceService - Optional injectable dice service (defaults to Foundry implementation)
+   * @param notificationService - Optional injectable notification service (defaults to Foundry implementation)
+   * @param dialogFactory - Optional injectable dialog factory (defaults to Foundry implementation)
    */
-  constructor(characterId: string, options: any = {}) {
+  constructor(
+    characterId: string,
+    options: any = {},
+    diceService: DiceService = new FoundryDiceService(),
+    notificationService: NotificationService = new FoundryNotificationService(),
+    dialogFactory: DialogFactory = new FoundryDialogFactory()
+  ) {
     super(options);
 
     this.characterId = characterId;
+    this.diceService = diceService;
+    this.notificationService = notificationService;
+    this.dialogFactory = dialogFactory;
   }
 
   async _render(force: boolean, options: any): Promise<void> {
@@ -314,7 +333,7 @@ export class PlayerActionWidget extends Application {
     // Get character from Redux store
     this.character = game.fitgd.api.character.getCharacter(this.characterId);
     if (!this.character) {
-      ui.notifications?.error('Character not found');
+      this.notificationService.error('Character not found');
       return data as PlayerActionWidgetData;
     }
 
@@ -1042,12 +1061,12 @@ export class PlayerActionWidget extends Application {
         'no-crew': 'Character must be in a crew to rally',
         'no-teammates': 'No other teammates in crew to rally',
       };
-      ui.notifications?.warn(messages[validation.reason!]);
+      this.notificationService.warn(messages[validation.reason!]);
       return;
     }
 
     // Open rally dialog
-    const dialog = new RallyDialog(this.characterId, this.rallyHandler.getCrewId()!);
+    const dialog = this.dialogFactory.createRallyDialog(this.characterId, this.rallyHandler.getCrewId()!);
     dialog.render(true);
   }
 
@@ -1066,7 +1085,7 @@ export class PlayerActionWidget extends Application {
         'no-crew': 'Character must be in a crew to lean into trait',
         'no-available-traits': 'No available traits - all traits are currently disabled',
       };
-      ui.notifications?.warn(messages[validation.reason!]);
+      this.notificationService.warn(messages[validation.reason!]);
       return;
     }
 
@@ -1090,7 +1109,7 @@ export class PlayerActionWidget extends Application {
         'no-crew': 'Character must be in a crew to use trait',
         'position-controlled': 'Position is already Controlled - cannot improve further',
       };
-      ui.notifications?.warn(messages[validation.reason!]);
+      this.notificationService.warn(messages[validation.reason!]);
       return;
     }
 
@@ -1101,12 +1120,12 @@ export class PlayerActionWidget extends Application {
         { affectedReduxIds: [asReduxId(this.useTraitHandler.getAffectedReduxId())], force: false }
       );
 
-      ui.notifications?.info('Trait flashback canceled');
+      this.notificationService.info('Trait flashback canceled');
       return;
     }
 
     // Open flashback traits dialog
-    const dialog = new FlashbackTraitsDialog(this.characterId, this.useTraitHandler.getCrewId()!);
+    const dialog = this.dialogFactory.createFlashbackTraitsDialog(this.characterId, this.useTraitHandler.getCrewId()!);
     dialog.render(true);
   }
 
@@ -1156,14 +1175,14 @@ export class PlayerActionWidget extends Application {
             const currentLoad = selectCurrentLoad(this.character!);
             const maxLoad = this.character!.loadLimit;
             if (currentLoad >= maxLoad) {
-              ui.notifications?.error(`Cannot equip item: Load limit reached (${currentLoad}/${maxLoad})`);
+              this.notificationService.error(`Cannot equip item: Load limit reached (${currentLoad}/${maxLoad})`);
               return;
             }
 
             // Check Momentum
             const currentMomentum = this.crew?.currentMomentum || 0;
             if (cost > 0 && currentMomentum < cost) {
-              ui.notifications?.error(`Insufficient Momentum: Need ${cost}, have ${currentMomentum}`);
+              this.notificationService.error(`Insufficient Momentum: Need ${cost}, have ${currentMomentum}`);
               return;
             }
 
@@ -1222,7 +1241,7 @@ export class PlayerActionWidget extends Application {
               { affectedReduxIds: [asReduxId(this.characterId), this.crewId ? asReduxId(this.crewId) : asReduxId(this.characterId)] }
             );
 
-            ui.notifications?.info(`Added and equipped ${name} (-${cost}M)`);
+            this.notificationService.info(`Added and equipped ${name} (-${cost}M)`);
           }
         },
         cancel: {
@@ -1245,7 +1264,7 @@ export class PlayerActionWidget extends Application {
     event.preventDefault();
 
     if (!this.crewId) {
-      ui.notifications?.warn('Crew not found - equipment management requires a crew');
+      this.notificationService.warn('Crew not found - equipment management requires a crew');
       return;
     }
 
@@ -1302,9 +1321,9 @@ export class PlayerActionWidget extends Application {
       const validation = this.diceRollingHandler.validateRoll(state, playerState, crew);
       if (!validation.isValid) {
         if (validation.reason === 'no-action-selected') {
-          ui.notifications?.warn('Please select an action first');
+          this.notificationService.warn('Please select an action first');
         } else if (validation.reason === 'insufficient-momentum') {
-          ui.notifications?.error(
+          this.notificationService.error(
             `Insufficient Momentum! Need ${validation.momentumNeeded}, have ${validation.momentumAvailable}`
           );
         }
@@ -1336,7 +1355,7 @@ export class PlayerActionWidget extends Application {
         }
 
         const itemsList = itemsNeedingLock.length > 0 ? ` [${itemsNeedingLock.join(', ')}]` : '';
-        ui.notifications?.error(
+        this.notificationService.error(
           `Insufficient Momentum to lock equipment! Need ${totalMomentumCost}M, have ${availableMomentum}M${itemsList}`
         );
         return;
@@ -1348,7 +1367,7 @@ export class PlayerActionWidget extends Application {
           game.fitgd.api.crew.spendMomentum({ crewId: this.crewId, amount: totalMomentumCost });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          ui.notifications?.error(`Failed to spend Momentum: ${errorMessage} `);
+          this.notificationService.error(`Failed to spend Momentum: ${errorMessage} `);
           return;
         }
       }
@@ -1362,7 +1381,7 @@ export class PlayerActionWidget extends Application {
         } catch (error) {
           console.error('FitGD | Error applying trait transaction:', error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          ui.notifications?.error(`Failed to apply trait changes: ${errorMessage} `);
+          this.notificationService.error(`Failed to apply trait changes: ${errorMessage} `);
           return;
         }
       }
@@ -1436,7 +1455,7 @@ export class PlayerActionWidget extends Application {
     } catch (error) {
       console.error('FitGD | Error in _onRoll:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications?.error(`Roll failed: ${errorMessage}`);
+      this.notificationService.error(`Roll failed: ${errorMessage}`);
     }
   }
 
@@ -1444,41 +1463,16 @@ export class PlayerActionWidget extends Application {
    * Roll dice and return results using Foundry's Roll class
    */
   private async _rollDice(dicePool: number): Promise<number[]> {
-    let roll: Roll;
-    let results: number[];
-
     try {
-      console.log(`FitGD | _rollDice - Creating roll with dicePool: ${dicePool}`);
-
-      if (dicePool === 0) {
-        // Roll 2d6, take lowest (desperate roll)
-        console.log('FitGD | _rollDice - Rolling 2d6kl (desperate)');
-        roll = await Roll.create('2d6kl').evaluate({ async: true });
-        results = [roll.total];
-        console.log('FitGD | _rollDice - Desperate roll result:', results);
-      } else {
-        // Roll Nd6
-        console.log(`FitGD | _rollDice - Rolling ${dicePool}d6`);
-        roll = await Roll.create(`${dicePool}d6`).evaluate({ async: true });
-        console.log('FitGD | _rollDice - Roll created, extracting results');
-        // Extract numeric values from result objects and sort descending
-        results = (roll.dice[0].results as any[]).map((r: any) => r.result).sort((a, b) => b - a);
-        console.log('FitGD | _rollDice - Extracted results:', results);
-      }
+      const results = await this.diceService.roll(dicePool);
 
       // Get fresh player state for flavor text
       const currentState = game.fitgd.store.getState();
       const currentPlayerState = currentState.playerRoundState.byCharacterId[this.characterId];
       const approach = currentPlayerState?.selectedApproach || 'unknown';
 
-      console.log('FitGD | _rollDice - Posting roll to chat');
-      // Post roll to chat
-      await roll.toMessage({
-        speaker: ChatMessage.getSpeaker({ actor: game.actors.get(this.characterId) }),
-        flavor: `${this.character!.name} - ${approach} approach`,
-      });
+      await this.diceService.postRollToChat(results, this.characterId, `${this.character!.name} - ${approach} approach`);
 
-      console.log('FitGD | _rollDice - Chat message posted, returning results');
       return results;
     } catch (error) {
       console.error('FitGD | Error in _rollDice:', error);
@@ -1524,7 +1518,7 @@ export class PlayerActionWidget extends Application {
     event.preventDefault();
 
     if (!this.crewId) {
-      ui.notifications?.warn('Character must be in a crew');
+      this.notificationService.warn('Character must be in a crew');
       return;
     }
 
@@ -1559,7 +1553,7 @@ export class PlayerActionWidget extends Application {
     const targetCharacterId = transaction?.harmTargetCharacterId;
 
     if (!targetCharacterId || !this.consequenceHandler) {
-      ui.notifications?.warn('Select target character first');
+      this.notificationService.warn('Select target character first');
       return;
     }
 
@@ -1601,7 +1595,7 @@ export class PlayerActionWidget extends Application {
                 } catch (error) {
                   console.error('FitGD | Error creating harm clock:', error);
                   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                  ui.notifications?.error(`Error creating clock: ${errorMessage} `);
+                  this.notificationService.error(`Error creating clock: ${errorMessage} `);
                 }
               }
             );
@@ -1619,7 +1613,7 @@ export class PlayerActionWidget extends Application {
         } catch (error) {
           console.error('FitGD | Error in harm clock selection:', error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          ui.notifications?.error(`Error selecting clock: ${errorMessage} `);
+          this.notificationService.error(`Error selecting clock: ${errorMessage} `);
         }
       }
     );
@@ -1636,7 +1630,7 @@ export class PlayerActionWidget extends Application {
     const crewId = this.crewId;
 
     if (!crewId || !this.consequenceHandler) {
-      ui.notifications?.warn('Character must be in a crew');
+      this.notificationService.warn('Character must be in a crew');
       return;
     }
 
@@ -1674,7 +1668,7 @@ export class PlayerActionWidget extends Application {
                 } catch (error) {
                   console.error('FitGD | Error creating crew clock:', error);
                   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                  ui.notifications?.error(`Error creating clock: ${errorMessage} `);
+                  this.notificationService.error(`Error creating clock: ${errorMessage} `);
                 }
               }
             );
@@ -1692,7 +1686,7 @@ export class PlayerActionWidget extends Application {
         } catch (error) {
           console.error('FitGD | Error in crew clock selection:', error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          ui.notifications?.error(`Error selecting clock: ${errorMessage} `);
+          this.notificationService.error(`Error selecting clock: ${errorMessage} `);
         }
       }
     );
@@ -1716,7 +1710,7 @@ export class PlayerActionWidget extends Application {
     // Validate transaction is complete
     const validation = this.consequenceApplicationHandler.validateConsequence(transaction);
     if (!validation.isValid) {
-      ui.notifications?.warn(validation.errorMessage || 'Invalid consequence');
+      this.notificationService.warn(validation.errorMessage || 'Invalid consequence');
       return;
     }
 
@@ -1777,7 +1771,7 @@ export class PlayerActionWidget extends Application {
     console.log('FitGD | Current playerRoundState after batch:', this.playerState?.state);
 
     // Show notification
-    ui.notifications?.info(workflow.notificationMessage);
+    this.notificationService.info(workflow.notificationMessage);
 
     // Only close widget if NOT the GM
     // GM widget will close when state transition is received via socket
@@ -1809,7 +1803,7 @@ export class PlayerActionWidget extends Application {
     // Validate stims can be used
     const validation = this.stimsWorkflowHandler.validateStimsUsage(state, this.playerState);
     if (!validation.isValid) {
-      ui.notifications?.error(this.stimsWorkflowHandler.getErrorMessage(validation.reason));
+      this.notificationService.error(this.stimsWorkflowHandler.getErrorMessage(validation.reason));
       return;
     }
 
@@ -1824,7 +1818,7 @@ export class PlayerActionWidget extends Application {
         silent: true,
       });
       addictionClockId = createAction.payload.id;
-      ui.notifications?.info('Addiction clock created');
+      this.notificationService.info('Addiction clock created');
     }
 
     // Roll d6 to determine addiction advance
@@ -1857,7 +1851,7 @@ export class PlayerActionWidget extends Application {
 
     if (updatedClock.segments >= updatedClock.maxSegments) {
       // Lockout!
-      ui.notifications?.error('Addiction clock filled! Stims locked.');
+      this.notificationService.error('Addiction clock filled! Stims locked.');
 
       const lockoutAction = this.stimsWorkflowHandler.createStimsLockoutAction();
       await game.fitgd.bridge.execute(lockoutAction as any, {
@@ -1868,7 +1862,7 @@ export class PlayerActionWidget extends Application {
     }
 
     // If not locked out, proceed to reroll
-    ui.notifications?.info('Stims used! Rerolling...');
+    this.notificationService.info('Stims used! Rerolling...');
 
     // Transition to STIMS_ROLLING
     const transitionAction = this.stimsWorkflowHandler.createTransitionToStimsRollingAction();
@@ -1901,7 +1895,7 @@ export class PlayerActionWidget extends Application {
       const validation = this.diceRollingHandler.validateRoll(freshState, freshPlayerState, freshCrew);
       if (!validation.isValid) {
         console.error('FitGD | Auto-reroll validation failed:', validation.reason);
-        ui.notifications?.error('Reroll validation failed');
+        this.notificationService.error('Reroll validation failed');
         return;
       }
 
@@ -1934,7 +1928,7 @@ export class PlayerActionWidget extends Application {
     } catch (error) {
       console.error('FitGD | Error in auto-reroll:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications?.error(`Reroll failed: ${errorMessage}`);
+      this.notificationService.error(`Reroll failed: ${errorMessage}`);
     }
   }
 
