@@ -16,15 +16,16 @@ import type { TraitTransaction, ConsequenceTransaction } from '@/types/playerRou
 import { selectCanUseRally } from '@/selectors/characterSelectors';
 import { selectStimsAvailable } from '@/selectors/clockSelectors';
 
-import { selectActiveEquipment, selectPassiveEquipment, selectCurrentLoad, isEquipmentConsumable, selectConsumableEquipment, selectFirstLockCost } from '@/selectors/equipmentSelectors';
+import { selectActiveEquipment, selectPassiveEquipment, selectConsumableEquipment, selectFirstLockCost } from '@/selectors/equipmentSelectors';
 import { selectDicePool, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect, selectEquipmentEffects, selectEquipmentModifiedPosition, selectEquipmentModifiedEffect } from '@/selectors/playerRoundStateSelectors';
 
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
 
 import { calculateOutcome } from '@/utils/diceRules';
-import { getEquipmentToLock, getConsumablesToDeplete } from '@/utils/equipmentRules';
+// Equipment utilities will be used in coordinator handler implementations (Phase 4)
+// import { getEquipmentToLock, getConsumablesToDeplete } from '@/utils/equipmentRules';
 
-import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog } from '../dialogs/index';
+// Dialog imports removed - handlers migrated to coordinator
 import { asReduxId } from '../types/ids';
 import type { IPlayerActionWidgetContext } from '../types/widgetContext';
 import { PlayerActionHandlerFactory } from '../services/playerActionHandlerFactory';
@@ -119,13 +120,7 @@ interface PlayerActionWidgetData {
   consequenceConfigured?: boolean;
 }
 
-interface ClockData {
-  name: string;
-  segments: number;
-  description?: string;
-  category?: string;
-  isCountdown?: boolean;
-}
+// ClockData moved to coordinator implementations
 
 /* -------------------------------------------- */
 /*  Player Action Widget Application            */
@@ -186,7 +181,6 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
   private dialogFactory: DialogFactory;
 
   // Event coordinator (delegates all 24 event handlers)
-  // @ts-expect-error - Will be used in Step 4 when migrating event handlers
   private coordinator: PlayerActionEventCoordinator;
 
   /**
@@ -608,54 +602,110 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     super.activateListeners(html);
 
     // Approach selection
-    html.find('.approach-select').change(this._onApproachChange.bind(this));
+    html.find('.approach-select').change((e) => {
+      const approach = (e.currentTarget as HTMLSelectElement).value;
+      void this.coordinator.handleApproachChange(approach);
+    });
 
     // Roll Mode selection
-    html.find('[data-action="set-mode"]').click(this._onRollModeChange.bind(this));
+    html.find('[data-action="set-mode"]').click((e) => {
+      const mode = (e.currentTarget as HTMLElement).dataset.mode as 'synergy' | 'equipment';
+      void this.coordinator.handleRollModeChange(mode);
+    });
 
     // Secondary Approach selection
-    html.find('.secondary-approach-select').change(this._onSecondaryApproachChange.bind(this));
+    html.find('.secondary-approach-select').change((e) => {
+      const value = (e.currentTarget as HTMLSelectElement).value;
+      void this.coordinator.handleSecondaryApproachChange(value);
+    });
 
     // Active Equipment selection
-    html.find('.active-equipment-select').change(this._onActiveEquipmentChange.bind(this));
-    html.find('[data-action="add-flashback-item"]').click(this._onAddFlashbackItem.bind(this));
+    html.find('.active-equipment-select').change((e) => {
+      const itemId = (e.currentTarget as HTMLSelectElement).value;
+      void this.coordinator.handleActiveEquipmentChange(itemId);
+    });
+    html.find('[data-action="add-flashback-item"]').click((_e) => {
+      void this.coordinator.handleAddFlashbackItem();
+    });
 
     // GM Passive Equipment selection
-    html.find('.passive-equipment-radio').change(this._onPassiveEquipmentChange.bind(this));
+    html.find('.passive-equipment-radio').change((e) => {
+      const itemId = (e.currentTarget as HTMLInputElement).value || null;
+      void this.coordinator.handlePassiveEquipmentChange(itemId);
+    });
 
     // GM position/effect controls
-    html.find('.position-select').change(this._onPositionChange.bind(this));
-    html.find('.effect-select').change(this._onEffectChange.bind(this));
+    html.find('.position-select').change((e) => {
+      const position = (e.currentTarget as HTMLSelectElement).value;
+      void this.coordinator.handlePositionChange(position);
+    });
+    html.find('.effect-select').change((e) => {
+      const effect = (e.currentTarget as HTMLSelectElement).value;
+      void this.coordinator.handleEffectChange(effect);
+    });
 
     // GM approve roll button
-    html.find('[data-action="approve-roll"]').click(this._onApproveRoll.bind(this));
+    html.find('[data-action="approve-roll"]').click((_e) => {
+      void this.coordinator.handleApproveRoll();
+    });
 
     // Prepare action buttons
-    html.find('[data-action="rally"]').click(this._onRally.bind(this));
-    html.find('[data-action="lean-into-trait"]').click(this._onLeanIntoTrait.bind(this));
-    html.find('[data-action="use-trait"]').click(this._onUseTrait.bind(this));
-    html.find('[data-action="equipment"]').click(this._onEquipment.bind(this));
-    html.find('[data-action="push-die"]').click(this._onTogglePushDie.bind(this));
-    html.find('[data-action="push-effect"]').click(this._onTogglePushEffect.bind(this));
+    html.find('[data-action="rally"]').click((_e) => {
+      void this.coordinator.handleRally();
+    });
+    html.find('[data-action="lean-into-trait"]').click((_e) => {
+      void this.coordinator.handleLeanIntoTrait();
+    });
+    html.find('[data-action="use-trait"]').click((_e) => {
+      void this.coordinator.handleUseTrait();
+    });
+    html.find('[data-action="equipment"]').click((_e) => {
+      void this.coordinator.handleEquipment();
+    });
+    html.find('[data-action="push-die"]').click((_e) => {
+      void this.coordinator.handleTogglePushDie();
+    });
+    html.find('[data-action="push-effect"]').click((_e) => {
+      void this.coordinator.handleTogglePushEffect();
+    });
 
     // Roll button (simplified: no more commit-roll button)
-    html.find('[data-action="roll"]').click(this._onRoll.bind(this));
+    html.find('[data-action="roll"]').click((e: JQuery.ClickEvent) => {
+      void this.coordinator.handleRoll(e);
+    });
 
     // Consequence buttons
-    html.find('[data-action="use-stims"]').click(this._onUseStims.bind(this));
+    html.find('[data-action="use-stims"]').click((_e) => {
+      void this.coordinator.handleUseStims();
+    });
 
     // GM consequence configuration buttons
-    html.find('[data-action="select-consequence-type"]').click(this._onSelectConsequenceType.bind(this));
-    html.find('[data-action="select-harm-target"]').click(this._onSelectHarmTarget.bind(this));
-    html.find('[data-action="select-harm-clock"]').click(this._onSelectHarmClock.bind(this));
-    html.find('[data-action="select-crew-clock"]').click(this._onSelectCrewClock.bind(this));
-    html.find('[data-action="approve-consequence"]').click(this._onPlayerAcceptConsequence.bind(this));
+    html.find('[data-action="select-consequence-type"]').click((e) => {
+      const type = (e.currentTarget as HTMLElement).dataset.type as 'harm' | 'crew-clock';
+      void this.coordinator.handleConsequenceTypeChange(type);
+    });
+    html.find('[data-action="select-harm-target"]').click((_e) => {
+      void this.coordinator.handleHarmTargetSelect();
+    });
+    html.find('[data-action="select-harm-clock"]').click((_e) => {
+      void this.coordinator.handleHarmClockSelect();
+    });
+    html.find('[data-action="select-crew-clock"]').click((_e) => {
+      void this.coordinator.handleCrewClockSelect();
+    });
+    html.find('[data-action="approve-consequence"]').click((_e) => {
+      void this.coordinator.handleAcceptConsequence();
+    });
 
     // Player stims button (from GM phase)
-    html.find('[data-action="use-stims-gm-phase"]').click(this._onUseStimsGMPhase.bind(this));
+    html.find('[data-action="use-stims-gm-phase"]').click((_e) => {
+      void this.coordinator.handleUseStimsGMPhase();
+    });
 
     // Cancel button (back button removed - no more ROLL_CONFIRM state)
-    html.find('[data-action="cancel"]').click(this._onCancel.bind(this));
+    html.find('[data-action="cancel"]').click((_e) => {
+      void this.coordinator.handleCancel();
+    });
   }
 
   /* -------------------------------------------- */
@@ -664,8 +714,10 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
 
   /**
    * Apply trait transaction to character
+   * NOTE: Will be called from coordinator handleRoll() in Phase 4
    * @param transaction - The transaction to apply
    */
+  // @ts-expect-error - Will be used in coordinator.handleRoll() Phase 4
   private async _applyTraitTransaction(transaction: TraitTransaction): Promise<void> {
     const traitHandler = this.handlerFactory.getTraitHandler();
 
@@ -776,6 +828,7 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
    * Equipment first-lock costs: 1M per unlocked Rare/Epic item used
    * Includes: equippedForAction items + approvedPassiveId
    */
+  // @ts-expect-error - Will be used in coordinator.handleRoll() Phase 4
   private _calculateTotalMomentumCost(playerState: PlayerRoundState | null | undefined, character: Character | null): number {
     if (!playerState || !character) return 0;
 
@@ -828,693 +881,18 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     return consequenceDataResolver.resolveConsequenceData(state, this.playerState);
   }
 
-  /* -------------------------------------------- */
-  /*  Event Handlers                              */
-  /* -------------------------------------------- */
 
-  /**
-   * Handle approach selection change
-   */
-  private async _onApproachChange(event: JQuery.ChangeEvent): Promise<void> {
-    const approach = (event.currentTarget as HTMLSelectElement).value;
 
-    // Use Bridge API to dispatch and broadcast
-    await game.fitgd.bridge.execute(
-      {
-        type: 'playerRoundState/setActionPlan',
-        payload: {
-          characterId: this.characterId,
-          approach,
-          position: this.playerState?.position || 'risky',
-          effect: this.playerState?.effect || 'standard',
-        },
-      },
-      { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients including GM
-    );
 
-    // Post chat message
-    const approachName = approach.charAt(0).toUpperCase() + approach.slice(1);
-    ChatMessage.create({
-      content: `<strong>${this.character!.name}</strong> selected approach: <strong>${approachName}</strong>`,
-      speaker: ChatMessage.getSpeaker(),
-    });
-  }
 
-  /**
-   * Handle roll mode change
-   */
-  private async _onRollModeChange(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-    const mode = event.currentTarget.dataset.mode as 'synergy' | 'equipment';
 
-    // Toggle mode: click to activate, click again to deactivate
-    const newMode = this.playerState?.rollMode === mode ? undefined : mode;
 
-    await game.fitgd.bridge.execute(
-      {
-        type: 'playerRoundState/setActionPlan',
-        payload: {
-          characterId: this.characterId,
-          approach: this.playerState?.selectedApproach || 'force',
-          rollMode: newMode,
-          position: this.playerState?.position || 'risky',
-          effect: this.playerState?.effect || 'standard',
-        },
-      },
-      { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
-    );
-  }
 
-  /**
-   * Handle secondary approach/equipment change (unified dropdown)
-   * Can be either an approach name or equipment ID
-   */
-  private async _onSecondaryApproachChange(event: JQuery.ChangeEvent): Promise<void> {
-    const selectedValue = (event.currentTarget as HTMLSelectElement).value;
-    if (!selectedValue) {
-      // Deselected - clear both
-      await game.fitgd.bridge.execute(
-        {
-          type: 'playerRoundState/setActionPlan',
-          payload: {
-            characterId: this.characterId,
-            approach: this.playerState?.selectedApproach || 'force',
-            secondaryApproach: undefined,
-            equippedForAction: [],
-            position: this.playerState?.position || 'risky',
-            effect: this.playerState?.effect || 'standard',
-          },
-        },
-        { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
-      );
-      return;
-    }
 
-    // Determine if it's an approach or equipment by checking against approaches
-    const isApproach = Object.keys(this.character!.approaches).includes(selectedValue);
 
-    if (isApproach) {
-      // Selected an approach for secondary
-      await game.fitgd.bridge.execute(
-        {
-          type: 'playerRoundState/setActionPlan',
-          payload: {
-            characterId: this.characterId,
-            approach: this.playerState?.selectedApproach || 'force',
-            secondaryApproach: selectedValue,
-            equippedForAction: [], // Clear equipment if synergy selected
-            rollMode: 'synergy', // Explicitly set mode to synergy
-            position: this.playerState?.position || 'risky',
-            effect: this.playerState?.effect || 'standard',
-          },
-        },
-        { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
-      );
-    } else {
-      // Selected an equipment item
-      const actions = [
-        {
-          type: 'playerRoundState/setActionPlan',
-          payload: {
-            characterId: this.characterId,
-            approach: this.playerState?.selectedApproach || 'force',
-            secondaryApproach: undefined, // Clear synergy if equipment selected
-            equippedForAction: [selectedValue],
-            position: this.playerState?.position || 'risky',
-            effect: this.playerState?.effect || 'standard',
-          },
-        } as any,
-      ];
 
-      // If consumable is selected, mark it as depleted
-      if (this.character) {
-        const equipment = this.character.equipment.find(e => e.id === selectedValue);
-        if (equipment && isEquipmentConsumable(equipment)) {
-          actions.push({
-            type: 'characters/markEquipmentDepleted',
-            payload: {
-              characterId: this.characterId,
-              equipmentId: selectedValue,
-            },
-          } as any);
-        }
-      }
 
-      await game.fitgd.bridge.executeBatch(
-        actions,
-        { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
-      );
-    }
-  }
 
-  /**
-   * Handle active equipment change
-   *
-   * When equipment is selected for an action:
-   * 1. Update the action plan with selected equipment
-   * 2. If it's a consumable, mark it as depleted (single-use items are consumed immediately)
-   *
-   * Note: Equipment locking happens when equipped, not when selected for an action
-   */
-  private async _onActiveEquipmentChange(event: JQuery.ChangeEvent): Promise<void> {
-    const equipmentId = (event.currentTarget as HTMLSelectElement).value;
-
-    const actions = [
-      {
-        type: 'playerRoundState/setActionPlan',
-        payload: {
-          characterId: this.characterId,
-          approach: this.playerState?.selectedApproach || 'force',
-          equippedForAction: equipmentId ? [equipmentId] : [],
-          rollMode: 'equipment', // Ensure mode stays equipment
-          position: this.playerState?.position || 'risky',
-          effect: this.playerState?.effect || 'standard',
-        },
-      } as any,
-    ];
-
-    // If a consumable is selected, mark it as depleted
-    // (consumables are single-use and consumed immediately when selected)
-    if (equipmentId && this.character) {
-      const equipment = this.character.equipment.find(e => e.id === equipmentId);
-      if (equipment && isEquipmentConsumable(equipment)) {
-        actions.push({
-          type: 'characters/markEquipmentDepleted',
-          payload: {
-            characterId: this.characterId,
-            equipmentId,
-          },
-        } as any);
-      }
-    }
-
-    await game.fitgd.bridge.executeBatch(
-      actions,
-      { affectedReduxIds: [asReduxId(this.characterId)] } // Broadcast to all clients
-    );
-  }
-
-  /**
-   * Handle GM Passive equipment approval
-   */
-  private async _onPassiveEquipmentChange(event: JQuery.ChangeEvent): Promise<void> {
-    const equipmentId = (event.currentTarget as HTMLInputElement).value || null;
-
-    // Use Bridge API to dispatch and broadcast
-    await game.fitgd.bridge.execute(
-      {
-        type: 'playerRoundState/setApprovedPassive',
-        payload: {
-          characterId: this.characterId,
-          equipmentId,
-        },
-      },
-      { affectedReduxIds: [asReduxId(this.characterId)], silent: true } // Silent: subscription handles render
-    );
-
-    // Post chat message if passive was selected
-    if (equipmentId && this.character) {
-      const passive = this.character.equipment.find(e => e.id === equipmentId);
-      if (passive) {
-        ChatMessage.create({
-          content: `GM approved Passive equipment for ${this.character!.name}: <strong>${passive.name}</strong>`,
-          speaker: ChatMessage.getSpeaker(),
-        });
-      }
-    }
-  }
-
-  /**
-   * Handle GM position change
-   */
-  private async _onPositionChange(event: JQuery.ChangeEvent): Promise<void> {
-    const position = (event.currentTarget as HTMLSelectElement).value as Position;
-
-    // Use Bridge API to dispatch and broadcast
-    await game.fitgd.bridge.execute(
-      {
-        type: 'playerRoundState/setPosition',
-        payload: {
-          characterId: this.characterId,
-          position,
-        },
-      },
-      { affectedReduxIds: [asReduxId(this.characterId)], silent: true } // Silent: subscription handles render
-    );
-
-    // Post chat message
-    ChatMessage.create({
-      content: `GM set position to <strong>${position.charAt(0).toUpperCase() + position.slice(1)}</strong> for ${this.character!.name}`,
-      speaker: ChatMessage.getSpeaker(),
-    });
-  }
-
-  /**
-   * Handle GM effect change
-   */
-  private async _onEffectChange(event: JQuery.ChangeEvent): Promise<void> {
-    const effect = (event.currentTarget as HTMLSelectElement).value as Effect;
-
-    // Use Bridge API to dispatch and broadcast
-    await game.fitgd.bridge.execute(
-      {
-        type: 'playerRoundState/setEffect',
-        payload: {
-          characterId: this.characterId,
-          effect,
-        },
-      },
-      { affectedReduxIds: [asReduxId(this.characterId)], silent: true } // Silent: subscription handles render
-    );
-
-    // Post chat message
-    ChatMessage.create({
-      content: `GM set effect to <strong>${effect.charAt(0).toUpperCase() + effect.slice(1)}</strong> for ${this.character!.name}`,
-      speaker: ChatMessage.getSpeaker(),
-    });
-  }
-
-  /**
-   * Handle GM approve roll button
-   */
-  private async _onApproveRoll(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-
-    // Toggle approval state
-    const currentlyApproved = this.playerState?.gmApproved || false;
-    const newApprovalState = !currentlyApproved;
-
-    // Use Bridge API to dispatch and broadcast
-    await game.fitgd.bridge.execute(
-      {
-        type: 'playerRoundState/setGmApproved',
-        payload: {
-          characterId: this.characterId,
-          approved: newApprovalState,
-        },
-      },
-      { affectedReduxIds: [asReduxId(this.characterId)], silent: true } // Silent: subscription handles render
-    );
-
-    // Post chat message
-    if (newApprovalState) {
-      ChatMessage.create({
-        content: `<strong>GM approved ${this.character!.name}'s action plan!</strong> ✅<br>Player may now roll.`,
-        speaker: ChatMessage.getSpeaker(),
-      });
-    } else {
-      ChatMessage.create({
-        content: `GM revoked approval for ${this.character!.name}'s action plan.`,
-        speaker: ChatMessage.getSpeaker(),
-      });
-    }
-  }
-
-  /**
-   * Handle Toggle Push Die button
-   */
-  private async _onTogglePushDie(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-    const pushHandler = this.handlerFactory.getPushHandler();
-
-    // Toggle push die
-    const action = pushHandler.createTogglePushDieAction(this.playerState);
-
-    await game.fitgd.bridge.execute(action, {
-      affectedReduxIds: [asReduxId(this.characterId)],
-      silent: true
-    });
-  }
-
-  /**
-   * Handle Toggle Push Effect button
-   */
-  private async _onTogglePushEffect(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-    const pushHandler = this.handlerFactory.getPushHandler();
-
-    // Toggle push effect
-    const action = pushHandler.createTogglePushEffectAction(this.playerState);
-
-    await game.fitgd.bridge.execute(action, {
-      affectedReduxIds: [asReduxId(this.characterId)],
-      silent: true
-    });
-  }
-
-  /**
-   * Handle Rally button
-   */
-  private async _onRally(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-
-    const rallyHandler = this.handlerFactory.getRallyHandler();
-
-    // Validate rally eligibility
-    const validation = rallyHandler.validateRally(this.crew);
-    if (!validation.isValid) {
-      const messages: { [key: string]: string } = {
-        'no-crew': 'Character must be in a crew to rally',
-        'no-teammates': 'No other teammates in crew to rally',
-      };
-      this.notificationService.warn(messages[validation.reason!]);
-      return;
-    }
-
-    // Open rally dialog
-    const dialog = this.dialogFactory.createRallyDialog(this.characterId, rallyHandler.getCrewId()!);
-    dialog.render(true);
-  }
-
-  /**
-   * Handle Lean Into Trait button
-   */
-  private async _onLeanIntoTrait(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-
-    const leanIntoTraitHandler = this.handlerFactory.getLeanIntoTraitHandler();
-
-    // Validate lean into trait eligibility
-    const validation = leanIntoTraitHandler.validateLeanIntoTrait();
-    if (!validation.isValid) {
-      const messages: { [key: string]: string } = {
-        'no-crew': 'Character must be in a crew to lean into trait',
-        'no-available-traits': 'No available traits - all traits are currently disabled',
-      };
-      this.notificationService.warn(messages[validation.reason!]);
-      return;
-    }
-
-    // Open lean into trait dialog
-    const dialog = new LeanIntoTraitDialog(this.characterId, leanIntoTraitHandler.getCrewId()!);
-    dialog.render(true);
-  }
-
-  /**
-   * Handle Use Trait button (merged flashback + traits)
-   */
-  private async _onUseTrait(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-
-    const useTraitHandler = this.handlerFactory.getUseTraitHandler();
-
-    // Validate use trait eligibility
-    const validation = useTraitHandler.validateUseTrait(this.playerState);
-    if (!validation.isValid) {
-      const messages: { [key: string]: string } = {
-        'no-crew': 'Character must be in a crew to use trait',
-        'position-controlled': 'Position is already Controlled - cannot improve further',
-      };
-      this.notificationService.warn(messages[validation.reason!]);
-      return;
-    }
-
-    // If trait transaction already exists, cancel it (toggle off)
-    if (useTraitHandler.hasActiveTraitTransaction(this.playerState)) {
-      await game.fitgd.bridge.execute(
-        useTraitHandler.createClearTraitTransactionAction(),
-        { affectedReduxIds: [asReduxId(useTraitHandler.getAffectedReduxId())], force: false }
-      );
-
-      this.notificationService.info('Trait flashback canceled');
-      return;
-    }
-
-    // Open flashback traits dialog
-    const dialog = this.dialogFactory.createFlashbackTraitsDialog(this.characterId, useTraitHandler.getCrewId()!);
-    dialog.render(true);
-  }
-
-  /**
-   * Handle Add Flashback Item button
-   */
-  private async _onAddFlashbackItem(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-
-    const content = `
-      <form>
-        <div class="form-group">
-          <label>Item Name</label>
-          <input type="text" name="name" placeholder="e.g. Heavy Blaster" autofocus style="width: 100%; margin-bottom: 10px;">
-        </div>
-        <div class="form-group">
-          <label>Tags</label>
-          <input type="text" name="tags" value="bonus" placeholder="comma separated" style="width: 100%; margin-bottom: 10px;">
-          <p class="notes" style="font-size: 0.8em; color: #666;">Default "bonus" tag grants +1d.</p>
-        </div>
-        <div class="form-group">
-          <label>Momentum Cost</label>
-          <input type="number" name="cost" value="1" min="0" max="10" style="width: 100%;">
-          <p class="notes" style="font-size: 0.8em; color: #666;">Usually 0 for Standard, 1 for Fine/Special.</p>
-        </div>
-      </form>
-    `;
-
-    new Dialog({
-      title: "Flashback Item",
-      content: content,
-      buttons: {
-        add: {
-          icon: '<i class="fas fa-check"></i>',
-          label: "Add Item",
-          callback: async (html: JQuery | HTMLElement | undefined) => {
-            if (!html) return;
-            const $html = $(html as HTMLElement);
-            const name = $html.find('[name="name"]').val() as string;
-            const tagsStr = $html.find('[name="tags"]').val() as string;
-            const cost = parseInt($html.find('[name="cost"]').val() as string) || 0;
-            const tags = tagsStr.split(',').map((t: string) => t.trim()).filter((t: string) => t);
-
-            if (!name) return;
-
-            // Check Load Limit
-            const currentLoad = selectCurrentLoad(this.character!);
-            const maxLoad = this.character!.loadLimit;
-            if (currentLoad >= maxLoad) {
-              this.notificationService.error(`Cannot equip item: Load limit reached (${currentLoad}/${maxLoad})`);
-              return;
-            }
-
-            // Check Momentum
-            const currentMomentum = this.crew?.currentMomentum || 0;
-            if (cost > 0 && currentMomentum < cost) {
-              this.notificationService.error(`Insufficient Momentum: Need ${cost}, have ${currentMomentum}`);
-              return;
-            }
-
-            // Create ID for new item
-            const itemId = foundry.utils.randomID();
-
-            // Build actions
-            const actions = [];
-
-            // Spend Momentum
-            if (cost > 0 && this.crewId) {
-              actions.push({
-                type: 'crews/spendMomentum',
-                payload: {
-                  crewId: this.crewId,
-                  amount: cost
-                }
-              });
-            }
-
-            // Add item
-            actions.push({
-              type: 'characters/addEquipment',
-              payload: {
-                characterId: this.characterId,
-                item: {
-                  id: itemId,
-                  name: name,
-                  load: 1,
-                  tags: tags
-                }
-              }
-            });
-
-            // Equip item
-            actions.push({
-              type: 'characters/toggleEquipped',
-              payload: {
-                characterId: this.characterId,
-                itemId: itemId
-              }
-            });
-
-            // Set as active for this action
-            actions.push({
-              type: 'playerRoundState/setActionPlan',
-              payload: {
-                characterId: this.characterId,
-                equippedForAction: [itemId]
-              }
-            });
-
-            // Execute batch
-            await game.fitgd.bridge.executeBatch(
-              actions,
-              { affectedReduxIds: [asReduxId(this.characterId), this.crewId ? asReduxId(this.crewId) : asReduxId(this.characterId)] }
-            );
-
-            this.notificationService.info(`Added and equipped ${name} (-${cost}M)`);
-          }
-        },
-        cancel: {
-          icon: '<i class="fas fa-times"></i>',
-          label: "Cancel"
-        }
-      },
-      default: "add"
-    }).render(true);
-  }
-
-  /**
-  /**
-   * Handle Equipment button
-   * Opens Equipment Management Dialog which provides access to:
-   * - Equipment management (equip/unequip)
-   * - Flashback Equipment Dialog (create new items)
-   */
-  private _onEquipment(event: JQuery.ClickEvent): void {
-    event.preventDefault();
-
-    if (!this.crewId) {
-      this.notificationService.warn('Crew not found - equipment management requires a crew');
-      return;
-    }
-
-    // Import and open Equipment Management Dialog
-    import('../dialogs/EquipmentManagementDialog').then(({ EquipmentManagementDialog }) => {
-      new EquipmentManagementDialog(this.characterId, this.crewId!).render(true);
-    });
-  }
-
-  /**
-   * Handle Roll Action button (DECISION -> ROLLING)
-   */
-  private async _onRoll(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-
-    const diceRollingHandler = this.handlerFactory.getDiceRollingHandler();
-
-    try {
-      const state = game.fitgd.store.getState();
-      const playerState = state.playerRoundState.byCharacterId[this.characterId];
-      const crew = this.crew;
-
-      // Validate roll can proceed
-      const validation = diceRollingHandler.validateRoll(state, playerState, crew);
-      if (!validation.isValid) {
-        if (validation.reason === 'no-action-selected') {
-          this.notificationService.warn('Please select an action first');
-        } else if (validation.reason === 'insufficient-momentum') {
-          this.notificationService.error(
-            `Insufficient Momentum! Need ${validation.momentumNeeded}, have ${validation.momentumAvailable}`
-          );
-        }
-        return;
-      }
-
-      // Calculate total momentum cost including equipment first-lock costs
-      const totalMomentumCost = this._calculateTotalMomentumCost(playerState, this.character);
-
-      // Validate sufficient momentum for all costs
-      const availableMomentum = this.crew?.currentMomentum || 0;
-      if (totalMomentumCost > availableMomentum) {
-        this.notificationService.error(
-          `Insufficient Momentum to lock equipment! Need ${totalMomentumCost}M, have ${availableMomentum}M`
-        );
-        return;
-      }
-
-      // Spend momentum NOW (before rolling)
-      if (this.crewId && totalMomentumCost > 0) {
-        try {
-          game.fitgd.api.crew.spendMomentum({ crewId: this.crewId, amount: totalMomentumCost });
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          this.notificationService.error(`Failed to spend Momentum: ${errorMessage} `);
-          return;
-        }
-      }
-
-      // Apply trait transaction (if exists)
-      if (playerState?.traitTransaction) {
-        try {
-          await this._applyTraitTransaction(playerState.traitTransaction);
-        } catch (error) {
-          console.error('FitGD | Error applying trait transaction:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          this.notificationService.error(`Failed to apply trait changes: ${errorMessage} `);
-          return;
-        }
-      }
-
-      // Transition to ROLLING
-      await game.fitgd.bridge.execute(
-        diceRollingHandler.createTransitionToRollingAction(),
-        { affectedReduxIds: [asReduxId(diceRollingHandler.getAffectedReduxId())], silent: true }
-      );
-
-      // Roll dice
-      const dicePool = diceRollingHandler.calculateDicePool(state);
-      const rollResult = await this._rollDice(dicePool);
-      const outcome = calculateOutcome(rollResult);
-
-      // Execute all roll outcome actions as batch
-      const rollBatch = diceRollingHandler.createRollOutcomeBatch(dicePool, rollResult, outcome);
-
-      // Lock equipment used in this roll (active + approved passive)
-      const equipmentToLock = getEquipmentToLock(
-        playerState?.equippedForAction,
-        playerState?.approvedPassiveId
-      );
-
-      if (equipmentToLock.length > 0) {
-        equipmentToLock.forEach((equipmentId) => {
-          rollBatch.push({
-            type: 'characters/markEquipmentUsed',
-            payload: {
-              characterId: this.characterId,
-              equipmentId,
-            },
-          });
-        });
-      }
-
-      // Mark consumables as depleted
-      const consumablesToDeplete = getConsumablesToDeplete(this.character!, playerState?.equippedForAction || []);
-      if (consumablesToDeplete.length > 0) {
-        consumablesToDeplete.forEach((equipmentId) => {
-          rollBatch.push({
-            type: 'characters/markEquipmentDepleted',
-            payload: {
-              characterId: this.characterId,
-              equipmentId,
-            },
-          });
-        });
-      }
-
-      await game.fitgd.bridge.executeBatch(
-        rollBatch,
-        {
-          affectedReduxIds: [asReduxId(diceRollingHandler.getAffectedReduxId())],
-          force: false,
-        }
-      );
-
-      // Post success to chat if applicable
-      if (outcome === 'critical' || outcome === 'success') {
-        this._postSuccessToChat(outcome, rollResult);
-      }
-    } catch (error) {
-      console.error('FitGD | Error in _onRoll:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.notificationService.error(`Roll failed: ${errorMessage}`);
-    }
-  }
 
   /**
    * Roll dice and return results using Foundry's Roll class
@@ -1537,13 +915,6 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     }
   }
 
-  /**
-   * Handle Use Stims button (from GM_RESOLVING_CONSEQUENCE state)
-   */
-  private async _onUseStims(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-    await this._useStims();
-  }
 
   /* -------------------------------------------- */
   /*  GM Consequence Configuration Handlers       */
@@ -1568,317 +939,22 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     dialog.render(true);
   }
 
-  /**
-   * Handle player accepting consequences
-   * Called when PLAYER clicks "Accept Consequences" button
-   */
-  private async _onPlayerAcceptConsequence(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
 
-    const consequenceApplicationHandler = this.handlerFactory.getConsequenceApplicationHandler();
-
-    const transaction = this.playerState?.consequenceTransaction;
-    console.log('FitGD | _onPlayerAcceptConsequence - Transaction:', JSON.stringify(transaction, null, 2));
-    console.log('FitGD | _onPlayerAcceptConsequence - Called by user:', game.user?.name, 'isGM:', game.user?.isGM);
-
-    // Validate transaction is complete
-    const validation = consequenceApplicationHandler.validateConsequence(transaction);
-    if (!validation.isValid) {
-      this.notificationService.warn(validation.errorMessage || 'Invalid consequence');
-      return;
-    }
-
-    const state = game.fitgd.store.getState();
-
-    // Check if clock exists in store
-    if (transaction?.harmClockId) {
-      const clock = state.clocks.byId[transaction.harmClockId];
-      console.log('FitGD | Clock exists in store?', !!clock, 'ClockId:', transaction.harmClockId);
-      if (clock) {
-        console.log('FitGD | Clock details:', JSON.stringify(clock, null, 2));
-      }
-    }
-
-    // Get workflow with all actions and metadata
-    const workflow = consequenceApplicationHandler.createConsequenceApplicationWorkflow(state, transaction!);
-    console.log('FitGD | Consequence action:', JSON.stringify(workflow.applyConsequenceAction, null, 2));
-
-    // Build batch of all consequence actions
-    // NOTE: Do NOT transition to TURN_COMPLETE here!
-    // The valid sequence is: GM_RESOLVING_CONSEQUENCE → APPLYING_EFFECTS
-    // GM and Player widgets will close when they detect APPLYING_EFFECTS state
-    const actions: any[] = [
-      workflow.transitionToApplyingAction,  // GM_RESOLVING_CONSEQUENCE → APPLYING_EFFECTS
-      workflow.applyConsequenceAction,      // Apply harm clock advancement
-      workflow.clearTransactionAction,       // Clear consequence transaction
-      // REMOVED: workflow.transitionToTurnCompleteAction - causes invalid transition error!
-    ];
-
-    // Add momentum gain if applicable
-    if (this.crewId && workflow.momentumGain > 0) {
-      actions.push({
-        type: 'crews/addMomentum',
-        payload: { crewId: this.crewId, amount: workflow.momentumGain },
-      });
-    }
-
-    console.log('FitGD | Executing batch of', actions.length, 'consequence actions');
-    console.log('FitGD | Affected Redux IDs:', {
-      characterId: this.characterId,
-      characterIdToNotify: workflow.characterIdToNotify,
-      crewId: this.crewId,
-    });
-    console.log('FitGD | Actions:', JSON.stringify(actions, null, 2));
-
-    // Execute all actions as atomic batch (single broadcast)
-    console.log('FitGD | Calling bridge.executeBatch...');
-    await game.fitgd.bridge.executeBatch(actions, {
-      affectedReduxIds: [
-        asReduxId(this.characterId),
-        ...(workflow.characterIdToNotify ? [asReduxId(workflow.characterIdToNotify)] : []),
-        ...(this.crewId ? [asReduxId(this.crewId)] : []),
-      ],
-      silent: false, // Allow sheet refresh after entire batch
-    });
-
-    console.log('FitGD | Batch executed, consequences applied');
-    console.log('FitGD | Current playerRoundState after batch:', this.playerState?.state);
-
-    // Show notification
-    this.notificationService.info(workflow.notificationMessage);
-
-    // Only close widget if NOT the GM
-    // GM widget will close when state transition is received via socket
-    if (!game.user?.isGM) {
-      console.log('FitGD | Closing player widget after accepting consequences');
-      setTimeout(() => this.close(), 500);
-    } else {
-      console.log('FitGD | NOT closing GM widget - waiting for socket state update');
-    }
-  }
-
-  /**
-   * Handle player using stims from GM phase
-   */
-  private async _onUseStimsGMPhase(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-    await this._useStims();
-  }
 
   /* -------------------------------------------- */
   /*  GM Consequence Configuration Handlers       */
   /* -------------------------------------------- */
 
-  /**
-   * Handle consequence type selection (harm vs crew-clock)
-   */
-  private async _onSelectConsequenceType(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-    const consequenceType = (event.currentTarget as HTMLElement).dataset.type as 'harm' | 'crew-clock';
 
-    const consequenceHandler = this.handlerFactory.getConsequenceHandler();
 
-    // Use handler to create action
-    const action = consequenceHandler.createSetConsequenceTypeAction(consequenceType);
 
-    // Execute via Bridge API
-    await game.fitgd.bridge.execute(action, {
-      affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
-      silent: true,
-    });
-  }
-
-  /**
-   * Handle harm target selection button
-   */
-  private async _onSelectHarmTarget(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-
-    if (!this.crewId) {
-      this.notificationService.warn('Character must be in a crew');
-      return;
-    }
-
-    const consequenceHandler = this.handlerFactory.getConsequenceHandler();
-    if (!consequenceHandler) return;
-
-    // Open CharacterSelectionDialog
-    const dialog = new CharacterSelectionDialog(
-      this.crewId,
-      this.characterId,
-      async (selectedCharacterId: string) => {
-        // Use handler to create action
-        const action = consequenceHandler.createSetHarmTargetAction(selectedCharacterId);
-
-        // Execute via Bridge API
-        await game.fitgd.bridge.execute(action, {
-          affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
-          silent: true,
-        });
-      }
-    );
-
-    dialog.render(true);
-  }
-
-  /**
-   * Handle harm clock selection button
-   */
-  private async _onSelectHarmClock(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-
-    const transaction = this.playerState?.consequenceTransaction;
-    const targetCharacterId = transaction?.harmTargetCharacterId;
-
-    const consequenceHandler = this.handlerFactory.getConsequenceHandler();
-
-    if (!targetCharacterId || !consequenceHandler) {
-      this.notificationService.warn('Select target character first');
-      return;
-    }
-
-    // Open ClockSelectionDialog for harm clocks
-    const dialog = new ClockSelectionDialog(
-      targetCharacterId,
-      'harm',
-      async (clockId: string) => {
-        try {
-          if (clockId === '_new') {
-            // Open ClockCreationDialog for new harm clock
-            const creationDialog = new ClockCreationDialog(
-              targetCharacterId,
-              'harm',
-              async (clockData: ClockData) => {
-                try {
-                  // Use handler to create clock action
-                  const createClockAction = consequenceHandler.createNewHarmClockAction(clockData);
-                  console.log(`FitGD | Creating new harm clock via Bridge:`, createClockAction);
-
-                  // Execute clock creation
-                  await game.fitgd.bridge.execute(
-                    createClockAction,
-                    { affectedReduxIds: [asReduxId(targetCharacterId)], silent: true }
-                  );
-
-                  console.log(`FitGD | Clock creation executed, should be broadcast now`);
-
-                  // Update transaction with new clock
-                  const updateAction = consequenceHandler.createUpdateHarmClockInTransactionAction(
-                    createClockAction.payload.id,
-                    clockData.name
-                  );
-
-                  await game.fitgd.bridge.execute(updateAction, {
-                    affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
-                    silent: true,
-                  });
-                } catch (error) {
-                  console.error('FitGD | Error creating harm clock:', error);
-                  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                  this.notificationService.error(`Error creating clock: ${errorMessage} `);
-                }
-              }
-            );
-
-            creationDialog.render(true);
-            return;
-          } else {
-            // Existing clock selected - use handler
-            const action = consequenceHandler.createSetHarmClockAction(clockId);
-            await game.fitgd.bridge.execute(action, {
-              affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
-              silent: true,
-            });
-          }
-        } catch (error) {
-          console.error('FitGD | Error in harm clock selection:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          this.notificationService.error(`Error selecting clock: ${errorMessage} `);
-        }
-      }
-    );
-
-    dialog.render(true);
-  }
-
-  /**
-   * Handle crew clock selection button
-   */
-  private async _onSelectCrewClock(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-
-    const crewId = this.crewId;
-    const consequenceHandler = this.handlerFactory.getConsequenceHandler();
-
-    if (!crewId || !consequenceHandler) {
-      this.notificationService.warn('Character must be in a crew');
-      return;
-    }
-
-    // Open ClockSelectionDialog for crew clocks (non-harm)
-    const dialog = new ClockSelectionDialog(
-      crewId,
-      'crew',
-      async (clockId: string) => {
-        try {
-          if (clockId === '_new') {
-            // Open ClockCreationDialog for new crew clock
-            const creationDialog = new ClockCreationDialog(
-              crewId,
-              'progress',
-              async (clockData: ClockData) => {
-                try {
-                  // Use handler to create clock action
-                  const createClockAction = consequenceHandler.createNewCrewClockAction(clockData);
-
-                  // Execute clock creation
-                  await game.fitgd.bridge.execute(
-                    createClockAction,
-                    { affectedReduxIds: [asReduxId(crewId)], silent: true }
-                  );
-
-                  // Update transaction with new clock
-                  const updateAction = consequenceHandler.createUpdateCrewClockInTransactionAction(
-                    createClockAction.payload.id
-                  );
-
-                  await game.fitgd.bridge.execute(updateAction, {
-                    affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
-                    silent: true,
-                  });
-                } catch (error) {
-                  console.error('FitGD | Error creating crew clock:', error);
-                  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                  this.notificationService.error(`Error creating clock: ${errorMessage} `);
-                }
-              }
-            );
-
-            creationDialog.render(true);
-            return;
-          } else {
-            // Existing clock selected - use handler
-            const action = consequenceHandler.createSetCrewClockAction(clockId);
-            await game.fitgd.bridge.execute(action, {
-              affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
-              silent: true,
-            });
-          }
-        } catch (error) {
-          console.error('FitGD | Error in crew clock selection:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          this.notificationService.error(`Error selecting clock: ${errorMessage} `);
-        }
-      }
-    );
-
-    dialog.render(true);
-  }
 
   /**
    * Shared stims logic (called from GM_RESOLVING_CONSEQUENCE state)
+   * NOTE: Will be called from coordinator.handleUseStims() and handleUseStimsGMPhase() in Phase 4
    * Validates addiction status, advances addiction clock, and sets up reroll
    */
+  // @ts-expect-error - Will be used in coordinator stims handlers Phase 4
   private async _useStims(): Promise<void> {
     const stimsWorkflowHandler = this.handlerFactory.getStimsWorkflowHandler();
     const stimsHandler = this.handlerFactory.getStimsHandler();
@@ -2011,12 +1087,4 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     });
   }
 
-  /**
-   * Handle Cancel button
-   */
-  private async _onCancel(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-    // Just close the widget
-    this.close();
-  }
 }

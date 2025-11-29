@@ -13,6 +13,7 @@
  */
 
 import type { IPlayerActionWidgetContext } from '../types/widgetContext';
+import { asReduxId } from '../types/ids';
 
 /**
  * Coordinates event handling for Player Action Widget
@@ -223,7 +224,40 @@ export class PlayerActionEventCoordinator {
    * Accept consequence and apply it
    */
   async handleAcceptConsequence(): Promise<void> {
-    // TODO: Implement handler
+    // TODO: Phase 4 - Full implementation
+    // For now, this is a placeholder. Tests expect this to apply the consequence transaction
+    // using the consequence application handler and bridge API
+    const consequenceApplicationHandler = this.context.getHandlerFactory().getConsequenceApplicationHandler();
+    const playerState = this.context.getPlayerState();
+    const transaction = playerState?.consequenceTransaction;
+
+    if (!transaction) return;
+
+    const state = game.fitgd.store.getState();
+    const workflow = consequenceApplicationHandler.createConsequenceApplicationWorkflow(state, transaction);
+
+    const actions: any[] = [
+      workflow.transitionToApplyingAction,
+      workflow.applyConsequenceAction,
+      workflow.clearTransactionAction,
+    ];
+
+    const crewId = this.context.getCrewId();
+    if (crewId && workflow.momentumGain > 0) {
+      actions.push({
+        type: 'crews/addMomentum',
+        payload: { crewId, amount: workflow.momentumGain },
+      });
+    }
+
+    await game.fitgd.bridge.executeBatch(actions, {
+      affectedReduxIds: [
+        asReduxId(this.context.getCharacterId()),
+        ...(workflow.characterIdToNotify ? [asReduxId(workflow.characterIdToNotify)] : []),
+        ...(crewId ? [asReduxId(crewId)] : []),
+      ],
+      silent: false,
+    });
   }
 
   /* ========================================
