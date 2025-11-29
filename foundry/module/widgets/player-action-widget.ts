@@ -26,26 +26,10 @@ import { getEquipmentToLock, getConsumablesToDeplete } from '@/utils/equipmentRu
 
 import { ClockSelectionDialog, CharacterSelectionDialog, ClockCreationDialog, LeanIntoTraitDialog } from '../dialogs/index';
 import { asReduxId } from '../types/ids';
-import { ConsequenceResolutionHandler } from '../handlers/consequenceResolutionHandler';
-import { StimsHandler } from '../handlers/stimsHandler';
-import { DiceRollingHandler } from '../handlers/diceRollingHandler';
-import { TraitHandler } from '../handlers/traitHandler';
-import { RallyHandler } from '../handlers/rallyHandler';
-import { TraitImprovementHandler } from '../handlers/traitImprovementHandler';
-import { ConsequenceDataResolver } from '../handlers/consequenceDataResolver';
-import { LeanIntoTraitHandler } from '../handlers/leanIntoTraitHandler';
-import { UseTraitHandler } from '../handlers/useTraitHandler';
-import { PushHandler } from '../handlers/pushHandler';
-import { ConsequenceApplicationHandler } from '../handlers/consequenceApplicationHandler';
-import { StimsWorkflowHandler } from '../handlers/stimsWorkflowHandler';
+import { PlayerActionHandlerFactory } from '../services/playerActionHandlerFactory';
 import { DiceService, FoundryDiceService } from '../services/diceService';
 import { NotificationService, FoundryNotificationService } from '../services/notificationService';
 import { DialogFactory, FoundryDialogFactory } from '../services/dialogFactory';
-
-/* -------------------------------------------- */
-/*  Types                                       */
-/* -------------------------------------------- */
-
 interface PlayerActionWidgetData {
   character: Character;
   crew: Crew | null;
@@ -187,18 +171,9 @@ export class PlayerActionWidget extends Application {
   private crewId: string | null = null;
   private playerState: PlayerRoundState | null = null;
   private storeUnsubscribe: (() => void) | null = null;
-  private consequenceHandler: ConsequenceResolutionHandler | null = null;
-  private stimsHandler: StimsHandler | null = null;
-  private diceRollingHandler: DiceRollingHandler | null = null;
-  private traitHandler: TraitHandler | null = null;
-  private rallyHandler: RallyHandler | null = null;
-  private traitImprovementHandler: TraitImprovementHandler | null = null;
-  private consequenceDataResolver: ConsequenceDataResolver | null = null;
-  private leanIntoTraitHandler: LeanIntoTraitHandler | null = null;
-  private useTraitHandler: UseTraitHandler | null = null;
-  private pushHandler: PushHandler | null = null;
-  private consequenceApplicationHandler: ConsequenceApplicationHandler | null = null;
-  private stimsWorkflowHandler: StimsWorkflowHandler | null = null;
+
+  // Handler factory (replaces 11 individual handler properties)
+  private handlerFactory: PlayerActionHandlerFactory;
 
   // Injectable services
   private diceService: DiceService;
@@ -227,6 +202,9 @@ export class PlayerActionWidget extends Application {
     this.diceService = diceService;
     this.notificationService = notificationService;
     this.dialogFactory = dialogFactory;
+
+    // Initialize handler factory
+    this.handlerFactory = new PlayerActionHandlerFactory(characterId, null);
   }
 
   async _render(force: boolean, options: any): Promise<void> {
@@ -290,6 +268,9 @@ export class PlayerActionWidget extends Application {
       this.storeUnsubscribe();
       this.storeUnsubscribe = null;
     }
+
+    // Reset handler factory
+    this.handlerFactory.reset();
 
     return super.close(options);
   }
@@ -360,66 +341,18 @@ export class PlayerActionWidget extends Application {
       console.log('FitGD | Widget getData() - Found Passive Item:', passive);
     }
 
-    // Initialize handlers
-    this.consequenceHandler = new ConsequenceResolutionHandler({
-      characterId: this.characterId,
-      crewId: this.crewId,
-      playerState: this.playerState,
-    });
+    // Update factory with crew ID and character (if crew ID changed)
+    if (crewId && crewId !== this.crewId) {
+      this.crewId = crewId;
+      this.handlerFactory = new PlayerActionHandlerFactory(
+        this.characterId,
+        crewId,
+        this.character
+      );
+    }
 
-    this.stimsHandler = new StimsHandler({
-      characterId: this.characterId,
-      crewId: this.crewId,
-      characterName: this.character?.name,
-    });
-
-    this.diceRollingHandler = new DiceRollingHandler({
-      characterId: this.characterId,
-      crewId: this.crewId,
-    });
-
-    this.traitHandler = new TraitHandler({
-      characterId: this.characterId,
-      characterName: this.character?.name,
-    });
-
-    this.rallyHandler = new RallyHandler({
-      characterId: this.characterId,
-      crewId: this.crewId,
-    });
-
-    this.traitImprovementHandler = new TraitImprovementHandler({
-      character: this.character,
-    });
-
-    this.consequenceDataResolver = new ConsequenceDataResolver({
-      characterId: this.characterId,
-    });
-
-    this.leanIntoTraitHandler = new LeanIntoTraitHandler({
-      character: this.character,
-      crewId: this.crewId,
-    });
-
-    this.useTraitHandler = new UseTraitHandler({
-      characterId: this.characterId,
-      crewId: this.crewId,
-    });
-
-    this.pushHandler = new PushHandler({
-      characterId: this.characterId,
-    });
-
-    this.consequenceApplicationHandler = new ConsequenceApplicationHandler({
-      characterId: this.characterId,
-      crewId: this.crewId,
-    });
-
-    this.stimsWorkflowHandler = new StimsWorkflowHandler({
-      characterId: this.characterId,
-      characterName: this.character?.name,
-      crewId: this.crewId,
-    });
+    // Update factory with character
+    this.handlerFactory.setCharacter(this.character);
 
     // Build data for template
     return {
@@ -571,15 +504,15 @@ export class PlayerActionWidget extends Application {
    * @param transaction - The transaction to apply
    */
   private async _applyTraitTransaction(transaction: TraitTransaction): Promise<void> {
-    if (!this.traitHandler) return;
+    const traitHandler = this.handlerFactory.getTraitHandler();
 
     // Create trait actions based on transaction mode
-    const actions = this.traitHandler.createTraitActions(transaction);
+    const actions = traitHandler.createTraitActions(transaction);
 
     // Execute all trait changes as a batch (single broadcast, prevents render race)
     if (actions.length > 0) {
       await game.fitgd.bridge.executeBatch(actions, {
-        affectedReduxIds: [asReduxId(this.traitHandler.getAffectedReduxId())],
+        affectedReduxIds: [asReduxId(traitHandler.getAffectedReduxId())],
         force: true, // Force full re-render to show new traits
       });
     }
@@ -715,8 +648,8 @@ export class PlayerActionWidget extends Application {
    * Compute improvements preview text
    */
   private _computeImprovements(): string[] {
-    if (!this.traitImprovementHandler) return [];
-    return this.traitImprovementHandler.computeImprovements(this.playerState);
+    const traitImprovementHandler = this.handlerFactory.getTraitImprovementHandler();
+    return traitImprovementHandler.computeImprovements(this.playerState);
   }
 
 
@@ -728,20 +661,8 @@ export class PlayerActionWidget extends Application {
    * @returns Consequence data for template
    */
   private _getConsequenceData(state: RootState) {
-    if (!this.consequenceDataResolver) {
-      return {
-        consequenceTransaction: null,
-        harmTargetCharacter: null,
-        selectedHarmClock: null,
-        selectedCrewClock: null,
-        calculatedHarmSegments: 0,
-        calculatedMomentumGain: 0,
-        effectivePosition: selectEffectivePosition(state, this.characterId),
-        effectiveEffect: selectEffectiveEffect(state, this.characterId),
-        consequenceConfigured: false,
-      };
-    }
-    return this.consequenceDataResolver.resolveConsequenceData(state, this.playerState);
+    const consequenceDataResolver = this.handlerFactory.getConsequenceDataResolver();
+    return consequenceDataResolver.resolveConsequenceData(state, this.playerState);
   }
 
   /* -------------------------------------------- */
@@ -1047,15 +968,47 @@ export class PlayerActionWidget extends Application {
   }
 
   /**
+   * Handle Toggle Push Die button
+   */
+  private async _onTogglePushDie(event: JQuery.ClickEvent): Promise<void> {
+    event.preventDefault();
+    const pushHandler = this.handlerFactory.getPushHandler();
+
+    // Toggle push die
+    const action = pushHandler.createTogglePushDieAction(this.playerState);
+
+    await game.fitgd.bridge.execute(action, {
+      affectedReduxIds: [asReduxId(this.characterId)],
+      silent: true
+    });
+  }
+
+  /**
+   * Handle Toggle Push Effect button
+   */
+  private async _onTogglePushEffect(event: JQuery.ClickEvent): Promise<void> {
+    event.preventDefault();
+    const pushHandler = this.handlerFactory.getPushHandler();
+
+    // Toggle push effect
+    const action = pushHandler.createTogglePushEffectAction(this.playerState);
+
+    await game.fitgd.bridge.execute(action, {
+      affectedReduxIds: [asReduxId(this.characterId)],
+      silent: true
+    });
+  }
+
+  /**
    * Handle Rally button
    */
   private async _onRally(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
 
-    if (!this.rallyHandler) return;
+    const rallyHandler = this.handlerFactory.getRallyHandler();
 
     // Validate rally eligibility
-    const validation = this.rallyHandler.validateRally(this.crew);
+    const validation = rallyHandler.validateRally(this.crew);
     if (!validation.isValid) {
       const messages: { [key: string]: string } = {
         'no-crew': 'Character must be in a crew to rally',
@@ -1066,7 +1019,7 @@ export class PlayerActionWidget extends Application {
     }
 
     // Open rally dialog
-    const dialog = this.dialogFactory.createRallyDialog(this.characterId, this.rallyHandler.getCrewId()!);
+    const dialog = this.dialogFactory.createRallyDialog(this.characterId, rallyHandler.getCrewId()!);
     dialog.render(true);
   }
 
@@ -1076,10 +1029,10 @@ export class PlayerActionWidget extends Application {
   private async _onLeanIntoTrait(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
 
-    if (!this.leanIntoTraitHandler) return;
+    const leanIntoTraitHandler = this.handlerFactory.getLeanIntoTraitHandler();
 
     // Validate lean into trait eligibility
-    const validation = this.leanIntoTraitHandler.validateLeanIntoTrait();
+    const validation = leanIntoTraitHandler.validateLeanIntoTrait();
     if (!validation.isValid) {
       const messages: { [key: string]: string } = {
         'no-crew': 'Character must be in a crew to lean into trait',
@@ -1090,7 +1043,7 @@ export class PlayerActionWidget extends Application {
     }
 
     // Open lean into trait dialog
-    const dialog = new LeanIntoTraitDialog(this.characterId, this.leanIntoTraitHandler.getCrewId()!);
+    const dialog = new LeanIntoTraitDialog(this.characterId, leanIntoTraitHandler.getCrewId()!);
     dialog.render(true);
   }
 
@@ -1100,10 +1053,10 @@ export class PlayerActionWidget extends Application {
   private async _onUseTrait(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
 
-    if (!this.useTraitHandler) return;
+    const useTraitHandler = this.handlerFactory.getUseTraitHandler();
 
     // Validate use trait eligibility
-    const validation = this.useTraitHandler.validateUseTrait(this.playerState);
+    const validation = useTraitHandler.validateUseTrait(this.playerState);
     if (!validation.isValid) {
       const messages: { [key: string]: string } = {
         'no-crew': 'Character must be in a crew to use trait',
@@ -1114,10 +1067,10 @@ export class PlayerActionWidget extends Application {
     }
 
     // If trait transaction already exists, cancel it (toggle off)
-    if (this.useTraitHandler.hasActiveTraitTransaction(this.playerState)) {
+    if (useTraitHandler.hasActiveTraitTransaction(this.playerState)) {
       await game.fitgd.bridge.execute(
-        this.useTraitHandler.createClearTraitTransactionAction(),
-        { affectedReduxIds: [asReduxId(this.useTraitHandler.getAffectedReduxId())], force: false }
+        useTraitHandler.createClearTraitTransactionAction(),
+        { affectedReduxIds: [asReduxId(useTraitHandler.getAffectedReduxId())], force: false }
       );
 
       this.notificationService.info('Trait flashback canceled');
@@ -1125,7 +1078,7 @@ export class PlayerActionWidget extends Application {
     }
 
     // Open flashback traits dialog
-    const dialog = this.dialogFactory.createFlashbackTraitsDialog(this.characterId, this.useTraitHandler.getCrewId()!);
+    const dialog = this.dialogFactory.createFlashbackTraitsDialog(this.characterId, useTraitHandler.getCrewId()!);
     dialog.render(true);
   }
 
@@ -1269,56 +1222,26 @@ export class PlayerActionWidget extends Application {
     }
 
     // Import and open Equipment Management Dialog
-    // This dialog provides access to both equipment management and flashback item creation
     import('../dialogs/EquipmentManagementDialog').then(({ EquipmentManagementDialog }) => {
       new EquipmentManagementDialog(this.characterId, this.crewId!).render(true);
     });
   }
-  private async _onTogglePushDie(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-
-    if (!this.pushHandler) return;
-
-    // Use Bridge API to dispatch, broadcast, and refresh
-    await game.fitgd.bridge.execute(
-      this.pushHandler.createTogglePushDieAction(this.playerState),
-      { affectedReduxIds: [asReduxId(this.pushHandler.getAffectedReduxId())], force: false }
-    );
-  }
-
-  /**
-   * Handle Push (Effect) toggle
-   */
-  private async _onTogglePushEffect(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-
-    if (!this.pushHandler) return;
-
-    // Use Bridge API to dispatch, broadcast, and refresh
-    await game.fitgd.bridge.execute(
-      this.pushHandler.createTogglePushEffectAction(this.playerState),
-      { affectedReduxIds: [asReduxId(this.pushHandler.getAffectedReduxId())], force: false }
-    );
-  }
 
   /**
    * Handle Roll Action button (DECISION -> ROLLING)
-   * Simplified: removed ROLL_CONFIRM intermediate state
    */
   private async _onRoll(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
 
-    if (!this.diceRollingHandler) return;
+    const diceRollingHandler = this.handlerFactory.getDiceRollingHandler();
 
     try {
       const state = game.fitgd.store.getState();
       const playerState = state.playerRoundState.byCharacterId[this.characterId];
       const crew = this.crew;
 
-      console.log('FitGD | _onRoll - playerState:', playerState);
-
       // Validate roll can proceed
-      const validation = this.diceRollingHandler.validateRoll(state, playerState, crew);
+      const validation = diceRollingHandler.validateRoll(state, playerState, crew);
       if (!validation.isValid) {
         if (validation.reason === 'no-action-selected') {
           this.notificationService.warn('Please select an action first');
@@ -1336,27 +1259,8 @@ export class PlayerActionWidget extends Application {
       // Validate sufficient momentum for all costs
       const availableMomentum = this.crew?.currentMomentum || 0;
       if (totalMomentumCost > availableMomentum) {
-        const equippedForAction = playerState?.equippedForAction?.[0];
-        const approvedPassiveId = playerState?.approvedPassiveId;
-        const itemsNeedingLock: string[] = [];
-
-        if (equippedForAction && this.character) {
-          const item = this.character.equipment.find(e => e.id === equippedForAction);
-          if (item && (item.tier === 'rare' || item.tier === 'epic') && !item.locked) {
-            itemsNeedingLock.push(item.name);
-          }
-        }
-
-        if (approvedPassiveId && this.character) {
-          const item = this.character.equipment.find(e => e.id === approvedPassiveId);
-          if (item && (item.tier === 'rare' || item.tier === 'epic') && !item.locked) {
-            itemsNeedingLock.push(item.name);
-          }
-        }
-
-        const itemsList = itemsNeedingLock.length > 0 ? ` [${itemsNeedingLock.join(', ')}]` : '';
         this.notificationService.error(
-          `Insufficient Momentum to lock equipment! Need ${totalMomentumCost}M, have ${availableMomentum}M${itemsList}`
+          `Insufficient Momentum to lock equipment! Need ${totalMomentumCost}M, have ${availableMomentum}M`
         );
         return;
       }
@@ -1376,8 +1280,6 @@ export class PlayerActionWidget extends Application {
       if (playerState?.traitTransaction) {
         try {
           await this._applyTraitTransaction(playerState.traitTransaction);
-          // NOTE: Position improvement is NOT applied to playerState
-          // It's ephemeral and only affects this roll's consequence calculation
         } catch (error) {
           console.error('FitGD | Error applying trait transaction:', error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -1387,22 +1289,18 @@ export class PlayerActionWidget extends Application {
       }
 
       // Transition to ROLLING
-      console.log('FitGD | Transitioning to ROLLING state');
       await game.fitgd.bridge.execute(
-        this.diceRollingHandler.createTransitionToRollingAction(),
-        { affectedReduxIds: [asReduxId(this.diceRollingHandler.getAffectedReduxId())], silent: true }
+        diceRollingHandler.createTransitionToRollingAction(),
+        { affectedReduxIds: [asReduxId(diceRollingHandler.getAffectedReduxId())], silent: true }
       );
 
       // Roll dice
-      const dicePool = this.diceRollingHandler.calculateDicePool(state);
-      console.log('FitGD | Rolling with dicePool:', dicePool);
+      const dicePool = diceRollingHandler.calculateDicePool(state);
       const rollResult = await this._rollDice(dicePool);
-      console.log('FitGD | Roll result:', rollResult);
       const outcome = calculateOutcome(rollResult);
-      console.log('FitGD | Roll outcome:', outcome);
 
       // Execute all roll outcome actions as batch
-      const rollBatch = this.diceRollingHandler.createRollOutcomeBatch(dicePool, rollResult, outcome);
+      const rollBatch = diceRollingHandler.createRollOutcomeBatch(dicePool, rollResult, outcome);
 
       // Lock equipment used in this roll (active + approved passive)
       const equipmentToLock = getEquipmentToLock(
@@ -1436,17 +1334,13 @@ export class PlayerActionWidget extends Application {
         });
       }
 
-      console.log('FitGD | Roll outcome batch actions:', rollBatch);
-
       await game.fitgd.bridge.executeBatch(
         rollBatch,
         {
-          affectedReduxIds: [asReduxId(this.diceRollingHandler.getAffectedReduxId())],
+          affectedReduxIds: [asReduxId(diceRollingHandler.getAffectedReduxId())],
           force: false,
         }
       );
-
-      console.log('FitGD | Roll outcome batch executed');
 
       // Post success to chat if applicable
       if (outcome === 'critical' || outcome === 'success') {
@@ -1494,189 +1388,6 @@ export class PlayerActionWidget extends Application {
 
   /**
    * Handle consequence type selection (harm vs crew-clock)
-   */
-  private async _onSelectConsequenceType(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-    const consequenceType = (event.currentTarget as HTMLElement).dataset.type as 'harm' | 'crew-clock';
-
-    if (!this.consequenceHandler) return;
-
-    // Use handler to create action
-    const action = this.consequenceHandler.createSetConsequenceTypeAction(consequenceType);
-
-    // Execute via Bridge API
-    await game.fitgd.bridge.execute(action, {
-      affectedReduxIds: [asReduxId(this.consequenceHandler.getAffectedReduxId())],
-      silent: true,
-    });
-  }
-
-  /**
-   * Handle harm target selection button
-   */
-  private async _onSelectHarmTarget(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-
-    if (!this.crewId) {
-      this.notificationService.warn('Character must be in a crew');
-      return;
-    }
-
-    if (!this.consequenceHandler) return;
-
-    // Open CharacterSelectionDialog
-    const dialog = new CharacterSelectionDialog(
-      this.crewId,
-      this.characterId,
-      async (selectedCharacterId: string) => {
-        // Use handler to create action
-        const action = this.consequenceHandler!.createSetHarmTargetAction(selectedCharacterId);
-
-        // Execute via Bridge API
-        await game.fitgd.bridge.execute(action, {
-          affectedReduxIds: [asReduxId(this.consequenceHandler!.getAffectedReduxId())],
-          silent: true,
-        });
-      }
-    );
-
-    dialog.render(true);
-  }
-
-  /**
-   * Handle harm clock selection button
-   */
-  private async _onSelectHarmClock(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-
-    const transaction = this.playerState?.consequenceTransaction;
-    const targetCharacterId = transaction?.harmTargetCharacterId;
-
-    if (!targetCharacterId || !this.consequenceHandler) {
-      this.notificationService.warn('Select target character first');
-      return;
-    }
-
-    // Open ClockSelectionDialog for harm clocks
-    const dialog = new ClockSelectionDialog(
-      targetCharacterId,
-      'harm',
-      async (clockId: string) => {
-        try {
-          if (clockId === '_new') {
-            // Open ClockCreationDialog for new harm clock
-            const creationDialog = new ClockCreationDialog(
-              targetCharacterId,
-              'harm',
-              async (clockData: ClockData) => {
-                try {
-                  // Use handler to create clock action
-                  const createClockAction = this.consequenceHandler!.createNewHarmClockAction(clockData);
-                  console.log(`FitGD | Creating new harm clock via Bridge:`, createClockAction);
-
-                  // Execute clock creation
-                  await game.fitgd.bridge.execute(
-                    createClockAction,
-                    { affectedReduxIds: [asReduxId(targetCharacterId)], silent: true }
-                  );
-
-                  console.log(`FitGD | Clock creation executed, should be broadcast now`);
-
-                  // Update transaction with new clock
-                  const updateAction = this.consequenceHandler!.createUpdateHarmClockInTransactionAction(
-                    createClockAction.payload.id,
-                    clockData.name
-                  );
-
-                  await game.fitgd.bridge.execute(updateAction, {
-                    affectedReduxIds: [asReduxId(this.consequenceHandler!.getAffectedReduxId())],
-                    silent: true,
-                  });
-                } catch (error) {
-                  console.error('FitGD | Error creating harm clock:', error);
-                  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                  this.notificationService.error(`Error creating clock: ${errorMessage} `);
-                }
-              }
-            );
-
-            creationDialog.render(true);
-            return;
-          } else {
-            // Existing clock selected - use handler
-            const action = this.consequenceHandler!.createSetHarmClockAction(clockId);
-            await game.fitgd.bridge.execute(action, {
-              affectedReduxIds: [asReduxId(this.consequenceHandler!.getAffectedReduxId())],
-              silent: true,
-            });
-          }
-        } catch (error) {
-          console.error('FitGD | Error in harm clock selection:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          this.notificationService.error(`Error selecting clock: ${errorMessage} `);
-        }
-      }
-    );
-
-    dialog.render(true);
-  }
-
-  /**
-   * Handle crew clock selection button
-   */
-  private async _onSelectCrewClock(event: JQuery.ClickEvent): Promise<void> {
-    event.preventDefault();
-
-    const crewId = this.crewId;
-
-    if (!crewId || !this.consequenceHandler) {
-      this.notificationService.warn('Character must be in a crew');
-      return;
-    }
-
-    // Open ClockSelectionDialog for crew clocks (non-harm)
-    const dialog = new ClockSelectionDialog(
-      crewId,
-      'crew',
-      async (clockId: string) => {
-        try {
-          if (clockId === '_new') {
-            // Open ClockCreationDialog for new crew clock
-            const creationDialog = new ClockCreationDialog(
-              crewId,
-              'progress',
-              async (clockData: ClockData) => {
-                try {
-                  // Use handler to create clock action
-                  const createClockAction = this.consequenceHandler!.createNewCrewClockAction(clockData);
-
-                  // Execute clock creation
-                  await game.fitgd.bridge.execute(
-                    createClockAction,
-                    { affectedReduxIds: [asReduxId(crewId)], silent: true }
-                  );
-
-                  // Update transaction with new clock
-                  const updateAction = this.consequenceHandler!.createUpdateCrewClockInTransactionAction(
-                    createClockAction.payload.id
-                  );
-
-                  await game.fitgd.bridge.execute(updateAction, {
-                    affectedReduxIds: [asReduxId(this.consequenceHandler!.getAffectedReduxId())],
-                    silent: true,
-                  });
-                } catch (error) {
-                  console.error('FitGD | Error creating crew clock:', error);
-                  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                  this.notificationService.error(`Error creating clock: ${errorMessage} `);
-                }
-              }
-            );
-
-            creationDialog.render(true);
-            return;
-          } else {
-            // Existing clock selected - use handler
             const action = this.consequenceHandler!.createSetCrewClockAction(clockId);
             await game.fitgd.bridge.execute(action, {
               affectedReduxIds: [asReduxId(this.consequenceHandler!.getAffectedReduxId())],
@@ -1701,14 +1412,14 @@ export class PlayerActionWidget extends Application {
   private async _onPlayerAcceptConsequence(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
 
-    if (!this.consequenceApplicationHandler) return;
+    const consequenceApplicationHandler = this.handlerFactory.getConsequenceApplicationHandler();
 
     const transaction = this.playerState?.consequenceTransaction;
     console.log('FitGD | _onPlayerAcceptConsequence - Transaction:', JSON.stringify(transaction, null, 2));
     console.log('FitGD | _onPlayerAcceptConsequence - Called by user:', game.user?.name, 'isGM:', game.user?.isGM);
 
     // Validate transaction is complete
-    const validation = this.consequenceApplicationHandler.validateConsequence(transaction);
+    const validation = consequenceApplicationHandler.validateConsequence(transaction);
     if (!validation.isValid) {
       this.notificationService.warn(validation.errorMessage || 'Invalid consequence');
       return;
@@ -1726,7 +1437,7 @@ export class PlayerActionWidget extends Application {
     }
 
     // Get workflow with all actions and metadata
-    const workflow = this.consequenceApplicationHandler.createConsequenceApplicationWorkflow(state, transaction!);
+    const workflow = consequenceApplicationHandler.createConsequenceApplicationWorkflow(state, transaction!);
     console.log('FitGD | Consequence action:', JSON.stringify(workflow.applyConsequenceAction, null, 2));
 
     // Build batch of all consequence actions
@@ -1791,30 +1502,243 @@ export class PlayerActionWidget extends Application {
     await this._useStims();
   }
 
+  /* -------------------------------------------- */
+  /*  GM Consequence Configuration Handlers       */
+  /* -------------------------------------------- */
+
+  /**
+   * Handle consequence type selection (harm vs crew-clock)
+   */
+  private async _onSelectConsequenceType(event: JQuery.ClickEvent): Promise<void> {
+    event.preventDefault();
+    const consequenceType = (event.currentTarget as HTMLElement).dataset.type as 'harm' | 'crew-clock';
+
+    const consequenceHandler = this.handlerFactory.getConsequenceHandler();
+    if (!consequenceHandler) return;
+
+    // Use handler to create action
+    const action = consequenceHandler.createSetConsequenceTypeAction(consequenceType);
+
+    // Execute via Bridge API
+    await game.fitgd.bridge.execute(action, {
+      affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
+      silent: true,
+    });
+  }
+
+  /**
+   * Handle harm target selection button
+   */
+  private async _onSelectHarmTarget(event: JQuery.ClickEvent): Promise<void> {
+    event.preventDefault();
+
+    if (!this.crewId) {
+      this.notificationService.warn('Character must be in a crew');
+      return;
+    }
+
+    const consequenceHandler = this.handlerFactory.getConsequenceHandler();
+    if (!consequenceHandler) return;
+
+    // Open CharacterSelectionDialog
+    const dialog = new CharacterSelectionDialog(
+      this.crewId,
+      this.characterId,
+      async (selectedCharacterId: string) => {
+        // Use handler to create action
+        const action = consequenceHandler.createSetHarmTargetAction(selectedCharacterId);
+
+        // Execute via Bridge API
+        await game.fitgd.bridge.execute(action, {
+          affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
+          silent: true,
+        });
+      }
+    );
+
+    dialog.render(true);
+  }
+
+  /**
+   * Handle harm clock selection button
+   */
+  private async _onSelectHarmClock(event: JQuery.ClickEvent): Promise<void> {
+    event.preventDefault();
+
+    const transaction = this.playerState?.consequenceTransaction;
+    const targetCharacterId = transaction?.harmTargetCharacterId;
+
+    const consequenceHandler = this.handlerFactory.getConsequenceHandler();
+
+    if (!targetCharacterId || !consequenceHandler) {
+      this.notificationService.warn('Select target character first');
+      return;
+    }
+
+    // Open ClockSelectionDialog for harm clocks
+    const dialog = new ClockSelectionDialog(
+      targetCharacterId,
+      'harm',
+      async (clockId: string) => {
+        try {
+          if (clockId === '_new') {
+            // Open ClockCreationDialog for new harm clock
+            const creationDialog = new ClockCreationDialog(
+              targetCharacterId,
+              'harm',
+              async (clockData: ClockData) => {
+                try {
+                  // Use handler to create clock action
+                  const createClockAction = consequenceHandler.createNewHarmClockAction(clockData);
+                  console.log(`FitGD | Creating new harm clock via Bridge:`, createClockAction);
+
+                  // Execute clock creation
+                  await game.fitgd.bridge.execute(
+                    createClockAction,
+                    { affectedReduxIds: [asReduxId(targetCharacterId)], silent: true }
+                  );
+
+                  console.log(`FitGD | Clock creation executed, should be broadcast now`);
+
+                  // Update transaction with new clock
+                  const updateAction = consequenceHandler.createUpdateHarmClockInTransactionAction(
+                    createClockAction.payload.id,
+                    clockData.name
+                  );
+
+                  await game.fitgd.bridge.execute(updateAction, {
+                    affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
+                    silent: true,
+                  });
+                } catch (error) {
+                  console.error('FitGD | Error creating harm clock:', error);
+                  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                  this.notificationService.error(`Error creating clock: ${errorMessage} `);
+                }
+              }
+            );
+
+            creationDialog.render(true);
+            return;
+          } else {
+            // Existing clock selected - use handler
+            const action = consequenceHandler.createSetHarmClockAction(clockId);
+            await game.fitgd.bridge.execute(action, {
+              affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
+              silent: true,
+            });
+          }
+        } catch (error) {
+          console.error('FitGD | Error in harm clock selection:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.notificationService.error(`Error selecting clock: ${errorMessage} `);
+        }
+      }
+    );
+
+    dialog.render(true);
+  }
+
+  /**
+   * Handle crew clock selection button
+   */
+  private async _onSelectCrewClock(event: JQuery.ClickEvent): Promise<void> {
+    event.preventDefault();
+
+    const crewId = this.crewId;
+    const consequenceHandler = this.handlerFactory.getConsequenceHandler();
+
+    if (!crewId || !consequenceHandler) {
+      this.notificationService.warn('Character must be in a crew');
+      return;
+    }
+
+    // Open ClockSelectionDialog for crew clocks (non-harm)
+    const dialog = new ClockSelectionDialog(
+      crewId,
+      'crew',
+      async (clockId: string) => {
+        try {
+          if (clockId === '_new') {
+            // Open ClockCreationDialog for new crew clock
+            const creationDialog = new ClockCreationDialog(
+              crewId,
+              'progress',
+              async (clockData: ClockData) => {
+                try {
+                  // Use handler to create clock action
+                  const createClockAction = consequenceHandler.createNewCrewClockAction(clockData);
+
+                  // Execute clock creation
+                  await game.fitgd.bridge.execute(
+                    createClockAction,
+                    { affectedReduxIds: [asReduxId(crewId)], silent: true }
+                  );
+
+                  // Update transaction with new clock
+                  const updateAction = consequenceHandler.createUpdateCrewClockInTransactionAction(
+                    createClockAction.payload.id
+                  );
+
+                  await game.fitgd.bridge.execute(updateAction, {
+                    affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
+                    silent: true,
+                  });
+                } catch (error) {
+                  console.error('FitGD | Error creating crew clock:', error);
+                  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                  this.notificationService.error(`Error creating clock: ${errorMessage} `);
+                }
+              }
+            );
+
+            creationDialog.render(true);
+            return;
+          } else {
+            // Existing clock selected - use handler
+            const action = consequenceHandler.createSetCrewClockAction(clockId);
+            await game.fitgd.bridge.execute(action, {
+              affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
+              silent: true,
+            });
+          }
+        } catch (error) {
+          console.error('FitGD | Error in crew clock selection:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.notificationService.error(`Error selecting clock: ${errorMessage} `);
+        }
+      }
+    );
+
+    dialog.render(true);
+  }
+
   /**
    * Shared stims logic (called from GM_RESOLVING_CONSEQUENCE state)
    * Validates addiction status, advances addiction clock, and sets up reroll
    */
   private async _useStims(): Promise<void> {
-    if (!this.stimsWorkflowHandler || !this.stimsHandler || !this.diceRollingHandler) return;
+    const stimsWorkflowHandler = this.handlerFactory.getStimsWorkflowHandler();
+    const stimsHandler = this.handlerFactory.getStimsHandler();
+    const diceRollingHandler = this.handlerFactory.getDiceRollingHandler();
 
     const state = game.fitgd.store.getState();
 
     // Validate stims can be used
-    const validation = this.stimsWorkflowHandler.validateStimsUsage(state, this.playerState);
+    const validation = stimsWorkflowHandler.validateStimsUsage(state, this.playerState);
     if (!validation.isValid) {
-      this.notificationService.error(this.stimsWorkflowHandler.getErrorMessage(validation.reason));
+      this.notificationService.error(stimsWorkflowHandler.getErrorMessage(validation.reason));
       return;
     }
 
     // Find or create addiction clock
-    let addictionClock = this.stimsWorkflowHandler.findAddictionClock(state);
+    let addictionClock = stimsWorkflowHandler.findAddictionClock(state);
     let addictionClockId = addictionClock?.id;
 
     if (!addictionClock) {
-      const createAction = this.stimsWorkflowHandler.createAddictionClockAction();
+      const createAction = stimsWorkflowHandler.createAddictionClockAction();
       await game.fitgd.bridge.execute(createAction as any, {
-        affectedReduxIds: [this.stimsWorkflowHandler.getAffectedReduxId()],
+        affectedReduxIds: [stimsWorkflowHandler.getAffectedReduxId()],
         silent: true,
       });
       addictionClockId = createAction.payload.id;
@@ -1823,7 +1747,7 @@ export class PlayerActionWidget extends Application {
 
     // Roll d6 to determine addiction advance
     const addictionRoll = await Roll.create('1d6').evaluate({ async: true });
-    const addictionAmount = this.stimsWorkflowHandler.validateAddictionRoll(addictionRoll.total);
+    const addictionAmount = stimsWorkflowHandler.validateAddictionRoll(addictionRoll.total);
 
     // Post addiction roll to chat
     await addictionRoll.toMessage({
@@ -1832,14 +1756,14 @@ export class PlayerActionWidget extends Application {
     });
 
     // Advance addiction clock
-    const advanceAction = this.stimsWorkflowHandler.createAdvanceAddictionClockAction(addictionClockId!, addictionAmount);
+    const advanceAction = stimsWorkflowHandler.createAdvanceAddictionClockAction(addictionClockId!, addictionAmount);
     await game.fitgd.bridge.execute(advanceAction as any, {
-      affectedReduxIds: [this.stimsWorkflowHandler.getAffectedReduxId()],
+      affectedReduxIds: [stimsWorkflowHandler.getAffectedReduxId()],
       silent: true,
     });
 
     // Mark stims as used this action (prevents using again)
-    const markStimsUsedAction = this.stimsHandler.createMarkStimsUsedAction();
+    const markStimsUsedAction = stimsHandler.createMarkStimsUsedAction();
     await game.fitgd.bridge.execute(markStimsUsedAction as any, {
       affectedReduxIds: [asReduxId(this.characterId)],
       silent: true,
@@ -1853,7 +1777,7 @@ export class PlayerActionWidget extends Application {
       // Lockout!
       this.notificationService.error('Addiction clock filled! Stims locked.');
 
-      const lockoutAction = this.stimsWorkflowHandler.createStimsLockoutAction();
+      const lockoutAction = stimsWorkflowHandler.createStimsLockoutAction();
       await game.fitgd.bridge.execute(lockoutAction as any, {
         affectedReduxIds: [asReduxId(this.characterId)],
         force: true,
@@ -1865,7 +1789,7 @@ export class PlayerActionWidget extends Application {
     this.notificationService.info('Stims used! Rerolling...');
 
     // Transition to STIMS_ROLLING
-    const transitionAction = this.stimsWorkflowHandler.createTransitionToStimsRollingAction();
+    const transitionAction = stimsWorkflowHandler.createTransitionToStimsRollingAction();
     await game.fitgd.bridge.execute(transitionAction as any, {
       affectedReduxIds: [asReduxId(this.characterId)],
       silent: true,
@@ -1875,60 +1799,30 @@ export class PlayerActionWidget extends Application {
     await new Promise(resolve => setTimeout(resolve, 500));
 
     // Transition back to ROLLING
-    const returnToRollingAction = this.stimsWorkflowHandler.createReturnToRollingAction();
-    await game.fitgd.bridge.execute(returnToRollingAction as any, {
+    const rollingAction = diceRollingHandler.createTransitionToRollingAction();
+    await game.fitgd.bridge.execute(rollingAction as any, {
       affectedReduxIds: [asReduxId(this.characterId)],
-      force: true,
+      silent: true,
     });
 
-    // Wait for state to update
-    await new Promise(resolve => setTimeout(resolve, 300));
+    // Reroll!
+    const dicePool = diceRollingHandler.calculateDicePool(updatedState);
+    const rollResult = await this._rollDice(dicePool);
+    const outcome = calculateOutcome(rollResult);
 
-    // Auto-reroll immediately
-    console.log('FitGD | Auto-rerolling after stims usage');
-    try {
-      const freshState = game.fitgd.store.getState();
-      const freshPlayerState = freshState.playerRoundState.byCharacterId[this.characterId];
-      const freshCrew = this.crew;
-
-      // Validate roll can proceed
-      const validation = this.diceRollingHandler.validateRoll(freshState, freshPlayerState, freshCrew);
-      if (!validation.isValid) {
-        console.error('FitGD | Auto-reroll validation failed:', validation.reason);
-        this.notificationService.error('Reroll validation failed');
-        return;
+    // Execute outcome actions
+    const rollBatch = diceRollingHandler.createRollOutcomeBatch(dicePool, rollResult, outcome);
+    await game.fitgd.bridge.executeBatch(
+      rollBatch,
+      {
+        affectedReduxIds: [asReduxId(diceRollingHandler.getAffectedReduxId())],
+        force: false,
       }
+    );
 
-      // Roll dice
-      const dicePool = this.diceRollingHandler.calculateDicePool(freshState);
-      console.log('FitGD | Auto-rerolling with dicePool:', dicePool);
-      const rollResult = await this._rollDice(dicePool);
-      console.log('FitGD | Auto-reroll result:', rollResult);
-      const outcome = calculateOutcome(rollResult);
-      console.log('FitGD | Auto-reroll outcome:', outcome);
-
-      // Execute all roll outcome actions as batch
-      const rollBatch = this.diceRollingHandler.createRollOutcomeBatch(dicePool, rollResult, outcome);
-      console.log('FitGD | Auto-reroll outcome batch actions:', rollBatch);
-
-      await game.fitgd.bridge.executeBatch(
-        rollBatch,
-        {
-          affectedReduxIds: [asReduxId(this.diceRollingHandler.getAffectedReduxId())],
-          force: false,
-        }
-      );
-
-      console.log('FitGD | Auto-reroll outcome batch executed');
-
-      // Post success to chat if applicable
-      if (outcome === 'critical' || outcome === 'success') {
-        this._postSuccessToChat(outcome, rollResult);
-      }
-    } catch (error) {
-      console.error('FitGD | Error in auto-reroll:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.notificationService.error(`Reroll failed: ${errorMessage}`);
+    // Post success
+    if (outcome === 'critical' || outcome === 'success') {
+      this._postSuccessToChat(outcome, rollResult);
     }
   }
 

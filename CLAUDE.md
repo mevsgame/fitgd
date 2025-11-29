@@ -536,6 +536,14 @@ npm run type-check:core
 npm run type-check:all
 ```
 
+### ⚠️ Running Tests
+
+**NOTE:** `npm test` produces large output (700+ tests). When running tests:
+- **Look for failure summaries** at the end (FAIL/PASS indicators)
+- **Use filters** if targeting specific tests: `npm test -- --grep "pattern"`
+- **Check for error sections** rather than reading full output
+- **Capture and analyze** final summary line showing pass/fail counts
+
 ---
 
 ## Project Structure
