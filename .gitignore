@@ -25,3 +25,4 @@ package-lock.json
 .claude/settings.local.json
 debug_output.json
 test_output.txt
+test_full_output.txt

@@ -283,6 +283,9 @@ export async function createWidgetHarness(
   // This creates consequenceApplicationHandler and other handlers needed for widget logic
   await widget.getData();
 
+  // Debug: Verify handler was initialized
+  console.log('DEBUG: After getData, handler exists?', !!(widget as any).consequenceApplicationHandler);
+
   /* -------------------------------------------- */
   /*  State Query Helpers                         */
   /* -------------------------------------------- */
@@ -508,11 +511,9 @@ export async function createWidgetHarness(
       throw new Error('Not in GM_RESOLVING_CONSEQUENCE state');
     }
 
-    // Transition to APPLYING_EFFECTS
-    await game.fitgd.bridge.execute({
-      type: 'playerRoundState/transitionState',
-      payload: { characterId, newState: 'APPLYING_EFFECTS' },
-    });
+    // Call the widget's _onPlayerAcceptConsequence method with a mock event
+    const mockEvent = createMockClickEvent();
+    await (widget as any)._onPlayerAcceptConsequence(mockEvent);
   };
 
   /* -------------------------------------------- */
