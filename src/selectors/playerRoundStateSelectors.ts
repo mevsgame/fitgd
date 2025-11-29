@@ -86,7 +86,7 @@ export const selectDicePool = createSelector(
       // Equipment: Apply category-based effects
       if (playerState.equippedForAction && playerState.equippedForAction.length > 0) {
         const equipmentId = playerState.equippedForAction[0]; // First (primary) equipment item
-        const item = character.equipment.find(e => e.id === equipmentId);
+        const item = character.equipment.find((e: any) => e.id === equipmentId);
 
         if (item && item.equipped) {
           // Get equipment modifiers
@@ -99,7 +99,7 @@ export const selectDicePool = createSelector(
 
     // 2.5 Add Passive Equipment (if approved by GM)
     if (playerState.approvedPassiveId) {
-      const item = character.equipment.find(e => e.id === playerState.approvedPassiveId);
+      const item = character.equipment.find((e: any) => e.id === playerState.approvedPassiveId);
       if (item && item.equipped) {
         const { diceBonus = 0, dicePenalty = 0 } = item.modifiers || {};
         pool += diceBonus;
@@ -450,7 +450,7 @@ export const selectHarmClocksWithStatus = createSelector(
     (state: RootState) => state.clocks.byId,
   ],
   (harmClockIds, clocksById) => {
-    return harmClockIds.map((clockId) => {
+    return harmClockIds.map((clockId: any) => {
       const clock = clocksById[clockId];
       return {
         ...clock,
@@ -466,7 +466,7 @@ export const selectHarmClocksWithStatus = createSelector(
 export const selectIsDying = createSelector(
   [selectHarmClocksWithStatus],
   (harmClocks) => {
-    return harmClocks.some((clock) => clock.isDying);
+    return harmClocks.some((clock: any) => clock.isDying);
   }
 );
 
