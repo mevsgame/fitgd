@@ -511,9 +511,9 @@ export async function createWidgetHarness(
       throw new Error('Not in GM_RESOLVING_CONSEQUENCE state');
     }
 
-    // Call the widget's _onPlayerAcceptConsequence method with a mock event
+    // Call the widget's coordinator to handle consequence acceptance
     const mockEvent = createMockClickEvent();
-    await (widget as any)._onPlayerAcceptConsequence(mockEvent);
+    await (widget as any).coordinator.handleAcceptConsequence(mockEvent);
   };
 
   /* -------------------------------------------- */
