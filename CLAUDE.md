@@ -445,6 +445,7 @@ game.fitgd.store.dispatch({ type: 'action', payload: {...} });
 - Call `saveImmediate()` or `refreshSheetsByReduxId()` manually
 - Call `this.render()` - let Redux subscriptions handle it
 - Commit without type-check and build verification
+- **NEVER use `git commit --no-verify`** - this bypasses the pre-commit hook that runs tests. If tests are failing, fix them first instead of skipping verification
 
 ### Exception
 Socket handlers intentionally use bare dispatch to prevent infinite broadcast loops.
