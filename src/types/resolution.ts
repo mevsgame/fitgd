@@ -40,3 +40,14 @@ export interface HarmConsequenceResult {
   segmentsAdded: number;
   isDying: boolean;
 }
+
+export interface DefensiveSuccessValues {
+  available: boolean;
+  originalPosition: Position;
+  defensivePosition: Position | null;
+  originalEffect: Effect;
+  defensiveEffect: Effect | null;
+  defensiveSegments: number;
+  originalSegments: number;
+  momentumGain: number;
+}

@@ -454,6 +454,20 @@
           💉 Use Stims & Reroll
           {{/if}}
         </button>
+        
+        {{!-- DEFENSIVE SUCCESS TOGGLE (Player Only) --}}
+        {{#if (and defensiveSuccessValues.available (not isGM))}}
+        <div class="plan-line defensive-success-toggle">
+          <button type="button" data-action="toggle-defensive-success" data-enabled="{{not useDefensiveSuccess}}"
+            class="toggle-btn {{#if useDefensiveSuccess}}defensive-active{{/if}}">
+            {{#if useDefensiveSuccess}}
+            ✓ Defensive Success
+            {{else}}
+            ✗ Defensive Success
+            {{/if}}
+          </button>
+        </div>
+        {{/if}}
 
         <!-- Player approves GM's configured consequence -->
         <button type="button" data-action="approve-consequence" class="primary" {{#unless

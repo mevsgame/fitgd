@@ -986,4 +986,19 @@ export class PlayerActionEventCoordinator {
     // Delegate to standard stims handling - same logic applies
     await this.handleUseStims();
   }
+
+  /**
+   * Handle defensive success toggle
+   *
+   * @param enabled - Whether to enable defensive success option
+   */
+  async handleToggleDefensiveSuccess(enabled: boolean): Promise<void> {
+    const consequenceHandler = this.context.getHandlerFactory().getConsequenceHandler();
+    const action = consequenceHandler.createToggleDefensiveSuccessAction(enabled);
+
+    await game.fitgd.bridge.execute(action as any, {
+      affectedReduxIds: [consequenceHandler.getAffectedReduxId() as any],
+      silent: true,
+    });
+  }
 }

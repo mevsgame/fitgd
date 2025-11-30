@@ -131,6 +131,10 @@ The dice you roll depend on what you're using to accomplish the task.
 **Roll Results:**
 - **1-3 (Failure):** You face consequences based on your Position and gain Momentum (+1 Controlled, +2 Risky, +4 Desperate, +6 Impossible).
 - **4-5 (Partial Success):** You succeed, but face consequences based on your Position and gain Momentum (+1 Controlled, +2 Risky, +4 Desperate, +6 Impossible).
+  - **Defensive Success Option:** If your Effect is Standard or higher, you may choose to reduce both your consequence severity by one position level AND your Effect by one tier. You still gain the full Momentum of your original Position. This represents distributing your success across both achieving your goal and protecting yourself from harm.
+    - Position reduction: Impossible→Desperate, Desperate→Risky, Risky→Controlled, Controlled→No consequence
+    - Effect reduction: Spectacular→Great, Great→Standard, Standard→Limited
+    - Example: A Risky position with Standard Effect can become a Controlled position (1 segment) with Limited Effect, while still gaining +2 Momentum.
 - **6 (Full Success):** You succeed without complication.
 - **Critical (Two 6s):** You achieve exceptional success--your Effect is increased by one level, and you gain some additional advantage or benefit.
 
@@ -139,6 +143,8 @@ The dice you roll depend on what you're using to accomplish the task.
 - **Position** determines the severity of consequences: **Controlled, Risky, Desperate, or Impossible**. Risky is the default. Controlled is earned through advantages (good gear, traits, tactical superiority). Desperate is typically a consequence of failure - when things go badly, your Position worsens. Impossible represents the most extreme and dire circumstances, where failure means devastating consequences. Position is determined through conversation between the GM and player, based on your approach and the situation. You can improve it by changing tactics or gaining advantages in the fiction.
 
 - **Effect** determines the impact of success: **Limited, Standard, Great, or Spectacular**. Standard is the default. Effect is determined through conversation between the GM and player, based on factors like the quality and tier of your gear, the scale of your action, relevant traits, and your approach. You can improve Effect by gaining advantages or by Pushing Yourself. Spectacular Effect represents extraordinary circumstances where your success has exceptional impact. **Effect only applies when you succeed** - it determines how much progress you make on success clocks (obstacles, objectives, etc.). It does not modify harm or other consequences from failure or partial success.
+
+- **Defensive Success Trade-off:** On partial success (4-5), if your Effect is Standard or higher, you can sacrifice one tier of Effect to reduce your consequence severity by one position level, while maintaining your original momentum gain. This allows you to balance impact against safety.
 
 #### **Teamwork**
 

@@ -18,6 +18,7 @@ import {
   selectEffectiveEffect,
   selectConsequenceSeverity,
   selectMomentumGain,
+  selectDefensiveSuccessValues,
 } from '@/selectors/playerRoundStateSelectors';
 
 /**
@@ -33,6 +34,8 @@ export interface ResolvedConsequenceData {
   effectivePosition: Position;
   effectiveEffect: Effect;
   consequenceConfigured: boolean;
+  defensiveSuccessValues?: any; // DefensiveSuccessValues from Redux
+  useDefensiveSuccess?: boolean;
 }
 
 /**
@@ -111,9 +114,24 @@ export class ConsequenceDataResolver {
     // Calculate harm segments and momentum gain using effective position
     // Note: Effect does NOT apply to consequences - only to success clocks
     const effectivePosition = selectEffectivePosition(state, this.config.characterId);
-    const effectiveEffect = selectEffectiveEffect(state, this.config.characterId);
-    const calculatedHarmSegments = selectConsequenceSeverity(effectivePosition);
-    const calculatedMomentumGain = selectMomentumGain(effectivePosition);
+    let effectiveEffect = selectEffectiveEffect(state, this.config.characterId);
+
+    // Check if defensive success is being used
+    let calculatedHarmSegments = selectConsequenceSeverity(effectivePosition);
+    let calculatedMomentumGain = selectMomentumGain(effectivePosition);
+
+    if (transaction.useDefensiveSuccess) {
+      // Defensive success reduces position by one step AND effect by one tier
+      const defensiveValues = selectDefensiveSuccessValues(state, this.config.characterId);
+      const defensivePosition = defensiveValues.defensivePosition;
+      const defensiveEffect = defensiveValues.defensiveEffect;
+
+      calculatedHarmSegments = defensivePosition ? selectConsequenceSeverity(defensivePosition) : 0;
+      // Effect is reduced when using defensive success
+      effectiveEffect = defensiveEffect || 'limited';
+      // Momentum ALWAYS comes from original position, not reduced position
+      calculatedMomentumGain = selectMomentumGain(effectivePosition);
+    }
 
     // Determine if consequence is fully configured
     let consequenceConfigured = false;
@@ -135,6 +153,8 @@ export class ConsequenceDataResolver {
       effectivePosition,
       effectiveEffect,
       consequenceConfigured,
+      defensiveSuccessValues: selectDefensiveSuccessValues(state, this.config.characterId),
+      useDefensiveSuccess: transaction?.useDefensiveSuccess || false,
     };
   }
 

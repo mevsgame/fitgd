@@ -472,6 +472,26 @@ See **[Stims Mechanics](mechanics-stims.md)** for comprehensive documentation.
 
 The stims interrupt is a last-resort mechanic for desperate situations, advancing the character's addiction clock at the cost of a reroll opportunity.
 
+#### Defensive Success Option
+
+See **[Defensive Success Feature](defensive-success.md)** for comprehensive documentation.
+
+**Widget Integration:**
+- **State**: Available in `GM_RESOLVING_CONSEQUENCE` (post-roll consequence resolution on partial success)
+- **Availability**: Only when rolling partial success (4-5) with Effect ≥ Standard
+- **Who Decides**: The **player** (not GM) chooses between Full Offense or Defensive Trade
+- **UI**: Two-column comparison panel showing both options side-by-side
+  - Left column: Full Offense (original position/effect/segments)
+  - Right column: Defensive Trade (reduced position/effect/segments with original momentum)
+- **Flow**: Player toggles option → GM configures clock/harm → Player accepts → Consequence applied with chosen values
+- **Mechanics**:
+  - Position reduces by one step (impossible→desperate→risky→controlled→none)
+  - Effect reduces by one tier (spectacular→great→standard→limited)
+  - Momentum preserved at original position value (not reduced)
+  - Example: Risky/Standard → Controlled (1 seg) with Limited effect, still +2M
+
+The defensive success option allows players to balance offense and defense, trading effect magnitude for consequence mitigation while maintaining momentum gains.
+
 ## Rules Integration
 
 *Primary Source: [vault/rules_primer.md](../vault/rules_primer.md)*

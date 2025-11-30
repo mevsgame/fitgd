@@ -9,6 +9,7 @@ import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
 import type { PlayerRoundState, Position, Effect } from '../types/playerRoundState';
 import type { EquipmentEffect } from '../types/equipment';
+import type { DefensiveSuccessValues } from '../types/resolution';
 import { DEFAULT_CONFIG } from '../config/gameConfig';
 import {
   calculateConsequenceSeverity,
@@ -23,6 +24,7 @@ import {
   improveEffect as improveEffectBySteps,
   worsenEffect as worsenEffectBySteps,
 } from '../utils/positionEffectHelpers';
+import { calculateDefensiveSuccessValues } from '../utils/defensiveSuccessRules';
 
 /**
  * Select player state by character ID
@@ -549,6 +551,29 @@ export const selectEffectiveEffect = createSelector(
     }
 
     return baseEffect;
+  }
+);
+
+/**
+ * Select defensive success values for current player state
+ *
+ * Computes whether defensive success option is available and what the values would be.
+ * Only available on partial success with effect ≥ standard.
+ */
+export const selectDefensiveSuccessValues = createSelector(
+  [
+    (state: RootState, characterId: string) => selectPlayerState(state, characterId),
+    (state: RootState, characterId: string) => selectEffectivePosition(state, characterId),
+    (state: RootState, characterId: string) => selectEffectiveEffect(state, characterId),
+  ],
+  (playerState, effectivePosition, effectiveEffect): DefensiveSuccessValues => {
+    const outcome = playerState?.outcome || 'failure';
+
+    return calculateDefensiveSuccessValues({
+      position: effectivePosition,
+      effect: effectiveEffect,
+      outcome,
+    });
   }
 );
 

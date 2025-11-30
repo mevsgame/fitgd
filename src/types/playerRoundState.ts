@@ -110,6 +110,11 @@ export interface ConsequenceTransaction {
   /** Selected crew clock ID (segments calculated automatically from position) */
   crewClockId?: string;
 
+  // ===== DEFENSIVE SUCCESS OPTION =====
+
+  /** Player chose defensive success option (reduce position, reduce effect) */
+  useDefensiveSuccess?: boolean;
+
   // ===== CALCULATED VALUES (read-only) =====
 
   /** Auto-calculated harm segments from Position × Effect table */

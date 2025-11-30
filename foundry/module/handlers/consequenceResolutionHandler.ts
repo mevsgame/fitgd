@@ -492,6 +492,32 @@ export class ConsequenceResolutionHandler {
   }
 
   /**
+   * Create action to toggle defensive success option
+   *
+   * @param enabled - Whether to enable defensive success
+   * @returns Redux action to update consequence transaction
+   */
+  createToggleDefensiveSuccessAction(enabled: boolean): {
+    type: string;
+    payload: {
+      characterId: string;
+      updates: {
+        useDefensiveSuccess: boolean;
+      };
+    };
+  } {
+    return {
+      type: 'playerRoundState/updateConsequenceTransaction',
+      payload: {
+        characterId: this.config.characterId,
+        updates: {
+          useDefensiveSuccess: enabled,
+        },
+      },
+    };
+  }
+
+  /**
    * Get the affected Redux ID for this character
    *
    * @param characterId - Optional override character ID

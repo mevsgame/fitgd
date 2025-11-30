@@ -118,6 +118,10 @@ interface PlayerActionWidgetData {
   effectivePosition?: Position;
   effectiveEffect?: Effect;
   consequenceConfigured?: boolean;
+
+  // Defensive success option (for GM_RESOLVING_CONSEQUENCE state)
+  defensiveSuccessValues?: any; // DefensiveSuccessValues from Redux
+  useDefensiveSuccess?: boolean;
 }
 
 // ClockData moved to coordinator implementations
@@ -677,6 +681,12 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     // Consequence buttons
     html.find('[data-action="use-stims"]').click((_e) => {
       void this.coordinator.handleUseStims();
+    });
+
+    // Defensive success toggle
+    html.find('[data-action="toggle-defensive-success"]').click((e) => {
+      const enabled = (e.currentTarget as HTMLElement).dataset.enabled === 'true';
+      void this.coordinator.handleToggleDefensiveSuccess(enabled);
     });
 
     // GM consequence configuration buttons
