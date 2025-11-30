@@ -7,6 +7,7 @@
 import { BaseSelectionDialog } from './base/BaseSelectionDialog';
 import type { Clock } from '@/types/clock';
 import type { RootState } from '@/store';
+import { selectHarmClocksByCharacter, selectThreatClocksByCrew } from '@/selectors/clockSelectors';
 
 /**
  * Dialog for selecting a harm or crew clock
@@ -24,24 +25,27 @@ export class ClockSelectionDialog extends BaseSelectionDialog {
   ) {
     const state: RootState = game.fitgd!.store.getState();
 
-    // Get clocks for entity
-    const allClocks = Object.values(state.clocks.byId);
-    const entityClocks = allClocks.filter((clock: Clock) => {
-      if (clock.entityId !== _entityId) return false;
+    // Get clocks for entity using selectors
+    let entityClocks: Clock[];
+    let title: string;
+    let emptyMessage: string;
 
-      if (clockType === 'harm') {
-        return clock.clockType === 'harm';
-      } else {
-        // crew clocks: anything that's not harm (progress clocks, consumables, addiction, etc.)
-        return clock.clockType !== 'harm';
-      }
-    });
+    if (clockType === 'harm') {
+      entityClocks = selectHarmClocksByCharacter(state, _entityId);
+      title = 'Select Harm Clock';
+      emptyMessage = 'No harm clocks yet';
+    } else {
+      // crew clocks: only threat category
+      entityClocks = selectThreatClocksByCrew(state, _entityId);
+      title = 'Select Threat Clock';
+      emptyMessage = 'No threat clocks available';
+    }
 
     super({
-      title: clockType === 'harm' ? 'Select Harm Clock' : 'Select Crew Clock',
+      title,
       items: entityClocks,
       allowCreate: true,
-      emptyMessage: clockType === 'harm' ? 'No harm clocks yet' : 'No crew clocks available',
+      emptyMessage,
       onSelect: onSelect,
       onCreate: async () => {
         // Close this dialog and trigger create flow

@@ -757,6 +757,7 @@ export class PlayerActionEventCoordinator {
         try {
           if (clockId === '_new') {
             // Open ClockCreationDialog for new crew clock
+            // Pre-select and lock to 'threat' category for consequence creation
             const creationDialog = new ClockCreationDialog(
               crewId,
               'progress',
@@ -782,7 +783,9 @@ export class PlayerActionEventCoordinator {
                   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                   this.context.getNotificationService().error(`Error creating clock: ${errorMessage}`);
                 }
-              }
+              },
+              {},
+              'threat'
             );
 
             creationDialog.render(true);

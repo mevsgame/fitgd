@@ -38,11 +38,201 @@
 - Provide command replay mechanism
 - Clean interfaces for Foundry (dice rolling, persistence)
 
+### 5. Documentation-First, Rules-Driven Development
+- **`vault/rules_primer.md` is the canonical source of truth** for all game mechanics
+- All feature changes must be validated against existing rules before implementation
+- Documentation in `docs/` must be updated BEFORE code changes for new features
+- No implementation can contradict the rules primer without explicit user approval to change the primer first
+
+---
+
+## Change Pipeline: Documentation-First → TDD → Implementation
+
+**⚠️ MANDATORY WORKFLOW FOR ALL FEATURES:**
+
+Every feature change follows this pipeline. Skipping steps invalidates the work.
+
+### Phase 1: Documentation & Rules Validation
+
+**BEFORE writing any code:**
+
+1. **Review `vault/rules_primer.md`**
+   - Does the proposed change align with existing game rules?
+   - Does it contradict any existing mechanics?
+   - Are there edge cases defined in the rules?
+
+2. **Review relevant `docs/` files**
+   - Check `docs/` for architecture decisions affecting this change
+   - Review existing patterns for similar features
+   - Identify what documentation needs updating
+
+3. **Validate against rules**
+   - If change contradicts rules primer → STOP, ask user to update primer first
+   - If change extends rules → Update primer first, then proceed
+   - If change is implementation-only → Proceed to Phase 2
+
+**Checklist:**
+- [ ] Read relevant sections of `vault/rules_primer.md`
+- [ ] Read relevant `docs/` architecture files
+- [ ] Identified any rule contradictions
+- [ ] If new rules needed: Rules primer updated and approved
+
+### Phase 2: Test-First Development (TDD)
+
+**BEFORE implementing features:**
+
+1. **Write failing tests that describe desired behavior**
+   - Tests reflect the rules defined in vault/rules_primer.md
+   - Tests verify command → state transformations
+   - Tests cover all scenarios mentioned in rules
+
+2. **Test structure:**
+   ```typescript
+   // ✅ CORRECT: Test describes the rule, not implementation
+   describe('Addiction Clock Reset', () => {
+     it('should reduce clock by resetReduction value from rules', () => {
+       // Per vault/rules_primer.md: "addiction resets reduce progress by N"
+       const state = createStateWithAddictionClock({ segments: 4 });
+       const action = resetAddictionClock(crewId);
+       const newState = reducer(state, action);
+
+       // DEFAULT_CONFIG.clocks.addiction.resetReduction defines the amount
+       expect(newState.clocks.byId[clockId].segments)
+         .toBe(4 - DEFAULT_CONFIG.clocks.addiction.resetReduction);
+     });
+   });
+   ```
+
+3. **Run tests - they MUST fail initially**
+   ```bash
+   npm test -- --grep "Addiction Clock Reset"
+   # Should show: FAIL ✓ (test exists but fails)
+   ```
+
+4. **Test coverage requirements:**
+   - Happy path (main game flow)
+   - Edge cases (boundaries, empty states)
+   - Rule-based scenarios (all conditions in rules)
+   - Error conditions (invalid inputs)
+
+**Checklist:**
+- [ ] Created test file with failing tests
+- [ ] Tests verify rules from vault/rules_primer.md
+- [ ] Tests cover all scenarios in documentation
+- [ ] Ran tests: confirmed they fail as expected
+- [ ] Each test has JSDoc linking to rules
+
+### Phase 3: Implementation
+
+**AFTER tests are written and documented:**
+
+1. **Implement to make tests pass**
+   ```bash
+   npm test -- --grep "Addiction Clock Reset"
+   # Should show: PASS ✓
+   ```
+
+2. **Implementation must:**
+   - Use selectors for state queries (don't access state directly)
+   - Use functions in `src/utils/` for business logic
+   - Use `DEFAULT_CONFIG` for game values
+   - Never contradict vault/rules_primer.md
+
+3. **No scope creep:**
+   - Only implement what tests specify
+   - Don't add "improvements" or extra features
+   - Don't refactor unrelated code
+
+### Phase 4: Documentation Updates
+
+**AFTER implementation is working:**
+
+1. **Update `docs/` files to reflect new behavior**
+   - Add implementation notes if complex
+   - Document patterns used (selectors, utils structure)
+   - Link to relevant rules in vault/rules_primer.md
+
+2. **Update code comments only for unclear logic:**
+   - JSDoc for public functions (required)
+   - Inline comments only where logic isn't self-evident
+   - Never comment obvious code
+
+**Checklist:**
+- [ ] Updated relevant `docs/` files
+- [ ] Updated CLAUDE.md if new patterns introduced
+- [ ] All JSDoc has examples
+- [ ] No unused documentation files created
+
+### Phase 5: Verification & Review
+
+**BEFORE committing:**
+
+1. **Type check & build**
+   ```bash
+   npm run type-check:all
+   npm run build
+   ```
+
+2. **Run full test suite**
+   ```bash
+   npm test
+   # All tests pass, including new ones
+   ```
+
+3. **Manual testing (if UI changes)**
+   - Test with GM + Player clients
+   - Verify state syncs correctly
+
+4. **Code review checklist:**
+   - [ ] Passes type-check:all
+   - [ ] Passes build
+   - [ ] All tests pass (including new ones)
+   - [ ] No code contradicts vault/rules_primer.md
+   - [ ] Tests verify rules, not implementation
+   - [ ] Used Bridge API (if Foundry changes)
+   - [ ] Documentation updated
+
+---
+
+## When Rules Primer Needs Updating
+
+**Scenario 1: New Feature Requiring Rule Changes**
+```
+User: "Add a mechanic that reduces harm clock reset by 1"
+Claude: STOP. This requires rules primer update.
+  1. Ask user: Should vault/rules_primer.md be updated?
+  2. Wait for user approval
+  3. Update vault/rules_primer.md with new rule
+  4. Follow change pipeline with new rule in place
+```
+
+**Scenario 2: Bug Fix Contradicts Rules**
+```
+User: "Fix bug in momentum calculation"
+Claude:
+  1. Find the contradiction
+  2. Ask: "Implement per rules, or should rules change?"
+  3. If rules change: Update vault/rules_primer.md first
+  4. Then follow change pipeline
+```
+
+**Scenario 3: Clarifying Ambiguous Rules**
+```
+User: "The rules say X is 'sometimes' applied. When exactly?"
+Claude:
+  1. Propose clarification to vault/rules_primer.md
+  2. Get approval
+  3. Implement based on clarified rule
+```
+
+**⚠️ GOLDEN RULE:**
+- No implementation can contradict vault/rules_primer.md
+- If contradiction exists, user must update rules primer first
+- Code changes always follow rule changes, never precede them
+
 ---
 
 ## Code Best Practices (From 4-Phase Audit)
-
-**Context:** Audit (Nov 2025) extracted 107 lines of business logic from Foundry → Redux, added 101 tests, established clear architectural boundaries.
 
 ### 1. Foundry-Redux Separation ✅
 
@@ -442,6 +632,10 @@ await saveImmediate();  // Single render cycle
 ## Critical Rules
 
 ### ✅ DO
+- **Follow the 5-phase change pipeline ALWAYS** (Documentation → TDD → Implementation → Docs → Verification)
+- **Read `vault/rules_primer.md` BEFORE writing any code** for a feature
+- **Write failing tests FIRST** before implementing features
+- **Check existing docs/** for patterns before inventing new ones
 - Use `game.fitgd.bridge.execute()` for single state changes
 - Use `game.fitgd.bridge.executeBatch()` for multiple related changes
 - Let Redux subscriptions handle all rendering
@@ -450,18 +644,33 @@ await saveImmediate();  // Single render cycle
 - Run `npm install` or `pnpm install` when starting work on fresh branch/session
 
 ### ❌ DO NOT
+- **Write code without reading rules primer first** - This violates the change pipeline
+- **Implement features without test-first approach** - Tests must fail before implementation
+- **Modify code that contradicts `vault/rules_primer.md`** - Stop and ask user to update primer first
+- **Skip documentation updates** - Docs must be updated AFTER implementation
 - Call `game.fitgd.store.dispatch()` directly (except socket handlers)
 - Call `game.fitgd.saveImmediate()` manually
 - Call `refreshSheetsByReduxId()` manually
 - Touch socket handler bare dispatches (socket message handlers)
 - Commit code without running type-check and build verification
-- **NEVER modify `vault/rules_primer.md` without explicit user consent** - This is the foundation document that defines the game system. Any changes must be approved before implementation.
 
 ### Exception
 Socket handlers in `receiveCommandsFromSocket()` intentionally use bare dispatch to prevent infinite broadcast loops.
 
-### Sacred Document
-**`vault/rules_primer.md` is the canonical game rules document.** It defines the core mechanics of Forged in the Grimdark and serves as the single source of truth for how the system works. This document should never be modified implicitly or as a side effect of other work. Any proposed changes to game rules must be explicitly reviewed and approved by the user before committing.
+### Sacred Documents
+
+**1. `vault/rules_primer.md` - CANONICAL GAME RULES**
+- The single source of truth for Forged in the Grimdark mechanics
+- Never modify implicitly or as side effect of other work
+- Any rule changes must be explicitly requested and approved by user BEFORE implementation
+- All code changes must validate against this document
+- If code contradicts this document, STOP and ask user to update primer first
+
+**2. `docs/` - ARCHITECTURE & IMPLEMENTATION PATTERNS**
+- Describes how to build features within the Redux/Foundry architecture
+- Must be reviewed before implementing new features
+- Must be updated after implementing new features
+- Establishes reusable patterns to prevent reinvention
 
 ---
 
