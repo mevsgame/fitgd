@@ -508,21 +508,6 @@ export class PlayerActionEventCoordinator {
     }).render(true);
   }
 
-  /**
-   * Handle equipment management dialog
-   */
-  async handleEquipment(): Promise<void> {
-    const crewId = this.context.getCrewId();
-    if (!crewId) {
-      this.context.getNotificationService().warn('Crew not found - equipment management requires a crew');
-      return;
-    }
-
-    // Import and open Equipment Management Dialog
-    const { EquipmentManagementDialog } = await import('../dialogs/EquipmentManagementDialog');
-    new EquipmentManagementDialog(this.context.getCharacterId(), crewId).render(true);
-  }
-
   /* ========================================
      ROLL EXECUTION EVENTS (2 handlers)
      ======================================== */

@@ -17,7 +17,7 @@ import { selectCanUseRally } from '@/selectors/characterSelectors';
 import { selectStimsAvailable } from '@/selectors/clockSelectors';
 
 import { selectActiveEquipment, selectPassiveEquipment, selectConsumableEquipment, selectFirstLockCost } from '@/selectors/equipmentSelectors';
-import { selectDicePool, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect, selectEquipmentEffects, selectEquipmentModifiedPosition, selectEquipmentModifiedEffect } from '@/selectors/playerRoundStateSelectors';
+import { selectDicePool, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect, selectEquipmentEffects, selectEquipmentModifiedPosition, selectEquipmentModifiedEffect, selectDefensiveSuccessValues } from '@/selectors/playerRoundStateSelectors';
 
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
 
@@ -596,7 +596,15 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
 
     // Only load consequence data if in GM_RESOLVING_CONSEQUENCE state
     if (playerState?.state === 'GM_RESOLVING_CONSEQUENCE') {
-      return this._getConsequenceData(state);
+      const consequenceData = this._getConsequenceData(state);
+
+      // Always include defensive success values for the player, even if no transaction yet
+      // This allows the player to see the toggle button immediately upon entering the phase
+      if (!consequenceData.defensiveSuccessValues) {
+        consequenceData.defensiveSuccessValues = selectDefensiveSuccessValues(state, this.characterId);
+      }
+
+      return consequenceData;
     }
 
     return {};
@@ -662,10 +670,7 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     });
     html.find('[data-action="use-trait"]').click((_e) => {
       void this.coordinator.handleUseTrait();
-    });
-    html.find('[data-action="equipment"]').click((_e) => {
-      void this.coordinator.handleEquipment();
-    });
+    }); 
     html.find('[data-action="push-die"]').click((_e) => {
       void this.coordinator.handleTogglePushDie();
     });
