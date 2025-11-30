@@ -1,48 +1,6 @@
 # Forged in the Grimdark - Redux Implementation Guide
 
- 
-## Project Overview
-
-**TypeScript + Redux Toolkit** event-sourced state management system for character and crew sheets. Designed to be **Foundry VTT agnostic** but compatible, with full command history for time-travel, undo, and data reconstruction.
-
----
-
-## Core Architecture Principles
-
-### 1. Event Sourcing
-- Full snapshot + complete command history stored
-- Current state is single source of truth
-- Command history allows reconstruction, undo, and audit trails
-
-### 2. Entity Separation
-**High-change entities** (separate stores with full history):
-- `Clock` - Abstract entity for harm, addiction, progress tracking
-- `Momentum` - Crew-level shared resource
-- `PlayerRoundState` - Turn workflow and action resolution state
-
-**Low-change entities** (snapshot with history):
-- `Character` - Traits, approaches, equipment, harm clocks
-- `Crew` - Metadata, campaign info
-- `Equipment` - Loot with state tracking (equipped, locked, consumed)
-
-**Design Principle:** Clocks are generic/reusable. Different clock types are instances of the same `Clock` entity with different metadata.
-
-### 3. TDD First
-- Every feature starts with failing tests
-- Tests verify command → state transformations
-- Property-based tests for invariant checking
-
-### 4. Foundry Compatibility
-- **No Foundry dependencies** in core logic
-- Expose serializable JSON state for Foundry persistence
-- Provide command replay mechanism
-- Clean interfaces for Foundry (dice rolling, persistence)
-
-### 5. Documentation-First, Rules-Driven Development
-- **`vault/rules_primer.md` is the canonical source of truth** for all game mechanics
-- All feature changes must be validated against existing rules before implementation
-- Documentation in `docs/` must be updated BEFORE code changes for new features
-- No implementation can contradict the rules primer without explicit user approval to change the primer first
+**TypeScript + Redux Toolkit** event-sourced state management for character and crew sheets. Foundry VTT compatible with full command history for time-travel, undo, and audit trails.
 
 ---
 
@@ -169,28 +127,23 @@ Every feature change follows this pipeline. Skipping steps invalidates the work.
 
 1. **Type check & build**
    ```bash
-   npm run type-check:all
-   npm run build
+   npm run type-check:all && npm run build
    ```
 
-2. **Run full test suite**
+2. **Run tests (minimal output)**
    ```bash
-   npm test
-   # All tests pass, including new ones
+   npm test 2>&1 | grep -E "^(PASS|FAIL|Tests:|✓|✗)" | tail -50
+   # For specific test: npm test -- --grep "pattern" 2>&1 | grep -E "^(✓|✗|Error)"
    ```
 
-3. **Manual testing (if UI changes)**
-   - Test with GM + Player clients
-   - Verify state syncs correctly
-
-4. **Code review checklist:**
-   - [ ] Passes type-check:all
-   - [ ] Passes build
-   - [ ] All tests pass (including new ones)
+3. **Verification checklist:**
+   - [ ] Passes type-check:all and build
+   - [ ] All tests pass (check failure summary only)
    - [ ] No code contradicts vault/rules_primer.md
    - [ ] Tests verify rules, not implementation
    - [ ] Used Bridge API (if Foundry changes)
    - [ ] Documentation updated
+   - [ ] Tested with GM + Player clients (if UI changes)
 
 ---
 
@@ -232,93 +185,63 @@ Claude:
 
 ---
 
-## Code Best Practices (From 4-Phase Audit)
-
-### 1. Foundry-Redux Separation ✅
+## Architecture & Code Principles
 
 **GOLDEN RULE:** All business logic belongs in Redux layer, NOT Foundry widgets.
 
-**Foundry Layer (Presentation):**
-- UI rendering, event handling
-- Foundry API integration
-- Bridge API calls to update Redux
-
-**Redux Layer (Business Logic):**
-- Game rules, state management
-- Validation, pure utility functions
-- Configuration values
+### Foundry-Redux Separation
+- **Foundry:** UI rendering, event handling, Bridge API calls
+- **Redux:** Game rules, validation, pure functions, configuration
 
 ```typescript
-// ✅ CORRECT: Business logic in Redux utils
-// src/utils/diceRules.ts
+// ✅ CORRECT: Business logic in Redux utils (src/utils/diceRules.ts)
 export function calculateOutcome(rollResult: number[]): DiceOutcome {
   const sixes = rollResult.filter(d => d === 6).length;
   if (sixes >= 2) return 'critical';
   // ...
 }
 
-// Foundry widget uses it
+// Foundry widget uses it (imports from Redux layer)
 import { calculateOutcome } from '@/utils/diceRules';
 const outcome = calculateOutcome(rollResult);
 ```
 
-### 2. Check for Existing Selectors First ✅
+### Code Organization
 
-```bash
-# Before implementing state queries, search for existing selectors
-grep -rn "selectStims" src/selectors/
-```
+1. **Pure functions** → `src/utils/` (TDD first, write tests before code)
+2. **State queries** → `src/selectors/` (search for existing first with `grep -rn "selectName" src/selectors/`)
+3. **Game values** → `src/config/gameConfig.ts` (no magic numbers)
+4. **Types** → Export with functions: `export type X = ...; export function y(): X { }`
 
-Use existing selector if found. If none exists, create in Redux (NOT in widget).
-
-### 3. Extract Pure Functions, Write Tests FIRST ✅
-
-**TDD Workflow:**
-1. Create utility with signature (throws error)
-2. Write comprehensive tests FIRST
-3. Implement function to make tests pass
-4. Use in Foundry widget
-
-### 4. No Magic Numbers - Centralized Config ✅
-
-```typescript
-// ✅ CORRECT: Use centralized config
-import { DEFAULT_CONFIG } from '@/config/gameConfig';
-
-getData() {
-  return {
-    maxMomentum: DEFAULT_CONFIG.crew.maxMomentum,
-    maxSegments: DEFAULT_CONFIG.clocks.addiction.segments,
-  };
-}
-```
-
-### 5. Export Types with Functions ✅
-
-```typescript
-export type DiceOutcome = 'critical' | 'success' | 'partial' | 'failure';
-export function calculateOutcome(rollResult: number[]): DiceOutcome { /* ... */ }
-```
-
-### 6. Comprehensive Test Coverage ✅
-
-Every pure function/selector should cover:
-- Happy paths (all valid outcomes)
-- Edge cases (empty inputs, boundaries, max values)
-- Priority rules (when multiple conditions apply)
-- Real-world scenarios (gameplay situations)
-
-### 7. Use Selectors for ALL State Queries ✅
+### State Query Pattern
 
 ```typescript
 // ✅ CORRECT: Use existing selector
 import { selectAddictionClockByCrew } from '@/selectors/clockSelectors';
-const addictionClock = selectAddictionClockByCrew(state, this.crewId);
+const clock = selectAddictionClockByCrew(state, crewId);
+// Memoized, testable, reusable, type-safe
 ```
 
-**Why:** Memoized, testable, reusable, type-safe, single source of truth.
+### Test Coverage Requirements
 
-### 8. JSDoc with Examples ✅
+Every function/selector should cover:
+- Happy paths (all valid outcomes)
+- Edge cases (boundaries, empty inputs)
+- Rule-based scenarios (all conditions in rules)
+- Error conditions (invalid inputs)
+
+### Architectural Decision Template
+
+When adding game logic, ask:
+1. **Is this a pure function?** → Extract to `src/utils/`
+2. **Is this a state query?** → Create selector in `src/selectors/`
+3. **Is this a constant game value?** → Add to `src/config/gameConfig.ts`
+4. **Is this Foundry-specific UI?** → Can stay in Foundry widget
+5. **Can this be reused?** → MUST be in Redux layer
+
+**Default:** If in doubt, extract to Redux layer.
+
+### JSDoc Requirements
 
 ```typescript
 /**
@@ -331,108 +254,50 @@ const addictionClock = selectAddictionClockByCrew(state, this.crewId);
  * calculateOutcome([6, 6, 3]) // 'critical'
  * calculateOutcome([5, 4, 3]) // 'partial'
  */
+export type DiceOutcome = 'critical' | 'success' | 'partial' | 'failure';
+export function calculateOutcome(rollResult: number[]): DiceOutcome { /* ... */ }
 ```
 
-### 9. Architectural Decision Template ✅
-
-When adding game logic, ask:
-1. **Is this a pure function?** → Extract to `src/utils/`
-2. **Is this a state query?** → Create selector in `src/selectors/`
-3. **Is this a constant game value?** → Add to `src/config/gameConfig.ts`
-4. **Is this Foundry-specific UI?** → Can stay in Foundry widget
-5. **Can this be reused?** → MUST be in Redux layer
-
-**Default:** If in doubt, extract to Redux layer.
-
----
-
-## Technology Stack
-
-| Layer | Technology | Rationale |
-|-------|-----------|-----------|
-| State Management | Redux Toolkit | Excellent TS support, built-in Immer |
-| Language | TypeScript 5+ | Type safety, excellent tooling |
-| Testing | Vitest | Fast, modern, excellent TS support |
-| Build | Vite | Fast, modern, tree-shakeable |
-| Package Manager | npm / pnpm | Both supported; pnpm preferred (lockfiles for both) |
+All public functions require JSDoc with examples. Types should be exported alongside functions.
 
 ---
 
 ## Data Model
 
-### Command Schema
-```typescript
-interface Command<T = unknown> {
-  type: string;                    // e.g., "character/addTrait"
-  payload: T;
-  timestamp: number;               // Unix timestamp (ms)
-  version: number;                 // Schema version for migration
-  userId?: string;
-  commandId: string;               // UUID for idempotency
-}
-```
+### Entities (Redux IDs = Foundry Actor IDs)
 
-### Core Entities
-
-#### Character
 ```typescript
 interface Character {
   id: string;                      // Foundry Actor ID
   name: string;
   traits: Trait[];
-  approaches: Approaches;          // 4 approaches (force, guile, focus, spirit), 0-4 dots each
+  approaches: Approaches;          // 4 approaches (force, guile, focus, spirit), 0-4 dots
   equipment: Equipment[];
   rallyAvailable: boolean;
-  createdAt: number;
-  updatedAt: number;
 }
-```
 
-#### Crew
-```typescript
 interface Crew {
-  id: string;
+  id: string;                      // Foundry Actor ID
   name: string;
   characters: string[];            // Character IDs
   currentMomentum: number;         // 0-10, starts at 5
-  createdAt: number;
-  updatedAt: number;
 }
-```
 
-#### Clock (Abstract)
-```typescript
 interface Clock {
   id: string;
-  entityId: string;                // characterId, crewId
+  entityId: string;                // characterId or crewId
   clockType: 'harm' | 'addiction' | 'progress';
-  subtype?: string;
   segments: number;
   maxSegments: number;
-  metadata?: {
-    rarity?: 'common' | 'uncommon' | 'rare';
-    tier?: 'accessible' | 'inaccessible';
-    frozen?: boolean;
-    [key: string]: unknown;
-  };
-  createdAt: number;
-  updatedAt: number;
+  metadata?: { rarity?: string; tier?: string; frozen?: boolean };
 }
-```
 
-#### Equipment
-```typescript
-interface Equipment {
-  id: string;
-  name: string;
-  category: 'active' | 'passive' | 'consumable';
-  tier: 'common' | 'rare' | 'epic';
-  slots: number;
-  equipped: boolean;
-  locked: boolean;
-  consumed: boolean;
-  createdAt: number;
-  updatedAt: number;
+interface Command<T = unknown> {
+  type: string;
+  payload: T;
+  timestamp: number;
+  version: number;
+  commandId: string;               // UUID for idempotency
 }
 ```
 
@@ -440,19 +305,14 @@ interface Equipment {
 
 ```typescript
 interface RootState {
-  characters: {
-    byId: Record<string, Character>;
-    allIds: string[];
-    history: Command[];
-  };
-  crews: { /* same structure */ };
+  characters: { byId: Record<string, Character>; allIds: string[]; history: Command[] };
+  crews: { byId: Record<string, Crew>; allIds: string[]; history: Command[] };
   clocks: {
     byId: Record<string, Clock>;
     allIds: string[];
-    // Indexes for efficient lookups
-    byEntityId: Record<string, string[]>;
+    byEntityId: Record<string, string[]>;      // Efficient lookup
     byType: Record<string, string[]>;
-    byTypeAndEntity: Record<string, string[]>;   // "harm:character-123"
+    byTypeAndEntity: Record<string, string[]>; // "harm:character-123"
     history: Command[];
   };
 }
@@ -489,346 +349,176 @@ export const DEFAULT_CONFIG: GameConfig = {
 
 ---
 
-## Foundry-Redux Bridge API (CRITICAL)
+## Foundry-Redux Bridge API
 
-**Status:** ✅ **IMPLEMENTED** (56+ usages, ongoing adoption)
-
-### The Problem
-
-Direct Redux access requires remembering 3+ steps, easy to forget:
+**Use Bridge API for ALL state changes in Foundry widgets.**
 
 ```javascript
-// ❌ Error-prone pattern
+// ✅ CORRECT: Single call encapsulates dispatch → broadcast → refresh
+await game.fitgd.bridge.execute({ type: 'action', payload: {...} });
+
+// ✅ CORRECT: Batch multiple actions (prevents render race conditions)
+await game.fitgd.bridge.executeBatch([
+  { type: 'action1', payload: {...} },
+  { type: 'action2', payload: {...} }
+]);
+
+// ❌ WRONG: Direct dispatch without broadcast/refresh
 game.fitgd.store.dispatch({ type: 'action', payload: {...} });
-await game.fitgd.saveImmediate();  // Forget → GM doesn't see changes
-refreshSheetsByReduxId([id], false);  // Forget → UI doesn't update
 ```
 
-### The Solution
-
-**Foundry-Redux Bridge API** encapsulates entire pattern:
-
-```javascript
-// ✅ CORRECT: Single call, impossible to forget steps
-await game.fitgd.bridge.execute(
-  { type: 'action', payload: {...} }
-);
-// Automatically: dispatches → broadcasts → refreshes affected sheets
-```
-
-### Key Features
-
-1. **Automatic broadcast** - Can't forget, it's part of the call
-2. **Automatic sheet refresh** - Detects affected entities
-3. **Batch support** - Prevents render race conditions:
-   ```javascript
-   await game.fitgd.bridge.executeBatch([
-     { type: 'action1', payload: {...} },
-     { type: 'action2', payload: {...} },
-     { type: 'action3', payload: {...} }
-   ]);
-   ```
-4. **ID mapping** - Handles Redux ↔ Foundry Actor ID conversion
-5. **Query methods** - Safe access to Redux state
-
-### Benefits
-
-| Before | After |
-|--------|-------|
-| 3-5 lines of code | 1-3 lines |
-| Easy to forget steps | Impossible to forget |
-| Render race conditions | Batching prevents races |
-| ID confusion | Automatic mapping |
-| Hard to test | Easy to mock |
-
-**Key Principle:** Make the correct pattern the easy pattern.
+**Why:** Encapsulates 3+ required steps (dispatch → broadcast → refresh) into one call. Automatic ID mapping, batch support.
 
 ---
 
-## Common Pitfalls (Implementation Learnings)
+## Critical Implementation Patterns
 
-### 1. Unified IDs: Foundry Actor ID === Redux ID ✅
+### Unified IDs (Foundry Actor ID === Redux ID)
+- No separate ID mapping layer - use Foundry IDs directly
+- Simpler code, better debugging, faster access
 
-**Solution:** Redux entities use Foundry Actor IDs directly as primary key.
+### Broadcasting Pattern
+- **Rule:** Every bare `store.dispatch()` MUST be followed by `await game.fitgd.saveImmediate()`
+- **Exception:** Socket handlers in `receiveCommandsFromSocket()` intentionally skip this to prevent infinite loops
+- **Better:** Use Bridge API to avoid this entirely
 
-```javascript
-// ✅ Single ID, direct access
-const characterId = game.fitgd.api.character.create({ id: actor.id, ... });
-const character = state.characters.byId[actor.id];
-```
+### Render Lifecycle
+- **Pattern 1:** Let Redux subscriptions handle ALL rendering
+  ```javascript
+  async _onRoll() {
+    dispatch(transitionState('ROLLING'));
+    await saveImmediate();  // Subscription handles render
+    const result = await this._rollDice();
+    dispatch(setRollResult(result));
+    await saveImmediate();  // Subscription handles render
+  }
+  ```
 
-**Benefits:** No ID mapping, simpler code, better debugging, faster access.
+- **Pattern 2:** Batch dispatches before broadcast
+  ```javascript
+  dispatch(action1());
+  dispatch(action2());
+  dispatch(action3());
+  await saveImmediate();  // Single render cycle
+  ```
 
-### 2. Package Manager: npm or pnpm ✅
+- **Render blocking:** Use `render(true)` for structural changes, `render(false)` for value updates (Foundry-specific optimization)
 
-**Status:** Both npm and pnpm are supported. Project maintains both `package-lock.json` and `pnpm-lock.yaml`.
-
-```bash
-# ✅ Either works
-npm install
-pnpm install
-
-# Use your preferred manager consistently
-npm run build:foundry
-# or
-pnpm run build:foundry
-```
-
-**Recommendation:** Use `pnpm` for faster installs, but npm works fine for this project.
-
-### 3. Universal Broadcasting Pattern ✅
-
-**⚠️ GOLDEN RULE:** Every `store.dispatch()` MUST be followed by `await game.fitgd.saveImmediate()`
-
-```javascript
-// ✅ CORRECT
-game.fitgd.store.dispatch({ type: 'action', payload: { /* ... */ } });
-await game.fitgd.saveImmediate();
-
-// ❌ WRONG - GM won't see the change
-game.fitgd.store.dispatch({ type: 'action', payload: { /* ... */ } });
-this.render();
-```
-
-**Exception:** Socket handlers in `receiveCommandsFromSocket()` intentionally use bare dispatch to prevent infinite loops.
-
-### 4. Foundry Render Lifecycle ✅
-
-**Pattern 1: Let Redux subscription handle ALL rendering**
-
-```javascript
-// ✅ CORRECT
-async _onRoll() {
-  dispatch(transitionState('ROLLING'));
-  await saveImmediate();  // Subscription handles render
-
-  const result = await this._rollDice();
-
-  dispatch(setRollResult(result));
-  await saveImmediate();  // Subscription handles render
-}
-```
-
-**Pattern 2: Batch dispatches before broadcast**
-
-```javascript
-// ✅ CORRECT
-dispatch(action1());
-dispatch(action2());
-dispatch(action3());
-await saveImmediate();  // Single render cycle
-```
-
-### 5. Quick Pitfall Reference
-
-- **Broadcast loops:** Update `lastBroadcastCount` immediately after applying socket commands
-- **Clock deletion refresh:** Capture entityId mapping BEFORE deleting
-- **Harm overflow:** Cap segments at max, don't error (game design)
+### Quick Reference
+- **Broadcast loops:** Update `lastBroadcastCount` immediately after socket commands
+- **Clock deletion:** Capture entityId mapping BEFORE deleting
+- **Harm overflow:** Cap segments at max, don't error
 - **Orphaned commands:** Make replay resilient to "entity not found"
-- **Render blocking:** Use `render(true)` for structural changes, `render(false)` for value updates
+- **Package manager:** Both npm and pnpm supported; use consistently
 
 ---
 
 ## Critical Rules
 
-### ✅ DO
-- **Follow the 5-phase change pipeline ALWAYS** (Documentation → TDD → Implementation → Docs → Verification)
-- **Read `vault/rules_primer.md` BEFORE writing any code** for a feature
-- **Write failing tests FIRST** before implementing features
-- **Check existing docs/** for patterns before inventing new ones
-- Use `game.fitgd.bridge.execute()` for single state changes
-- Use `game.fitgd.bridge.executeBatch()` for multiple related changes
-- Let Redux subscriptions handle all rendering
-- Test with GM + Player clients before declaring done
-- Verify TypeScript builds before committing (`npm run type-check:all`)
-- Run `npm install` or `pnpm install` when starting work on fresh branch/session
+### Sacred Documents (Non-negotiable)
 
-### ❌ DO NOT
-- **Write code without reading rules primer first** - This violates the change pipeline
-- **Implement features without test-first approach** - Tests must fail before implementation
-- **Modify code that contradicts `vault/rules_primer.md`** - Stop and ask user to update primer first
-- **Skip documentation updates** - Docs must be updated AFTER implementation
-- Call `game.fitgd.store.dispatch()` directly (except socket handlers)
-- Call `game.fitgd.saveImmediate()` manually
-- Call `refreshSheetsByReduxId()` manually
-- Touch socket handler bare dispatches (socket message handlers)
-- Commit code without running type-check and build verification
+**`vault/rules_primer.md` - CANONICAL GAME RULES**
+- Single source of truth for all mechanics
+- All code MUST validate against this
+- If code contradicts rules → STOP, ask user to update primer first
+- Never modify implicitly or as side effect of other work
+
+**`docs/` - ARCHITECTURE PATTERNS**
+- Describes Redux/Foundry integration patterns
+- Review before implementing new features
+- Update AFTER implementation is working
+
+### DO
+- **ALWAYS follow 5-phase pipeline** (Documentation → TDD → Implementation → Docs → Verification)
+- **Read rules primer BEFORE writing code**
+- **Write failing tests FIRST** before implementation
+- Use Bridge API for state changes (`game.fitgd.bridge.execute()` / `executeBatch()`)
+- Let Redux subscriptions handle all rendering
+- Batch dispatches before broadcast
+- Run `npm install` at start of session
+- Type-check before committing: `npm run type-check:all && npm run build`
+
+### DO NOT
+- Write code without reading rules primer first
+- Implement without test-first approach (tests must fail initially)
+- Call `store.dispatch()` directly in Foundry widgets (use Bridge API)
+- Call `saveImmediate()` or `refreshSheetsByReduxId()` manually
+- Call `this.render()` - let Redux subscriptions handle it
+- Commit without type-check and build verification
 
 ### Exception
-Socket handlers in `receiveCommandsFromSocket()` intentionally use bare dispatch to prevent infinite broadcast loops.
-
-### Sacred Documents
-
-**1. `vault/rules_primer.md` - CANONICAL GAME RULES**
-- The single source of truth for Forged in the Grimdark mechanics
-- Never modify implicitly or as side effect of other work
-- Any rule changes must be explicitly requested and approved by user BEFORE implementation
-- All code changes must validate against this document
-- If code contradicts this document, STOP and ask user to update primer first
-
-**2. `docs/` - ARCHITECTURE & IMPLEMENTATION PATTERNS**
-- Describes how to build features within the Redux/Foundry architecture
-- Must be reviewed before implementing new features
-- Must be updated after implementing new features
-- Establishes reusable patterns to prevent reinvention
+Socket handlers intentionally use bare dispatch to prevent infinite broadcast loops.
 
 ---
 
 ## Development Workflow
 
-### ⚠️ FIRST STEP: Install Dependencies
-
-**CRITICAL:** Always run `npm install` (or `pnpm install`) on fresh branch or new session!
-
+### Installation (Run First)
 ```bash
-# ALWAYS run this first
-npm install
-# or: pnpm install
-
-# Verify installation
+npm install  # or: pnpm install (either works, use consistently)
 npm run build
 ```
 
-**When to run:**
-- Starting work on new branch
-- After pulling changes to `package.json` or lockfiles
-- When encountering "Cannot find module" errors
-- At start of every Claude Code session
-
-### Before Committing Code
+### Before Committing
 
 ```bash
-# 1. Type check
-npm run type-check:all
+# Type check & build
+npm run type-check:all && npm run build
 
-# 2. Build verification
-npm run build
+# Run tests (minimal output only)
+npm test 2>&1 | grep -E "^(PASS|FAIL|Tests:|✓|✗)" | tail -50
+# For specific test: npm test -- --grep "pattern" 2>&1 | grep -E "^(✓|✗|Error)"
 
-# 3. Run tests
-npm test
-
-# 4. Commit
+# Commit
 git add .
 git commit -m "your message"
 git push
 ```
 
-### Pre-Commit Checklist
-
-- [ ] Dependencies installed (`npm install` or `pnpm install`)
-- [ ] Code compiles (`npm run build`)
-- [ ] Type check passes (`npm run type-check:all`)
-- [ ] No new TypeScript errors introduced
-- [ ] Tested with GM + Player clients (for Foundry changes)
-- [ ] Used Bridge API for state changes
-- [ ] **User Code review requested and approved** - Mandatory If the user requested it before during session
-
-### Common Commands
+### Quick Command Reference
 
 ```bash
-# Install dependencies
-npm install  # or: pnpm install
-
-# Type check specific file
-npm run type-check:foundry | grep "filename.ts"
-
-# Build and watch
-npm run build:watch
-
-# Run tests
-npm test
-
-# Type check core
-npm run type-check:core
-
-# Type check all
-npm run type-check:all
+npm run type-check:core          # Type check src/ only
+npm run type-check:foundry       # Type check foundry module
+npm run type-check:all           # Type check everything
+npm run build:watch              # Watch and rebuild
+npm test -- --grep "pattern"     # Run specific test
 ```
-
-### ⚠️ Running Tests
-
-**NOTE:** `npm test` produces large output (700+ tests). When running tests:
-- **Look for failure summaries** at the end (FAIL/PASS indicators)
-- **Use filters** if targeting specific tests: `npm test -- --grep "pattern"`
-- **Check for error sections** rather than reading full output
-- **Capture and analyze** final summary line showing pass/fail counts
 
 ---
 
 ## Project Structure
 
 ```
-fitgd/
-├── src/
-│   ├── api/              # High-level API layer
-│   ├── store/            # Configure store, middleware
-│   ├── slices/           # Redux slices (character, crew, clock, playerRoundState)
-│   ├── types/            # TypeScript interfaces
-│   ├── config/           # gameConfig.ts (DEFAULT_CONFIG)
-│   ├── validators/       # Business rule validation
-│   ├── selectors/        # Memoized selectors
-│   ├── resolution/       # Consequence resolution logic
-│   ├── resources/        # Resource management
-│   ├── adapters/         # Foundry Actor/Item mapping
-│   └── utils/            # Pure functions, command factory
-│
-├── tests/
-│   ├── unit/             # Per-reducer and selector tests
-│   ├── integration/      # Cross-slice, API contract tests
-│   └── fixtures/         # Test data
-│
-├── foundry/
-│   └── module/
-│       ├── foundry-redux-bridge.mjs  # Bridge API
-│       ├── handlers/     # Business logic handlers
-│       ├── dialogs/      # Dialog implementations
-│       └── widgets/      # UI widgets & components
-│
-├── docs/                 # Architecture and implementation docs
-└── README.md             # Project overview
+src/
+├── api/              # High-level API
+├── store/            # Store configuration
+├── slices/           # Redux reducers
+├── selectors/        # Memoized selectors
+├── utils/            # Pure functions
+├── config/           # gameConfig.ts
+├── validators/       # Rule validation
+└── types/            # TypeScript interfaces
+
+tests/
+├── unit/             # Per-reducer tests
+├── integration/      # Cross-slice workflows
+└── fixtures/         # Test data
+
+foundry/module/
+├── foundry-redux-bridge.mjs  # Bridge API
+├── handlers/         # Business logic
+├── dialogs/          # Dialog UIs
+└── widgets/          # Component widgets
+
+docs/                 # Architecture documentation
+vault/                # Game rules (rules_primer.md)
 ```
 
---- 
+## Foundry Integration Notes
 
-## Testing Strategy
-
-**700+ tests** covering unit, integration, and selector scenarios.
-
-**Approach:** Test command → state transformations, not implementation details.
-
-- **Unit tests:** Per-reducer command handling
-- **Integration tests:** Cross-slice workflows (e.g., character creation + equipment)
-- **Selector tests:** Memoization and correctness
-- **Invariant tests:** Constraints always maintained (approaches 0-4, momentum 0-10, etc.)
-
-See `tests/` directory for examples.
-
----
-
-## Foundry VTT Integration
-
-### Actor/Item Mapping
-
-**Character → Foundry Actor (type: "character")**
-- Redux ID = Foundry Actor ID (unified)
-- Derived data (harm clocks) fetched via selectors
-
-**Crew → Foundry Actor (type: "crew")**
-- Redux ID = Foundry Actor ID
-- Derived data (addiction/consumable clocks) via selectors
-
-**Equipment/Trait → Foundry Items**
-- Standard item mapping
-
-### Persistence Strategy
-- Foundry saves full Redux state snapshot to world data
-- On load, hydrate Redux store from snapshot
-- Command history optionally saved separately for audit/replay
-
-### Data Flow
-```
-Foundry UI → Command → Redux → Selector → Actor Update
-     ↑                                          ↓
-     └────────── Subscription callback ─────────┘
-```
- 
+- **Redux ID = Foundry Actor ID** (no separate ID layer)
+- Character/Crew are Foundry Actors
+- Selectors fetch derived data (harm clocks, etc.)
+- Foundry saves Redux state snapshot to world data
+- Data flow: Foundry UI → Bridge API → Redux → Selectors → Actor Update
