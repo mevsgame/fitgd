@@ -14,6 +14,9 @@
 
 import type { IPlayerActionWidgetContext } from '../types/widgetContext';
 import { asReduxId } from '../types/ids';
+import { DEFAULT_CONFIG } from '@/config/gameConfig';
+import { selectEffectiveEffect } from '@/selectors/playerRoundStateSelectors';
+import { calculateOutcome } from '@/utils/diceRules';
 
 /**
  * Coordinates event handling for Player Action Widget
@@ -563,7 +566,6 @@ export class PlayerActionEventCoordinator {
         `${characterName} - ${approach} approach`
       );
 
-      const { calculateOutcome } = await import('@/utils/diceRules');
       const outcome = calculateOutcome(rollResult);
 
       // Execute all roll outcome actions as batch
@@ -962,7 +964,6 @@ export class PlayerActionEventCoordinator {
       `${characterName} - ${approach} approach (Stims Reroll)`
     );
 
-    const { calculateOutcome } = await import('@/utils/diceRules');
     const outcome = calculateOutcome(rollResult);
 
     // Execute outcome actions
@@ -1059,8 +1060,6 @@ export class PlayerActionEventCoordinator {
 
                   // Calculate segments based on current effect only (position doesn't affect success)
                   const state = game.fitgd.store.getState();
-                  const { selectEffectiveEffect } = await import('@/selectors/playerRoundStateSelectors');
-                  const { DEFAULT_CONFIG } = await import('@/config/gameConfig');
 
                   const effect = selectEffectiveEffect(state, this.context.getCharacterId());
                   const segments = DEFAULT_CONFIG.resolution.successSegments[effect];
@@ -1093,8 +1092,6 @@ export class PlayerActionEventCoordinator {
           } else {
             // Set the clock ID and calculate segments based on current effect only
             const state = game.fitgd.store.getState();
-            const { selectEffectiveEffect } = await import('@/selectors/playerRoundStateSelectors');
-            const { DEFAULT_CONFIG } = await import('@/config/gameConfig');
 
             const effect = selectEffectiveEffect(state, this.context.getCharacterId());
             const segments = DEFAULT_CONFIG.resolution.successSegments[effect];
