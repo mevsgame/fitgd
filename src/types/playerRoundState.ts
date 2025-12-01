@@ -115,6 +115,17 @@ export interface ConsequenceTransaction {
   /** Player chose defensive success option (reduce position, reduce effect) */
   useDefensiveSuccess?: boolean;
 
+  // ===== SUCCESS CLOCK OPTIONS (for success/critical outcomes) =====
+
+  /** Operation to perform on success clock: 'add' to advance progress, 'reduce' to reduce threat */
+  successClockOperation?: 'add' | 'reduce';
+
+  /** Selected clock ID to modify (if advancing progress or reducing threat) */
+  successClockId?: string;
+
+  /** Auto-calculated segments to add/reduce for success clock operation */
+  calculatedSuccessClockSegments?: number;
+
   // ===== CALCULATED VALUES (read-only) =====
 
   /** Auto-calculated harm segments from Position × Effect table */

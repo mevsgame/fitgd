@@ -36,6 +36,11 @@ export interface ResolvedConsequenceData {
   consequenceConfigured: boolean;
   defensiveSuccessValues?: any; // DefensiveSuccessValues from Redux
   useDefensiveSuccess?: boolean;
+  // Success clock fields
+  successClockId?: string | null;
+  selectedSuccessClock?: Clock | null;
+  successClockOperation?: 'add' | 'reduce';
+  calculatedSuccessClockSegments?: number;
 }
 
 /**
@@ -143,6 +148,12 @@ export class ConsequenceDataResolver {
       consequenceConfigured = Boolean(transaction.crewClockId);
     }
 
+    // Resolve selected success clock
+    let selectedSuccessClock: Clock | null = null;
+    if (transaction.successClockId) {
+      selectedSuccessClock = state.clocks.byId[transaction.successClockId] || null;
+    }
+
     return {
       consequenceTransaction: transaction,
       harmTargetCharacter,
@@ -155,6 +166,10 @@ export class ConsequenceDataResolver {
       consequenceConfigured,
       defensiveSuccessValues: selectDefensiveSuccessValues(state, this.config.characterId),
       useDefensiveSuccess: transaction?.useDefensiveSuccess || false,
+      successClockId: transaction.successClockId || null,
+      selectedSuccessClock,
+      successClockOperation: transaction.successClockOperation || undefined,
+      calculatedSuccessClockSegments: transaction.calculatedSuccessClockSegments || undefined,
     };
   }
 
