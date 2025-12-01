@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { configureStore } from '../../src/store';
 import { createClock, addSegments } from '../../src/slices/clockSlice';
 import { createCrew } from '../../src/slices/crewSlice';
-import { selectThreatClocksByCrew } from '../../src/selectors/clockSelectors';
+import { selectThreatClocksByCrew, selectProgressClocksByCrew } from '../../src/selectors/clockSelectors';
 import type { Clock } from '../../src/types';
 
 describe('clockSelectors', () => {
@@ -181,6 +181,62 @@ describe('clockSelectors', () => {
       const threatClocks = selectThreatClocksByCrew(store.getState(), crewId);
       expect(threatClocks).toHaveLength(1);
       expect(threatClocks[0].metadata?.category).toBe('threat');
+    });
+  });
+
+  describe('selectProgressClocksByCrew', () => {
+    it('should return non-threat progress clocks (projects, goals, etc.)', () => {
+      // Create threat clock (should be excluded)
+      store.dispatch(
+        createClock({
+          entityId: crewId,
+          clockType: 'progress',
+          maxSegments: 6,
+          category: 'threat',
+        })
+      );
+
+      // Create long-term project (should be included)
+      store.dispatch(
+        createClock({
+          entityId: crewId,
+          clockType: 'progress',
+          maxSegments: 6,
+          category: 'long-term-project',
+          description: 'Project',
+        })
+      );
+
+      // Create personal goal (should be included)
+      store.dispatch(
+        createClock({
+          entityId: crewId,
+          clockType: 'progress',
+          maxSegments: 4,
+          category: 'personal-goal',
+          description: 'Goal',
+        })
+      );
+
+      const progressClocks = selectProgressClocksByCrew(store.getState(), crewId);
+      expect(progressClocks).toHaveLength(2);
+      expect(progressClocks.map(c => c.metadata?.category)).toContain('long-term-project');
+      expect(progressClocks.map(c => c.metadata?.category)).toContain('personal-goal');
+      expect(progressClocks.some(c => c.metadata?.category === 'threat')).toBe(false);
+    });
+
+    it('should exclude threat clocks', () => {
+      store.dispatch(
+        createClock({
+          entityId: crewId,
+          clockType: 'progress',
+          maxSegments: 6,
+          category: 'threat',
+        })
+      );
+
+      const progressClocks = selectProgressClocksByCrew(store.getState(), crewId);
+      expect(progressClocks).toHaveLength(0);
     });
   });
 });

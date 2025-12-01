@@ -152,6 +152,29 @@ export const selectThreatClocksByCrew = createSelector(
 );
 
 /**
+ * Get all non-threat progress clocks for a crew (for success clock advancement)
+ *
+ * @param state - Redux state
+ * @param crewId - Crew entity ID
+ * @returns Array of non-threat progress clocks (projects, goals, obstacles, factions)
+ */
+export const selectProgressClocksByCrew = createSelector(
+  [
+    selectClocksState,
+    (_state: RootState, crewId: string) => crewId,
+  ],
+  (clocksState, crewId): Clock[] => {
+    const clockIds = clocksState.byEntityId[crewId] || [];
+    return clockIds
+      .map((id) => clocksState.byId[id])
+      .filter((clock: Clock) =>
+        clock.clockType === 'progress' &&
+        clock.metadata?.category !== 'threat' // Exclude threat clocks
+      );
+  }
+);
+
+/**
  * Check if character is dying (has 6/6 harm clock)
  */
 export const selectIsCharacterDying = createSelector(

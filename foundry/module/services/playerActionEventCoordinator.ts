@@ -36,7 +36,7 @@ export class PlayerActionEventCoordinator {
    *
    * @param context - Widget context providing state and services
    */
-  constructor(private _context: IPlayerActionWidgetContext) {}
+  constructor(private _context: IPlayerActionWidgetContext) { }
 
   /**
    * Get the context (exposed for testing and use by handlers)
@@ -737,7 +737,7 @@ export class PlayerActionEventCoordinator {
     const { ClockSelectionDialog, ClockCreationDialog } = await import('../dialogs/index');
     const dialog = new ClockSelectionDialog(
       crewId,
-      'crew',
+      'threat',
       async (clockId: string) => {
         try {
           if (clockId === '_new') {
@@ -1020,7 +1020,7 @@ export class PlayerActionEventCoordinator {
     const { ClockSelectionDialog, ClockCreationDialog } = await import('../dialogs/index');
     const dialog = new ClockSelectionDialog(
       crewId,
-      'crew', // Use crew clocks for both advance/reduce operations
+      operation === 'add' ? 'progress' : 'threat',
       async (clockId: string) => {
         try {
           if (clockId === '_new') {
@@ -1144,19 +1144,19 @@ export class PlayerActionEventCoordinator {
         // addSegments for advancing, clearSegments for reducing
         const updateClockAction = operation === 'add'
           ? {
-              type: 'clocks/addSegments',
-              payload: {
-                clockId: clock.id,
-                amount: segments,
-              },
-            }
+            type: 'clocks/addSegments',
+            payload: {
+              clockId: clock.id,
+              amount: segments,
+            },
+          }
           : {
-              type: 'clocks/clearSegments',
-              payload: {
-                clockId: clock.id,
-                amount: segments,
-              },
-            };
+            type: 'clocks/clearSegments',
+            payload: {
+              clockId: clock.id,
+              amount: segments,
+            },
+          };
 
         // Clear transaction and apply clock update
         const clearTransactionAction = {
