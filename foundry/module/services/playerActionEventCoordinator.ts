@@ -819,8 +819,14 @@ export class PlayerActionEventCoordinator {
         },
       },
       workflow.applyConsequenceAction,
-      workflow.clearTransactionAction,
     ];
+
+    // For Partial Success: DON'T clear transaction yet
+    // It contains useDefensiveSuccess flag needed for calculating success clock segments
+    // It will be cleared in handleAcceptSuccessClock instead
+    if (!isPartialSuccess) {
+      actions.push(workflow.clearTransactionAction);
+    }
 
     const crewId = this.context.getCrewId();
     if (crewId && workflow.momentumGain > 0) {
@@ -1146,23 +1152,10 @@ export class PlayerActionEventCoordinator {
       const state = game.fitgd.store.getState();
       const successClockAction = this._createSuccessClockAction(state, transaction);
 
-      if (successClockAction) {
-        // Clear transaction and apply clock update
-        const clearTransactionAction = {
-          type: 'playerRoundState/clearConsequenceTransaction',
-          payload: { characterId },
-        };
+      const actions: any[] = [];
 
-        await game.fitgd.bridge.executeBatch(
-          [successClockAction, clearTransactionAction],
-          {
-            affectedReduxIds: [
-              asReduxId(characterId),
-              ...(crewId ? [asReduxId(crewId)] : []),
-            ],
-            silent: false,
-          }
-        );
+      if (successClockAction) {
+        actions.push(successClockAction);
 
         // Post message to chat
         const clock = state.clocks.byId[transaction.successClockId!];
@@ -1174,6 +1167,26 @@ export class PlayerActionEventCoordinator {
             `${clock.subtype} ${actionType} by ${segments} segment(s)`
           );
         }
+      }
+
+      // Always clear transaction (whether clock was selected or skipped)
+      const clearTransactionAction = {
+        type: 'playerRoundState/clearConsequenceTransaction',
+        payload: { characterId },
+      };
+      actions.push(clearTransactionAction);
+
+      if (actions.length > 0) {
+        await game.fitgd.bridge.executeBatch(
+          actions,
+          {
+            affectedReduxIds: [
+              asReduxId(characterId),
+              ...(crewId ? [asReduxId(crewId)] : []),
+            ],
+            silent: false,
+          }
+        );
       }
     }
 

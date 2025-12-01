@@ -33,7 +33,7 @@ export const selectPlayerState = (
   state: RootState,
   characterId: string
 ): PlayerRoundState | undefined => {
-  return state.playerRoundState.byCharacterId[characterId];
+  return state.playerRoundState?.byCharacterId[characterId];
 };
 
 /**
@@ -147,7 +147,7 @@ export const selectDicePool = createSelector(
  */
 export const selectEquipmentEffects = createSelector(
   [
-    (state: RootState, characterId: string) => state.characters.byId[characterId],
+    (state: RootState, characterId: string) => state.characters?.byId[characterId],
     (state: RootState, characterId: string) => selectPlayerState(state, characterId),
   ],
   (character, playerState): EquipmentEffect => {
@@ -522,18 +522,22 @@ export const selectEffectivePosition = createSelector(
  * Calculate effective effect for roll (ephemeral - does NOT mutate state)
  *
  * Applies push effect improvement if applicable.
- * The improved effect is only used for this roll's success clock calculations
+ * Also applies Defensive Success effect reduction for Partial Success outcomes.
+ * The improved/reduced effect is only used for this roll's success clock calculations
  * and does NOT modify the base effect set by the GM.
  *
  * @param state - Redux state
  * @param characterId - Character ID
- * @returns Effective effect for roll (with push improvements applied)
+ * @returns Effective effect for roll (with push improvements and defensive success reductions applied)
  *
  * @example
  * // Base effect: standard, pushed for effect
  * selectEffectiveEffect(state, characterId) // → 'great'
  *
- * // Base effect: standard, no push
+ * // Base effect: standard, defensive success chosen (Partial Success)
+ * selectEffectiveEffect(state, characterId) // → 'limited'
+ *
+ * // Base effect: standard, no push, no defensive success
  * selectEffectiveEffect(state, characterId) // → 'standard'
  */
 export const selectEffectiveEffect = createSelector(
@@ -543,14 +547,20 @@ export const selectEffectiveEffect = createSelector(
   ],
   (playerState, equipmentModifiedEffect): Effect => {
     // Start from the effect ALREADY modified by equipment
-    const baseEffect = equipmentModifiedEffect;
+    let effectiveEffect = equipmentModifiedEffect;
 
-    // Check if Push (Effect) is active
+    // Check if Push (Effect) is active - IMPROVES effect
     if (playerState?.pushed && playerState?.pushType === 'improved-effect') {
-      return improveEffect(baseEffect);
+      effectiveEffect = improveEffect(effectiveEffect);
     }
 
-    return baseEffect;
+    // Check if Defensive Success is active - REDUCES effect
+    // This is used for Partial Success to trade offense for better defense
+    if (playerState?.consequenceTransaction?.useDefensiveSuccess) {
+      effectiveEffect = worsenEffectBySteps(effectiveEffect, 1);
+    }
+
+    return effectiveEffect;
   }
 );
 
