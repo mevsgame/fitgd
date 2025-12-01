@@ -443,17 +443,25 @@ const playerRoundStateSlice = createSlice({
         throw new Error(`No state found for character ${characterId}`);
       }
 
+      // Auto-create transaction if it doesn't exist (for success clock operations on SUCCESS_COMPLETE)
+      // Success outcomes don't have consequences but can still advance clocks
       if (!currentState.consequenceTransaction) {
-        throw new Error(`No consequence transaction to update for character ${characterId}`);
+        state.byCharacterId[characterId] = {
+          ...currentState,
+          consequenceTransaction: {
+            consequenceType: 'harm', // Default type (not used for success clock operations)
+            ...updates,
+          },
+        };
+      } else {
+        state.byCharacterId[characterId] = {
+          ...currentState,
+          consequenceTransaction: {
+            ...currentState.consequenceTransaction,
+            ...updates,
+          },
+        };
       }
-
-      state.byCharacterId[characterId] = {
-        ...currentState,
-        consequenceTransaction: {
-          ...currentState.consequenceTransaction,
-          ...updates,
-        },
-      };
     },
 
     /**

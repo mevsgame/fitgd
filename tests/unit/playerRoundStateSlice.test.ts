@@ -622,20 +622,27 @@ describe('playerRoundStateSlice', () => {
       expect(state.consequenceTransaction).toBeUndefined();
     });
 
-    it('should throw error when updating non-existent transaction', () => {
+    it('should auto-create transaction when updating non-existent transaction', () => {
       const characterId = 'char-123';
 
       store.dispatch(initializePlayerState({ characterId }));
 
-      // Try to update without setting first
-      expect(() => {
-        store.dispatch(
-          updateConsequenceTransaction({
-            characterId,
-            updates: { harmClockId: 'clock-123' },
-          })
-        );
-      }).toThrow('No consequence transaction to update');
+      // Update without setting first - should auto-create transaction
+      // This allows success clock operations on SUCCESS_COMPLETE state
+      store.dispatch(
+        updateConsequenceTransaction({
+          characterId,
+          updates: { harmClockId: 'clock-123' },
+        })
+      );
+
+      const state = store.getState();
+      const playerState = state.playerRoundState.byCharacterId[characterId];
+
+      // Transaction should be auto-created with the updates
+      expect(playerState?.consequenceTransaction).toBeDefined();
+      expect(playerState?.consequenceTransaction?.harmClockId).toBe('clock-123');
+      expect(playerState?.consequenceTransaction?.consequenceType).toBe('harm'); // Default type
     });
 
     it('should handle crew-clock consequence type', () => {
