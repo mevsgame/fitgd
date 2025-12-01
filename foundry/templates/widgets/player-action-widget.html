@@ -279,8 +279,79 @@
         <div class="dice-rolled">Rolled: {{join playerState.rollResult ", "}}</div>
       </div>
     </div>
+
+    {{#unless isGM}}
+    <!-- Player View: Simple Success Message -->
     <p class="success-message">You succeed without complications!</p>
     <p class="fade-text">Close this window when ready.</p>
+    {{/unless}}
+
+    {{#if isGM}}
+    <!-- GM View: Optional Clock Advancement -->
+    <p class="success-message">Success! Optionally advance a clock:</p>
+
+    <div class="gm-consequence-config">
+      <h4>⏰ Clock Advancement (Optional):</h4>
+
+      <!-- Success Clock Configuration -->
+      <div class="success-clock-config">
+        <!-- Operation Selection Buttons -->
+        <div class="operation-buttons">
+          <button type="button" data-action="select-success-clock-operation" data-operation="add"
+            class="operation-btn {{#if (eq successClockOperation 'add')}}active{{/if}}">
+            ⬆️ Advance Progress Clock
+          </button>
+          <button type="button" data-action="select-success-clock-operation" data-operation="reduce"
+            class="operation-btn {{#if (eq successClockOperation 'reduce')}}active{{/if}}">
+            ⬇️ Reduce Threat Clock
+          </button>
+        </div>
+
+        <!-- Clock Selection Based on Operation -->
+        {{#if (eq successClockOperation 'add')}}
+        <div class="form-group">
+          <label>Progress Clock to Advance:</label>
+          <button type="button" data-action="select-success-clock" class="select-btn">
+            {{#if selectedSuccessClock}}
+            {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
+            {{else}}
+            Select or Create Clock...
+            {{/if}}
+          </button>
+        </div>
+        {{else if (eq successClockOperation 'reduce')}}
+        <div class="form-group">
+          <label>Threat Clock to Reduce:</label>
+          <button type="button" data-action="select-success-clock" class="select-btn">
+            {{#if selectedSuccessClock}}
+            {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
+            {{else}}
+            Select Clock...
+            {{/if}}
+          </button>
+        </div>
+        {{/if}}
+
+        <!-- Segments Preview -->
+        {{#if selectedSuccessClock}}
+        <div class="info-note">
+          {{#if (eq successClockOperation 'add')}}
+          Segments to add: <strong>{{calculatedSuccessClockSegments}}</strong>
+          {{else}}
+          Segments to reduce: <strong>{{calculatedSuccessClockSegments}}</strong>
+          {{/if}}
+        </div>
+        {{/if}}
+
+        <!-- Skip Button -->
+        <button type="button" data-action="skip-success-clock" class="secondary-btn">
+          ⏭️ Skip Clock Advancement
+        </button>
+      </div>
+    </div>
+
+    <p class="fade-text">Close this window when ready.</p>
+    {{/if}}
   </div>
   {{/if}}
 

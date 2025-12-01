@@ -594,8 +594,9 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
   }): Partial<PlayerActionWidgetData> {
     const { state, playerState } = entities;
 
-    // Only load consequence data if in GM_RESOLVING_CONSEQUENCE state
-    if (playerState?.state === 'GM_RESOLVING_CONSEQUENCE') {
+    // Load consequence data for both GM_RESOLVING_CONSEQUENCE and SUCCESS_COMPLETE states
+    // SUCCESS_COMPLETE needs success clock fields for optional clock advancement UI
+    if (playerState?.state === 'GM_RESOLVING_CONSEQUENCE' || playerState?.state === 'SUCCESS_COMPLETE') {
       const consequenceData = this._getConsequenceData(state);
 
       // Always include defensive success values for the player, even if no transaction yet
