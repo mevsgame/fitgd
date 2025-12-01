@@ -986,4 +986,105 @@ export class PlayerActionEventCoordinator {
       silent: true,
     });
   }
+
+  /**
+   * Handle success clock operation selection (advance or reduce)
+   */
+  async handleSuccessClockOperationChange(operation: 'add' | 'reduce'): Promise<void> {
+    const consequenceHandler = this.context.getHandlerFactory().getConsequenceHandler();
+    const action = consequenceHandler.createSetSuccessClockOperationAction(operation);
+
+    await game.fitgd.bridge.execute(action as any, {
+      affectedReduxIds: [consequenceHandler.getAffectedReduxId() as any],
+      silent: true,
+    });
+  }
+
+  /**
+   * Handle success clock selection dialog
+   */
+  async handleSuccessClockSelect(): Promise<void> {
+    const playerState = this.context.getPlayerState();
+    const crewId = this.context.getCrewId();
+    const consequenceHandler = this.context.getHandlerFactory().getConsequenceHandler();
+
+    if (!playerState?.consequenceTransaction || !crewId) return;
+
+    const operation = playerState.consequenceTransaction.successClockOperation;
+    if (!operation) {
+      this.context.getNotificationService().warn('Select clock operation (Advance/Reduce) first');
+      return;
+    }
+
+    // Open ClockSelectionDialog (use crew-type for both operations)
+    const { ClockSelectionDialog, ClockCreationDialog } = await import('../dialogs/index');
+    const dialog = new ClockSelectionDialog(
+      crewId,
+      'crew', // Use crew clocks for both advance/reduce operations
+      async (clockId: string) => {
+        try {
+          if (clockId === '_new') {
+            // Open ClockCreationDialog for new clock
+            const preSelectedCategory = operation === 'reduce' ? 'threat' : undefined;
+            const creationDialog = new ClockCreationDialog(
+              crewId,
+              'progress',
+              async (clockData: any) => {
+                try {
+                  // Create the new clock
+                  const createClockAction = consequenceHandler.createNewSuccessClockAction(clockData);
+                  const newClockId = createClockAction.payload.id;
+
+                  await game.fitgd.bridge.execute(createClockAction as any, {
+                    affectedReduxIds: [asReduxId(crewId)],
+                    silent: true,
+                  });
+
+                  // Update the transaction with the new clock
+                  const updateAction = consequenceHandler.createSetSuccessClockAction(newClockId);
+                  await game.fitgd.bridge.execute(updateAction as any, {
+                    affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
+                    silent: true,
+                  });
+                } catch (error) {
+                  console.error('FitGD | Error creating success clock:', error);
+                  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                  this.context.getNotificationService().error(`Error creating clock: ${errorMessage}`);
+                }
+              },
+              {},
+              preSelectedCategory
+            );
+
+            creationDialog.render(true);
+          } else {
+            const action = consequenceHandler.createSetSuccessClockAction(clockId);
+            await game.fitgd.bridge.execute(action as any, {
+              affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
+              silent: true,
+            });
+          }
+        } catch (error) {
+          console.error('FitGD | Error in success clock selection:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.context.getNotificationService().error(`Error selecting clock: ${errorMessage}`);
+        }
+      }
+    );
+
+    dialog.render(true);
+  }
+
+  /**
+   * Handle skip success clock button (clear success clock selections)
+   */
+  async handleSkipSuccessClock(): Promise<void> {
+    const consequenceHandler = this.context.getHandlerFactory().getConsequenceHandler();
+    const action = consequenceHandler.createSetSuccessClockAction(''); // Empty string clears selection
+
+    await game.fitgd.bridge.execute(action as any, {
+      affectedReduxIds: [consequenceHandler.getAffectedReduxId() as any],
+      silent: true,
+    });
+  }
 }

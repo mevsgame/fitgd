@@ -694,6 +694,18 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
       void this.coordinator.handleToggleDefensiveSuccess(enabled);
     });
 
+    // Success clock operation selection (for success/critical outcomes)
+    html.find('[data-action="select-success-clock-operation"]').click((e) => {
+      const operation = (e.currentTarget as HTMLElement).dataset.operation as 'add' | 'reduce';
+      void this.coordinator.handleSuccessClockOperationChange(operation);
+    });
+    html.find('[data-action="select-success-clock"]').click((_e) => {
+      void this.coordinator.handleSuccessClockSelect();
+    });
+    html.find('[data-action="skip-success-clock"]').click((_e) => {
+      void this.coordinator.handleSkipSuccessClock();
+    });
+
     // GM consequence configuration buttons
     html.find('[data-action="select-consequence-type"]').click((e) => {
       const type = (e.currentTarget as HTMLElement).dataset.type as 'harm' | 'crew-clock';
