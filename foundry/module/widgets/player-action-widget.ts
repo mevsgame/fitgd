@@ -706,6 +706,9 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     html.find('[data-action="skip-success-clock"]').click((_e) => {
       void this.coordinator.handleSkipSuccessClock();
     });
+    html.find('[data-action="accept-success-clock"]').click((_e) => {
+      void this.coordinator.handleAcceptSuccessClock();
+    });
 
     // GM consequence configuration buttons
     html.find('[data-action="select-consequence-type"]').click((e) => {

@@ -1040,9 +1040,26 @@ export class PlayerActionEventCoordinator {
                     silent: true,
                   });
 
-                  // Update the transaction with the new clock
-                  const updateAction = consequenceHandler.createSetSuccessClockAction(newClockId);
-                  await game.fitgd.bridge.execute(updateAction as any, {
+                  // Calculate segments based on current effect
+                  const state = game.fitgd.store.getState();
+                  const { calculateSuccessClockProgress } = await import('@/utils/playerRoundRules');
+                  const { selectEffectivePosition, selectEffectiveEffect } = await import('@/selectors/playerRoundStateSelectors');
+
+                  const position = selectEffectivePosition(state, this.context.getCharacterId());
+                  const effect = selectEffectiveEffect(state, this.context.getCharacterId());
+                  const segments = calculateSuccessClockProgress(position, effect);
+
+                  // Update the transaction with the new clock and calculated segments
+                  const updateClockAction = consequenceHandler.createSetSuccessClockAction(newClockId);
+                  const setSegmentsAction = {
+                    type: 'playerRoundState/updateConsequenceTransaction',
+                    payload: {
+                      characterId: this.context.getCharacterId(),
+                      updates: { calculatedSuccessClockSegments: segments },
+                    },
+                  };
+
+                  await game.fitgd.bridge.executeBatch([updateClockAction, setSegmentsAction] as any[], {
                     affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
                     silent: true,
                   });
@@ -1058,8 +1075,28 @@ export class PlayerActionEventCoordinator {
 
             creationDialog.render(true);
           } else {
-            const action = consequenceHandler.createSetSuccessClockAction(clockId);
-            await game.fitgd.bridge.execute(action as any, {
+            // Set the clock ID and calculate segments based on current effect
+            const state = game.fitgd.store.getState();
+
+            // Import the calculation function
+            const { calculateSuccessClockProgress } = await import('@/utils/playerRoundRules');
+            const { selectEffectivePosition, selectEffectiveEffect } = await import('@/selectors/playerRoundStateSelectors');
+
+            const position = selectEffectivePosition(state, this.context.getCharacterId());
+            const effect = selectEffectiveEffect(state, this.context.getCharacterId());
+            const segments = calculateSuccessClockProgress(position, effect);
+
+            // Batch: set clock ID and calculated segments
+            const setClockAction = consequenceHandler.createSetSuccessClockAction(clockId);
+            const setSegmentsAction = {
+              type: 'playerRoundState/updateConsequenceTransaction',
+              payload: {
+                characterId: this.context.getCharacterId(),
+                updates: { calculatedSuccessClockSegments: segments },
+              },
+            };
+
+            await game.fitgd.bridge.executeBatch([setClockAction, setSegmentsAction] as any[], {
               affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
               silent: true,
             });
@@ -1086,5 +1123,74 @@ export class PlayerActionEventCoordinator {
       affectedReduxIds: [consequenceHandler.getAffectedReduxId() as any],
       silent: true,
     });
+  }
+
+  /**
+   * Handle accept success clock button (apply clock advancement and close widget)
+   */
+  async handleAcceptSuccessClock(): Promise<void> {
+    const playerState = this.context.getPlayerState();
+    const transaction = playerState?.consequenceTransaction;
+    const characterId = this.context.getCharacterId();
+    const crewId = this.context.getCrewId();
+
+    // If success clock is configured, apply it
+    if (transaction?.successClockId && transaction?.successClockOperation) {
+      const state = game.fitgd.store.getState();
+      const clock = state.clocks.byId[transaction.successClockId];
+
+      if (clock) {
+        // Calculate segments to apply
+        const segments = transaction.calculatedSuccessClockSegments || 1;
+        const operation = transaction.successClockOperation;
+
+        // Create clock update action based on operation
+        // addSegments for advancing, clearSegments for reducing
+        const updateClockAction = operation === 'add'
+          ? {
+              type: 'clocks/addSegments',
+              payload: {
+                clockId: clock.id,
+                amount: segments,
+              },
+            }
+          : {
+              type: 'clocks/clearSegments',
+              payload: {
+                clockId: clock.id,
+                amount: segments,
+              },
+            };
+
+        // Clear transaction and apply clock update
+        const clearTransactionAction = {
+          type: 'playerRoundState/clearConsequenceTransaction',
+          payload: { characterId },
+        };
+
+        await game.fitgd.bridge.executeBatch(
+          [updateClockAction, clearTransactionAction],
+          {
+            affectedReduxIds: [
+              asReduxId(characterId),
+              ...(crewId ? [asReduxId(crewId)] : []),
+            ],
+            silent: false,
+          }
+        );
+
+        // Post message to chat
+        const clockAction = operation === 'add' ? 'advanced' : 'reduced';
+        this.context.getNotificationService().info(
+          `${clock.subtype} ${clockAction} by ${segments} segment(s)`
+        );
+      }
+    }
+
+    // Close the widget
+    const app = this.context as any;
+    if (app.close) {
+      await app.close();
+    }
   }
 }
