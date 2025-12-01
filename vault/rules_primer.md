@@ -199,13 +199,11 @@ Characters can have up to three active harm clocks. If you would take a fourth t
 
 #### **Success Clocks (Progress Tracking)**
 
-When you succeed at an action that makes progress toward a goal (picking a lock, hacking a system, convincing a group, building a device), you advance a **success clock**. Unlike harm/consequence clocks, success clocks are affected by both Position and Effect:
+When you succeed at an action that makes progress toward a goal (picking a lock, hacking a system, convincing a group, building a device), you advance a **success clock**. Success clocks are affected by Effect:
 
-**Progress on Success (Position + Effect):**
-- **Base Progress:** Controlled=1, Risky=3, Desperate=5, Impossible=6 segments
-- **Effect Modifier:** Limited=-1, Standard=+0, Great=+1, Spectacular=+2
-
-Example: A Risky action with Great Effect would advance 4 segments (3 base + 1 for great effect). A Desperate action with Spectacular Effect would advance 7 segments (5 base + 2 for spectacular effect).
+**Progress on Success  Effect:**
+- **Base Progress:** Limited=1, Standard=3, Greater=4, Spectacular=6 segments 
+ 
 
 ---
 

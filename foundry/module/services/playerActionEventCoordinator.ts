@@ -1040,14 +1040,13 @@ export class PlayerActionEventCoordinator {
                     silent: true,
                   });
 
-                  // Calculate segments based on current effect
+                  // Calculate segments based on current effect only (position doesn't affect success)
                   const state = game.fitgd.store.getState();
-                  const { calculateSuccessClockProgress } = await import('@/utils/playerRoundRules');
-                  const { selectEffectivePosition, selectEffectiveEffect } = await import('@/selectors/playerRoundStateSelectors');
+                  const { selectEffectiveEffect } = await import('@/selectors/playerRoundStateSelectors');
+                  const { DEFAULT_CONFIG } = await import('@/config/gameConfig');
 
-                  const position = selectEffectivePosition(state, this.context.getCharacterId());
                   const effect = selectEffectiveEffect(state, this.context.getCharacterId());
-                  const segments = calculateSuccessClockProgress(position, effect);
+                  const segments = DEFAULT_CONFIG.resolution.successSegments[effect];
 
                   // Update the transaction with the new clock and calculated segments
                   const updateClockAction = consequenceHandler.createSetSuccessClockAction(newClockId);
@@ -1075,16 +1074,13 @@ export class PlayerActionEventCoordinator {
 
             creationDialog.render(true);
           } else {
-            // Set the clock ID and calculate segments based on current effect
+            // Set the clock ID and calculate segments based on current effect only
             const state = game.fitgd.store.getState();
+            const { selectEffectiveEffect } = await import('@/selectors/playerRoundStateSelectors');
+            const { DEFAULT_CONFIG } = await import('@/config/gameConfig');
 
-            // Import the calculation function
-            const { calculateSuccessClockProgress } = await import('@/utils/playerRoundRules');
-            const { selectEffectivePosition, selectEffectiveEffect } = await import('@/selectors/playerRoundStateSelectors');
-
-            const position = selectEffectivePosition(state, this.context.getCharacterId());
             const effect = selectEffectiveEffect(state, this.context.getCharacterId());
-            const segments = calculateSuccessClockProgress(position, effect);
+            const segments = DEFAULT_CONFIG.resolution.successSegments[effect];
 
             // Batch: set clock ID and calculated segments
             const setClockAction = consequenceHandler.createSetSuccessClockAction(clockId);
