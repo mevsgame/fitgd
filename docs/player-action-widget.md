@@ -30,7 +30,8 @@ The widget derives its UI state primarily from `playerRoundStateSlice`. The key 
     - GM selects consequences (Harm, Complication, Clock ticks).
     - Player can interrupt with **Stims**.
     - **Valid Transitions**:
-        - To `APPLYING_EFFECTS`: When player accepts consequences
+        - To `APPLYING_EFFECTS`: When player accepts consequences (Failure)
+        - To `SUCCESS_COMPLETE`: When player accepts consequences (Partial Success)
         - To `STIMS_ROLLING`: When player uses stims to resist
 5.  **APPLYING_EFFECTS**:
     - Consequences are applied to character/crew state.
@@ -369,6 +370,7 @@ The widget uses a **Transaction Pattern** to handle complex state changes that r
     1.  **Stage**: GM selects "Harm" or "Clock Tick". A `ConsequenceTransaction` object is created.
         - **Character Harm**: GM chooses which character and harm type
         - **Crew Clock**: GM selects from **threat category progress clocks only** (see [Crew Clock Consequence Rules](#crew-clock-consequence-rules))
+        - **Success Clock (Partial Success)**: GM/Player selects project clock to advance (standard success logic).
     2.  **Preview**: The Player sees exactly what is about to happen (e.g., "Taking 2 Harm: Broken Leg").
     3.  **Validation**: The "Accept Consequences" button is disabled until the GM fully configures the consequence:
         - Button shows "Waiting for GM to configure consequence..." when disabled
@@ -491,6 +493,34 @@ See **[Defensive Success Feature](defensive-success.md)** for comprehensive docu
   - Example: Risky/Standard → Controlled (1 seg) with Limited effect, still +2M
 
 The defensive success option allows players to balance offense and defense, trading effect magnitude for consequence mitigation while maintaining momentum gains.
+
+#### Partial Success Resolution (Sequential Flow)
+
+**Widget Integration:**
+- **State 1**: `GM_RESOLVING_CONSEQUENCE` - Configure and accept consequences
+- **State 2**: `SUCCESS_COMPLETE` - Select and apply success clock (optional)
+- **Logic**: Partial Success (4-5) is both a success *and* a failure, resolved in two sequential phases.
+
+**Workflow**:
+  1. **Phase 1 - Consequence Resolution**:
+     - GM configures Harm or Threat Clock ticks (standard consequence flow)
+     - Player accepts consequences
+     - Consequence is applied + state transitions to `SUCCESS_COMPLETE`
+  
+  2. **Phase 2 - Success Clock Resolution**:
+     - Widget transitions to `SUCCESS_COMPLETE` state
+     - GM can now select a Success Clock (Project/Goal) to advance
+     - GM clicks "Advance Progress Clock" or "Reduce Threat Clock"
+     - GM selects or creates a clock
+     - Calculated segments based on Effect are shown
+     - GM clicks "Apply Clock & Close" or "Skip Clock Advancement"
+     - Success clock is applied (if selected) + widget closes
+
+**Benefits of Sequential Flow**:
+- **Clear separation**: Consequence (negative) and success (positive) are visually distinct phases
+- **No confusion**: GM/Player sees one task at a time
+- **Flexible**: GM can skip success clock advancement if narrative doesn't warrant it
+- **Consistent**: Reuses existing `SUCCESS_COMPLETE` UI that players already understand from full success outcomes
 
 ## Rules Integration
 

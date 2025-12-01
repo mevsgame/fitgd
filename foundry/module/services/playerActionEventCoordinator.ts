@@ -805,8 +805,19 @@ export class PlayerActionEventCoordinator {
     const state = game.fitgd.store.getState();
     const workflow = consequenceApplicationHandler.createConsequenceApplicationWorkflow(state, transaction);
 
+    // For Partial Success: transition to SUCCESS_COMPLETE instead of APPLYING_EFFECTS
+    // This allows GM to select success clocks in a separate phase
+    const isPartialSuccess = playerState?.outcome === 'partial';
+    const nextState = isPartialSuccess ? 'SUCCESS_COMPLETE' : workflow.transitionToApplyingAction.payload.newState;
+
     const actions: any[] = [
-      workflow.transitionToApplyingAction,
+      {
+        type: 'playerRoundState/transitionState',
+        payload: {
+          characterId: this.context.getCharacterId(),
+          newState: nextState,
+        },
+      },
       workflow.applyConsequenceAction,
       workflow.clearTransactionAction,
     ];
@@ -1131,33 +1142,11 @@ export class PlayerActionEventCoordinator {
     const crewId = this.context.getCrewId();
 
     // If success clock is configured, apply it
-    if (transaction?.successClockId && transaction?.successClockOperation) {
+    if (transaction) {
       const state = game.fitgd.store.getState();
-      const clock = state.clocks.byId[transaction.successClockId];
+      const successClockAction = this._createSuccessClockAction(state, transaction);
 
-      if (clock) {
-        // Calculate segments to apply
-        const segments = transaction.calculatedSuccessClockSegments || 1;
-        const operation = transaction.successClockOperation;
-
-        // Create clock update action based on operation
-        // addSegments for advancing, clearSegments for reducing
-        const updateClockAction = operation === 'add'
-          ? {
-            type: 'clocks/addSegments',
-            payload: {
-              clockId: clock.id,
-              amount: segments,
-            },
-          }
-          : {
-            type: 'clocks/clearSegments',
-            payload: {
-              clockId: clock.id,
-              amount: segments,
-            },
-          };
-
+      if (successClockAction) {
         // Clear transaction and apply clock update
         const clearTransactionAction = {
           type: 'playerRoundState/clearConsequenceTransaction',
@@ -1165,7 +1154,7 @@ export class PlayerActionEventCoordinator {
         };
 
         await game.fitgd.bridge.executeBatch(
-          [updateClockAction, clearTransactionAction],
+          [successClockAction, clearTransactionAction],
           {
             affectedReduxIds: [
               asReduxId(characterId),
@@ -1176,10 +1165,15 @@ export class PlayerActionEventCoordinator {
         );
 
         // Post message to chat
-        const clockAction = operation === 'add' ? 'advanced' : 'reduced';
-        this.context.getNotificationService().info(
-          `${clock.subtype} ${clockAction} by ${segments} segment(s)`
-        );
+        const clock = state.clocks.byId[transaction.successClockId!];
+        if (clock) {
+          const segments = transaction.calculatedSuccessClockSegments || 1;
+          const operation = transaction.successClockOperation;
+          const actionType = operation === 'add' ? 'advanced' : 'reduced';
+          this.context.getNotificationService().info(
+            `${clock.subtype} ${actionType} by ${segments} segment(s)`
+          );
+        }
       }
     }
 
@@ -1187,6 +1181,39 @@ export class PlayerActionEventCoordinator {
     const app = this.context as any;
     if (app.close) {
       await app.close();
+    }
+  }
+
+  /**
+   * Create action to update success clock based on transaction
+   */
+  private _createSuccessClockAction(state: any, transaction: any): any | null {
+    if (!transaction?.successClockId || !transaction?.successClockOperation) {
+      return null;
+    }
+
+    const clock = state.clocks.byId[transaction.successClockId];
+    if (!clock) return null;
+
+    const segments = transaction.calculatedSuccessClockSegments || 1;
+    const operation = transaction.successClockOperation;
+
+    if (operation === 'add') {
+      return {
+        type: 'clocks/addSegments',
+        payload: {
+          clockId: clock.id,
+          amount: segments,
+        },
+      };
+    } else {
+      return {
+        type: 'clocks/clearSegments',
+        payload: {
+          clockId: clock.id,
+          amount: segments,
+        },
+      };
     }
   }
 }
