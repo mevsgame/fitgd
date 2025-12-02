@@ -445,6 +445,7 @@ game.fitgd.store.dispatch({ type: 'action', payload: {...} });
 - Call `saveImmediate()` or `refreshSheetsByReduxId()` manually
 - Call `this.render()` - let Redux subscriptions handle it
 - Commit without type-check and build verification
+- Create markdown files documenting current progress, plans, summaries, or explanations of work (user will explicitly request such documentation)
 
 ### Exceptions
 - **Socket handlers:** Intentionally use bare dispatch to prevent infinite broadcast loops
@@ -465,6 +466,8 @@ npm run build
 ```
 
 ### Before Committing
+
+**Pre-commit Hook Guarantee:** The pre-commit hook ensures the previous commit had successful tests and type checks. If test or type-check failures appear, they indicate a regression and must be investigated and fixed.
 
 ```bash
 # Type check & build
