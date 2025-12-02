@@ -79,10 +79,13 @@ describe('PlayerActionWidget - Partial Success with Defensive Success', () => {
             });
 
             // Set outcome to partial (required for defensive success to be available)
+            // Set outcome to partial (required for defensive success to be available)
             store.dispatch({
-                type: 'playerRoundState/setOutcome',
+                type: 'playerRoundState/setRollResult',
                 payload: {
                     characterId,
+                    dicePool: 1,
+                    rollResult: [4],
                     outcome: 'partial' as const,
                 },
             });
@@ -279,10 +282,13 @@ describe('PlayerActionWidget - Partial Success with Defensive Success', () => {
             });
 
             // Set outcome to partial (required for defensive success to be available)
+            // Set outcome to partial (required for defensive success to be available)
             store.dispatch({
-                type: 'playerRoundState/setOutcome',
+                type: 'playerRoundState/setRollResult',
                 payload: {
                     characterId,
+                    dicePool: 1,
+                    rollResult: [4],
                     outcome: 'partial' as const,
                 },
             });
