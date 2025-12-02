@@ -950,8 +950,14 @@ export class PlayerActionEventCoordinator {
       silent: true,
     });
 
-    // Reroll!
-    const dicePool = diceRollingHandler.calculateDicePool(updatedState);
+    // ✅ FIX: Wait for Redux state transition to propagate before calculating dice
+    // Without this wait, state updates to subscribers haven't completed yet
+    // causing dice pool calculation to use stale state (captured 40+ lines earlier)
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // ✅ FIX: Fetch fresh state instead of using stale 'updatedState' from line 917
+    const freshState = game.fitgd.store.getState();
+    const dicePool = diceRollingHandler.calculateDicePool(freshState);
     const rollResult = await this.context.getDiceService().roll(dicePool);
 
     // Post the reroll to chat
