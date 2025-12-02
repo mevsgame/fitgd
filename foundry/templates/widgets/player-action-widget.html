@@ -177,7 +177,9 @@
         <div class="plan-line">
           Position: {{uppercase (default playerState.position "risky")}}
           {{#if (ne improvedPosition playerState.position)}}
-          → <span class="{{#if (or (ne equipmentModifiedPosition playerState.position) playerState.traitTransaction)}}improved{{/if}}">{{uppercase improvedPosition}}</span>
+          → <span
+            class="{{#if (or (ne equipmentModifiedPosition playerState.position) playerState.traitTransaction)}}improved{{/if}}">{{uppercase
+            improvedPosition}}</span>
           {{/if}}
         </div>
 
@@ -185,7 +187,9 @@
         <div class="plan-line">
           Effect: {{uppercase (default playerState.effect "standard")}}
           {{#if (ne improvedEffect playerState.effect)}}
-          → <span class="{{#if (or (ne equipmentModifiedEffect playerState.effect) (and playerState.pushed (eq playerState.pushType 'improved-effect')))}}improved{{/if}}">{{uppercase improvedEffect}}</span>
+          → <span
+            class="{{#if (or (ne equipmentModifiedEffect playerState.effect) (and playerState.pushed (eq playerState.pushType 'improved-effect')))}}improved{{/if}}">{{uppercase
+            improvedEffect}}</span>
           {{/if}}
         </div>
 
@@ -271,6 +275,8 @@
     <div class="roll-outcome">
       {{#if (eq playerState.outcome "critical")}}
       <h2 class="outcome-critical">✨ CRITICAL SUCCESS! ✨</h2>
+      {{else if (eq playerState.outcome "partial")}}
+      <h2 class="outcome-partial">⚠️ PARTIAL SUCCESS - Clock Advancement</h2>
       {{else}}
       <h2 class="outcome-success">✅ FULL SUCCESS</h2>
       {{/if}}
@@ -279,8 +285,97 @@
         <div class="dice-rolled">Rolled: {{join playerState.rollResult ", "}}</div>
       </div>
     </div>
+
+    {{#unless isGM}}
+    <!-- Player View: Simple Success Message -->
+    {{#if (eq playerState.outcome "partial")}}
+    <p class="success-message">Consequences accepted. GM is configuring your success...</p>
+    {{else}}
     <p class="success-message">You succeed without complications!</p>
+    {{/if}}
     <p class="fade-text">Close this window when ready.</p>
+    {{/unless}}
+
+    {{#if isGM}}
+    <!-- GM View: Optional Clock Advancement -->
+    {{#if (eq playerState.outcome "partial")}}
+    <p class="success-message">Consequences applied. Now select a clock to advance:</p>
+    {{else}}
+    <p class="success-message">Success! Optionally advance a clock:</p>
+    {{/if}}
+
+    <div class="gm-consequence-config">
+      <h4>⏰ Clock Advancement (Optional):</h4>
+
+      <!-- Success Clock Configuration -->
+      <div class="success-clock-config">
+        <!-- Operation Selection Buttons -->
+        <div class="operation-buttons">
+          <button type="button" data-action="select-success-clock-operation" data-operation="add"
+            class="operation-btn {{#if (eq successClockOperation 'add')}}active{{/if}}">
+            ⬆️ Advance Progress Clock
+          </button>
+          <button type="button" data-action="select-success-clock-operation" data-operation="reduce"
+            class="operation-btn {{#if (eq successClockOperation 'reduce')}}active{{/if}}">
+            ⬇️ Reduce Threat Clock
+          </button>
+        </div>
+
+        <!-- Clock Selection Based on Operation -->
+        {{#if (eq successClockOperation 'add')}}
+        <div class="form-group">
+          <label>Progress Clock to Advance:</label>
+          <button type="button" data-action="select-success-clock" class="select-btn">
+            {{#if selectedSuccessClock}}
+            {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
+            {{else}}
+            Select or Create Clock...
+            {{/if}}
+          </button>
+        </div>
+        {{else if (eq successClockOperation 'reduce')}}
+        <div class="form-group">
+          <label>Threat Clock to Reduce:</label>
+          <button type="button" data-action="select-success-clock" class="select-btn">
+            {{#if selectedSuccessClock}}
+            {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
+            {{else}}
+            Select Clock...
+            {{/if}}
+          </button>
+        </div>
+        {{/if}}
+
+        <!-- Segments Preview -->
+        {{#if selectedSuccessClock}}
+        <div class="info-note">
+          {{#if (eq successClockOperation 'add')}}
+          Segments to add: <strong>{{calculatedSuccessClockSegments}}</strong>
+          {{else}}
+          Segments to reduce: <strong>{{calculatedSuccessClockSegments}}</strong>
+          {{/if}}
+        </div>
+        {{/if}}
+
+        <!-- Skip Button -->
+        <button type="button" data-action="skip-success-clock" class="secondary-btn">
+          ⏭️ Skip Clock Advancement
+        </button>
+      </div>
+
+      <!-- Accept Button -->
+      <div class="action-buttons">
+        <button type="button" data-action="accept-success-clock" class="primary">
+          {{#if selectedSuccessClock}}
+          ✓ Apply Clock & Close
+          {{else}}
+          ✓ Close
+          {{/if}}
+        </button>
+      </div>
+    </div>
+
+    {{/if}}
   </div>
   {{/if}}
 
@@ -288,7 +383,11 @@
   {{#if isGMResolvingConsequence}}
   <div class="widget-content gm-resolving-consequence">
     <div class="roll-outcome">
-      {{#if (eq playerState.outcome "partial")}}
+      {{#if (eq playerState.outcome "success")}}
+      <h2 class="outcome-success">✅ SUCCESS - Optional Clock Advancement</h2>
+      {{else if (eq playerState.outcome "critical")}}
+      <h2 class="outcome-critical">✨ CRITICAL SUCCESS - Optional Clock Advancement</h2>
+      {{else if (eq playerState.outcome "partial")}}
       <h2 class="outcome-partial">⚠️ PARTIAL SUCCESS - Configuring Consequence</h2>
       {{else}}
       <h2 class="outcome-failure">❌ FAILURE - Configuring Consequence</h2>
@@ -332,7 +431,7 @@
         </div>
         {{/if}}
 
-        {{#if calculatedHarmSegments}}
+        {{#if effectivePosition}}
         <div class="plan-line highlight">
           <strong>Harm:</strong> +{{calculatedHarmSegments}} segments
           <span class="calculation">({{uppercase effectivePosition}}/{{uppercase effectiveEffect}})</span>
@@ -368,6 +467,65 @@
     {{#if isGM}}
     <!-- ==================== GM CONSEQUENCE CONFIGURATION ==================== -->
     <div class="gm-consequence-config">
+      {{#if (or (eq playerState.outcome 'success') (eq playerState.outcome 'critical'))}}
+      <h4>⏰ Clock Advancement (Optional):</h4>
+
+      <!-- Success Clock Configuration -->
+      <div class="success-clock-config">
+        <!-- Operation Selection Buttons -->
+        <div class="operation-buttons">
+          <button type="button" data-action="select-success-clock-operation" data-operation="add"
+            class="operation-btn {{#if (eq successClockOperation 'add')}}active{{/if}}">
+            ⬆️ Advance Progress Clock
+          </button>
+          <button type="button" data-action="select-success-clock-operation" data-operation="reduce"
+            class="operation-btn {{#if (eq successClockOperation 'reduce')}}active{{/if}}">
+            ⬇️ Reduce Threat Clock
+          </button>
+        </div>
+
+        <!-- Clock Selection Based on Operation -->
+        {{#if (eq successClockOperation 'add')}}
+        <div class="form-group">
+          <label>Progress Clock to Advance:</label>
+          <button type="button" data-action="select-success-clock" class="select-btn">
+            {{#if selectedSuccessClock}}
+            {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
+            {{else}}
+            Select or Create Clock...
+            {{/if}}
+          </button>
+        </div>
+        {{else if (eq successClockOperation 'reduce')}}
+        <div class="form-group">
+          <label>Threat Clock to Reduce:</label>
+          <button type="button" data-action="select-success-clock" class="select-btn">
+            {{#if selectedSuccessClock}}
+            {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
+            {{else}}
+            Select Clock...
+            {{/if}}
+          </button>
+        </div>
+        {{/if}}
+
+        <!-- Segments Preview -->
+        {{#if selectedSuccessClock}}
+        <div class="info-note">
+          {{#if (eq successClockOperation 'add')}}
+          Segments to add: <strong>{{calculatedSuccessClockSegments}}</strong>
+          {{else}}
+          Segments to reduce: <strong>{{calculatedSuccessClockSegments}}</strong>
+          {{/if}}
+        </div>
+        {{/if}}
+
+        <!-- Skip Button -->
+        <button type="button" data-action="skip-success-clock" class="secondary-btn">
+          ⏭️ Skip Clock Advancement
+        </button>
+      </div>
+      {{else}}
       <h4>⚙️ Configure Consequence:</h4>
 
       <!-- Consequence Type Toggles -->
@@ -381,6 +539,7 @@
           ⏱️ Crew Clock
         </button>
       </div>
+      {{/if}}
 
       <!-- Harm Configuration (shown when harm type selected) -->
       {{#if (eq consequenceTransaction.consequenceType 'harm')}}
@@ -454,6 +613,20 @@
           💉 Use Stims & Reroll
           {{/if}}
         </button>
+
+        {{!-- DEFENSIVE SUCCESS TOGGLE (Player Only) --}}
+        {{#if (and defensiveSuccessValues.available (not isGM))}}
+        <div class="plan-line defensive-success-toggle">
+          <button type="button" data-action="toggle-defensive-success" data-enabled="{{not useDefensiveSuccess}}"
+            class="toggle-btn {{#if useDefensiveSuccess}}defensive-active{{/if}}">
+            {{#if useDefensiveSuccess}}
+            ✓ Defensive Success
+            {{else}}
+            ✗ Defensive Success
+            {{/if}}
+          </button>
+        </div>
+        {{/if}}
 
         <!-- Player approves GM's configured consequence -->
         <button type="button" data-action="approve-consequence" class="primary" {{#unless

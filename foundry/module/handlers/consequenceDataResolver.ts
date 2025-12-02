@@ -18,6 +18,7 @@ import {
   selectEffectiveEffect,
   selectConsequenceSeverity,
   selectMomentumGain,
+  selectDefensiveSuccessValues,
 } from '@/selectors/playerRoundStateSelectors';
 
 /**
@@ -33,6 +34,13 @@ export interface ResolvedConsequenceData {
   effectivePosition: Position;
   effectiveEffect: Effect;
   consequenceConfigured: boolean;
+  defensiveSuccessValues?: any; // DefensiveSuccessValues from Redux
+  useDefensiveSuccess?: boolean;
+  // Success clock fields
+  successClockId?: string | null;
+  selectedSuccessClock?: Clock | null;
+  successClockOperation?: 'add' | 'reduce';
+  calculatedSuccessClockSegments?: number;
 }
 
 /**
@@ -56,7 +64,7 @@ export interface ConsequenceDataResolverConfig {
  * const data = resolver.resolveConsequenceData(state, playerState);
  */
 export class ConsequenceDataResolver {
-  constructor(private config: ConsequenceDataResolverConfig) {}
+  constructor(private config: ConsequenceDataResolverConfig) { }
 
   /**
    * Resolve consequence transaction data for template rendering
@@ -110,10 +118,32 @@ export class ConsequenceDataResolver {
 
     // Calculate harm segments and momentum gain using effective position
     // Note: Effect does NOT apply to consequences - only to success clocks
-    const effectivePosition = selectEffectivePosition(state, this.config.characterId);
-    const effectiveEffect = selectEffectiveEffect(state, this.config.characterId);
-    const calculatedHarmSegments = selectConsequenceSeverity(effectivePosition);
-    const calculatedMomentumGain = selectMomentumGain(effectivePosition);
+    const originalPosition = selectEffectivePosition(state, this.config.characterId);
+    let effectivePosition = originalPosition;
+    let effectiveEffect = selectEffectiveEffect(state, this.config.characterId);
+
+    // Check if defensive success is being used
+    let calculatedHarmSegments = selectConsequenceSeverity(effectivePosition);
+    let calculatedMomentumGain = selectMomentumGain(effectivePosition);
+
+    if (transaction.useDefensiveSuccess) {
+      // Defensive success reduces position by one step AND effect by one tier
+      const defensiveValues = selectDefensiveSuccessValues(state, this.config.characterId);
+      const defensivePosition = defensiveValues.defensivePosition;
+      const defensiveEffect = defensiveValues.defensiveEffect;
+
+      calculatedHarmSegments = defensivePosition ? selectConsequenceSeverity(defensivePosition) : 0;
+
+      // Update effectivePosition for display (if not null)
+      if (defensivePosition) {
+        effectivePosition = defensivePosition;
+      }
+
+      // Effect is reduced when using defensive success
+      effectiveEffect = defensiveEffect || 'limited';
+      // Momentum ALWAYS comes from original position, not reduced position
+      calculatedMomentumGain = selectMomentumGain(originalPosition);
+    }
 
     // Determine if consequence is fully configured
     let consequenceConfigured = false;
@@ -123,6 +153,12 @@ export class ConsequenceDataResolver {
     } else if (transaction.consequenceType === 'crew-clock') {
       // Crew clock is configured if: clock selected (segments calculated automatically from position)
       consequenceConfigured = Boolean(transaction.crewClockId);
+    }
+
+    // Resolve selected success clock
+    let selectedSuccessClock: Clock | null = null;
+    if (transaction.successClockId) {
+      selectedSuccessClock = state.clocks.byId[transaction.successClockId] || null;
     }
 
     return {
@@ -135,6 +171,12 @@ export class ConsequenceDataResolver {
       effectivePosition,
       effectiveEffect,
       consequenceConfigured,
+      defensiveSuccessValues: selectDefensiveSuccessValues(state, this.config.characterId),
+      useDefensiveSuccess: transaction?.useDefensiveSuccess || false,
+      successClockId: transaction.successClockId || null,
+      selectedSuccessClock,
+      successClockOperation: transaction.successClockOperation || undefined,
+      calculatedSuccessClockSegments: transaction.calculatedSuccessClockSegments || undefined,
     };
   }
 

@@ -110,6 +110,22 @@ export interface ConsequenceTransaction {
   /** Selected crew clock ID (segments calculated automatically from position) */
   crewClockId?: string;
 
+  // ===== DEFENSIVE SUCCESS OPTION =====
+
+  /** Player chose defensive success option (reduce position, reduce effect) */
+  useDefensiveSuccess?: boolean;
+
+  // ===== SUCCESS CLOCK OPTIONS (for success/critical outcomes) =====
+
+  /** Operation to perform on success clock: 'add' to advance progress, 'reduce' to reduce threat */
+  successClockOperation?: 'add' | 'reduce';
+
+  /** Selected clock ID to modify (if advancing progress or reducing threat) */
+  successClockId?: string;
+
+  /** Auto-calculated segments to add/reduce for success clock operation */
+  calculatedSuccessClockSegments?: number;
+
   // ===== CALCULATED VALUES (read-only) =====
 
   /** Auto-calculated harm segments from Position × Effect table */
@@ -231,6 +247,7 @@ export const STATE_TRANSITIONS: Record<PlayerRoundStateType, PlayerRoundStateTyp
   SUCCESS_COMPLETE: ['TURN_COMPLETE'],  // Manual close only (GM clicks "End Turn")
   GM_RESOLVING_CONSEQUENCE: [
     'APPLYING_EFFECTS',           // GM applies consequence
+    'SUCCESS_COMPLETE',           // Partial success: transition to success clock phase
     'STIMS_ROLLING'               // Player interrupts with stims
   ],
   APPLYING_EFFECTS: ['TURN_COMPLETE'],

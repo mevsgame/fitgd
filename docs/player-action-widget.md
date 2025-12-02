@@ -30,7 +30,8 @@ The widget derives its UI state primarily from `playerRoundStateSlice`. The key 
     - GM selects consequences (Harm, Complication, Clock ticks).
     - Player can interrupt with **Stims**.
     - **Valid Transitions**:
-        - To `APPLYING_EFFECTS`: When player accepts consequences
+        - To `APPLYING_EFFECTS`: When player accepts consequences (Failure)
+        - To `SUCCESS_COMPLETE`: When player accepts consequences (Partial Success)
         - To `STIMS_ROLLING`: When player uses stims to resist
 5.  **APPLYING_EFFECTS**:
     - Consequences are applied to character/crew state.
@@ -367,6 +368,9 @@ The widget uses a **Transaction Pattern** to handle complex state changes that r
 - **Purpose**: Allows the GM to configure complex consequences (e.g., "Take Level 2 Harm AND tick the Alarm clock") before applying them.
 - **Lifecycle**:
     1.  **Stage**: GM selects "Harm" or "Clock Tick". A `ConsequenceTransaction` object is created.
+        - **Character Harm**: GM chooses which character and harm type
+        - **Crew Clock**: GM selects from **threat category progress clocks only** (see [Crew Clock Consequence Rules](#crew-clock-consequence-rules))
+        - **Success Clock (Partial Success)**: GM/Player selects project clock to advance (standard success logic).
     2.  **Preview**: The Player sees exactly what is about to happen (e.g., "Taking 2 Harm: Broken Leg").
     3.  **Validation**: The "Accept Consequences" button is disabled until the GM fully configures the consequence:
         - Button shows "Waiting for GM to configure consequence..." when disabled
@@ -470,6 +474,54 @@ See **[Stims Mechanics](mechanics-stims.md)** for comprehensive documentation.
 
 The stims interrupt is a last-resort mechanic for desperate situations, advancing the character's addiction clock at the cost of a reroll opportunity.
 
+#### Defensive Success Option
+
+See **[Defensive Success Feature](defensive-success.md)** for comprehensive documentation.
+
+**Widget Integration:**
+- **State**: Available in `GM_RESOLVING_CONSEQUENCE` (post-roll consequence resolution on partial success)
+- **Availability**: Only when rolling partial success (4-5) with Effect ≥ Standard
+- **Who Decides**: The **player** (not GM) chooses between Full Offense or Defensive Trade
+- **UI**: Two-column comparison panel showing both options side-by-side
+  - Left column: Full Offense (original position/effect/segments)
+  - Right column: Defensive Trade (reduced position/effect/segments with original momentum)
+- **Flow**: Player toggles option → GM configures clock/harm → Player accepts → Consequence applied with chosen values
+- **Mechanics**:
+  - Position reduces by one step (impossible→desperate→risky→controlled→none)
+  - Effect reduces by one tier (spectacular→great→standard→limited)
+  - Momentum preserved at original position value (not reduced)
+  - Example: Risky/Standard → Controlled (1 seg) with Limited effect, still +2M
+
+The defensive success option allows players to balance offense and defense, trading effect magnitude for consequence mitigation while maintaining momentum gains.
+
+#### Partial Success Resolution (Sequential Flow)
+
+**Widget Integration:**
+- **State 1**: `GM_RESOLVING_CONSEQUENCE` - Configure and accept consequences
+- **State 2**: `SUCCESS_COMPLETE` - Select and apply success clock (optional)
+- **Logic**: Partial Success (4-5) is both a success *and* a failure, resolved in two sequential phases.
+
+**Workflow**:
+  1. **Phase 1 - Consequence Resolution**:
+     - GM configures Harm or Threat Clock ticks (standard consequence flow)
+     - Player accepts consequences
+     - Consequence is applied + state transitions to `SUCCESS_COMPLETE`
+  
+  2. **Phase 2 - Success Clock Resolution**:
+     - Widget transitions to `SUCCESS_COMPLETE` state
+     - GM can now select a Success Clock (Project/Goal) to advance
+     - GM clicks "Advance Progress Clock" or "Reduce Threat Clock"
+     - GM selects or creates a clock
+     - Calculated segments based on Effect are shown
+     - GM clicks "Apply Clock & Close" or "Skip Clock Advancement"
+     - Success clock is applied (if selected) + widget closes
+
+**Benefits of Sequential Flow**:
+- **Clear separation**: Consequence (negative) and success (positive) are visually distinct phases
+- **No confusion**: GM/Player sees one task at a time
+- **Flexible**: GM can skip success clock advancement if narrative doesn't warrant it
+- **Consistent**: Reuses existing `SUCCESS_COMPLETE` UI that players already understand from full success outcomes
+
 ## Rules Integration
 
 *Primary Source: [vault/rules_primer.md](../vault/rules_primer.md)*
@@ -485,3 +537,42 @@ The stims interrupt is a last-resort mechanic for desperate situations, advancin
   - Consumable: Single-use, depletes on lock
 - **Equipment Locking**: Items lock on roll commit, preventing mid-mission swapping.
 - **Dice Pool Construction**: Supports Primary + Secondary (Approach or Equipment) + Passive for flexible action resolution.
+
+### Crew Clock Consequence Rules
+
+**Restriction:** When GM selects a crew clock consequence, only **threat category progress clocks** are available.
+
+**Rationale:** Threat clocks represent dangers, countdowns, and escalating threats that worsen when actions fail. Other clock categories (long-term-project, personal-goal, obstacle, faction) are not appropriate targets for immediate consequences from failed rolls.
+
+**Workflow - Existing Threat Clocks:**
+1. Player fails or gets partial success on action
+2. GM transitions to `GM_RESOLVING_CONSEQUENCE`
+3. GM clicks "Crew Clock" consequence option
+4. Dialog displays only threat category clocks (e.g., "Alarm Rising 3/6", "Rival's Vendetta 4/6")
+5. GM selects a threat clock
+6. Consequences applied based on Position (1/2/4/6 segments)
+
+**Workflow - No Threat Clocks Available:**
+1. Player fails or gets partial success on action
+2. GM transitions to `GM_RESOLVING_CONSEQUENCE`
+3. GM clicks "Crew Clock" consequence option
+4. Dialog shows "No threat clocks available" message
+5. GM clicks "Create New Threat Clock" button
+6. Clock creation dialog opens with:
+   - Category **locked to "threat"** (cannot change)
+   - Help text: "Category locked for consequence creation"
+   - Other fields available: Name, Segments (4/6/8/12)
+7. GM creates threat clock (e.g., "Guard Pursuit 3/6")
+8. Consequence immediately applied to new clock
+
+**Example Threat Clocks:**
+- "Rival's Vendetta 0/6"
+- "Guard Pursuit 4/6"
+- "Reactor Overload 5/8"
+- "Alarm Escalating 2/4"
+
+**Non-Threat Clocks (Not Available for Consequences):**
+- Long-term-projects (campaigns, investigations)
+- Personal goals (character development)
+- Obstacles (mechanical blocks to overcome)
+- Faction clocks (relationship tracking)

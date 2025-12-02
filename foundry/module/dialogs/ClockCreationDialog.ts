@@ -35,15 +35,18 @@ export class ClockCreationDialog extends Dialog {
    * @param clockType - 'harm' or 'progress' (crew clock)
    * @param onCreate - Callback: (clockData) => Promise<void>
    * @param options - Additional dialog options
+   * @param preSelectedCategory - Optional: lock category to this value (e.g., 'threat' for consequences)
    */
   constructor(
     _entityId: string,
     clockType: ClockType,
     onCreate: (clockData: ClockData) => void | Promise<void>,
-    options: Partial<DialogOptions> = {}
+    options: Partial<DialogOptions> = {},
+    preSelectedCategory?: 'threat' | 'long-term-project' | 'personal-goal' | 'obstacle' | 'faction'
   ) {
     const isHarm = clockType === 'harm';
-    const title = isHarm ? 'Create Harm Clock' : 'Create Crew Clock';
+    const isLockedCategory = preSelectedCategory !== undefined;
+    const title = isHarm ? 'Create Harm Clock' : (isLockedCategory ? 'Create Threat Clock' : 'Create Crew Clock');
     const placeholder = isHarm ? 'e.g., Physical Harm, Morale Damage' : 'e.g., Threat Level, Investigation';
 
     const content = `
@@ -74,14 +77,15 @@ export class ClockCreationDialog extends Dialog {
 
           ${!isHarm ? `
           <div class="form-group">
-            <label>Category</label>
-            <select name="category">
-              <option value="long-term-project">Long-term Project</option>
-              <option value="threat">Threat (countdown)</option>
-              <option value="personal-goal">Personal Goal</option>
-              <option value="obstacle">Obstacle</option>
-              <option value="faction">Faction</option>
+            <label>Category${isLockedCategory ? ' (locked for consequence)' : ''}</label>
+            <select name="category" ${isLockedCategory ? 'disabled' : ''}>
+              <option value="long-term-project" ${preSelectedCategory === 'long-term-project' ? 'selected' : ''}>Long-term Project</option>
+              <option value="threat" ${preSelectedCategory === 'threat' ? 'selected' : ''}>Threat (countdown)</option>
+              <option value="personal-goal" ${preSelectedCategory === 'personal-goal' ? 'selected' : ''}>Personal Goal</option>
+              <option value="obstacle" ${preSelectedCategory === 'obstacle' ? 'selected' : ''}>Obstacle</option>
+              <option value="faction" ${preSelectedCategory === 'faction' ? 'selected' : ''}>Faction</option>
             </select>
+            ${isLockedCategory ? '<p class="form-help">Category is locked because this clock is being created for consequence resolution</p>' : ''}
           </div>
           ` : ''}
 
@@ -100,7 +104,7 @@ export class ClockCreationDialog extends Dialog {
         icon: '<i class="fas fa-clock"></i>',
         label: 'Create Clock',
         callback: async (html?: JQuery<HTMLElement>) => {
-          await this._onApply(html!, onCreate, clockType);
+          await this._onApply(html!, onCreate, clockType, preSelectedCategory);
         }
       },
       cancel: {
@@ -122,11 +126,19 @@ export class ClockCreationDialog extends Dialog {
 
   /**
    * Handle form submission
+   *
+   * @private
+   * @param html - Dialog HTML
+   * @param onCreate - Callback to create the clock
+   * @param clockType - Type of clock being created
+   * @param preSelectedCategory - Pre-selected category (if locked)
+   * @returns True if dialog should close, false otherwise
    */
   private async _onApply(
     html: JQuery,
     onCreate: (clockData: ClockData) => void | Promise<void>,
-    clockType: ClockType
+    clockType: ClockType,
+    preSelectedCategory?: string
   ): Promise<boolean> {
     const form = html.find('form')[0] as HTMLFormElement;
     const clockName = (form.elements.namedItem('clockName') as HTMLInputElement).value.trim();
@@ -134,7 +146,8 @@ export class ClockCreationDialog extends Dialog {
     const descriptionEl = form.elements.namedItem('description') as HTMLTextAreaElement | null;
     const description = descriptionEl?.value?.trim() || undefined;
     const categoryEl = form.elements.namedItem('category') as HTMLSelectElement | null;
-    const category = categoryEl?.value;
+    // Use preSelectedCategory if field is disabled, otherwise get from form
+    const category = preSelectedCategory || categoryEl?.value;
 
     // Validation
     if (!clockName) {

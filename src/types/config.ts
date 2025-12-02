@@ -76,9 +76,9 @@ export interface GameConfig {
       great: number;
       spectacular: number;
     };
-    // Success segments (legacy, may be deprecated)
+    // Success segments based on Effect (limited/standard/great/spectacular)
     successSegments: {
-      lesser: number,
+      limited: number,
       standard: number,
       great: number,
       spectacular: number

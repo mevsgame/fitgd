@@ -14,6 +14,9 @@
 
 import type { IPlayerActionWidgetContext } from '../types/widgetContext';
 import { asReduxId } from '../types/ids';
+import { DEFAULT_CONFIG } from '@/config/gameConfig';
+import { selectEffectiveEffect, selectDefensiveSuccessValues } from '@/selectors/playerRoundStateSelectors';
+import { calculateOutcome } from '@/utils/diceRules';
 
 /**
  * Coordinates event handling for Player Action Widget
@@ -36,7 +39,7 @@ export class PlayerActionEventCoordinator {
    *
    * @param context - Widget context providing state and services
    */
-  constructor(private _context: IPlayerActionWidgetContext) {}
+  constructor(private _context: IPlayerActionWidgetContext) { }
 
   /**
    * Get the context (exposed for testing and use by handlers)
@@ -508,21 +511,6 @@ export class PlayerActionEventCoordinator {
     }).render(true);
   }
 
-  /**
-   * Handle equipment management dialog
-   */
-  async handleEquipment(): Promise<void> {
-    const crewId = this.context.getCrewId();
-    if (!crewId) {
-      this.context.getNotificationService().warn('Crew not found - equipment management requires a crew');
-      return;
-    }
-
-    // Import and open Equipment Management Dialog
-    const { EquipmentManagementDialog } = await import('../dialogs/EquipmentManagementDialog');
-    new EquipmentManagementDialog(this.context.getCharacterId(), crewId).render(true);
-  }
-
   /* ========================================
      ROLL EXECUTION EVENTS (2 handlers)
      ======================================== */
@@ -578,7 +566,6 @@ export class PlayerActionEventCoordinator {
         `${characterName} - ${approach} approach`
       );
 
-      const { calculateOutcome } = await import('@/utils/diceRules');
       const outcome = calculateOutcome(rollResult);
 
       // Execute all roll outcome actions as batch
@@ -752,11 +739,12 @@ export class PlayerActionEventCoordinator {
     const { ClockSelectionDialog, ClockCreationDialog } = await import('../dialogs/index');
     const dialog = new ClockSelectionDialog(
       crewId,
-      'crew',
+      'threat',
       async (clockId: string) => {
         try {
           if (clockId === '_new') {
             // Open ClockCreationDialog for new crew clock
+            // Pre-select and lock to 'threat' category for consequence creation
             const creationDialog = new ClockCreationDialog(
               crewId,
               'progress',
@@ -782,7 +770,9 @@ export class PlayerActionEventCoordinator {
                   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                   this.context.getNotificationService().error(`Error creating clock: ${errorMessage}`);
                 }
-              }
+              },
+              {},
+              'threat'
             );
 
             creationDialog.render(true);
@@ -817,11 +807,28 @@ export class PlayerActionEventCoordinator {
     const state = game.fitgd.store.getState();
     const workflow = consequenceApplicationHandler.createConsequenceApplicationWorkflow(state, transaction);
 
+    // For Partial Success: transition to SUCCESS_COMPLETE instead of APPLYING_EFFECTS
+    // This allows GM to select success clocks in a separate phase
+    const isPartialSuccess = playerState?.outcome === 'partial';
+    const nextState = isPartialSuccess ? 'SUCCESS_COMPLETE' : workflow.transitionToApplyingAction.payload.newState;
+
     const actions: any[] = [
-      workflow.transitionToApplyingAction,
+      {
+        type: 'playerRoundState/transitionState',
+        payload: {
+          characterId: this.context.getCharacterId(),
+          newState: nextState,
+        },
+      },
       workflow.applyConsequenceAction,
-      workflow.clearTransactionAction,
     ];
+
+    // For Partial Success: DON'T clear transaction yet
+    // It contains useDefensiveSuccess flag needed for calculating success clock segments
+    // It will be cleared in handleAcceptSuccessClock instead
+    if (!isPartialSuccess) {
+      actions.push(workflow.clearTransactionAction);
+    }
 
     const crewId = this.context.getCrewId();
     if (crewId && workflow.momentumGain > 0) {
@@ -943,8 +950,14 @@ export class PlayerActionEventCoordinator {
       silent: true,
     });
 
-    // Reroll!
-    const dicePool = diceRollingHandler.calculateDicePool(updatedState);
+    // ✅ FIX: Wait for Redux state transition to propagate before calculating dice
+    // Without this wait, state updates to subscribers haven't completed yet
+    // causing dice pool calculation to use stale state (captured 40+ lines earlier)
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // ✅ FIX: Fetch fresh state instead of using stale 'updatedState' from line 917
+    const freshState = game.fitgd.store.getState();
+    const dicePool = diceRollingHandler.calculateDicePool(freshState);
     const rollResult = await this.context.getDiceService().roll(dicePool);
 
     // Post the reroll to chat
@@ -957,7 +970,6 @@ export class PlayerActionEventCoordinator {
       `${characterName} - ${approach} approach (Stims Reroll)`
     );
 
-    const { calculateOutcome } = await import('@/utils/diceRules');
     const outcome = calculateOutcome(rollResult);
 
     // Execute outcome actions
@@ -982,5 +994,254 @@ export class PlayerActionEventCoordinator {
   async handleUseStimsGMPhase(): Promise<void> {
     // Delegate to standard stims handling - same logic applies
     await this.handleUseStims();
+  }
+
+  /**
+   * Handle defensive success toggle
+   *
+   * @param enabled - Whether to enable defensive success option
+   */
+  async handleToggleDefensiveSuccess(enabled: boolean): Promise<void> {
+    const consequenceHandler = this.context.getHandlerFactory().getConsequenceHandler();
+    const action = consequenceHandler.createToggleDefensiveSuccessAction(enabled);
+
+    await game.fitgd.bridge.execute(action as any, {
+      affectedReduxIds: [consequenceHandler.getAffectedReduxId() as any],
+      silent: true,
+    });
+  }
+
+  /**
+   * Handle success clock operation selection (advance or reduce)
+   */
+  async handleSuccessClockOperationChange(operation: 'add' | 'reduce'): Promise<void> {
+    const consequenceHandler = this.context.getHandlerFactory().getConsequenceHandler();
+    const action = consequenceHandler.createSetSuccessClockOperationAction(operation);
+
+    await game.fitgd.bridge.execute(action as any, {
+      affectedReduxIds: [consequenceHandler.getAffectedReduxId() as any],
+      silent: true,
+    });
+  }
+
+  /**
+   * Handle success clock selection dialog
+   */
+  async handleSuccessClockSelect(): Promise<void> {
+    const playerState = this.context.getPlayerState();
+    const crewId = this.context.getCrewId();
+    const consequenceHandler = this.context.getHandlerFactory().getConsequenceHandler();
+
+    if (!playerState?.consequenceTransaction || !crewId) return;
+
+    const operation = playerState.consequenceTransaction.successClockOperation;
+    if (!operation) {
+      this.context.getNotificationService().warn('Select clock operation (Advance/Reduce) first');
+      return;
+    }
+
+    // Open ClockSelectionDialog (use crew-type for both operations)
+    const { ClockSelectionDialog, ClockCreationDialog } = await import('../dialogs/index');
+    const dialog = new ClockSelectionDialog(
+      crewId,
+      operation === 'add' ? 'progress' : 'threat',
+      async (clockId: string) => {
+        try {
+          if (clockId === '_new') {
+            // Open ClockCreationDialog for new clock
+            const preSelectedCategory = operation === 'reduce' ? 'threat' : undefined;
+            const creationDialog = new ClockCreationDialog(
+              crewId,
+              'progress',
+              async (clockData: any) => {
+                try {
+                  // Create the new clock
+                  const createClockAction = consequenceHandler.createNewSuccessClockAction(clockData);
+                  const newClockId = createClockAction.payload.id;
+
+                  await game.fitgd.bridge.execute(createClockAction as any, {
+                    affectedReduxIds: [asReduxId(crewId)],
+                    silent: true,
+                  });
+
+                  // Calculate segments based on effect (use defensive effect if active)
+                  const state = game.fitgd.store.getState();
+
+                  // Check if defensive success is active - use reduced effect
+                  let effectToUse = selectEffectiveEffect(state, this.context.getCharacterId());
+                  if (playerState?.consequenceTransaction?.useDefensiveSuccess) {
+                    const defensiveValues = selectDefensiveSuccessValues(state, this.context.getCharacterId());
+                    effectToUse = defensiveValues.defensiveEffect || 'limited';
+                  }
+
+                  const segments = DEFAULT_CONFIG.resolution.successSegments[effectToUse];
+
+                  // Update the transaction with the new clock and calculated segments
+                  const updateClockAction = consequenceHandler.createSetSuccessClockAction(newClockId);
+                  const setSegmentsAction = {
+                    type: 'playerRoundState/updateConsequenceTransaction',
+                    payload: {
+                      characterId: this.context.getCharacterId(),
+                      updates: { calculatedSuccessClockSegments: segments },
+                    },
+                  };
+
+                  await game.fitgd.bridge.executeBatch([updateClockAction, setSegmentsAction] as any[], {
+                    affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
+                    silent: true,
+                  });
+                } catch (error) {
+                  console.error('FitGD | Error creating success clock:', error);
+                  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                  this.context.getNotificationService().error(`Error creating clock: ${errorMessage}`);
+                }
+              },
+              {},
+              preSelectedCategory
+            );
+
+            creationDialog.render(true);
+          } else {
+            // Set the clock ID and calculate segments based on effect (use defensive effect if active)
+            const state = game.fitgd.store.getState();
+
+            // Check if defensive success is active - use reduced effect
+            let effectToUse = selectEffectiveEffect(state, this.context.getCharacterId());
+            if (playerState?.consequenceTransaction?.useDefensiveSuccess) {
+              const defensiveValues = selectDefensiveSuccessValues(state, this.context.getCharacterId());
+              effectToUse = defensiveValues.defensiveEffect || 'limited';
+            }
+
+            const segments = DEFAULT_CONFIG.resolution.successSegments[effectToUse];
+
+            // Batch: set clock ID and calculated segments
+            const setClockAction = consequenceHandler.createSetSuccessClockAction(clockId);
+            const setSegmentsAction = {
+              type: 'playerRoundState/updateConsequenceTransaction',
+              payload: {
+                characterId: this.context.getCharacterId(),
+                updates: { calculatedSuccessClockSegments: segments },
+              },
+            };
+
+            await game.fitgd.bridge.executeBatch([setClockAction, setSegmentsAction] as any[], {
+              affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
+              silent: true,
+            });
+          }
+        } catch (error) {
+          console.error('FitGD | Error in success clock selection:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.context.getNotificationService().error(`Error selecting clock: ${errorMessage}`);
+        }
+      }
+    );
+
+    dialog.render(true);
+  }
+
+  /**
+   * Handle skip success clock button (clear success clock selections)
+   */
+  async handleSkipSuccessClock(): Promise<void> {
+    const consequenceHandler = this.context.getHandlerFactory().getConsequenceHandler();
+    const action = consequenceHandler.createSetSuccessClockAction(''); // Empty string clears selection
+
+    await game.fitgd.bridge.execute(action as any, {
+      affectedReduxIds: [consequenceHandler.getAffectedReduxId() as any],
+      silent: true,
+    });
+  }
+
+  /**
+   * Handle accept success clock button (apply clock advancement and close widget)
+   */
+  async handleAcceptSuccessClock(): Promise<void> {
+    const playerState = this.context.getPlayerState();
+    const transaction = playerState?.consequenceTransaction;
+    const characterId = this.context.getCharacterId();
+    const crewId = this.context.getCrewId();
+
+    // If success clock is configured, apply it
+    if (transaction) {
+      const state = game.fitgd.store.getState();
+      const successClockAction = this._createSuccessClockAction(state, transaction);
+
+      const actions: any[] = [];
+
+      if (successClockAction) {
+        actions.push(successClockAction);
+
+        // Post message to chat
+        const clock = state.clocks.byId[transaction.successClockId!];
+        if (clock) {
+          const segments = transaction.calculatedSuccessClockSegments || 1;
+          const operation = transaction.successClockOperation;
+          const actionType = operation === 'add' ? 'advanced' : 'reduced';
+          this.context.getNotificationService().info(
+            `${clock.subtype} ${actionType} by ${segments} segment(s)`
+          );
+        }
+      }
+
+      // Always clear transaction (whether clock was selected or skipped)
+      const clearTransactionAction = {
+        type: 'playerRoundState/clearConsequenceTransaction',
+        payload: { characterId },
+      };
+      actions.push(clearTransactionAction);
+
+      if (actions.length > 0) {
+        await game.fitgd.bridge.executeBatch(
+          actions,
+          {
+            affectedReduxIds: [
+              asReduxId(characterId),
+              ...(crewId ? [asReduxId(crewId)] : []),
+            ],
+            silent: false,
+          }
+        );
+      }
+    }
+
+    // Close the widget
+    const app = this.context as any;
+    if (app.close) {
+      await app.close();
+    }
+  }
+
+  /**
+   * Create action to update success clock based on transaction
+   */
+  private _createSuccessClockAction(state: any, transaction: any): any | null {
+    if (!transaction?.successClockId || !transaction?.successClockOperation) {
+      return null;
+    }
+
+    const clock = state.clocks.byId[transaction.successClockId];
+    if (!clock) return null;
+
+    const segments = transaction.calculatedSuccessClockSegments || 1;
+    const operation = transaction.successClockOperation;
+
+    if (operation === 'add') {
+      return {
+        type: 'clocks/addSegments',
+        payload: {
+          clockId: clock.id,
+          amount: segments,
+        },
+      };
+    } else {
+      return {
+        type: 'clocks/clearSegments',
+        payload: {
+          clockId: clock.id,
+          amount: segments,
+        },
+      };
+    }
   }
 }

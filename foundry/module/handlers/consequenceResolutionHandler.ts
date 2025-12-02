@@ -492,6 +492,32 @@ export class ConsequenceResolutionHandler {
   }
 
   /**
+   * Create action to toggle defensive success option
+   *
+   * @param enabled - Whether to enable defensive success
+   * @returns Redux action to update consequence transaction
+   */
+  createToggleDefensiveSuccessAction(enabled: boolean): {
+    type: string;
+    payload: {
+      characterId: string;
+      updates: {
+        useDefensiveSuccess: boolean;
+      };
+    };
+  } {
+    return {
+      type: 'playerRoundState/updateConsequenceTransaction',
+      payload: {
+        characterId: this.config.characterId,
+        updates: {
+          useDefensiveSuccess: enabled,
+        },
+      },
+    };
+  }
+
+  /**
    * Get the affected Redux ID for this character
    *
    * @param characterId - Optional override character ID
@@ -548,5 +574,131 @@ export class ConsequenceResolutionHandler {
     payload: any;
   }> {
     return [this.createTransitionStateAction('IDLE_WAITING')];
+  }
+
+  /**
+   * Create Redux action to set success clock operation
+   *
+   * @param operation - 'add' for progress clocks, 'reduce' for threat clocks
+   * @returns Redux action payload
+   */
+  createSetSuccessClockOperationAction(operation: 'add' | 'reduce'): {
+    type: string;
+    payload: {
+      characterId: string;
+      updates: {
+        successClockOperation: 'add' | 'reduce';
+      };
+    };
+  } {
+    return {
+      type: 'playerRoundState/updateConsequenceTransaction',
+      payload: {
+        characterId: this.config.characterId,
+        updates: {
+          successClockOperation: operation,
+        },
+      },
+    };
+  }
+
+  /**
+   * Create Redux action to select a success clock
+   *
+   * @param clockId - The clock ID to select
+   * @returns Redux action payload
+   */
+  createSetSuccessClockAction(clockId: string): {
+    type: string;
+    payload: {
+      characterId: string;
+      updates: {
+        successClockId: string;
+      };
+    };
+  } {
+    return {
+      type: 'playerRoundState/updateConsequenceTransaction',
+      payload: {
+        characterId: this.config.characterId,
+        updates: {
+          successClockId: clockId,
+        },
+      },
+    };
+  }
+
+  /**
+   * Create Redux action to create a new success clock
+   *
+   * @param clockData - Clock configuration
+   * @param generateId - Optional ID generator (for testing)
+   * @returns Redux action payload
+   */
+  createNewSuccessClockAction(
+    clockData: ClockData,
+    generateId?: () => string
+  ): {
+    type: string;
+    payload: {
+      id: string;
+      entityId: string;
+      clockType: 'progress';
+      subtype: string;
+      maxSegments: number;
+      segments: 0;
+      metadata: {
+        category?: string;
+        description?: string;
+      };
+    };
+  } {
+    if (!this.config.crewId) {
+      throw new Error('Cannot create success clock: no crew assigned');
+    }
+
+    const newClockId = generateId ? generateId() : (foundry?.utils?.randomID?.() || this._defaultIdGenerator());
+
+    return {
+      type: 'clocks/createClock',
+      payload: {
+        id: newClockId,
+        entityId: this.config.crewId,
+        clockType: 'progress',
+        subtype: clockData.name,
+        maxSegments: clockData.segments,
+        segments: 0,
+        metadata: {
+          category: clockData.category,
+          description: clockData.description,
+        },
+      },
+    };
+  }
+
+  /**
+   * Create Redux action to update transaction with new success clock
+   *
+   * @param newClockId - The newly created clock ID
+   * @returns Redux action payload
+   */
+  createUpdateSuccessClockInTransactionAction(newClockId: string): {
+    type: string;
+    payload: {
+      characterId: string;
+      updates: {
+        successClockId: string;
+      };
+    };
+  } {
+    return {
+      type: 'playerRoundState/updateConsequenceTransaction',
+      payload: {
+        characterId: this.config.characterId,
+        updates: {
+          successClockId: newClockId,
+        },
+      },
+    };
   }
 }

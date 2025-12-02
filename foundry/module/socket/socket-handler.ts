@@ -10,6 +10,7 @@
 
 import { updateBroadcastTracking, applyCommandsIncremental, refreshAffectedSheets, reloadStateFromSettings } from '../autosave/autosave-manager';
 import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
+import { PlayerActionWidget } from '../widgets/player-action-widget';
 
 /* -------------------------------------------- */
 /*  Socket Communication (socketlib)            */
@@ -400,9 +401,6 @@ async function handleTakeAction(data: { characterId: string; userId: string; use
 
   // Only show widget if this user owns the actor or is GM
   if (isOwner || isGM) {
-    // Import PlayerActionWidget dynamically to avoid circular dependencies
-    const { PlayerActionWidget } = await import('../widgets/player-action-widget');
-
     // Check if widget already exists for this character
     const existingWidget = Object.values(ui.windows).find(
       (app) => app instanceof PlayerActionWidget && (app as any).characterId === characterId

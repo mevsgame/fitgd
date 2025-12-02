@@ -13,7 +13,7 @@
 
 import type { RootState } from '@/store';
 import type { ConsequenceTransaction } from '@/types/playerRoundState';
-import { selectEffectivePosition, selectConsequenceSeverity, selectMomentumGain } from '@/selectors/playerRoundStateSelectors';
+import { selectEffectivePosition, selectConsequenceSeverity, selectMomentumGain, selectDefensiveSuccessValues } from '@/selectors/playerRoundStateSelectors';
 
 /**
  * Configuration for consequence application
@@ -224,11 +224,21 @@ export class ConsequenceApplicationHandler {
 
   /**
    * Calculate consequence severity based on position
+   * Considers defensive success reduction if applicable
    *
    * @param state - Redux state
+   * @param transaction - Consequence transaction (to check defensive success flag)
    * @returns Number of segments to apply
    */
-  calculateConsequenceSegments(state: RootState): number {
+  calculateConsequenceSegments(state: RootState, transaction?: ConsequenceTransaction): number {
+    // Check if defensive success is being used
+    if (transaction?.useDefensiveSuccess) {
+      const defensiveValues = selectDefensiveSuccessValues(state, this.config.characterId);
+      const defensivePosition = defensiveValues.defensivePosition;
+      return defensivePosition ? selectConsequenceSeverity(defensivePosition) : 0;
+    }
+
+    // Otherwise use effective position
     const position = selectEffectivePosition(state, this.config.characterId);
     return selectConsequenceSeverity(position);
   }
@@ -294,7 +304,7 @@ export class ConsequenceApplicationHandler {
     state: RootState,
     transaction: ConsequenceTransaction
   ): ConsequenceApplicationResult {
-    const segments = this.calculateConsequenceSegments(state);
+    const segments = this.calculateConsequenceSegments(state, transaction);
     const momentumGain = this.calculateMomentumGain(state);
     const isHarm = transaction.consequenceType === 'harm';
 

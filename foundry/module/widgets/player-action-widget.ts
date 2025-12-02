@@ -17,7 +17,7 @@ import { selectCanUseRally } from '@/selectors/characterSelectors';
 import { selectStimsAvailable } from '@/selectors/clockSelectors';
 
 import { selectActiveEquipment, selectPassiveEquipment, selectConsumableEquipment, selectFirstLockCost } from '@/selectors/equipmentSelectors';
-import { selectDicePool, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect, selectEquipmentEffects, selectEquipmentModifiedPosition, selectEquipmentModifiedEffect } from '@/selectors/playerRoundStateSelectors';
+import { selectDicePool, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect, selectEquipmentEffects, selectEquipmentModifiedPosition, selectEquipmentModifiedEffect, selectDefensiveSuccessValues } from '@/selectors/playerRoundStateSelectors';
 
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
 
@@ -118,6 +118,10 @@ interface PlayerActionWidgetData {
   effectivePosition?: Position;
   effectiveEffect?: Effect;
   consequenceConfigured?: boolean;
+
+  // Defensive success option (for GM_RESOLVING_CONSEQUENCE state)
+  defensiveSuccessValues?: any; // DefensiveSuccessValues from Redux
+  useDefensiveSuccess?: boolean;
 }
 
 // ClockData moved to coordinator implementations
@@ -590,9 +594,18 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
   }): Partial<PlayerActionWidgetData> {
     const { state, playerState } = entities;
 
-    // Only load consequence data if in GM_RESOLVING_CONSEQUENCE state
-    if (playerState?.state === 'GM_RESOLVING_CONSEQUENCE') {
-      return this._getConsequenceData(state);
+    // Load consequence data for both GM_RESOLVING_CONSEQUENCE and SUCCESS_COMPLETE states
+    // SUCCESS_COMPLETE needs success clock fields for optional clock advancement UI
+    if (playerState?.state === 'GM_RESOLVING_CONSEQUENCE' || playerState?.state === 'SUCCESS_COMPLETE') {
+      const consequenceData = this._getConsequenceData(state);
+
+      // Always include defensive success values for the player, even if no transaction yet
+      // This allows the player to see the toggle button immediately upon entering the phase
+      if (!consequenceData.defensiveSuccessValues) {
+        consequenceData.defensiveSuccessValues = selectDefensiveSuccessValues(state, this.characterId);
+      }
+
+      return consequenceData;
     }
 
     return {};
@@ -658,10 +671,7 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     });
     html.find('[data-action="use-trait"]').click((_e) => {
       void this.coordinator.handleUseTrait();
-    });
-    html.find('[data-action="equipment"]').click((_e) => {
-      void this.coordinator.handleEquipment();
-    });
+    }); 
     html.find('[data-action="push-die"]').click((_e) => {
       void this.coordinator.handleTogglePushDie();
     });
@@ -677,6 +687,27 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     // Consequence buttons
     html.find('[data-action="use-stims"]').click((_e) => {
       void this.coordinator.handleUseStims();
+    });
+
+    // Defensive success toggle
+    html.find('[data-action="toggle-defensive-success"]').click((e) => {
+      const enabled = (e.currentTarget as HTMLElement).dataset.enabled === 'true';
+      void this.coordinator.handleToggleDefensiveSuccess(enabled);
+    });
+
+    // Success clock operation selection (for success/critical outcomes)
+    html.find('[data-action="select-success-clock-operation"]').click((e) => {
+      const operation = (e.currentTarget as HTMLElement).dataset.operation as 'add' | 'reduce';
+      void this.coordinator.handleSuccessClockOperationChange(operation);
+    });
+    html.find('[data-action="select-success-clock"]').click((_e) => {
+      void this.coordinator.handleSuccessClockSelect();
+    });
+    html.find('[data-action="skip-success-clock"]').click((_e) => {
+      void this.coordinator.handleSkipSuccessClock();
+    });
+    html.find('[data-action="accept-success-clock"]').click((_e) => {
+      void this.coordinator.handleAcceptSuccessClock();
     });
 
     // GM consequence configuration buttons

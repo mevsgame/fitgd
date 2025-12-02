@@ -9,6 +9,7 @@ import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
 import type { PlayerRoundState, Position, Effect } from '../types/playerRoundState';
 import type { EquipmentEffect } from '../types/equipment';
+import type { DefensiveSuccessValues } from '../types/resolution';
 import { DEFAULT_CONFIG } from '../config/gameConfig';
 import {
   calculateConsequenceSeverity,
@@ -23,6 +24,7 @@ import {
   improveEffect as improveEffectBySteps,
   worsenEffect as worsenEffectBySteps,
 } from '../utils/positionEffectHelpers';
+import { calculateDefensiveSuccessValues } from '../utils/defensiveSuccessRules';
 
 /**
  * Select player state by character ID
@@ -31,7 +33,7 @@ export const selectPlayerState = (
   state: RootState,
   characterId: string
 ): PlayerRoundState | undefined => {
-  return state.playerRoundState.byCharacterId[characterId];
+  return state.playerRoundState?.byCharacterId[characterId];
 };
 
 /**
@@ -145,7 +147,7 @@ export const selectDicePool = createSelector(
  */
 export const selectEquipmentEffects = createSelector(
   [
-    (state: RootState, characterId: string) => state.characters.byId[characterId],
+    (state: RootState, characterId: string) => state.characters?.byId[characterId],
     (state: RootState, characterId: string) => selectPlayerState(state, characterId),
   ],
   (character, playerState): EquipmentEffect => {
@@ -520,18 +522,22 @@ export const selectEffectivePosition = createSelector(
  * Calculate effective effect for roll (ephemeral - does NOT mutate state)
  *
  * Applies push effect improvement if applicable.
- * The improved effect is only used for this roll's success clock calculations
+ * Also applies Defensive Success effect reduction for Partial Success outcomes.
+ * The improved/reduced effect is only used for this roll's success clock calculations
  * and does NOT modify the base effect set by the GM.
  *
  * @param state - Redux state
  * @param characterId - Character ID
- * @returns Effective effect for roll (with push improvements applied)
+ * @returns Effective effect for roll (with push improvements and defensive success reductions applied)
  *
  * @example
  * // Base effect: standard, pushed for effect
  * selectEffectiveEffect(state, characterId) // → 'great'
  *
- * // Base effect: standard, no push
+ * // Base effect: standard, defensive success chosen (Partial Success)
+ * selectEffectiveEffect(state, characterId) // → 'limited'
+ *
+ * // Base effect: standard, no push, no defensive success
  * selectEffectiveEffect(state, characterId) // → 'standard'
  */
 export const selectEffectiveEffect = createSelector(
@@ -541,14 +547,41 @@ export const selectEffectiveEffect = createSelector(
   ],
   (playerState, equipmentModifiedEffect): Effect => {
     // Start from the effect ALREADY modified by equipment
-    const baseEffect = equipmentModifiedEffect;
+    let effectiveEffect = equipmentModifiedEffect;
 
-    // Check if Push (Effect) is active
+    // Check if Push (Effect) is active - IMPROVES effect
     if (playerState?.pushed && playerState?.pushType === 'improved-effect') {
-      return improveEffect(baseEffect);
+      effectiveEffect = improveEffect(effectiveEffect);
     }
 
-    return baseEffect;
+    // NOTE: Defensive Success effect reduction is handled in consequenceDataResolver
+    // during final consequence calculation, not here. This prevents circular dependency
+    // where toggling defensive success would reduce effect, making it unavailable.
+
+    return effectiveEffect;
+  }
+);
+
+/**
+ * Select defensive success values for current player state
+ *
+ * Computes whether defensive success option is available and what the values would be.
+ * Only available on partial success with effect ≥ standard.
+ */
+export const selectDefensiveSuccessValues = createSelector(
+  [
+    (state: RootState, characterId: string) => selectPlayerState(state, characterId),
+    (state: RootState, characterId: string) => selectEffectivePosition(state, characterId),
+    (state: RootState, characterId: string) => selectEffectiveEffect(state, characterId),
+  ],
+  (playerState, effectivePosition, effectiveEffect): DefensiveSuccessValues => {
+    const outcome = playerState?.outcome || 'failure';
+
+    return calculateDefensiveSuccessValues({
+      position: effectivePosition,
+      effect: effectiveEffect,
+      outcome,
+    });
   }
 );
 
