@@ -15,7 +15,7 @@
 import type { IPlayerActionWidgetContext } from '../types/widgetContext';
 import { asReduxId } from '../types/ids';
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
-import { selectEffectiveEffect } from '@/selectors/playerRoundStateSelectors';
+import { selectEffectiveEffect, selectDefensiveSuccessValues } from '@/selectors/playerRoundStateSelectors';
 import { calculateOutcome } from '@/utils/diceRules';
 
 /**
@@ -1058,11 +1058,17 @@ export class PlayerActionEventCoordinator {
                     silent: true,
                   });
 
-                  // Calculate segments based on current effect only (position doesn't affect success)
+                  // Calculate segments based on effect (use defensive effect if active)
                   const state = game.fitgd.store.getState();
 
-                  const effect = selectEffectiveEffect(state, this.context.getCharacterId());
-                  const segments = DEFAULT_CONFIG.resolution.successSegments[effect];
+                  // Check if defensive success is active - use reduced effect
+                  let effectToUse = selectEffectiveEffect(state, this.context.getCharacterId());
+                  if (playerState?.consequenceTransaction?.useDefensiveSuccess) {
+                    const defensiveValues = selectDefensiveSuccessValues(state, this.context.getCharacterId());
+                    effectToUse = defensiveValues.defensiveEffect || 'limited';
+                  }
+
+                  const segments = DEFAULT_CONFIG.resolution.successSegments[effectToUse];
 
                   // Update the transaction with the new clock and calculated segments
                   const updateClockAction = consequenceHandler.createSetSuccessClockAction(newClockId);
@@ -1090,11 +1096,17 @@ export class PlayerActionEventCoordinator {
 
             creationDialog.render(true);
           } else {
-            // Set the clock ID and calculate segments based on current effect only
+            // Set the clock ID and calculate segments based on effect (use defensive effect if active)
             const state = game.fitgd.store.getState();
 
-            const effect = selectEffectiveEffect(state, this.context.getCharacterId());
-            const segments = DEFAULT_CONFIG.resolution.successSegments[effect];
+            // Check if defensive success is active - use reduced effect
+            let effectToUse = selectEffectiveEffect(state, this.context.getCharacterId());
+            if (playerState?.consequenceTransaction?.useDefensiveSuccess) {
+              const defensiveValues = selectDefensiveSuccessValues(state, this.context.getCharacterId());
+              effectToUse = defensiveValues.defensiveEffect || 'limited';
+            }
+
+            const segments = DEFAULT_CONFIG.resolution.successSegments[effectToUse];
 
             // Batch: set clock ID and calculated segments
             const setClockAction = consequenceHandler.createSetSuccessClockAction(clockId);

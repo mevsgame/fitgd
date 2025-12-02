@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 import type { RootState } from '../../src/store';
-import { charactersReducer } from '../../src/slices/characterSlice';
-import { crewsReducer } from '../../src/slices/crewSlice';
-import { clocksReducer } from '../../src/slices/clockSlice';
+import charactersReducer from '../../src/slices/characterSlice';
+import crewsReducer from '../../src/slices/crewSlice';
+import clocksReducer from '../../src/slices/clockSlice';
 import playerRoundStateReducer from '../../src/slices/playerRoundStateSlice';
-import { selectEffectiveEffect } from '../../src/selectors/playerRoundStateSelectors';
+import { selectEffectiveEffect, selectDefensiveSuccessValues } from '../../src/selectors/playerRoundStateSelectors';
 import { DEFAULT_CONFIG } from '../../src/config/gameConfig';
 
 describe('PlayerActionWidget - Partial Success with Defensive Success', () => {
@@ -78,6 +78,15 @@ describe('PlayerActionWidget - Partial Success with Defensive Success', () => {
                 },
             });
 
+            // Set outcome to partial (required for defensive success to be available)
+            store.dispatch({
+                type: 'playerRoundState/setOutcome',
+                payload: {
+                    characterId,
+                    outcome: 'partial' as const,
+                },
+            });
+
             // Transition to GM_RESOLVING_CONSEQUENCE (Partial Success)
             store.dispatch({
                 type: 'playerRoundState/transitionState',
@@ -98,12 +107,16 @@ describe('PlayerActionWidget - Partial Success with Defensive Success', () => {
 
             const state = store.getState() as RootState;
 
-            // ASSERTION: selectEffectiveEffect should return LIMITED (reduced from STANDARD)
+            // ASSERTION: selectEffectiveEffect should return STANDARD (no reduction in selector anymore)
             const effectiveEffect = selectEffectiveEffect(state, characterId);
-            expect(effectiveEffect).toBe('limited');
+            expect(effectiveEffect).toBe('standard');
 
-            // ASSERTION: Success clock segments should be 1 (LIMITED), not 3 (STANDARD)
-            const expectedSegments = DEFAULT_CONFIG.resolution.successSegments[effectiveEffect];
+            // ASSERTION: selectDefensiveSuccessValues should provide the REDUCED effect (LIMITED)
+            const defensiveValues = selectDefensiveSuccessValues(state, characterId);
+            expect(defensiveValues.defensiveEffect).toBe('limited');
+
+            // ASSERTION: Success clock segments calculated from defensive effect should be 1 (LIMITED), not 2 (STANDARD)
+            const expectedSegments = DEFAULT_CONFIG.resolution.successSegments[defensiveValues.defensiveEffect!];
             expect(expectedSegments).toBe(1);
         });
 
@@ -265,6 +278,15 @@ describe('PlayerActionWidget - Partial Success with Defensive Success', () => {
                 },
             });
 
+            // Set outcome to partial (required for defensive success to be available)
+            store.dispatch({
+                type: 'playerRoundState/setOutcome',
+                payload: {
+                    characterId,
+                    outcome: 'partial' as const,
+                },
+            });
+
             // Transition to GM_RESOLVING_CONSEQUENCE (Partial Success)
             store.dispatch({
                 type: 'playerRoundState/transitionState',
@@ -285,12 +307,16 @@ describe('PlayerActionWidget - Partial Success with Defensive Success', () => {
 
             const state = store.getState() as RootState;
 
-            // ASSERTION: selectEffectiveEffect should return STANDARD (reduced from GREAT)
+            // ASSERTION: selectEffectiveEffect should return GREAT (no reduction in selector anymore)
             const effectiveEffect = selectEffectiveEffect(state, characterId);
-            expect(effectiveEffect).toBe('standard');
+            expect(effectiveEffect).toBe('great');
 
-            // ASSERTION: Success clock segments should be 2 (STANDARD), not 4 (GREAT)
-            const expectedSegments = DEFAULT_CONFIG.resolution.successSegments[effectiveEffect];
+            // ASSERTION: selectDefensiveSuccessValues should provide the REDUCED effect (STANDARD)
+            const defensiveValues = selectDefensiveSuccessValues(state, characterId);
+            expect(defensiveValues.defensiveEffect).toBe('standard');
+
+            // ASSERTION: Success clock segments calculated from defensive effect should be 2 (STANDARD), not 4 (GREAT)
+            const expectedSegments = DEFAULT_CONFIG.resolution.successSegments[defensiveValues.defensiveEffect!];
             expect(expectedSegments).toBe(2);
         });
     });

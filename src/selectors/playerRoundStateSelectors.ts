@@ -554,11 +554,9 @@ export const selectEffectiveEffect = createSelector(
       effectiveEffect = improveEffect(effectiveEffect);
     }
 
-    // Check if Defensive Success is active - REDUCES effect
-    // This is used for Partial Success to trade offense for better defense
-    if (playerState?.consequenceTransaction?.useDefensiveSuccess) {
-      effectiveEffect = worsenEffectBySteps(effectiveEffect, 1);
-    }
+    // NOTE: Defensive Success effect reduction is handled in consequenceDataResolver
+    // during final consequence calculation, not here. This prevents circular dependency
+    // where toggling defensive success would reduce effect, making it unavailable.
 
     return effectiveEffect;
   }
