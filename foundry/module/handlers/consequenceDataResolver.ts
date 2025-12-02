@@ -64,7 +64,7 @@ export interface ConsequenceDataResolverConfig {
  * const data = resolver.resolveConsequenceData(state, playerState);
  */
 export class ConsequenceDataResolver {
-  constructor(private config: ConsequenceDataResolverConfig) {}
+  constructor(private config: ConsequenceDataResolverConfig) { }
 
   /**
    * Resolve consequence transaction data for template rendering
@@ -118,7 +118,8 @@ export class ConsequenceDataResolver {
 
     // Calculate harm segments and momentum gain using effective position
     // Note: Effect does NOT apply to consequences - only to success clocks
-    const effectivePosition = selectEffectivePosition(state, this.config.characterId);
+    const originalPosition = selectEffectivePosition(state, this.config.characterId);
+    let effectivePosition = originalPosition;
     let effectiveEffect = selectEffectiveEffect(state, this.config.characterId);
 
     // Check if defensive success is being used
@@ -132,10 +133,16 @@ export class ConsequenceDataResolver {
       const defensiveEffect = defensiveValues.defensiveEffect;
 
       calculatedHarmSegments = defensivePosition ? selectConsequenceSeverity(defensivePosition) : 0;
+
+      // Update effectivePosition for display (if not null)
+      if (defensivePosition) {
+        effectivePosition = defensivePosition;
+      }
+
       // Effect is reduced when using defensive success
       effectiveEffect = defensiveEffect || 'limited';
       // Momentum ALWAYS comes from original position, not reduced position
-      calculatedMomentumGain = selectMomentumGain(effectivePosition);
+      calculatedMomentumGain = selectMomentumGain(originalPosition);
     }
 
     // Determine if consequence is fully configured
