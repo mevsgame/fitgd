@@ -2,9 +2,9 @@
 
   {{!-- Sheet Header --}}
   <header class="sheet-header">
-    <img class="profile-img" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" height="100" width="100"/>
+    <img class="profile-img" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" height="100" width="100" />
     <div class="header-fields">
-      <h1 class="crewname"><input name="name" type="text" value="{{actor.name}}" placeholder="Crew Name"/></h1>
+      <h1 class="crewname"><input name="name" type="text" value="{{actor.name}}" placeholder="Crew Name" /></h1>
 
       {{!-- Momentum Display --}}
       <div class="momentum-display">
@@ -12,13 +12,13 @@
         <div class="momentum-row">
           <div class="momentum-track">
             {{#times 10}}
-              <span class="momentum-box {{#if (lt this ../system.currentMomentum)}}filled{{/if}}">
-                {{#if (eq this ../system.currentMomentum)}}▶{{/if}}
-              </span>
+            <span class="momentum-box {{#if (lt this ../system.currentMomentum)}}filled{{/if}}">
+              {{#if (eq this ../system.currentMomentum)}}▶{{/if}}
+            </span>
             {{/times}}
           </div>
           <div class="momentum-value">{{system.currentMomentum}}/10</div>
-          
+
           <button class="momentum-add-btn" type="button" data-amount="1" title="Add 1 Momentum">
             <i class="fas fa-plus"></i>
           </button>
@@ -30,7 +30,7 @@
             <i class="fas fa-redo"></i>
           </button>
           {{/if}}
-        </div> 
+        </div>
       </div>
     </div>
   </header>
@@ -59,7 +59,8 @@
         <div class="member-item">
           <div class="member-info">
             {{#if character.foundryActorId}}
-            <a class="content-link" draggable="true" data-uuid="Actor.{{character.foundryActorId}}" data-id="{{character.foundryActorId}}" data-type="Actor">
+            <a class="content-link" draggable="true" data-uuid="Actor.{{character.foundryActorId}}"
+              data-id="{{character.foundryActorId}}" data-type="Actor">
               <i class="fas fa-user"></i> {{character.name}}
             </a>
             {{else}}
@@ -67,7 +68,8 @@
             {{/if}}
           </div>
           {{#if @root.editable}}
-          <button class="remove-character-btn" type="button" data-character-id="{{character.id}}" title="Remove from crew">
+          <button class="remove-character-btn" type="button" data-character-id="{{character.id}}"
+            title="Remove from crew">
             <i class="fas fa-times"></i>
           </button>
           {{/if}}
@@ -91,80 +93,6 @@
         </div>
       </div>
 
-      {{!-- Addiction Clock --}}
-      {{#if system.addictionClock}}
-      <div class="clock-section">
-        <h3>Addiction Clock</h3>
-        <div class="clock-item addiction-clock" data-clock-id="{{system.addictionClock.id}}">
-          <div class="clock-info">
-            <h4 class="clock-name">Addiction</h4>
-            <div class="clock-controls">
-              {{#if @root.editable}}
-              <input type="number" class="clock-value-input"
-                     data-clock-id="{{system.addictionClock.id}}"
-                     value="{{system.addictionClock.segments}}"
-                     min="0"
-                     max="{{system.addictionClock.maxSegments}}"
-                     title="Click to edit value directly"/>
-              {{else}}
-              <span class="clock-value">{{system.addictionClock.segments}}/{{system.addictionClock.maxSegments}}</span>
-              {{/if}}
-            </div>
-            {{#if (gte system.addictionClock.segments system.addictionClock.maxSegments)}}
-            <p class="warning"><i class="fas fa-exclamation-triangle"></i> Stims locked!</p>
-            {{/if}}
-          </div>
-          <div class="clock-display">
-            {{clockSVG system.addictionClock width="120px" height="120px" class="addiction-clock-svg"}}
-          </div>
-        </div>
-      </div>
-      {{/if}}
-
-      {{!-- Consumable Clocks --}}
-      {{#if system.consumableClocks}}
-      <div class="clock-section">
-        <h3>Consumables</h3>
-        <div class="clocks-flow-grid">
-          {{#each system.consumableClocks as |clock|}}
-          <div class="clock-item consumable-clock {{#if clock.metadata.frozen}}frozen{{/if}}" data-clock-id="{{clock.id}}">
-            <div class="clock-info">
-              <div class="clock-header-inline">
-                <h4 class="clock-name {{#if @root.editable}}editable{{/if}}"
-                    data-clock-id="{{clock.id}}"
-                    contenteditable="{{@root.editable}}">{{clock.subtype}}</h4>
-                {{#if @root.editable}}
-                <button class="delete-clock-btn" type="button" data-clock-id="{{clock.id}}" title="Delete Clock">
-                  <i class="fas fa-trash"></i>
-                </button>
-                {{/if}}
-              </div>
-              <span class="clock-rarity">{{clock.metadata.rarity}}</span>
-              <div class="clock-controls">
-                {{#if @root.editable}}
-                <input type="number" class="clock-value-input"
-                       data-clock-id="{{clock.id}}"
-                       value="{{clock.segments}}"
-                       min="0"
-                       max="{{clock.maxSegments}}"
-                       title="Click to edit value directly"/>
-                {{else}}
-                <span class="clock-value">{{clock.segments}}/{{clock.maxSegments}}</span>
-                {{/if}}
-              </div>
-              {{#if clock.metadata.frozen}}
-              <p class="clock-status"><i class="fas fa-snowflake"></i> Depleted</p>
-              {{/if}}
-            </div>
-            <div class="clock-display">
-              {{clockSVG clock width="100px" height="100px" class="consumable-clock-svg"}}
-            </div>
-          </div>
-          {{/each}}
-        </div>
-      </div>
-      {{/if}}
-
       {{!-- Progress Clocks --}}
       {{#if system.progressClocks}}
       <div class="clock-section">
@@ -174,9 +102,8 @@
           <div class="clock-item progress-clock" data-clock-id="{{clock.id}}" data-category="{{clock.category}}">
             <div class="clock-info">
               <div class="clock-header-inline">
-                <h4 class="clock-name {{#if @root.editable}}editable{{/if}}"
-                    data-clock-id="{{clock.id}}"
-                    contenteditable="{{@root.editable}}">{{clock.name}}</h4>
+                <h4 class="clock-name {{#if @root.editable}}editable{{/if}}" data-clock-id="{{clock.id}}"
+                  contenteditable="{{@root.editable}}">{{clock.name}}</h4>
                 {{#if @root.editable}}
                 <button class="delete-clock-btn" type="button" data-clock-id="{{clock.id}}" title="Delete Clock">
                   <i class="fas fa-trash"></i>
@@ -186,12 +113,8 @@
               <span class="clock-category">{{clock.category}}</span>
               <div class="clock-controls">
                 {{#if @root.editable}}
-                <input type="number" class="clock-value-input"
-                       data-clock-id="{{clock.id}}"
-                       value="{{clock.segments}}"
-                       min="0"
-                       max="{{clock.maxSegments}}"
-                       title="Click to edit value directly"/>
+                <input type="number" class="clock-value-input" data-clock-id="{{clock.id}}" value="{{clock.segments}}"
+                  min="0" max="{{clock.maxSegments}}" title="Click to edit value directly" />
                 {{else}}
                 <span class="clock-value">{{clock.segments}}/{{clock.maxSegments}}</span>
                 {{/if}}

@@ -386,12 +386,39 @@ export async function createWidgetHarness(
   };
 
   const clickRoll = async (): Promise<void> => {
-    // This will call the widget's _onRoll method once we have dependency injection
-    // For now, simulate the core roll workflow
+    // Simulate the complete roll workflow including equipment locking
+    // (per docs/player-action-widget.md)
     const currentState = getPlayerState();
+    const char = getCharacter();
+    const crewData = getCrew();
 
     if (!currentState?.selectedApproach) {
       throw new Error('No approach selected');
+    }
+
+    // Collect equipment to lock
+    const equipmentToLock: string[] = [];
+    if (currentState.equippedForAction && currentState.equippedForAction.length > 0) {
+      equipmentToLock.push(...currentState.equippedForAction);
+    }
+    if (currentState.approvedPassiveId) {
+      equipmentToLock.push(currentState.approvedPassiveId);
+    }
+
+    // Calculate first-lock momentum cost for unlocked rare/epic items
+    let firstLockCost = 0;
+    if (char) {
+      for (const eqId of equipmentToLock) {
+        const eq = char.equipment.find(e => e.id === eqId);
+        if (eq && !eq.locked && (eq.tier === 'rare' || eq.tier === 'epic')) {
+          firstLockCost += 1;
+        }
+      }
+    }
+
+    // Validate momentum for first-lock cost
+    if (crewData && firstLockCost > 0 && crewData.currentMomentum < firstLockCost) {
+      throw new Error(`Insufficient momentum for equipment lock (need ${firstLockCost})`);
     }
 
     // Transition to ROLLING
@@ -411,7 +438,8 @@ export async function createWidgetHarness(
     // Set roll result and transition
     const nextState = outcome === 'critical' || outcome === 'success' ? 'SUCCESS_COMPLETE' : 'GM_RESOLVING_CONSEQUENCE';
 
-    await game.fitgd.bridge.executeBatch([
+    // Build action batch
+    const actions: Array<{ type: string; payload: any }> = [
       {
         type: 'playerRoundState/setRollResult',
         payload: {
@@ -425,8 +453,38 @@ export async function createWidgetHarness(
         type: 'playerRoundState/transitionState',
         payload: { characterId, newState: nextState },
       },
-    ]);
+    ];
+
+    // Add equipment lock actions (per docs/player-action-widget.md)
+    for (const eqId of equipmentToLock) {
+      const eq = char?.equipment.find(e => e.id === eqId);
+      if (eq && !eq.locked) {
+        actions.push({
+          type: 'characters/markEquipmentUsed',
+          payload: { characterId, equipmentId: eqId },
+        });
+
+        // If consumable, also mark as consumed
+        if (eq.category === 'consumable') {
+          actions.push({
+            type: 'characters/markEquipmentDepleted',
+            payload: { characterId, equipmentId: eqId },
+          });
+        }
+      }
+    }
+
+    // Spend first-lock momentum
+    if (crewData && firstLockCost > 0) {
+      actions.push({
+        type: 'crews/spendMomentum',
+        payload: { crewId: crewData.id, amount: firstLockCost },
+      });
+    }
+
+    await game.fitgd.bridge.executeBatch(actions);
   };
+
 
   const clickPushDie = async (): Promise<void> => {
     const currentState = getPlayerState();

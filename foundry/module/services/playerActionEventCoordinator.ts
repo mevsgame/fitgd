@@ -534,7 +534,29 @@ export class PlayerActionEventCoordinator {
     try {
       const state = game.fitgd.store.getState();
 
-      // Validate roll can proceed
+      // Collect equipment to lock (Active from equippedForAction + Passive from approvedPassiveId)
+      const equipmentToLock: string[] = [];
+      if (playerState.equippedForAction && playerState.equippedForAction.length > 0) {
+        equipmentToLock.push(...playerState.equippedForAction);
+      }
+      if (playerState.approvedPassiveId) {
+        equipmentToLock.push(playerState.approvedPassiveId);
+      }
+
+      // Calculate first-lock momentum cost (1M per unlocked Rare/Epic item)
+      let firstLockMomentumCost = 0;
+      for (const eqId of equipmentToLock) {
+        const eq = character.equipment.find(e => e.id === eqId);
+        if (eq && !eq.locked && (eq.tier === 'rare' || eq.tier === 'epic')) {
+          firstLockMomentumCost += DEFAULT_CONFIG.equipment.momentumCostByTier[eq.tier] || 0;
+        }
+      }
+
+      // Calculate total momentum cost (existing push/trait costs + equipment lock cost)
+      const baseMomentumCost = diceRollingHandler.calculateMomentumCost(playerState);
+      const totalMomentumCost = baseMomentumCost + firstLockMomentumCost;
+
+      // Validate roll can proceed (including equipment lock cost)
       const validation = diceRollingHandler.validateRoll(state, playerState, crew);
       if (!validation.isValid) {
         if (validation.reason === 'no-action-selected') {
@@ -544,6 +566,14 @@ export class PlayerActionEventCoordinator {
             `Insufficient Momentum! Need ${validation.momentumNeeded}, have ${validation.momentumAvailable}`
           );
         }
+        return;
+      }
+
+      // Additional check for equipment first-lock cost
+      if (crew && firstLockMomentumCost > 0 && crew.currentMomentum < totalMomentumCost) {
+        this.context.getNotificationService().error(
+          `Insufficient Momentum for equipment! Need ${totalMomentumCost}M (includes ${firstLockMomentumCost}M for first-lock), have ${crew.currentMomentum}M`
+        );
         return;
       }
 
@@ -568,13 +598,45 @@ export class PlayerActionEventCoordinator {
 
       const outcome = calculateOutcome(rollResult);
 
-      // Execute all roll outcome actions as batch
-      const rollBatch = diceRollingHandler.createRollOutcomeBatch(dicePool, rollResult, outcome);
+      // Build roll outcome batch (state transition + equipment locking)
+      const rollBatch: Array<{ type: string; payload: any }> = [
+        ...diceRollingHandler.createRollOutcomeBatch(dicePool, rollResult, outcome),
+      ];
+
+      // Add equipment lock actions
+      for (const eqId of equipmentToLock) {
+        const eq = character.equipment.find(e => e.id === eqId);
+        if (eq && !eq.locked) {
+          rollBatch.push({
+            type: 'characters/markEquipmentUsed',
+            payload: { characterId: this.context.getCharacterId(), equipmentId: eqId },
+          });
+
+          // If consumable, also mark as consumed
+          if (eq.category === 'consumable') {
+            rollBatch.push({
+              type: 'characters/markEquipmentDepleted',
+              payload: { characterId: this.context.getCharacterId(), equipmentId: eqId },
+            });
+          }
+        }
+      }
+
+      // Spend first-lock momentum (in addition to any existing momentum costs)
+      if (crew && firstLockMomentumCost > 0) {
+        rollBatch.push({
+          type: 'crews/spendMomentum',
+          payload: { crewId: crew.id, amount: firstLockMomentumCost },
+        });
+      }
 
       await game.fitgd.bridge.executeBatch(
         rollBatch,
         {
-          affectedReduxIds: [asReduxId(diceRollingHandler.getAffectedReduxId())],
+          affectedReduxIds: [
+            asReduxId(diceRollingHandler.getAffectedReduxId()),
+            ...(crew ? [asReduxId(crew.id)] : []),
+          ],
           force: false,
         }
       );
@@ -589,6 +651,7 @@ export class PlayerActionEventCoordinator {
       this.context.getNotificationService().error(`Roll failed: ${errorMessage}`);
     }
   }
+
 
   /**
    * Cancel current action and return to decision phase
