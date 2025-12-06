@@ -12,7 +12,7 @@ The **Equipment Sheet Dialog** is a reusable interface for creating and editing 
 - **Compendium Compatible**: Items can be saved to compendium for reuse
 
 ### Usage Contexts
-1. **Character Sheet**: Double-click item to edit, "Add Equipment" button to create
+1. **Character Sheet**: Double-click item to edit, "Create Equipment" button to create from scratch, "Browse Equipment" to add from compendium
 2. **Compendium Management**: Create equipment templates for reuse
 3. **World Item Creation**: GM creates equipment items in world database
 4. **Equipment Browser**: Add items from compendium to character
@@ -144,11 +144,15 @@ The **Equipment Sheet Dialog** is a reusable interface for creating and editing 
 *See: [Character Sheet](./character-sheet.md)*
 
 **Opening Dialog**:
-- **Create New**: Click "Add Equipment" button → Opens dialog in create mode
+- **Create New**: Click "Create Equipment" button → Opens dialog in create mode
 - **Edit Existing**: Double-click item in equipment list → Opens dialog in edit mode
 
 **Create Mode**:
-- All fields empty/default values
+- **GM**: All fields empty/default values, full control over Tier/Modifiers
+- **Player (Restricted)**: Simplified interface
+  - Choose Type: Active (+1d) or Passive (No Bonus)
+  - Name, Slots, Description input
+  - Automatically sets Tier=Common and appropriate Category/Modifiers
 - "Create" button at bottom
 - On submit: Creates Foundry Item, adds to character, closes dialog
 - Item starts unlocked and unequipped (player must equip on Character Sheet)
@@ -287,24 +291,6 @@ await item.update({
 - Tooltip: "Only GM can edit Rare/Epic items"
 
 **Validation Feedback**:
-- Red border on invalid fields
-- Error message below field (e.g., "Name cannot be empty")
-- Submit button disabled until form valid
-
-**Bonus Inputs**:
-- Number inputs with +/- steppers
-- Zero is valid (no bonus)
-- Positive/negative both allowed
-
-## Dialog State Management
-
-### Form State
-- Stored in dialog component state (not Redux)
-- Pre-populated with item data in edit mode
-- Validated on submit, not on every keystroke
-
-### Permissions Check
-- Run on dialog open: Determine if user can edit
 - Disable fields based on permissions
 - Show warning message if read-only
 

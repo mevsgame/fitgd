@@ -192,6 +192,7 @@ class FitGDCharacterSheet extends ActorSheet {
     html.find('input[name="system.rallyAvailable"]').change(this._onRallyChange.bind(this));
 
     // Equipment
+    html.find('.create-equipment-btn').click(this._onCreateEquipment.bind(this));
     html.find('.add-equipment-btn').click(this._onAddEquipment.bind(this));
     html.find('.edit-equipment-btn').click(this._onEditEquipment.bind(this));
     html.find('.delete-equipment-btn').click(this._onDeleteEquipment.bind(this));
@@ -678,6 +679,19 @@ class FitGDCharacterSheet extends ActorSheet {
       // Revert checkbox on error
       input.checked = !isChecked;
     }
+  }
+
+  /**
+   * Create new equipment from scratch
+   */
+  private async _onCreateEquipment(event: JQuery.ClickEvent): Promise<void> {
+    event.preventDefault();
+    const characterId = this._getReduxId();
+    if (!characterId) return;
+
+    // Open editor in create mode
+    // Template/Defaults are handled by the Dialog class
+    (new EquipmentEditDialog(characterId, {}, 'create') as any).render(true);
   }
 
   /**

@@ -265,6 +265,14 @@
   background-color: #1a1a1a !important;
 }
 
+.dialog.fitgd-dialog textarea,
+.dialog .fitgd-dialog-content textarea {
+  background: #2a2a2a !important;
+  color: #e0e0e0 !important;
+  border: 1px solid #555 !important;
+  resize: vertical;
+}
+
 /* Dialog header (window-header) */
 .dialog.fitgd-dialog .window-header,
 .dialog.fitgd-dialog header.window-header {
@@ -293,6 +301,7 @@
   background-color: #2a2a2a !important;
   border: 1px solid #555 !important;
   color: #e0e0e0 !important;
+  height: 28px !important;
 }
 
 /* Dialog buttons container and buttons */
@@ -805,6 +814,17 @@
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.fitgd .equipment-header-info .action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.fitgd .equipment-header-info .action-buttons button {
+  white-space: nowrap;
+  padding: 8px 16px;
+  min-width: fit-content;
 }
 
 .fitgd .equipment-list {

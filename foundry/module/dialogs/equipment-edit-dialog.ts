@@ -8,6 +8,7 @@
  */
 
 import type { Equipment } from '@/types/equipment';
+import { prepareEquipmentData } from '../utils/equipment-form-handler';
 
 interface EquipmentEditData {
   equipment: Equipment;
@@ -21,6 +22,7 @@ interface EquipmentEditData {
     position: number;
     effect: number;
   };
+  restrictedCreation: boolean;
 }
 
 export class EquipmentEditDialog extends FormApplication {
@@ -75,6 +77,8 @@ export class EquipmentEditDialog extends FormApplication {
     const positionModifier = (mods.positionBonus || 0) - (mods.positionPenalty || 0);
     const effectModifier = (mods.effectBonus || 0) - (mods.effectPenalty || 0);
 
+    const restrictedCreation = !isGM && this.mode === 'create';
+
     return {
       equipment: equipment as Equipment,
       mode: this.mode,
@@ -87,6 +91,7 @@ export class EquipmentEditDialog extends FormApplication {
         position: positionModifier,
         effect: effectModifier,
       },
+      restrictedCreation,
     };
   }
 
@@ -96,65 +101,55 @@ export class EquipmentEditDialog extends FormApplication {
     // Wire up custom buttons
     html.find('.cancel-btn').click(() => (this as any).close());
     html.find('.save-btn').click(() => this._onSubmit(new Event('submit')));
+
+    // Category Change Logic: auto-set defaults
+    html.find('select[name="category"]').change((event) => {
+      const category = (event.target as HTMLSelectElement).value;
+      const diceInput = html.find('input[name="modifiers.dice"]');
+      const positionInput = html.find('input[name="modifiers.position"]');
+      const effectInput = html.find('input[name="modifiers.effect"]');
+
+      if (category === 'active') {
+        // Active creates +1d default, reset others
+        diceInput.val(1);
+        positionInput.val(0);
+        effectInput.val(0);
+      } else if (category === 'passive') {
+        // Passive resets all modifiers to 0
+        diceInput.val(0);
+        positionInput.val(0);
+        effectInput.val(0);
+      }
+    });
   }
 
   protected async _updateObject(_event: Event, formData: Record<string, any>): Promise<void> {
     const equipment = this.object as Partial<Equipment>;
     const isGM = game.user!.isGM;
 
-    // Validate name
-    const name = (formData.name as string)?.trim();
-    if (!name || name.length === 0) {
-      ui.notifications?.error('Equipment name is required');
-      return;
-    }
-    if (name.length > 50) {
-      ui.notifications?.error('Equipment name must be 50 characters or less');
+    // Use shared validation logic
+    const result = prepareEquipmentData(formData as any, isGM, this.mode);
+
+    if (!result.success) {
+      ui.notifications?.error(result.error || 'Unknown error');
       return;
     }
 
-    // Validate slots
-    const slots = parseInt(formData.slots as string, 10);
-    if (isNaN(slots) || slots < 1) {
-      ui.notifications?.error('Equipment must occupy at least 1 slot');
-      return;
-    }
-
-    // Validate tier restrictions for players
-    const tier = formData.tier as Equipment['tier'];
-    if (!isGM && tier !== 'common') {
-      ui.notifications?.error('Players can only create or edit Common tier equipment');
-      return;
-    }
-
-    // Parse consolidated modifier fields
-    const diceModifier = formData['modifiers.dice'] ? parseInt(formData['modifiers.dice'] as string, 10) : 0;
-    const positionModifier = formData['modifiers.position'] ? parseInt(formData['modifiers.position'] as string, 10) : 0;
-    const effectModifier = formData['modifiers.effect'] ? parseInt(formData['modifiers.effect'] as string, 10) : 0;
-
-    // Split positive/negative values into bonus/penalty fields
-    const modifiers: Equipment['modifiers'] = {
-      diceBonus: diceModifier > 0 ? diceModifier : undefined,
-      dicePenalty: diceModifier < 0 ? Math.abs(diceModifier) : undefined,
-      positionBonus: positionModifier > 0 ? positionModifier : undefined,
-      positionPenalty: positionModifier < 0 ? Math.abs(positionModifier) : undefined,
-      effectBonus: effectModifier > 0 ? effectModifier : undefined,
-      effectPenalty: effectModifier < 0 ? Math.abs(effectModifier) : undefined,
-    };
+    const finalData = result.data!;
 
     if (this.mode === 'create') {
-      // Create mode: add new equipment to character
+      // Create mode
       const newEquipment: Equipment = {
         id: crypto.randomUUID(),
-        name,
-        category: formData.category as Equipment['category'],
-        tier,
-        slots,
-        description: (formData.description as string) || '',
+        name: finalData.name!,
+        category: finalData.category!,
+        tier: finalData.tier!,
+        slots: finalData.slots!,
+        description: finalData.description || '',
         equipped: false,
         locked: false,
         consumed: false,
-        modifiers,
+        modifiers: finalData.modifiers!,
         acquiredAt: Date.now(),
         acquiredVia: isGM ? 'earned' : 'earned',
       };
@@ -167,17 +162,17 @@ export class EquipmentEditDialog extends FormApplication {
         },
       });
 
-      ui.notifications?.info(`Created ${name}`);
+      ui.notifications?.info(`Created ${finalData.name}`);
     } else {
-      // Edit mode: update existing equipment
+      // Edit mode
       const equipmentId = (equipment as Equipment).id;
       const changes: Partial<Equipment> = {
-        name,
-        category: formData.category as Equipment['category'],
-        tier,
-        slots,
-        description: (formData.description as string) || '',
-        modifiers,
+        name: finalData.name,
+        category: finalData.category,
+        tier: finalData.tier,
+        slots: finalData.slots,
+        description: finalData.description,
+        modifiers: finalData.modifiers,
       };
 
       await game.fitgd.bridge.execute({
@@ -189,7 +184,7 @@ export class EquipmentEditDialog extends FormApplication {
         },
       });
 
-      ui.notifications?.info(`Updated ${name}`);
+      ui.notifications?.info(`Updated ${finalData.name}`);
     }
   }
 }

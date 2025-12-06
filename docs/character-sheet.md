@@ -43,8 +43,9 @@ The sheet features an explicit **Edit Mode** for Action Dots.
 **Item Management**:
 - **Add Items**:
   - Drag-drop from compendium to Character Sheet
-  - Click "Add Equipment" button → Opens Equipment Sheet Dialog (create mode)
-  - Players can create Common items, GM can create any tier
+  - Click "Create Equipment" button → Opens Equipment Sheet Dialog (create mode, restricted for players)
+  - Click "Browse Equipment" button → Opens Equipment Browser
+  - Players can create Common items (Active +1d or Passive), GM can create any tier
 - **Edit Items**:
   - Double-click item → Opens Equipment Sheet Dialog (edit mode)
   - Player: Can edit unlocked Common items only
