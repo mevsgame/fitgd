@@ -49,13 +49,18 @@ export class AddTraitDialog extends Dialog {
       }
     };
 
-    super({
-      title: "Add Trait",
-      content,
-      buttons,
-      default: "add",
-      ...options
-    });
+    super(
+      {
+        title: "Add Trait",
+        content,
+        buttons,
+        default: "add"
+      },
+      {
+        classes: ['fitgd', 'dialog', 'fitgd-dialog', 'add-trait-dialog'],
+        ...options
+      }
+    );
   }
 
   private async _onApply(html: JQuery, characterId: string): Promise<void> {

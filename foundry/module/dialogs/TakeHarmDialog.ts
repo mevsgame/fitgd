@@ -26,7 +26,6 @@ export class TakeHarmDialog extends Dialog {
     const content = `
       <div class="clock-creation-dialog">
         <div class="dialog-header">
-          <h2>Take Harm</h2>
           <p class="help-text">Apply harm from consequences or enemy action</p>
         </div>
 
@@ -86,14 +85,18 @@ export class TakeHarmDialog extends Dialog {
       }
     };
 
-    super({
-      title: "Take Harm",
-      content,
-      buttons,
-      default: "apply",
-      classes: ['fitgd', 'fitgd-dialog', 'clock-creation-dialog'],
-      ...options
-    });
+    super(
+      {
+        title: "Take Harm",
+        content,
+        buttons,
+        default: "apply"
+      },
+      {
+        classes: ['fitgd', 'dialog', 'fitgd-dialog', 'clock-creation-dialog'],
+        ...options
+      }
+    );
   }
 
   private async _onApply(html: JQuery, characterId: string, crewId: string): Promise<void> {

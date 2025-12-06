@@ -52,7 +52,6 @@ export class ClockCreationDialog extends Dialog {
     const content = `
       <div class="clock-creation-dialog">
         <div class="dialog-header">
-          <h2>${title}</h2>
           <p class="help-text">Configure the new clock properties</p>
         </div>
 
@@ -113,15 +112,19 @@ export class ClockCreationDialog extends Dialog {
       }
     };
 
-    super({
-      title,
-      content,
-      buttons,
-      default: 'create',
-      classes: ['fitgd', 'clock-creation-dialog'],
-      width: 450,
-      ...options
-    });
+    super(
+      {
+        title,
+        content,
+        buttons,
+        default: 'create'
+      },
+      {
+        classes: ['fitgd', 'dialog', 'fitgd-dialog', 'clock-creation-dialog'],
+        width: 450,
+        ...options
+      }
+    );
   }
 
   /**

@@ -244,11 +244,14 @@
 
 /* Apply dark theme to dialogs opened from FitGD sheets */
 /* Dialog window and content */
+
 .dialog.fitgd-dialog,
 .dialog.fitgd-dialog .window-content,
 .dialog .window-content.fitgd-dialog-content {
   background: #1a1a1a !important;
   background-color: #1a1a1a !important;
+  background-image: none !important;
+  /* Force remove parchment texture */
   color: #e0e0e0 !important;
 }
 
@@ -256,13 +259,105 @@
 .dialog .dialog-content.fitgd-content {
   background: #1a1a1a !important;
   background-color: #1a1a1a !important;
+  background-image: none !important;
   color: #e0e0e0 !important;
 }
 
-.dialog.fitgd-dialog form,
-.dialog .fitgd-dialog-content form {
-  background: #1a1a1a !important;
-  background-color: #1a1a1a !important;
+/* Standardize padding and density for dialogs using fitgd-dialog */
+.dialog.fitgd-dialog .dialog-content {
+  padding: 0.5rem !important;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dialog.fitgd-dialog .form-group {
+  margin-bottom: 0.5rem !important;
+}
+
+.dialog.fitgd-dialog label {
+  font-weight: 600 !important;
+  margin-bottom: 0.2rem !important;
+  color: #fff !important;
+}
+
+.dialog.fitgd-dialog input,
+.dialog.fitgd-dialog select,
+.dialog.fitgd-dialog textarea {
+  background: #2a2a2a !important;
+  color: #fff !important;
+  border: 1px solid #555 !important;
+  padding: 0.4rem !important;
+  border-radius: 4px !important;
+  font-family: "Signika", sans-serif !important;
+}
+
+/* Specific: Add Trait Dialog */
+.add-trait-dialog form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.add-trait-dialog textarea {
+  min-height: 50px;
+  resize: vertical;
+}
+
+/* Specific: Clock Creation Dialog */
+.clock-creation-dialog .dialog-header {
+  padding: 0.5rem 0.75rem;
+  background: linear-gradient(135deg, #242424 0%, #1a1a1a 100%);
+  border-bottom: 2px solid #555;
+  margin: -0.5rem -0.5rem 0.5rem -0.5rem;
+  /* Negative margin to bleed to edge */
+  border-radius: 4px 4px 0 0;
+}
+
+.clock-creation-dialog .dialog-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #fff;
+  border: none;
+}
+
+.clock-creation-dialog .help-text {
+  margin: 0;
+  color: #b0b0b0;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+.clock-creation-dialog .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+/* Dialog Buttons standardisation */
+.dialog.fitgd-dialog .dialog-buttons {
+  margin-top: 0.5rem !important;
+  padding-top: 0.5rem !important;
+  border-top: 1px solid #444 !important;
+  gap: 0.5rem !important;
+  display: flex !important;
+  justify-content: flex-end;
+}
+
+.dialog.fitgd-dialog .dialog-buttons button {
+  padding: 0.4rem !important;
+  line-height: 1.2 !important;
+  background: linear-gradient(to bottom, #444, #222) !important;
+  border: 1px solid #666 !important;
+  color: #e0e0e0 !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3) !important;
+  flex: 1;
+}
+
+.dialog.fitgd-dialog .dialog-buttons button:hover {
+  background: linear-gradient(to bottom, #555, #333) !important;
+  border-color: #888 !important;
+  color: #fff !important;
 }
 
 .dialog.fitgd-dialog textarea,
@@ -3673,22 +3768,30 @@
 
 /* Equipment Edit Dialog Form Styling */
 .equipment-edit-dialog {
-  padding: 1rem;
+  padding: 0.5rem;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .equipment-edit-dialog .equipment-form {
-  padding: 0 0.5rem;
+  padding: 0 0.25rem;
+  flex: 1;
+  overflow-y: auto;
+  /* Allow scroll only on form if needed */
+  scrollbar-width: thin;
 }
 
 .equipment-edit-dialog .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .equipment-edit-dialog .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   display: flex;
   flex-direction: column;
 }
@@ -3700,9 +3803,9 @@
 .equipment-edit-dialog .form-group label {
   font-weight: 600;
   color: #fff;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.2rem;
   font-family: "Signika", sans-serif;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .equipment-edit-dialog .form-group input[type="text"],
@@ -3712,11 +3815,11 @@
   background: #2a2a2a;
   color: #fff;
   border: 1px solid #555;
-  padding: 0.5rem;
+  padding: 0.4rem;
   border-radius: 4px;
   font-size: 0.9rem;
   font-family: "Signika", sans-serif;
-  min-height: 32px;
+  min-height: 30px;
 }
 
 .equipment-edit-dialog .form-group input[type="text"]:focus,
@@ -3730,32 +3833,34 @@
 
 .equipment-edit-dialog .form-group textarea {
   resize: vertical;
-  min-height: 60px;
+  min-height: 50px;
   line-height: 1.4;
 }
 
 .equipment-edit-dialog .help-text,
 .equipment-edit-dialog .help-text-small {
   color: #b0b0b0;
-  font-size: 0.8rem;
-  margin-top: 0.25rem;
-  line-height: 1.3;
+  font-size: 0.75rem;
+  margin-top: 0.2rem;
+  line-height: 1.2;
+  font-style: italic;
 }
 
 .equipment-edit-dialog .help-text strong {
   color: #fff;
+  font-weight: 600;
 }
 
 .equipment-edit-dialog .required {
   color: #ff6b6b;
-  margin-left: 4px;
+  margin-left: 3px;
 }
 
 .equipment-edit-dialog .modifiers-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 1rem;
-  margin-top: 0.5rem;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
 }
 
 .equipment-edit-dialog .modifier-field {
@@ -3764,55 +3869,87 @@
 }
 
 .equipment-edit-dialog .modifier-field label {
-  margin-bottom: 0.25rem;
-  font-size: 0.9rem;
+  margin-bottom: 0.2rem;
+  font-size: 0.85rem;
 }
 
 .equipment-edit-dialog .modifier-field input {
   width: 100%;
 }
 
+/* Type Selection Layout (Player View) */
+.equipment-edit-dialog .type-selection {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  border: 1px solid #444;
+}
+
+.equipment-edit-dialog .type-option {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.equipment-edit-dialog .type-option:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.equipment-edit-dialog .type-option input[type="radio"] {
+  margin: 0;
+  cursor: pointer;
+}
+
 .equipment-edit-dialog .dialog-header {
-  padding: 0.5rem 1rem;
-  background: linear-gradient(135deg, #1a1a1a 0%, #242424 100%);
+  padding: 0.5rem 0.75rem;
+  background: linear-gradient(135deg, #242424 0%, #1a1a1a 100%);
   border-bottom: 2px solid #555;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   border-radius: 4px 4px 0 0;
 }
 
 .equipment-edit-dialog .dialog-header h2 {
-  margin: 0 0 0.25rem 0;
-  font-size: 1.2rem;
+  margin: 0 0 0.2rem 0;
+  font-size: 1.1rem;
   color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .equipment-edit-dialog .dialog-header .info-notice {
   margin: 0;
   color: #b0b0b0;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .equipment-edit-dialog .warning-notice {
   background: #664400;
   border-left: 4px solid #ff9800;
   color: #ffe0b2;
-  padding: 0.5rem;
-  margin: 0.5rem 0 0 0;
+  padding: 0.4rem;
+  margin: 0.4rem 0 0 0;
   border-radius: 3px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .equipment-edit-dialog .dialog-buttons {
   display: flex;
   gap: 0.5rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
   border-top: 1px solid #555;
 }
 
 .equipment-edit-dialog .dialog-buttons button {
   flex: 1;
-  padding: 0.5rem;
+  padding: 0.4rem;
   font-size: 0.9rem;
   border-radius: 4px;
   border: none;
@@ -3825,22 +3962,22 @@
 .equipment-edit-dialog .dialog-buttons button.primary {
   background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
   color: #fff;
-  border: 2px solid #42a5f5;
+  border: 1px solid #42a5f5;
 }
 
 .equipment-edit-dialog .dialog-buttons button.primary:hover {
   background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
-  box-shadow: 0 0 15px rgba(66, 165, 245, 0.6);
+  box-shadow: 0 0 10px rgba(66, 165, 245, 0.4);
 }
 
 .equipment-edit-dialog .dialog-buttons button.secondary {
-  background: #4a4a4a;
+  background: #444;
   color: #e0e0e0;
   border: 1px solid #666;
 }
 
 .equipment-edit-dialog .dialog-buttons button.secondary:hover {
-  background: #5a5a5a;
+  background: #555;
 }
 
 

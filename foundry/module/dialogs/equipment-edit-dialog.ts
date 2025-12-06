@@ -49,7 +49,7 @@ export class EquipmentEditDialog extends FormApplication {
 
   static get defaultOptions(): FormApplicationOptions {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ['fitgd', 'dialog', 'equipment-edit'] as unknown as string[],
+      classes: ['fitgd', 'dialog', 'fitgd-dialog', 'equipment-edit'] as unknown as string[],
       template: 'systems/forged-in-the-grimdark/templates/dialogs/equipment-edit.html',
       width: 500,
       height: 'auto' as any,

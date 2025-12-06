@@ -2,10 +2,8 @@
   {{!-- Header --}}
   <div class="dialog-header">
     {{#if (eq mode 'create')}}
-    <h2>Create Equipment</h2>
     <p class="info-notice">📦 Create a new equipment item for this character</p>
     {{else}}
-    <h2>Edit Equipment</h2>
     <p class="info-notice">📦 Configure equipment stats and modifiers</p>
     {{/if}}
 
@@ -39,15 +37,18 @@
 
     <div class="form-group">
       <label>Type <span class="required">*</span></label>
-      <div class="modifier-field type-selection "
-        style="display: flex; gap: 20px; align-items: center; padding: 10px; background: rgba(0,0,0,0.1); border-radius: 4px;">
-        <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+      <div class="type-selection">
+        <label class="type-option">
           <input type="radio" name="restrictedType" value="active" checked>
-          <span><strong>Active</strong> (+1d check)</span>
+          <div>
+            <strong>Active</strong> <span style="color: #4caf50">(+1d check)</span>
+          </div>
         </label>
-        <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+        <label class="type-option">
           <input type="radio" name="restrictedType" value="passive">
-          <span><strong>Passive</strong> (No bonus)</span>
+          <div>
+            <strong>Passive</strong> <span style="color: #aaa">(No bonus)</span>
+          </div>
         </label>
       </div>
       <p class="help-text">Players can create simple Active items (adds +1d) or Passive items (no mechanical bonus).</p>
@@ -55,7 +56,7 @@
 
     <div class="form-group">
       <label>Description</label>
-      <textarea name="description" rows="4" placeholder="Describe the equipment...">{{equipment.description}}</textarea>
+      <textarea name="description" rows="3" placeholder="Describe the equipment...">{{equipment.description}}</textarea>
     </div>
 
     {{else}}
@@ -64,7 +65,7 @@
       <div class="form-group">
         <label>Name <span class="required">*</span></label>
         <input type="text" name="name" value="{{equipment.name}}" maxlength="50" required />
-        <p class="help-text">Equipment name (max 50 characters)</p>
+        <p class="help-text">Equipment name (max 50 chars)</p>
       </div>
 
       <div class="form-group">
@@ -75,12 +76,10 @@
           {{/each}}
         </select>
         <p class="help-text">
-          <strong>Common:</strong> Standard gear<br />
-          <strong>Rare:</strong> Requires 1M on first use<br />
-          <strong>Epic:</strong> Must be earned through story
+          Common (Standard), Rare (1M), Epic (Story)
           {{#unless isGM}}
           {{#unless canEditTier}}
-          <br /><strong>⚠️ Players: Common only</strong>
+          <br /><span class="warning-text">⚠️ Common only</span>
           {{/unless}}
           {{/unless}}
         </p>
@@ -97,9 +96,7 @@
           {{/each}}
         </select>
         <p class="help-text">
-          <strong>Active:</strong> Player selects (weapons, tools)<br />
-          <strong>Passive:</strong> GM approves (armor, implants)<br />
-          <strong>Consumable:</strong> Single-use items (stims, grenades)
+          Active (Weapons/Tools), Passive (Armor/Implants), Consumable
         </p>
       </div>
 
@@ -107,38 +104,34 @@
         <label>Slots <span class="required">*</span></label>
         <input type="number" name="slots" value="{{#if equipment.slots}}{{equipment.slots}}{{else}}1{{/if}}" min="1"
           required />
-        <p class="help-text">Load slots occupied (minimum 1, default 5 slots per character)</p>
+        <p class="help-text">Load slots (min 1, usually 1-2)</p>
       </div>
     </div>
 
     <div class="form-group">
       <label>Description</label>
-      <textarea name="description" rows="4"
-        placeholder="Describe the equipment and how it affects gameplay...">{{equipment.description}}</textarea>
-      <p class="help-text">Include narrative details and mechanical effects on Position/Effect</p>
+      <textarea name="description" rows="3" placeholder="Describe the equipment...">{{equipment.description}}</textarea>
+      <p class="help-text">Narrative details and mechanical effects.</p>
     </div>
 
     <div class="form-group">
       <label>Modifiers</label>
-      <p class="help-text">Configure how this equipment affects rolls when used (use negative values for penalties)</p>
       <div class="modifiers-grid">
         <div class="modifier-field">
-          <label>Dice Modifier</label>
+          <label>Dice +/-</label>
           <input type="number" name="modifiers.dice" value="{{modifiers.dice}}" placeholder="0" />
-          <p class="help-text-small">Additional dice in pool (positive = bonus, negative = penalty)</p>
         </div>
         <div class="modifier-field">
-          <label>Position Modifier</label>
+          <label>Position +/-</label>
           <input type="number" name="modifiers.position" value="{{modifiers.position}}" placeholder="0" min="-1"
             max="1" />
-          <p class="help-text-small">Position steps (positive = improve, negative = worsen)</p>
         </div>
         <div class="modifier-field">
-          <label>Effect Modifier</label>
+          <label>Effect +/-</label>
           <input type="number" name="modifiers.effect" value="{{modifiers.effect}}" placeholder="0" min="-1" max="1" />
-          <p class="help-text-small">Effect levels (positive = improve, negative = reduce)</p>
         </div>
       </div>
+      <p class="help-text-small">Use negative values for penalties.</p>
     </div>
     {{/if}}
 
