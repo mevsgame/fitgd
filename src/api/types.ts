@@ -144,12 +144,7 @@ export interface ClockAPI {
  * Resource API Interface
  */
 export interface ResourceAPI {
-  useConsumable(params: {
-    crewId: string;
-    characterId: string;
-    consumableType: string;
-    depletionRoll: number;
-  }): any; // Returns UseConsumableResult
+
   useStim(params: {
     crewId: string;
     characterId: string;
@@ -163,14 +158,14 @@ export interface ResourceAPI {
 export interface QueryAPI {
   canUseRally(params: { characterId: string; crewId: string }): boolean;
   canUseStim(crewId: string): boolean;
-  canUseConsumable(params: { crewId: string; consumableType: string }): boolean;
+
   isDying(characterId: string): boolean;
   getMomentum(crewId: string): number;
   getAvailableTraits(characterId: string): Trait[];
   getHarmClocks(characterId: string): any[];
   getProgressClocks(entityId: string): any[];
   getAddictionClock(crewId: string): any;
-  getConsumableClocks(crewId: string): any[];
+
 }
 
 /**

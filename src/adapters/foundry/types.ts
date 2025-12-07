@@ -5,7 +5,7 @@
  * NOTE: FitGD uses different mechanics than standard Blades in the Dark!
  */
 
-import { ClockSize, ProgressClockCategory } from "@/types";
+import { ProgressClockCategory } from "@/types";
 import { EquipmentTier } from "@/types/equipment";
 import { TraitCategory } from "@/types/character";
 
@@ -100,8 +100,7 @@ export interface FoundryCrewData {
     color: ClockColor; // yellow
   } | null;
 
-  // Consumable Clocks (derived from Redux)
-  consumables: ConsumableClockData[];
+
 
   // Progress Clocks (derived from Redux)
   progressClocks: ProgressClockData[];
@@ -111,18 +110,7 @@ export interface FoundryCrewData {
   updatedAt: number;
 }
 
-/**
- * Consumable clock display data
- */
-export interface ConsumableClockData {
-  id: string;
-  type: string; // e.g., "frag_grenades", "stims"
-  segments: number;
-  maxSegments: ClockSize;
-  rarity: EquipmentTier;
-  frozen: boolean;
-  color: ClockColor; // green
-}
+
 
 /**
  * Progress clock display data
@@ -178,7 +166,6 @@ export const FITGD_CLOCK_COLORS: Record<string, ClockColor> = {
   morale_harm: 'grey',
 
   // Resource clocks
-  consumable: 'green',
   addiction: 'yellow',
 
   // Progress clocks

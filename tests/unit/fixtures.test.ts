@@ -4,7 +4,7 @@ import {
   mockCharacter_Rookie,
   mockCrew_StrikeTeamAlpha,
   mockClock_PhysicalHarm,
-  mockClock_ConsumableGrenades,
+
   mockClock_Addiction,
 } from '../fixtures';
 
@@ -49,12 +49,7 @@ describe('Test Fixtures', () => {
       expect(mockClock_PhysicalHarm.segments).toBe(3);
     });
 
-    it('should have valid consumable clock fixture', () => {
-      expect(mockClock_ConsumableGrenades).toBeDefined();
-      expect(mockClock_ConsumableGrenades.clockType).toBe('consumable');
-      expect(mockClock_ConsumableGrenades.metadata?.rarity).toBe('common');
-      expect(mockClock_ConsumableGrenades.maxSegments).toBe(8);
-    });
+
 
     it('should have valid addiction clock fixture', () => {
       expect(mockClock_Addiction).toBeDefined();

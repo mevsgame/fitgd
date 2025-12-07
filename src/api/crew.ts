@@ -23,8 +23,7 @@ export interface CrewAPI {
   // Resources (validated against clocks)
   canUseStim(crewId: string): boolean;
   useStim(crewId: string, characterId: string): void;
-  canUseConsumable(crewId: string, consumableType: string): boolean;
-  useConsumable(crewId: string, consumableType: string): void;
+
 
   // Queries
   getCrew(crewId: string): Crew | null;

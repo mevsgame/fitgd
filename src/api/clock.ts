@@ -1,16 +1,14 @@
-import { EquipmentTier } from '@/types/equipment';
 import type { Clock } from '../types';
 
 /**
  * Clock API
  *
- * High-level API for clock operations (harm, consumable, addiction).
+ * High-level API for clock operations (harm, addiction).
  * Abstract entity with type-specific behavior.
  */
 export interface ClockAPI {
   // Creation
   createHarmClock(characterId: string, subtype: string): string;
-  createConsumableClock(crewId: string, subtype: string, rarity: EquipmentTier): string;
   createAddictionClock(crewId: string): string;
 
   // Manipulation
@@ -21,7 +19,5 @@ export interface ClockAPI {
   // Queries
   getClock(clockId: string): Clock | null;
   getHarmClocks(characterId: string): Clock[];
-  getConsumableClocks(crewId: string): Clock[];
-  getAddictionClock(crewId: string): Clock | null;
   isClockFilled(clockId: string): boolean;
 }

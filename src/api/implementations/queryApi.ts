@@ -51,7 +51,6 @@ export function createQueryAPI(store: Store) {
     },
 
 
-
     /**
      * Is character dying? (has 6/6 harm clock)
      */

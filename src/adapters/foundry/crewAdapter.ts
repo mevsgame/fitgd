@@ -3,12 +3,12 @@ import type { Crew } from '../../types';
 import type {
   FoundryActor,
   FoundryCrewData,
-  ConsumableClockData,
+
   ProgressClockData,
   ClockColor,
 } from './types';
 import { FITGD_CLOCK_COLORS } from './types';
-import { EquipmentTier } from '@/types/equipment';
+
 
 /**
  * Crew Adapter
@@ -31,8 +31,7 @@ export function exportCrewToFoundry(store: Store, crewId: string): FoundryActor 
   // Get addiction clock (crew-wide, 8 segments)
   const addictionClock = getCrewAddictionClock(store, crewId);
 
-  // Get consumable clocks
-  const consumableClocks = getCrewConsumableClocks(store, crewId);
+
 
   // Get progress clocks
   const progressClocks = getCrewProgressClocks(store, crewId);
@@ -48,7 +47,7 @@ export function exportCrewToFoundry(store: Store, crewId: string): FoundryActor 
       },
       characters: crew.characters,
       addiction: addictionClock,
-      consumables: consumableClocks,
+
       progressClocks: progressClocks,
       createdAt: crew.createdAt,
       updatedAt: crew.updatedAt,
@@ -107,29 +106,7 @@ function getCrewAddictionClock(
   };
 }
 
-/**
- * Get consumable clocks for crew
- */
-function getCrewConsumableClocks(store: Store, crewId: string): ConsumableClockData[] {
-  const state = store.getState();
-  const consumableClocksKey = `consumable:${crewId}`;
-  const consumableClockIds = state.clocks.byTypeAndEntity[consumableClocksKey] || [];
 
-  return consumableClockIds.map((clockId: string) => {
-    const clock = state.clocks.byId[clockId];
-    const metadata = clock.metadata || {};
-
-    return {
-      id: clock.id,
-      type: clock.subtype || 'Consumable',
-      segments: clock.segments,
-      maxSegments: clock.maxSegments,
-      rarity: (metadata.rarity as EquipmentTier),
-      frozen: (metadata.frozen as boolean) || false,
-      color: FITGD_CLOCK_COLORS.consumable,
-    };
-  });
-}
 
 /**
  * Get progress clocks for crew
