@@ -1387,24 +1387,17 @@ export class PlayerActionEventCoordinator {
         }
 
         // Calculate derived values (segments based on effect/outcome)
-        let segments = 2; // Default to Standard
+        // Use config values to ensure consistency with rules_primer.md
         const effect = playerState?.effect || 'standard';
+        let segments = DEFAULT_CONFIG.resolution.successSegments[effect];
 
-        const effectSegments: Record<string, number> = {
-          limited: 1,
-          standard: 2,
-          great: 3,
-          spectacular: 5,
-        };
-
-        segments = effectSegments[effect] || 2;
-
-        // Critical success check
+        // Critical success enhances effect by one tier
         if (playerState?.outcome === 'critical') {
-          if (effect === 'limited') segments = 2;
-          else if (effect === 'standard') segments = 3;
-          else if (effect === 'great') segments = 5;
-          else segments = 6;
+          // Critical enhances effect: Limited->Standard, Standard->Great, Great->Spectacular
+          if (effect === 'limited') segments = DEFAULT_CONFIG.resolution.successSegments.standard;
+          else if (effect === 'standard') segments = DEFAULT_CONFIG.resolution.successSegments.great;
+          else if (effect === 'great') segments = DEFAULT_CONFIG.resolution.successSegments.spectacular;
+          else segments = DEFAULT_CONFIG.resolution.successSegments.spectacular; // Spectacular stays at max
         }
 
         logger.debug('Calculated segments for success clock:', segments, 'Effect:', effect, 'Outcome:', playerState?.outcome);

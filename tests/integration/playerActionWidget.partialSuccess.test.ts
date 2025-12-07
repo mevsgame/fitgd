@@ -79,7 +79,7 @@ describe('PlayerActionWidget - Partial Success Repro', () => {
         expect(updatedState?.consequenceTransaction).toBeDefined();
         // This is where it failed for the user (missing ID)
         expect(updatedState?.consequenceTransaction?.successClockId).toBe(mockClockId);
-        // Verify segments were calculated (Standard effect = 2 for partial success)
+        // Verify segments were calculated (Standard effect = 2 per rules_primer.md)
         expect(updatedState?.consequenceTransaction?.calculatedSuccessClockSegments).toBe(2);
     });
 });
