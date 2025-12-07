@@ -6,7 +6,7 @@
  */
 
 import { ClockSize, ProgressClockCategory } from "@/types";
-import { EquipmentRarity } from "@/types/equipment";
+import { EquipmentTier } from "@/types/equipment";
 import { TraitCategory } from "@/types/character";
 
 /**
@@ -119,7 +119,7 @@ export interface ConsumableClockData {
   type: string; // e.g., "frag_grenades", "stims"
   segments: number;
   maxSegments: ClockSize;
-  rarity: EquipmentRarity;
+  rarity: EquipmentTier;
   frozen: boolean;
   color: ClockColor; // green
 }
@@ -165,7 +165,7 @@ export interface FoundryTraitData {
 export interface FoundryEquipmentData {
   category: string; // 'weapon', 'armor', 'tool', etc.
   description?: string;
-  rarity: EquipmentRarity;
+  rarity: EquipmentTier;
   tags: string[];
 }
 

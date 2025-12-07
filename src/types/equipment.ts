@@ -6,11 +6,7 @@
  */
 export type EquipmentTier = 'common' | 'rare' | 'epic';
 
-/**
- * Legacy alias for backwards compatibility during transition
- * @deprecated Use EquipmentTier instead
- */
-export type EquipmentRarity = EquipmentTier;
+
 
 /**
  * Equipment category determines usage pattern in rolls
@@ -74,7 +70,7 @@ export interface Equipment {
   category: EquipmentCategory;  // 'active' | 'passive' | 'consumable'
   tier: EquipmentTier;          // 'common' | 'rare' | 'epic'
   slots: number;                // Slots occupied (default 1)
-  description: string; 
+  description: string;
 
   // Instance state flags
   equipped: boolean;            // Is currently equipped?

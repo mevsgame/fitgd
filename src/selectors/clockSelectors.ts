@@ -109,21 +109,7 @@ export const selectAddictionClockByCharacter = createSelector(
   }
 );
 
-/**
- * Get addiction clock for a crew
- * @deprecated Use selectAddictionClockByCharacter for per-character addiction clocks
- */
-export const selectAddictionClockByCrew = createSelector(
-  [
-    selectClocksState,
-    (_state: RootState, crewId: string) => crewId,
-  ],
-  (clocksState, crewId): Clock | null => {
-    const key = `addiction:${crewId}`;
-    const clockIds = clocksState.byTypeAndEntity[key] || [];
-    return clockIds.length > 0 ? clocksState.byId[clockIds[0]] : null;
-  }
-);
+
 
 /**
  * Get threat category progress clocks for a crew
