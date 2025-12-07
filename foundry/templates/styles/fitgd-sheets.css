@@ -4096,44 +4096,55 @@
 /*  Side Panel Styles                                                        */
 /* ========================================================================== */
 
-/* Wrapper with flex layout for side panel */
-.player-action-widget-wrapper {
+/* Wrapper - only applies flex when side panel is open */
+.fitgd.player-action-widget .player-action-widget-wrapper {
+  display: block;
+}
+
+.fitgd.player-action-widget .player-action-widget-wrapper.has-side-panel {
   display: flex;
   align-items: flex-start;
   gap: 0;
 }
 
-.player-action-widget-wrapper.has-side-panel {
-  gap: 0;
-}
-
-.player-action-widget-wrapper.side-panel-left {
+.fitgd.player-action-widget .player-action-widget-wrapper.side-panel-left {
   flex-direction: row;
 }
 
-.player-action-widget-wrapper.side-panel-right {
+.fitgd.player-action-widget .player-action-widget-wrapper.side-panel-right {
   flex-direction: row;
+}
+
+/* Main container should grow to fill space */
+.fitgd.player-action-widget .player-action-widget-wrapper .player-action-widget-container {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Side panel container */
-.side-panel {
-  width: 280px;
+.fitgd.player-action-widget .side-panel {
+  width: 200px;
+  min-width: 200px;
   background: #1a1a1a;
   border: 2px solid #555;
-  border-radius: 4px;
   animation: sidePanelSlideIn 0.2s ease-out;
+  flex-shrink: 0;
 }
 
-.side-panel-left .side-panel {
+.fitgd.player-action-widget .side-panel-left .side-panel {
   border-right: 3px solid #ff6347;
   margin-right: -2px;
   border-radius: 4px 0 0 4px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
-.side-panel-right .side-panel {
+.fitgd.player-action-widget .side-panel-right .side-panel {
   border-left: 3px solid #ff6347;
   margin-left: -2px;
   border-radius: 0 4px 4px 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 
 @keyframes sidePanelSlideIn {
@@ -4141,13 +4152,14 @@
     opacity: 0;
     transform: translateX(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
   }
 }
 
-.side-panel-right .side-panel {
+.fitgd.player-action-widget .side-panel-right .side-panel {
   animation-name: sidePanelSlideInRight;
 }
 
@@ -4156,45 +4168,48 @@
     opacity: 0;
     transform: translateX(10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
   }
 }
 
-.side-panel-header {
+.fitgd.player-action-widget .side-panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 12px;
+  padding: 8px 10px;
   background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
   border-bottom: 1px solid #555;
 }
 
-.side-panel-header h4 {
+.fitgd.player-action-widget .side-panel-header h4 {
   margin: 0;
   color: #ffd700;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
-.side-panel-close {
+.fitgd.player-action-widget .side-panel-close {
   background: transparent;
   border: none;
   color: #999;
   cursor: pointer;
-  padding: 4px 8px;
-  font-size: 1rem;
+  padding: 2px 6px;
+  font-size: 0.9rem;
   transition: color 0.2s;
+  line-height: 1;
 }
 
-.side-panel-close:hover {
+.fitgd.player-action-widget .side-panel-close:hover {
   color: #ff6347;
 }
 
-.side-panel-content {
-  padding: 12px;
-  max-height: 400px;
+.fitgd.player-action-widget .side-panel-content {
+  padding: 10px;
+  max-height: 350px;
   overflow-y: auto;
 }
 
@@ -4202,23 +4217,23 @@
 /*  Clock Picker Styles                          */
 /* -------------------------------------------- */
 
-.clock-picker {
+.fitgd.player-action-widget .clock-picker {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
-.clock-picker-items {
+.fitgd.player-action-widget .clock-picker-items {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
-.clock-picker-item {
+.fitgd.player-action-widget .clock-picker-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  gap: 8px;
+  padding: 6px 8px;
   background: #2a2a2a;
   border: 1px solid #444;
   border-radius: 4px;
@@ -4226,150 +4241,263 @@
   transition: all 0.2s;
 }
 
-.clock-picker-item:hover {
+.fitgd.player-action-widget .clock-picker-item:hover {
   border-color: #ffd700;
   background: #333;
 }
 
-.clock-picker-item.selected {
+.fitgd.player-action-widget .clock-picker-item.selected {
   border-color: #ff6347;
   background: linear-gradient(135deg, #3a2a2a 0%, #2a1a1a 100%);
-  box-shadow: 0 0 8px rgba(255, 99, 71, 0.3);
 }
 
-.clock-picker-item input[type="radio"] {
+.fitgd.player-action-widget .clock-picker-item input[type="radio"] {
   margin: 0;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
-.clock-picker-item-content {
+.fitgd.player-action-widget .clock-picker-item-content {
   display: flex;
   flex: 1;
   justify-content: space-between;
   align-items: center;
+  min-width: 0;
 }
 
-.clock-picker-item .clock-name {
+.fitgd.player-action-widget .clock-picker-item .clock-name {
   font-weight: 500;
   color: #e0e0e0;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.clock-picker-item .clock-progress {
+.fitgd.player-action-widget .clock-picker-item .clock-progress {
   color: #ff6347;
   font-weight: bold;
-  font-size: 0.9em;
+  font-size: 0.85rem;
+  flex-shrink: 0;
 }
 
-.clock-picker-empty {
+.fitgd.player-action-widget .clock-picker-empty {
   text-align: center;
   color: #777;
   font-style: italic;
-  padding: 20px;
+  padding: 15px 10px;
+  font-size: 0.85rem;
 }
 
 /* Create New Section */
-.clock-picker-create {
+.fitgd.player-action-widget .clock-picker-create {
   border-top: 1px solid #444;
-  padding-top: 10px;
+  padding-top: 8px;
 }
 
-.clock-picker-create-toggle {
+.fitgd.player-action-widget .clock-picker-create-toggle {
   width: 100%;
-  padding: 8px 12px;
+  padding: 6px 10px;
   background: linear-gradient(135deg, #444 0%, #333 100%);
   border: 1px solid #555;
   color: #e0e0e0;
   border-radius: 4px;
   cursor: pointer;
   font-weight: 500;
+  font-size: 0.85rem;
   transition: all 0.2s;
 }
 
-.clock-picker-create-toggle:hover {
+.fitgd.player-action-widget .clock-picker-create-toggle:hover {
   background: linear-gradient(135deg, #555 0%, #444 100%);
   border-color: #ffd700;
 }
 
-.clock-picker-create-toggle i {
-  margin-right: 6px;
+.fitgd.player-action-widget .clock-picker-create-toggle i {
+  margin-right: 5px;
 }
 
-.clock-picker-create-form {
-  margin-top: 10px;
-  padding: 12px;
+.fitgd.player-action-widget .clock-picker-create-form {
+  margin-top: 8px;
+  padding: 10px;
   background: #222;
   border: 1px solid #444;
   border-radius: 4px;
 }
 
-.clock-picker-create-form .form-group {
-  margin-bottom: 10px;
+.fitgd.player-action-widget .clock-picker-create-form .form-group {
+  margin-bottom: 8px;
 }
 
-.clock-picker-create-form .form-group label {
+.fitgd.player-action-widget .clock-picker-create-form .form-group label {
   display: block;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #ccc;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
-.clock-picker-create-form .clock-name-input,
-.clock-picker-create-form .clock-category-select,
-.clock-picker-create-form .clock-segments-select {
+.fitgd.player-action-widget .clock-picker-create-form .clock-name-input,
+.fitgd.player-action-widget .clock-picker-create-form .clock-category-select,
+.fitgd.player-action-widget .clock-picker-create-form .clock-segments-select {
   width: 100%;
-  padding: 6px 8px;
+  padding: 5px 7px;
   background: #2a2a2a;
   border: 1px solid #555;
   color: #e0e0e0;
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
-.clock-picker-create-form .locked-value {
+.fitgd.player-action-widget .clock-picker-create-form .locked-value {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   color: #999;
   font-style: italic;
+  font-size: 0.85rem;
 }
 
-.clock-picker-create-form .locked-value i {
-  font-size: 0.8em;
+.fitgd.player-action-widget .clock-picker-create-form .locked-value i {
+  font-size: 0.75em;
 }
 
-.clock-picker-create-actions {
+.fitgd.player-action-widget .clock-picker-create-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 6px;
+  margin-top: 10px;
 }
 
-.clock-picker-create-actions .btn-create {
+.fitgd.player-action-widget .clock-picker-create-actions .btn-create {
   flex: 1;
-  padding: 8px;
+  padding: 6px;
   background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
   border: 1px solid #42a5f5;
   color: #fff;
   border-radius: 4px;
   cursor: pointer;
   font-weight: 500;
+  font-size: 0.85rem;
   transition: all 0.2s;
 }
 
-.clock-picker-create-actions .btn-create:hover {
+.fitgd.player-action-widget .clock-picker-create-actions .btn-create:hover {
   background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
-  box-shadow: 0 0 8px rgba(66, 165, 245, 0.5);
 }
 
-.clock-picker-create-actions .btn-cancel {
-  padding: 8px 12px;
+.fitgd.player-action-widget .clock-picker-create-actions .btn-cancel {
+  padding: 6px 10px;
   background: #444;
   border: 1px solid #555;
   color: #ccc;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 0.85rem;
   transition: all 0.2s;
 }
 
-.clock-picker-create-actions .btn-cancel:hover {
+.fitgd.player-action-widget .clock-picker-create-actions .btn-cancel:hover {
   background: #555;
+}
+
+/* Selected clock display (read-only display in main content) */
+.fitgd.player-action-widget .selected-clock-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #2a3a2a 0%, #1a2a1a 100%);
+  border: 1px solid #4a6a4a;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.fitgd.player-action-widget .selected-clock-display:hover {
+  border-color: #6a8a6a;
+  background: linear-gradient(135deg, #3a4a3a 0%, #2a3a2a 100%);
+}
+
+.fitgd.player-action-widget .selected-clock-display .clock-name {
+  color: #8f8;
+  font-weight: 500;
+}
+
+.fitgd.player-action-widget .selected-clock-display .clock-progress {
+  color: #ff6347;
+  font-weight: bold;
+}
+
+/* Side panel sections */
+.fitgd.player-action-widget .side-panel-section {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #444;
+}
+
+.fitgd.player-action-widget .side-panel-section .section-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #999;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.fitgd.player-action-widget .target-select-btn {
+  width: 100%;
+  padding: 8px 10px;
+  background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #e0e0e0;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.fitgd.player-action-widget .target-select-btn:hover {
+  border-color: #ffd700;
+  background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 100%);
+}
+
+.fitgd.player-action-widget .target-select-btn .target-name {
+  color: #fff;
+  font-weight: 500;
+}
+
+.fitgd.player-action-widget .target-select-btn .target-badge {
+  color: #888;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.fitgd.player-action-widget .target-select-btn .target-placeholder {
+  color: #777;
+  font-style: italic;
+}
+
+/* Config action button (opens sidebar) */
+.fitgd.player-action-widget .config-action-btn {
+  width: 100%;
+  padding: 10px 15px;
+  background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+  border: 1px dashed #666;
+  border-radius: 4px;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.fitgd.player-action-widget .config-action-btn:hover {
+  border-color: #ffd700;
+  border-style: solid;
+  color: #ffd700;
+  background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 100%);
+}
+
+.fitgd.player-action-widget .config-action-btn i {
+  margin-right: 6px;
 }

@@ -11,11 +11,11 @@ Context Parameters:
 - sidePanelMode: String - 'harm-clock' | 'crew-clock' | 'success-clock'
 
 Usage:
-{{> side-panel 
-    sidePanelOpen=sidePanelOpen 
-    sidePanelPosition=sidePanelPosition 
-    sidePanelTitle="Select Clock"
-    sidePanelMode=sidePanelMode
+{{> side-panel
+sidePanelOpen=sidePanelOpen
+sidePanelPosition=sidePanelPosition
+sidePanelTitle="Select Clock"
+sidePanelMode=sidePanelMode
 }}
 --}}
 
@@ -30,32 +30,46 @@ Usage:
   <div class="side-panel-content">
     {{!-- Content injected based on mode --}}
     {{#if (eq sidePanelMode 'harm-clock')}}
-      {{> clock-picker 
-          clocks=sidePanelClocks 
-          selectedClockId=selectedHarmClockId
-          allowCreate=true
-          categoryLocked=false
-          defaultCategory="harm"
-          actionPrefix="harm"
-      }}
+    {{!-- Target Character Selection --}}
+    <div class="side-panel-section target-section">
+      <label class="section-label">Target Character:</label>
+      <button type="button" data-action="select-harm-target" class="target-select-btn">
+        {{#if harmTargetCharacter}}
+        <span class="target-name">{{harmTargetCharacter.name}}</span>
+        <span class="target-badge">{{#if (eq harmTargetCharacter.id characterId)}}(Self){{else}}(Other){{/if}}</span>
+        {{else}}
+        <span class="target-placeholder">Select Target...</span>
+        {{/if}}
+      </button>
+    </div>
+
+    {{!-- Clock Selection --}}
+    {{> clock-picker
+    clocks=sidePanelClocks
+    selectedClockId=selectedHarmClockId
+    allowCreate=true
+    categoryLocked=false
+    defaultCategory="harm"
+    actionPrefix="harm"
+    }}
     {{else if (eq sidePanelMode 'crew-clock')}}
-      {{> clock-picker 
-          clocks=sidePanelClocks 
-          selectedClockId=selectedCrewClockId
-          allowCreate=true
-          categoryLocked=true
-          defaultCategory="threat"
-          actionPrefix="crew"
-      }}
+    {{> clock-picker
+    clocks=sidePanelClocks
+    selectedClockId=selectedCrewClockId
+    allowCreate=true
+    categoryLocked=true
+    defaultCategory="threat"
+    actionPrefix="crew"
+    }}
     {{else if (eq sidePanelMode 'success-clock')}}
-      {{> clock-picker 
-          clocks=sidePanelClocks 
-          selectedClockId=selectedSuccessClockId
-          allowCreate=true
-          categoryLocked=false
-          defaultCategory=(default successClockCategory "long-term-project")
-          actionPrefix="success"
-      }}
+    {{> clock-picker
+    clocks=sidePanelClocks
+    selectedClockId=selectedSuccessClockId
+    allowCreate=true
+    categoryLocked=false
+    defaultCategory=(default successClockCategory "long-term-project")
+    actionPrefix="success"
+    }}
     {{/if}}
   </div>
 </div>

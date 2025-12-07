@@ -10,6 +10,8 @@
   selectedHarmClockId=selectedHarmClock.id
   selectedCrewClockId=selectedCrewClock.id
   selectedSuccessClockId=selectedSuccessClock.id
+  harmTargetCharacter=harmTargetCharacter
+  characterId=character.id
   }}
   {{/if}}
 
@@ -326,55 +328,20 @@
       <div class="gm-consequence-config">
         <h4>⏰ Clock Advancement (Optional):</h4>
 
+
         <!-- Success Clock Configuration -->
         <div class="success-clock-config">
-          <!-- Operation Selection Buttons -->
+          <!-- Operation Selection Buttons - these now open sidebar -->
           <div class="operation-buttons">
-            <button type="button" data-action="select-success-clock-operation" data-operation="add"
+            <button type="button" data-action="select-success-clock-add"
               class="operation-btn {{#if (eq successClockOperation 'add')}}active{{/if}}">
               ▲ Advance Progress Clock
             </button>
-            <button type="button" data-action="select-success-clock-operation" data-operation="reduce"
+            <button type="button" data-action="select-success-clock-reduce"
               class="operation-btn {{#if (eq successClockOperation 'reduce')}}active{{/if}}">
               ▼ Reduce Threat Clock
             </button>
           </div>
-
-          <!-- Clock Selection Based on Operation -->
-          {{#if (eq successClockOperation 'add')}}
-          <div class="form-group">
-            <label>Progress Clock to Advance:</label>
-            <button type="button" data-action="select-success-clock" class="select-btn">
-              {{#if selectedSuccessClock}}
-              {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
-              {{else}}
-              Select or Create Clock...
-              {{/if}}
-            </button>
-          </div>
-          {{else if (eq successClockOperation 'reduce')}}
-          <div class="form-group">
-            <label>Threat Clock to Reduce:</label>
-            <button type="button" data-action="select-success-clock" class="select-btn">
-              {{#if selectedSuccessClock}}
-              {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
-              {{else}}
-              Select Clock...
-              {{/if}}
-            </button>
-          </div>
-          {{/if}}
-
-          <!-- Segments Preview -->
-          {{#if selectedSuccessClock}}
-          <div class="info-note">
-            {{#if (eq successClockOperation 'add')}}
-            Segments to add: <strong>{{calculatedSuccessClockSegments}}</strong>
-            {{else}}
-            Segments to reduce: <strong>{{calculatedSuccessClockSegments}}</strong>
-            {{/if}}
-          </div>
-          {{/if}}
         </div>
 
         <!-- Accept Button -->
@@ -486,53 +453,17 @@
 
         <!-- Success Clock Configuration -->
         <div class="success-clock-config">
-          <!-- Operation Selection Buttons -->
+          <!-- Operation Selection Buttons - these now open sidebar -->
           <div class="operation-buttons">
-            <button type="button" data-action="select-success-clock-operation" data-operation="add"
+            <button type="button" data-action="select-success-clock-add"
               class="operation-btn {{#if (eq successClockOperation 'add')}}active{{/if}}">
               ⬆️ Advance Progress Clock
             </button>
-            <button type="button" data-action="select-success-clock-operation" data-operation="reduce"
+            <button type="button" data-action="select-success-clock-reduce"
               class="operation-btn {{#if (eq successClockOperation 'reduce')}}active{{/if}}">
               ⬇️ Reduce Threat Clock
             </button>
           </div>
-
-          <!-- Clock Selection Based on Operation -->
-          {{#if (eq successClockOperation 'add')}}
-          <div class="form-group">
-            <label>Progress Clock to Advance:</label>
-            <button type="button" data-action="select-success-clock" class="select-btn">
-              {{#if selectedSuccessClock}}
-              {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
-              {{else}}
-              Select or Create Clock...
-              {{/if}}
-            </button>
-          </div>
-          {{else if (eq successClockOperation 'reduce')}}
-          <div class="form-group">
-            <label>Threat Clock to Reduce:</label>
-            <button type="button" data-action="select-success-clock" class="select-btn">
-              {{#if selectedSuccessClock}}
-              {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
-              {{else}}
-              Select Clock...
-              {{/if}}
-            </button>
-          </div>
-          {{/if}}
-
-          <!-- Segments Preview -->
-          {{#if selectedSuccessClock}}
-          <div class="info-note">
-            {{#if (eq successClockOperation 'add')}}
-            Segments to add: <strong>{{calculatedSuccessClockSegments}}</strong>
-            {{else}}
-            Segments to reduce: <strong>{{calculatedSuccessClockSegments}}</strong>
-            {{/if}}
-          </div>
-          {{/if}}
 
           <!-- Skip Button -->
           <button type="button" data-action="skip-success-clock" class="secondary-btn">
@@ -558,54 +489,29 @@
         <!-- Harm Configuration (shown when harm type selected) -->
         {{#if (eq consequenceTransaction.consequenceType 'harm')}}
         <div class="harm-config">
-          <div class="form-group">
-            <label>Target Character:</label>
-            <button type="button" data-action="select-harm-target" class="select-btn">
-              {{#if harmTargetCharacter}}
-              {{harmTargetCharacter.name}} {{#if (eq harmTargetCharacter.id
-              character.id)}}(Acting){{else}}(Protected){{/if}}
-              {{else}}
-              Select Character...
-              {{/if}}
-            </button>
-          </div>
-
-          <div class="form-group">
-            <label>Harm Clock:</label>
-            <button type="button" data-action="select-harm-clock" class="select-btn" {{#unless
-              harmTargetCharacter}}disabled{{/unless}}>
-              {{#if selectedHarmClock}}
-              {{selectedHarmClock.subtype}} ({{selectedHarmClock.segments}}/{{selectedHarmClock.maxSegments}})
-              {{else}}
-              {{#if harmTargetCharacter}}Select or Create Clock...{{else}}(Select target first){{/if}}
-              {{/if}}
-            </button>
-          </div>
-
+          {{!-- Only show buttons to open sidebar if nothing selected yet --}}
+          {{#unless (and harmTargetCharacter selectedHarmClock)}}
+          {{#unless sidePanelOpen}}
+          <button type="button" data-action="select-harm-clock" class="config-action-btn">
+            <i class="fas fa-cog"></i>
+            {{#if harmTargetCharacter}}Select Harm Clock{{else}}Configure Harm Target & Clock{{/if}}
+          </button>
+          {{/unless}}
+          {{/unless}}
         </div>
         {{/if}}
 
         <!-- Crew Clock Configuration (shown when crew-clock type selected) -->
         {{#if (eq consequenceTransaction.consequenceType 'crew-clock')}}
         <div class="crew-clock-config">
-          <div class="form-group">
-            <label>Select Clock:</label>
-            <button type="button" data-action="select-crew-clock" class="select-btn">
-              {{#if selectedCrewClock}}
-              {{selectedCrewClock.subtype}} ({{selectedCrewClock.segments}}/{{selectedCrewClock.maxSegments}})
-              {{else}}
-              Select or Create Clock...
-              {{/if}}
-            </button>
-          </div>
-
-          {{#if selectedCrewClock}}
-          <div class="info-note">
-            Segments to add: <strong>{{calculatedHarmSegments}}</strong>
-            <span class="calculation">({{uppercase effectivePosition}})</span>
-          </div>
-          {{/if}}
-
+          {{!-- Only show button if no clock selected and sidebar not open --}}
+          {{#unless selectedCrewClock}}
+          {{#unless sidePanelOpen}}
+          <button type="button" data-action="select-crew-clock" class="config-action-btn">
+            <i class="fas fa-cog"></i> Select Crew Clock
+          </button>
+          {{/unless}}
+          {{/unless}}
         </div>
         {{/if}}
       </div>
@@ -665,6 +571,8 @@
   selectedHarmClockId=selectedHarmClock.id
   selectedCrewClockId=selectedCrewClock.id
   selectedSuccessClockId=selectedSuccessClock.id
+  harmTargetCharacter=harmTargetCharacter
+  characterId=character.id
   }}
   {{/if}}
 </div>

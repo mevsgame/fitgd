@@ -711,13 +711,14 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
       void this.coordinator.handleToggleDefensiveSuccess(enabled);
     });
 
-    // Success clock operation selection (for success/critical outcomes)
-    html.find('[data-action="select-success-clock-operation"]').click((e) => {
-      const operation = (e.currentTarget as HTMLElement).dataset.operation as 'add' | 'reduce';
-      void this.coordinator.handleSuccessClockOperationChange(operation);
+    // Success clock operation buttons - set operation AND open sidebar
+    html.find('[data-action="select-success-clock-add"]').click(async (_e) => {
+      await this.coordinator.handleSuccessClockOperationChange('add');
+      this.openSidePanel('success-clock');
     });
-    html.find('[data-action="select-success-clock"]').click((_e) => {
-      void this.coordinator.handleSuccessClockSelect();
+    html.find('[data-action="select-success-clock-reduce"]').click(async (_e) => {
+      await this.coordinator.handleSuccessClockOperationChange('reduce');
+      this.openSidePanel('success-clock');
     });
     html.find('[data-action="skip-success-clock"]').click((_e) => {
       void this.coordinator.handleSkipSuccessClock();
@@ -727,9 +728,19 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     });
 
     // GM consequence configuration buttons
-    html.find('[data-action="select-consequence-type"]').click((e) => {
+    html.find('[data-action="select-consequence-type"]').click(async (e) => {
       const type = (e.currentTarget as HTMLElement).dataset.type as 'harm' | 'crew-clock';
-      void this.coordinator.handleConsequenceTypeChange(type);
+      await this.coordinator.handleConsequenceTypeChange(type);
+      // Also open the appropriate side panel
+      if (type === 'harm') {
+        // For harm, need target selected first - check if already selected
+        if (this.playerState?.consequenceTransaction?.harmTargetCharacterId) {
+          this.openSidePanel('harm-clock');
+        }
+        // If no target, user will need to select target first, then click harm clock button
+      } else if (type === 'crew-clock') {
+        this.openSidePanel('crew-clock');
+      }
     });
     html.find('[data-action="select-harm-target"]').click((_e) => {
       void this.coordinator.handleHarmTargetSelect();
@@ -740,9 +751,6 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     });
     html.find('[data-action="select-crew-clock"]').click((_e) => {
       this.openSidePanel('crew-clock');
-    });
-    html.find('[data-action="select-success-clock"]').click((_e) => {
-      this.openSidePanel('success-clock');
     });
     html.find('[data-action="approve-consequence"]').click((_e) => {
       void this.coordinator.handleAcceptConsequence();
@@ -1103,25 +1111,65 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
 
   /**
    * Open the side panel with specified mode
-   * Calculates optimal position based on widget location
+   * Expands window width to accommodate panel
    * 
    * @param mode - Panel mode determining content type
    */
   openSidePanel(mode: 'harm-clock' | 'crew-clock' | 'success-clock'): void {
+    // Check if panel is already open (switching modes doesn't need width adjustment)
+    const wasAlreadyOpen = this.sidePanelOpen;
+
     this.sidePanelMode = mode;
     this.sidePanelOpen = true;
 
     // Calculate optimal position based on widget location on screen
     this._calculateSidePanelPosition();
 
+    // Only expand window width if panel wasn't already open
+    if (!wasAlreadyOpen) {
+      const sidePanelWidth = 210; // 200px panel + some margin
+      const app = this as any;
+      const currentWidth = (app.position?.width as number) || 600;
+      const newWidth = currentWidth + sidePanelWidth;
+
+      // Adjust position if panel is on the left (shift window right)
+      const currentLeft = app.position?.left as number;
+      if (this.sidePanelPosition === 'left' && currentLeft !== undefined) {
+        this.setPosition({
+          width: newWidth,
+          left: Math.max(0, currentLeft - sidePanelWidth)
+        });
+      } else {
+        this.setPosition({ width: newWidth });
+      }
+    }
+
     // Re-render to show panel
     this.render(true);
   }
 
   /**
-   * Close the side panel
+   * Close the side panel and restore window width
    */
   closeSidePanel(): void {
+    const sidePanelWidth = 210;
+    const app = this as any;
+    const currentWidth = (app.position?.width as number) || 600;
+    const currentLeft = app.position?.left as number;
+
+    // Restore original width
+    const newWidth = Math.max(600, currentWidth - sidePanelWidth);
+
+    // Adjust position back if panel was on left
+    if (this.sidePanelPosition === 'left' && currentLeft !== undefined) {
+      this.setPosition({
+        width: newWidth,
+        left: currentLeft + sidePanelWidth
+      });
+    } else {
+      this.setPosition({ width: newWidth });
+    }
+
     this.sidePanelOpen = false;
     this.sidePanelMode = null;
     this.render(true);

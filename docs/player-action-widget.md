@@ -576,3 +576,106 @@ The defensive success option allows players to balance offense and defense, trad
 - Personal goals (character development)
 - Obstacles (mechanical blocks to overcome)
 - Faction clocks (relationship tracking)
+
+## Side Panel (Contextual Configuration)
+
+### Overview
+
+The Side Panel is an integrated, contextual configuration panel that replaces modal dialogs for clock and target selection. When opened, the widget window **expands horizontally** to accommodate the panel, then contracts when closed - maintaining a stable main content area.
+
+### When Side Panel Opens
+
+| Trigger | Panel Mode | Content |
+|---------|------------|---------|
+| GM clicks "Harm" consequence type | `harm-clock` | Target character selector + Harm clock picker |
+| GM clicks "Crew Clock" consequence type | `crew-clock` | Threat clock picker |
+| GM clicks "Advance Progress Clock" | `success-clock` | Progress clock picker (add operation) |
+| GM clicks "Reduce Threat Clock" | `success-clock` | Threat clock picker (reduce operation) |
+
+### UI Behavior
+
+**Window Expansion:**
+- When panel opens: Window width increases by 210px
+- When panel closes: Window width returns to 600px (default)
+- If panel opens on left side: Window position shifts left to keep main content in place
+
+**Position Calculation:**
+- Panel position (left/right) determined by widget location on screen
+- If widget is on left half of screen → panel appears on right
+- If widget is on right half of screen → panel appears on left
+
+**State Preservation:**
+- If panel is already open and mode switches (e.g., harm → crew), no additional width is added
+- Panel mode updates to show new content
+
+### Architecture
+
+**Widget State Properties:**
+```typescript
+private sidePanelOpen: boolean = false;
+private sidePanelMode: 'harm-clock' | 'crew-clock' | 'success-clock' | null = null;
+private sidePanelPosition: 'left' | 'right' = 'right';
+```
+
+**Key Methods:**
+- `openSidePanel(mode)`: Opens panel with specified mode, expands window
+- `closeSidePanel()`: Closes panel, restores window width
+- `_calculateSidePanelPosition()`: Determines left/right based on screen position
+- `_getSidePanelData()`: Prepares data for panel template (filters clocks by mode)
+
+### Template Structure
+
+```handlebars
+<div class="player-action-widget-wrapper {{#if sidePanelOpen}}has-side-panel side-panel-{{sidePanelPosition}}{{/if}}">
+  {{!-- Side Panel (left position) --}}
+  {{#if (and sidePanelOpen (eq sidePanelPosition 'left'))}}
+    {{> side-panel ...}}
+  {{/if}}
+
+  <div class="player-action-widget-container">
+    {{!-- Main widget content --}}
+  </div>
+
+  {{!-- Side Panel (right position) --}}
+  {{#if (and sidePanelOpen (eq sidePanelPosition 'right'))}}
+    {{> side-panel ...}}
+  {{/if}}
+</div>
+```
+
+**Partials:**
+- `side-panel.html`: Container with header, close button, and mode-specific content
+- `clock-picker.html`: Reusable clock selection list with create form
+
+### CSS Classes
+
+| Class | Purpose |
+|-------|---------|
+| `.player-action-widget-wrapper` | Flex container, block by default |
+| `.has-side-panel` | Enables flex layout when panel open |
+| `.side-panel-left` / `.side-panel-right` | Controls flex direction |
+| `.side-panel` | Panel styling (200px width, dark theme) |
+| `.clock-picker` | Clock list and create form |
+| `.target-select-btn` | Target character button in harm panel |
+| `.config-action-btn` | Dashed button to open sidebar (shown when incomplete) |
+
+### Coordinator Integration
+
+**New Methods in `PlayerActionEventCoordinator`:**
+- `handleSidePanelClockSelect(panelType, clockId)`: Dispatches appropriate action to select clock
+- `handleSidePanelClockCreate(panelType, clockData)`: Creates new clock and selects it
+
+### Handlebars Helpers
+
+New helpers added for side panel templates:
+- `and`: Logical AND for combining conditions
+- `not`: Logical NOT for negating conditions
+
+### Benefits Over Modal Dialogs
+
+1. **Contextual**: Panel is visually attached to related controls
+2. **Non-disruptive**: Main content remains visible and stable
+3. **Composable**: Different sections can be combined (target + clock in harm panel)
+4. **Smooth**: Window expands rather than content squishing
+5. **Consistent**: Same pattern for all clock/target selection flows
+

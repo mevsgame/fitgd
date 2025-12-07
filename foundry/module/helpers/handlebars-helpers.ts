@@ -47,6 +47,8 @@ export async function registerHandlebarsHelpers(): Promise<void> {
     'equipment-grid',
     'equipment-row-view',
     'gm-passive-grid',
+    'side-panel',
+    'clock-picker',
   ];
 
   try {
@@ -81,6 +83,18 @@ export async function registerHandlebarsHelpers(): Promise<void> {
   // Equals helper
   Handlebars.registerHelper('eq', function (a: unknown, b: unknown) {
     return a === b;
+  });
+
+  // Logical AND helper
+  Handlebars.registerHelper('and', function (...args: unknown[]) {
+    // Remove the last argument (Handlebars options object)
+    const values = args.slice(0, -1);
+    return values.every(v => Boolean(v));
+  });
+
+  // Logical NOT helper
+  Handlebars.registerHelper('not', function (value: unknown) {
+    return !value;
   });
 
   // Less than or equal
