@@ -405,6 +405,25 @@ export async function createWidgetHarness(
       equipmentToLock.push(currentState.approvedPassiveId);
     }
 
+    // Calculate base momentum cost (Push, Flashback, Trait Transaction)
+    // This matches selectMomentumCost in playerRoundStateSelectors.ts
+    let baseMomentumCost = 0;
+
+    // Push cost: 1 Momentum
+    if (currentState.pushed) {
+      baseMomentumCost += 1;
+    }
+
+    // Trait transaction: variable momentum cost
+    if (currentState.traitTransaction) {
+      baseMomentumCost += currentState.traitTransaction.momentumCost || 0;
+    }
+
+    // Legacy flashback: 1 Momentum
+    if (currentState.flashbackApplied) {
+      baseMomentumCost += 1;
+    }
+
     // Calculate first-lock momentum cost for unlocked rare/epic items
     let firstLockCost = 0;
     if (char) {
@@ -416,9 +435,12 @@ export async function createWidgetHarness(
       }
     }
 
-    // Validate momentum for first-lock cost
-    if (crewData && firstLockCost > 0 && crewData.currentMomentum < firstLockCost) {
-      throw new Error(`Insufficient momentum for equipment lock (need ${firstLockCost})`);
+    // Total momentum cost (base + equipment)
+    const totalMomentumCost = baseMomentumCost + firstLockCost;
+
+    // Validate momentum for total cost
+    if (crewData && totalMomentumCost > 0 && crewData.currentMomentum < totalMomentumCost) {
+      throw new Error(`Insufficient momentum (need ${totalMomentumCost}, have ${crewData.currentMomentum})`);
     }
 
     // Transition to ROLLING
@@ -474,11 +496,11 @@ export async function createWidgetHarness(
       }
     }
 
-    // Spend first-lock momentum
-    if (crewData && firstLockCost > 0) {
+    // Spend all momentum costs (Push, Flashback, Equipment first-locks)
+    if (crewData && totalMomentumCost > 0) {
       actions.push({
         type: 'crews/spendMomentum',
-        payload: { crewId: crewData.id, amount: firstLockCost },
+        payload: { crewId: crewData.id, amount: totalMomentumCost },
       });
     }
 

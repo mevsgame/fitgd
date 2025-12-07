@@ -623,11 +623,12 @@ export class PlayerActionEventCoordinator {
         }
       }
 
-      // Spend first-lock momentum (in addition to any existing momentum costs)
-      if (crew && firstLockMomentumCost > 0) {
+      // Spend all momentum costs (Push, Flashback, and equipment first-locks)
+      // totalMomentumCost = baseMomentumCost (Push + Flashback) + firstLockMomentumCost (equipment)
+      if (crew && totalMomentumCost > 0) {
         rollBatch.push({
           type: 'crews/spendMomentum',
-          payload: { crewId: crew.id, amount: firstLockMomentumCost },
+          payload: { crewId: crew.id, amount: totalMomentumCost },
         });
       }
 
