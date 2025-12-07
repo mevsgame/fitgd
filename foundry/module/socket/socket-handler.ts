@@ -11,6 +11,7 @@
 import { updateBroadcastTracking, applyCommandsIncremental, refreshAffectedSheets, reloadStateFromSettings } from '../autosave/autosave-manager';
 import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 import { PlayerActionWidget } from '../widgets/player-action-widget';
+import { logger } from '@/utils/logger';
 
 /* -------------------------------------------- */
 /*  Socket Communication (socketlib)            */
@@ -77,7 +78,7 @@ interface SocketMessageData {
  * when other clients broadcast commands.
  */
 async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void> {
-  console.log(`FitGD | socketlib received data:`, data);
+  logger.debug(`socketlib received data:`, data);
 
   // Handle test messages (for diagnostics)
   if (data.test) {
@@ -92,15 +93,15 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
   }
 
   const userName = data.userName || 'Unknown User';
-  console.log(`FitGD | Received ${data.commandCount || 0} new commands from ${userName}`);
+  logger.info(`Received ${data.commandCount || 0} new commands from ${userName}`);
 
   // Validate commands structure
   if (!data.commands) {
-    console.error(`FitGD | No commands in message data`);
+    logger.error(`No commands in message data`);
     return;
   }
 
-  console.log(`FitGD | Commands to apply:`, data.commands);
+  logger.debug(`Commands to apply:`, data.commands);
 
   try {
     // BEFORE applying commands, capture entityIds for clocks that will be deleted
@@ -123,7 +124,7 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
     // Also apply playerRoundState if present (ephemeral UI state)
     const changedCharacterIds: string[] = [];
     if (data.playerRoundState) {
-      console.log(`FitGD | Applying received playerRoundState:`, data.playerRoundState);
+      logger.debug(`Applying received playerRoundState:`, data.playerRoundState);
 
       const currentState = game.fitgd!.store.getState();
 
@@ -131,13 +132,13 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
       for (const [characterId, receivedPlayerState] of Object.entries(data.playerRoundState.byCharacterId)) {
         let currentPlayerState = currentState.playerRoundState.byCharacterId[characterId];
 
-        console.log(`FitGD | Socket handler - character ${characterId.substring(0, 8)}:`);
-        console.log(`  Current state: ${currentPlayerState?.state}`);
-        console.log(`  Received state: ${receivedPlayerState.state}`);
+        logger.debug(`Socket handler - character ${characterId.substring(0, 8)}:`);
+        logger.debug(`  Current state: ${currentPlayerState?.state}`);
+        logger.debug(`  Received state: ${receivedPlayerState.state}`);
 
         // CRITICAL: Initialize player state if it doesn't exist!
         if (!currentPlayerState) {
-          console.log(`  No current state - initializing player state first`);
+          logger.debug(`  No current state - initializing player state first`);
           game.fitgd!.store.dispatch({
             type: 'playerRoundState/initializePlayerState',
             payload: { characterId }
@@ -145,16 +146,16 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
           // Re-fetch the newly initialized state for this character
           const updatedState = game.fitgd!.store.getState();
           currentPlayerState = updatedState.playerRoundState.byCharacterId[characterId];
-          console.log(`  Initialized state: ${currentPlayerState?.state}`);
+          logger.debug(`  Initialized state: ${currentPlayerState?.state}`);
         }
 
         // Skip if identical (avoid unnecessary updates)
         if (JSON.stringify(currentPlayerState) === JSON.stringify(receivedPlayerState)) {
-          console.log(`  Skipping - states are identical`);
+          logger.debug(`  Skipping - states are identical`);
           continue;
         }
 
-        console.log(`  States differ - applying updates`);
+        logger.debug(`  States differ - applying updates`);
 
         // Track that this character's state changed
         changedCharacterIds.push(characterId);
@@ -166,7 +167,7 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
           !receivedPlayerState.rollResult &&
           !receivedPlayerState.traitTransaction &&
           !receivedPlayerState.consequenceTransaction) {
-          console.log(`  Received state appears to be reset (IDLE_WAITING) - dispatching resetPlayerState`);
+          logger.debug(`  Received state appears to be reset (IDLE_WAITING) - dispatching resetPlayerState`);
           game.fitgd!.store.dispatch({
             type: 'playerRoundState/resetPlayerState',
             payload: { characterId }
@@ -260,7 +261,7 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
 
         // CRITICAL: Handle state transitions
         if (receivedPlayerState.state && receivedPlayerState.state !== currentPlayerState?.state) {
-          console.log(`  Dispatching state transition: ${currentPlayerState?.state} → ${receivedPlayerState.state}`);
+          logger.debug(`  Dispatching state transition: ${currentPlayerState?.state} → ${receivedPlayerState.state}`);
           game.fitgd!.store.dispatch({
             type: 'playerRoundState/transitionState',
             payload: {
@@ -269,7 +270,7 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
             }
           });
         } else {
-          console.log(`  State transition skipped - receivedPlayerState.state: ${receivedPlayerState.state}, currentPlayerState.state: ${currentPlayerState?.state}`);
+          logger.debug(`  State transition skipped - receivedPlayerState.state: ${receivedPlayerState.state}, currentPlayerState.state: ${currentPlayerState?.state}`);
         }
 
         // CRITICAL: Handle roll results (dicePool, rollResult, outcome)
@@ -340,28 +341,28 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
       // CRITICAL: Also refresh widgets for playerRoundState changes
       // This ensures GM sees player's trait transactions and plan updates
       if (changedCharacterIds.length > 0) {
-        console.log(`FitGD | Refreshing widgets for ${changedCharacterIds.length} changed characters:`, changedCharacterIds);
+        logger.debug(`Refreshing widgets for ${changedCharacterIds.length} changed characters:`, changedCharacterIds);
         refreshSheetsByReduxId(changedCharacterIds, false);
       }
 
-      console.log(`FitGD | Sync complete - applied ${appliedCount} new commands + playerRoundState`);
+      logger.debug(`Sync complete - applied ${appliedCount} new commands + playerRoundState`);
 
       // GM persists changes from players to world settings
       if (game.user!.isGM) {
         try {
           const history = game.fitgd!.foundry.exportHistory();
           await (game.settings as any).set('forged-in-the-grimdark', 'commandHistory', history);
-          console.log(`FitGD | GM persisted player changes to world settings`);
+          logger.debug(`GM persisted player changes to world settings`);
         } catch (error) {
-          console.error('FitGD | GM failed to persist player changes:', error);
+          logger.error('GM failed to persist player changes:', error);
         }
       }
     } else {
-      console.log(`FitGD | No commands or playerRoundState were applied (all duplicates or empty)`);
+      logger.debug(`No commands or playerRoundState were applied (all duplicates or empty)`);
     }
   } catch (error) {
-    console.error('FitGD | Error applying incremental commands:', error);
-    console.warn('FitGD | Falling back to full state reload...');
+    logger.error('Error applying incremental commands:', error);
+    logger.warn('Falling back to full state reload...');
 
     await reloadStateFromSettings();
   }
@@ -377,12 +378,12 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
 async function handleTakeAction(data: { characterId: string; userId: string; userName: string }): Promise<void> {
   const { characterId, userId, userName } = data;
 
-  console.log(`FitGD | Received takeAction for character ${characterId} from ${userName} (${userId})`);
+  logger.debug(`Received takeAction for character ${characterId} from ${userName} (${userId})`);
 
   // Get the actor to check ownership
   const actor = game.actors!.get(characterId); // Unified IDs
   if (!actor) {
-    console.warn(`FitGD | Actor not found for characterId ${characterId}`);
+    logger.warn(`FitGD | Actor not found for characterId ${characterId}`);
     return;
   }
 
@@ -390,7 +391,7 @@ async function handleTakeAction(data: { characterId: string; userId: string; use
   const isOwner = actor.isOwner;
   const isGM = game.user!.isGM;
 
-  console.log(`FitGD | Widget visibility check:`, {
+  logger.debug(`Widget visibility check:`, {
     actorName: actor.name,
     currentUser: game.user!.name,
     isOwner,
@@ -407,13 +408,13 @@ async function handleTakeAction(data: { characterId: string; userId: string; use
     );
 
     if (existingWidget) {
-      console.log(`FitGD | Bringing existing Player Action Widget to front for character ${characterId}`);
+      logger.debug(`Bringing existing Player Action Widget to front for character ${characterId}`);
       if ((existingWidget as any).rendered) {
         existingWidget.bringToTop();
       }
       existingWidget.render(true);
     } else {
-      console.log(`FitGD | Creating new Player Action Widget for character ${characterId}`);
+      logger.debug(`Creating new Player Action Widget for character ${characterId}`);
       const widget = new PlayerActionWidget(characterId);
       widget.render(true);
     }
@@ -425,7 +426,7 @@ async function handleTakeAction(data: { characterId: string; userId: string; use
 
     ui.notifications!.info(`${characterName} is taking action!`);
   } else {
-    console.log(`FitGD | Widget NOT shown - user is not owner or GM`);
+    logger.debug(`Widget NOT shown - user is not owner or GM`);
   }
 }
 

@@ -116,7 +116,7 @@ describe('PlayerActionWidget - Stims Fills Addiction Clock', () => {
                 const stimsRollingIndex = stateTransitions.indexOf('STIMS_ROLLING');
                 const stimsLockedIndex = stateTransitions.indexOf('STIMS_LOCKED');
 
-                console.log('State transitions:', stateTransitions);
+                // console.log('State transitions:', stateTransitions);
 
                 if (stimsLockedIndex !== -1) {
                     // If we reached STIMS_LOCKED, we MUST have gone through STIMS_ROLLING first
@@ -213,7 +213,7 @@ describe('PlayerActionWidget - Stims Fills Addiction Clock', () => {
                 harness.setNextRoll([6]); // Success on reroll
                 await harness.clickUseStims();
 
-                console.log('State transitions (no fill):', stateTransitions);
+                // console.log('State transitions (no fill):', stateTransitions);
 
                 // Verify STIMS_ROLLING was the first transition
                 expect(stateTransitions[1]).toBe('STIMS_ROLLING');

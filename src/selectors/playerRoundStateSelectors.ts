@@ -442,13 +442,15 @@ export const selectCanUseStims = createSelector(
   }
 );
 
+const EMPTY_ARRAY: string[] = [];
+
 /**
  * Get all harm clocks for a character with computed isDying flag
  */
 export const selectHarmClocksWithStatus = createSelector(
   [
     (state: RootState, characterId: string) =>
-      state.clocks.byTypeAndEntity[`harm:${characterId}`] || [],
+      state.clocks.byTypeAndEntity[`harm:${characterId}`] || EMPTY_ARRAY,
     (state: RootState) => state.clocks.byId,
   ],
   (harmClockIds, clocksById) => {

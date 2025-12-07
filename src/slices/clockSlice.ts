@@ -11,6 +11,7 @@ import {
 } from '../validators/clockValidator';
 import { isOrphanedCommand } from '../utils/commandUtils';
 import type { Clock, ClockSize, ClockType, Command, ProgressClockCategory } from '../types';
+import { logger } from '@/utils/logger';
 
 /**
  * Clock Slice State
@@ -238,8 +239,8 @@ const clockSlice = createSlice({
         }
         addToIndexes(state, clock);
 
-        console.log(`FitGD | clockSlice.createClock - Created clock:`, clock.id, clock.subtype, `for entity:`, clock.entityId);
-        console.log(`FitGD | clockSlice.createClock - Adding to history, current history length:`, state.history.length);
+        logger.debug(`clockSlice.createClock - Created clock:`, clock.id, clock.subtype, `for entity:`, clock.entityId);
+        logger.debug(`clockSlice.createClock - Adding to history, current history length:`, state.history.length);
 
         // Log command to history
         state.history.push({
@@ -251,7 +252,7 @@ const clockSlice = createSlice({
           userId: undefined,
         });
 
-        console.log(`FitGD | clockSlice.createClock - History length after push:`, state.history.length);
+        logger.debug(`clockSlice.createClock - History length after push:`, state.history.length);
       },
       prepare: (payload: CreateClockPayload) => {
         const timestamp = Date.now();
@@ -305,8 +306,8 @@ const clockSlice = createSlice({
         const { clockId, amount } = action.payload;
         const clock = state.byId[clockId];
 
-        console.log(`FitGD | clockSlice.addSegments called - ClockId: ${clockId}, Amount: ${amount}`);
-        console.log(`FitGD | Clock before update:`, clock ? JSON.stringify(clock) : 'NOT FOUND');
+        logger.debug(`clockSlice.addSegments called - ClockId: ${clockId}, Amount: ${amount}`);
+        logger.debug(`Clock before update:`, clock ? JSON.stringify(clock) : 'NOT FOUND');
 
         validateClockExists(clock, clockId);
         validateSegmentAmount(amount);
@@ -322,8 +323,8 @@ const clockSlice = createSlice({
 
         // Log if we capped the overflow
         if (newSegments > clock.maxSegments) {
-          console.log(
-            `FitGD | Clock ${clockId} capped at max: ` +
+          logger.debug(
+            `Clock ${clockId} capped at max: ` +
             `tried to add ${amount} to ${oldSegments}/${clock.maxSegments}, ` +
             `capped to ${clock.segments}/${clock.maxSegments}`
           );
@@ -566,7 +567,7 @@ const clockSlice = createSlice({
       state.allIds = state.allIds.filter(id => !clocksToRemove.includes(id));
 
       if (clocksToRemove.length > 0) {
-        console.log(`FitGD | Cleaned up ${clocksToRemove.length} orphaned clocks`);
+        logger.info(`Cleaned up ${clocksToRemove.length} orphaned clocks`);
       }
     },
 
@@ -587,13 +588,14 @@ const clockSlice = createSlice({
      * // After: [deleteClock]  // Only deletion command kept for audit
      * ```
      */
-    pruneOrphanedHistory: (state, action: PayloadAction<{ validIds: Set<string> }>) => {
+    pruneOrphanedHistory: (state, action: PayloadAction<{ validIds: string[] }>) => {
       const { validIds } = action.payload;
+      const validIdsSet = new Set(validIds);
 
       state.history = state.history.filter((command) => {
         // The isOrphanedCommand function remains the same,
         // but it now receives the definitive list of valid IDs from the action's payload.
-        return !isOrphanedCommand(command, validIds);
+        return !isOrphanedCommand(command, validIdsSet);
       });
     },
 

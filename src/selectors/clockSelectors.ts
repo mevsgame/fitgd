@@ -217,32 +217,20 @@ export const selectStimsAvailable = createSelector(
     addictionClocks = addictionClocks.filter((clock: Clock) => {
       const characterExists = clock.entityId in characterById;
       if (!characterExists) {
-        console.log(`FitGD | Filtered orphaned addiction clock: ${clock.id} (deleted entity: ${clock.entityId})`);
+        // logger.debug(`Filtered orphaned addiction clock: ${clock.id} (deleted entity: ${clock.entityId})`);
       }
       return characterExists;
     });
 
-    // Debug: Log addiction clock info
-    if (addictionClocks.length > 0) {
-      console.log('FitGD | Active Addiction Clocks:', addictionClocks.map((c: Clock) => ({
-        id: c.id,
-        entityId: c.entityId,
-        segments: c.segments,
-        maxSegments: c.maxSegments,
-        filled: c.segments >= c.maxSegments,
-        frozen: c.metadata?.frozen === true
-      })));
-    }
-
     // If no clocks exist yet, stims available
     if (addictionClocks.length === 0) {
-      console.log('FitGD | No active addiction clocks - stims AVAILABLE');
+      // logger.debug('No active addiction clocks - stims AVAILABLE');
       return true;
     }
 
     // Stims are LOCKED crew-wide if ANY character's addiction clock is filled or frozen
     const isLocked = addictionClocks.some((clock: Clock) => isClockFilled(clock) || clock.metadata?.frozen === true);
-    console.log('FitGD | Stims available:', !isLocked);
+    // logger.debug('Stims available:', !isLocked);
     return !isLocked;
   }
 );

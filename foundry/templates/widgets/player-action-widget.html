@@ -319,11 +319,35 @@
 
       {{#if isGM}}
       <!-- GM View: Optional Clock Advancement -->
+      {{#unless selectedSuccessClock}}
       {{#if (eq playerState.outcome "partial")}}
       <p class="success-message">Consequences applied. Now select a clock to advance:</p>
       {{else}}
       <p class="success-message">Success! Optionally advance a clock:</p>
       {{/if}}
+      {{else}}
+      <!-- Highlight Selected Clock (Plan Box Style) - REPLACES TEXT -->
+      <div class="action-plan-preview" style="margin-bottom: 15px;">
+        <h4>📋 Success Plan:</h4>
+        <div class="plan-box" style="border-left: 4px solid var(--color-success);">
+          <div class="plan-line action-composition">
+            <strong>Operation:</strong>
+            {{#if (eq successClockOperation 'add')}}Advance Progress{{else}}Reduce Threat{{/if}}
+          </div>
+
+          <div class="plan-line">
+            <strong>Target Clock:</strong> {{selectedSuccessClock.subtype}}
+          </div>
+
+          <div class="plan-line">
+            <strong>Segments:</strong>
+            <span class="badge" style="background: var(--color-success); color: white;">
+              {{#if calculatedSuccessClockSegments}}+{{calculatedSuccessClockSegments}}{{else}}?{{/if}}
+            </span>
+          </div>
+        </div>
+      </div>
+      {{/unless}}
 
       <div class="gm-consequence-config">
         <h4>⏰ Clock Advancement (Optional):</h4>

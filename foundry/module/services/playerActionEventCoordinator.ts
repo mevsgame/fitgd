@@ -17,6 +17,7 @@ import { asReduxId } from '../types/ids';
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
 import { selectEffectiveEffect, selectDefensiveSuccessValues } from '@/selectors/playerRoundStateSelectors';
 import { calculateOutcome } from '@/utils/diceRules';
+import { logger } from '../utils/logger';
 
 /**
  * Coordinates event handling for Player Action Widget
@@ -646,7 +647,7 @@ export class PlayerActionEventCoordinator {
         await this.context.postSuccessToChat(outcome, rollResult);
       }
     } catch (error) {
-      console.error('FitGD | Error in handleRoll:', error);
+      logger.error('Error in handleRoll:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.context.getNotificationService().error(`Roll failed: ${errorMessage}`);
     }
@@ -760,7 +761,7 @@ export class PlayerActionEventCoordinator {
                     silent: true,
                   });
                 } catch (error) {
-                  console.error('FitGD | Error creating harm clock:', error);
+                  logger.error('Error creating harm clock:', error);
                   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                   this.context.getNotificationService().error(`Error creating clock: ${errorMessage}`);
                 }
@@ -776,7 +777,7 @@ export class PlayerActionEventCoordinator {
             });
           }
         } catch (error) {
-          console.error('FitGD | Error in harm clock selection:', error);
+          logger.error('Error in harm clock selection:', error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           this.context.getNotificationService().error(`Error selecting clock: ${errorMessage}`);
         }
@@ -829,7 +830,7 @@ export class PlayerActionEventCoordinator {
                     silent: true,
                   });
                 } catch (error) {
-                  console.error('FitGD | Error creating crew clock:', error);
+                  logger.error('Error creating crew clock:', error);
                   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                   this.context.getNotificationService().error(`Error creating clock: ${errorMessage}`);
                 }
@@ -847,7 +848,7 @@ export class PlayerActionEventCoordinator {
             });
           }
         } catch (error) {
-          console.error('FitGD | Error in crew clock selection:', error);
+          logger.error('Error in crew clock selection:', error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           this.context.getNotificationService().error(`Error selecting clock: ${errorMessage}`);
         }
@@ -1173,7 +1174,7 @@ export class PlayerActionEventCoordinator {
                     silent: true,
                   });
                 } catch (error) {
-                  console.error('FitGD | Error creating success clock:', error);
+                  logger.error('Error creating success clock:', error);
                   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                   this.context.getNotificationService().error(`Error creating clock: ${errorMessage}`);
                 }
@@ -1212,7 +1213,7 @@ export class PlayerActionEventCoordinator {
             });
           }
         } catch (error) {
-          console.error('FitGD | Error in success clock selection:', error);
+          logger.error('Error in success clock selection:', error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           this.context.getNotificationService().error(`Error selecting clock: ${errorMessage}`);
         }
@@ -1244,12 +1245,13 @@ export class PlayerActionEventCoordinator {
     const characterId = this.context.getCharacterId();
     const crewId = this.context.getCrewId();
 
+    // List of actions to execute
+    const actions: any[] = [];
+
     // If success clock is configured, apply it
     if (transaction) {
       const state = game.fitgd.store.getState();
       const successClockAction = this._createSuccessClockAction(state, transaction);
-
-      const actions: any[] = [];
 
       if (successClockAction) {
         actions.push(successClockAction);
@@ -1266,26 +1268,33 @@ export class PlayerActionEventCoordinator {
         }
       }
 
-      // Always clear transaction (whether clock was selected or skipped)
+      // Clear transaction (whether clock was selected or skipped)
       const clearTransactionAction = {
         type: 'playerRoundState/clearConsequenceTransaction',
         payload: { characterId },
       };
       actions.push(clearTransactionAction);
-
-      if (actions.length > 0) {
-        await game.fitgd.bridge.executeBatch(
-          actions,
-          {
-            affectedReduxIds: [
-              asReduxId(characterId),
-              ...(crewId ? [asReduxId(crewId)] : []),
-            ],
-            silent: false,
-          }
-        );
-      }
     }
+
+    // ALWAYS transition to TURN_COMPLETE to allow next turn
+    actions.push({
+      type: 'playerRoundState/transitionState',
+      payload: {
+        characterId,
+        newState: 'TURN_COMPLETE',
+      },
+    });
+
+    await game.fitgd.bridge.executeBatch(
+      actions,
+      {
+        affectedReduxIds: [
+          asReduxId(characterId),
+          ...(crewId ? [asReduxId(crewId)] : []),
+        ],
+        silent: false,
+      }
+    );
 
     // Close the widget
     const app = this.context as any;
@@ -1359,20 +1368,69 @@ export class PlayerActionEventCoordinator {
         break;
 
       case 'success':
+        const playerState = this.context.getPlayerState();
+        const actions: any[] = [];
+        const characterId = this.context.getCharacterId();
+
+        // If no transaction exists (e.g. Critical Success), initialize one first
+        if (!playerState?.consequenceTransaction) {
+          actions.push({
+            type: 'playerRoundState/setConsequenceTransaction',
+            payload: {
+              characterId,
+              transaction: {
+                consequenceType: 'crew-clock', // Default/placeholder
+                successClockOperation: 'add',  // Default to add
+              },
+            },
+          });
+        }
+
+        // Calculate derived values (segments based on effect/outcome)
+        let segments = 2; // Default to Standard
+        const effect = playerState?.effect || 'standard';
+
+        const effectSegments: Record<string, number> = {
+          limited: 1,
+          standard: 2,
+          great: 3,
+          spectacular: 5,
+        };
+
+        segments = effectSegments[effect] || 2;
+
+        // Critical success check
+        if (playerState?.outcome === 'critical') {
+          if (effect === 'limited') segments = 2;
+          else if (effect === 'standard') segments = 3;
+          else if (effect === 'great') segments = 5;
+          else segments = 6;
+        }
+
+        logger.debug('Calculated segments for success clock:', segments, 'Effect:', effect, 'Outcome:', playerState?.outcome);
+
         // Set success clock in transaction
-        await game.fitgd.bridge.execute({
-          type: 'playerRoundState/setSuccessClockTransaction',
+        actions.push({
+          type: 'playerRoundState/updateConsequenceTransaction',
           payload: {
-            characterId: this.context.getCharacterId(),
-            successClockId: clockId,
+            characterId,
+            updates: {
+              successClockId: clockId,
+              calculatedSuccessClockSegments: segments
+            },
           },
-        }, {
-          affectedReduxIds: [asReduxId(this.context.getCharacterId())],
+        });
+
+        logger.debug('Dispatching updateConsequenceTransaction with:', { successClockId: clockId, calculatedSuccessClockSegments: segments });
+
+        await game.fitgd.bridge.executeBatch(actions, {
+          affectedReduxIds: [asReduxId(characterId)],
           silent: true,
         });
         break;
     }
   }
+
 
   /**
    * Handle clock creation from side panel

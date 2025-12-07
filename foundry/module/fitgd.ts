@@ -38,6 +38,7 @@ import { saveCommandHistory, trackInitialCommandsAsApplied, getNewCommandsSinceL
 
 // Developer commands
 import { registerDevCommands } from './console/dev-commands';
+import { logger } from './utils/logger';
 
 /* -------------------------------------------- */
 /*  Type Definitions                            */
@@ -94,7 +95,7 @@ function setSetting<T>(key: string, value: T): Promise<T> {
  * Initialize the FitGD system
  */
 Hooks.once('init', async function () {
-  console.log('FitGD | Initializing Forged in the Grimdark system');
+  logger.info('Initializing Forged in the Grimdark system');
 
   // Create global namespace
   if (!game.fitgd) {
@@ -102,38 +103,38 @@ Hooks.once('init', async function () {
   }
 
   // Initialize Redux store
-  console.log('FitGD | Creating Redux store...');
+  logger.info('Creating Redux store...');
   try {
     game.fitgd!.store = configureStore() as Store<RootState>;
-    console.log('FitGD | Redux store created successfully');
+    logger.info('Redux store created successfully');
   } catch (error) {
-    console.error('FitGD | Failed to create Redux store:', error);
+    logger.error('Failed to create Redux store:', error);
     return;
   }
 
   // Initialize Game API
-  console.log('FitGD | Creating Game API...');
+  logger.info('Creating Game API...');
   try {
     game.fitgd!.api = createGameAPI(game.fitgd!.store);
-    console.log('FitGD | Game API created successfully. Available APIs:', Object.keys(game.fitgd!.api));
+    logger.info('Game API created successfully. Available APIs:', Object.keys(game.fitgd!.api));
   } catch (error) {
-    console.error('FitGD | Failed to create Game API:', error);
+    logger.error('Failed to create Game API:', error);
     return;
   }
 
   // Initialize Foundry adapter
-  console.log('FitGD | Creating Foundry adapter...');
+  logger.info('Creating Foundry adapter...');
   try {
     game.fitgd!.foundry = createFoundryAdapter(game.fitgd!.store);
-    console.log('FitGD | Foundry adapter created successfully');
+    logger.info('Foundry adapter created successfully');
   } catch (error) {
-    console.error('FitGD | Failed to create Foundry adapter:', error);
+    logger.error('Failed to create Foundry adapter:', error);
     return;
   }
 
   // Initialize socketlib for reliable multi-client communication
-  console.log('FitGD | Initializing socketlib...');
-  console.log('FitGD | socketlib available?', typeof socketlib !== 'undefined');
+  logger.info('Initializing socketlib...');
+  logger.info('socketlib available?', typeof socketlib !== 'undefined');
 
   try {
     if (typeof socketlib === 'undefined') {
@@ -141,17 +142,17 @@ Hooks.once('init', async function () {
     }
 
     game.fitgd!.socket = socketlib.registerSystem('forged-in-the-grimdark');
-    console.log('FitGD | socketlib registered successfully, socket object:', game.fitgd!.socket);
+    logger.info('socketlib registered successfully, socket object:', game.fitgd!.socket);
 
     // Register socket handlers
     // Note: Handler function must be defined before registration
     game.fitgd!.socket.register('syncCommands', receiveCommandsFromSocket);
     game.fitgd!.socket.register('takeAction', handleTakeAction);
-    console.log('FitGD | Socket handlers registered for "syncCommands" and "takeAction"');
-    console.log('FitGD | Handler functions:', receiveCommandsFromSocket, handleTakeAction);
+    logger.info('Socket handlers registered for "syncCommands" and "takeAction"');
+    logger.info('Handler functions:', receiveCommandsFromSocket, handleTakeAction);
   } catch (error) {
-    console.error('FitGD | Failed to initialize socketlib:', error);
-    console.error('FitGD | Make sure socketlib module is installed and enabled');
+    logger.error('Failed to initialize socketlib:', error);
+    logger.error('Make sure socketlib module is installed and enabled');
     return;
   }
 
@@ -164,7 +165,7 @@ Hooks.once('init', async function () {
 
       // Circuit breaker: prevent infinite broadcast loops
       if (!checkCircuitBreaker(newCommandCount)) {
-        console.error(`FitGD | Broadcast blocked by circuit breaker`);
+        logger.error(`Broadcast blocked by circuit breaker`);
         return;
       }
 
@@ -184,18 +185,18 @@ Hooks.once('init', async function () {
           timestamp: Date.now()
         };
 
-        console.log(`FitGD | Broadcasting ${newCommandCount} commands + playerRoundState via socketlib`);
-        console.log(`FitGD | PlayerRoundState being broadcast:`, JSON.stringify(playerRoundState, null, 2));
+        logger.info(`Broadcasting ${newCommandCount} commands + playerRoundState via socketlib`);
+        logger.debug(`PlayerRoundState being broadcast:`, JSON.stringify(playerRoundState, null, 2));
 
         try {
           // Use socketlib to broadcast to OTHER clients (not self)
           const result = await game.fitgd!.socket.executeForOthers('syncCommands', socketData);
-          console.log(`FitGD | socketlib broadcast completed, result:`, result);
+          logger.info(`socketlib broadcast completed, result:`, result);
         } catch (error) {
-          console.error('FitGD | socketlib broadcast error:', error);
+          logger.error('socketlib broadcast error:', error);
         }
       } else {
-        console.log(`FitGD | No new commands or playerRoundState to broadcast`);
+        logger.info(`No new commands or playerRoundState to broadcast`);
       }
 
       // Auto-prune orphaned history if enabled
@@ -203,7 +204,7 @@ Hooks.once('init', async function () {
         const autoPruneEnabled = getSetting<boolean>('autoPruneHistory');
 
         if (autoPruneEnabled) {
-          console.log('FitGD | Auto-prune enabled, checking for orphaned history...');
+          logger.info('Auto-prune enabled, checking for orphaned history...');
 
           // Get state before any operations
           const stateBefore = game.fitgd!.store.getState();
@@ -256,14 +257,14 @@ Hooks.once('init', async function () {
             (clockCountBefore - clockCountAfter);
 
           if (prunedCount > 0 || cleanedCount > 0) {
-            console.log(`FitGD | Auto-prune: Removed ${cleanedCount} orphaned entities and ${prunedCount} history commands`);
+            logger.info(`Auto-prune: Removed ${cleanedCount} orphaned entities and ${prunedCount} history commands`);
 
             if (cleanedCount > 0) {
               ui.notifications!.info(`FitGD: Cleaned up ${cleanedCount} orphaned entities`);
 
               // If we cleaned up state, we MUST update the snapshot to persist the deletion
               // Otherwise, re-hydrating from the old snapshot would bring them back
-              console.log('FitGD | Updating state snapshot to persist cleanup...');
+              logger.info('Updating state snapshot to persist cleanup...');
               const stateSnapshot = game.fitgd!.foundry.exportState();
               await setSetting('stateSnapshot', stateSnapshot);
             }
@@ -281,33 +282,33 @@ Hooks.once('init', async function () {
         const history = game.fitgd!.foundry.exportHistory() as CommandHistory;
         await setSetting('commandHistory', history);
         const total = history.characters.length + history.crews.length + history.clocks.length;
-        console.log(`FitGD | Saved ${total} commands to world settings (GM only)`);
+        logger.info(`Saved ${total} commands to world settings (GM only)`);
       } else {
-        console.log(`FitGD | Skipped settings save (player - GM will persist on receipt)`);
+        logger.info(`Skipped settings save (player - GM will persist on receipt)`);
       }
     } catch (error) {
-      console.error('FitGD | Error in saveImmediate:', error);
+      logger.error('Error in saveImmediate:', error);
       // Don't throw - we still want broadcasts to work even if save fails
     }
   };
 
   // Initialize Foundry-Redux Bridge API
-  console.log('FitGD | Creating Foundry-Redux Bridge...');
+  logger.info('Creating Foundry-Redux Bridge...');
   try {
     game.fitgd!.bridge = createFoundryReduxBridge(
       game.fitgd!.store,
       game.fitgd!.saveImmediate
     );
-    console.log('FitGD | Foundry-Redux Bridge created successfully');
-    console.log('FitGD | Bridge API available at game.fitgd.bridge');
+    logger.info('Foundry-Redux Bridge created successfully');
+    logger.info('Bridge API available at game.fitgd.bridge');
   } catch (error) {
-    console.error('FitGD | Failed to create Foundry-Redux Bridge:', error);
+    logger.error('Failed to create Foundry-Redux Bridge:', error);
     return;
   }
 
   // Extend game.fitgd.api.action with Foundry-specific takeAction helper
   (game.fitgd!.api.action as any).takeAction = takeAction;
-  console.log('FitGD | Extended action API with takeAction helper');
+  logger.info('Extended action API with takeAction helper');
 
   // Register settings
   registerSystemSettings();
@@ -333,10 +334,10 @@ Hooks.once('init', async function () {
     link.rel = 'stylesheet';
     link.href = cssPath;
     document.head.appendChild(link);
-    console.log('FitGD | Manually loaded equipment-row-view.css');
+    logger.info('Manually loaded equipment-row-view.css');
   }
 
-  console.log('FitGD | Initialization complete');
+  logger.info('Initialization complete');
 });
 
 /* -------------------------------------------- */
@@ -347,8 +348,8 @@ Hooks.once('init', async function () {
  * Load saved game state when world is ready
  */
 Hooks.once('ready', async function () {
-  console.log(`FitGD | World ready for user: ${game.user!.name} (isGM: ${game.user!.isGM})`);
-  console.log(`FitGD | game.fitgd initialized: ${!!game.fitgd}, has store: ${!!game.fitgd?.store}, has api: ${!!game.fitgd?.api}`);
+  logger.info(`World ready for user: ${game.user!.name} (isGM: ${game.user!.isGM})`);
+  logger.debug(`game.fitgd initialized: ${!!game.fitgd}, has store: ${!!game.fitgd?.store}, has api: ${!!game.fitgd?.api}`);
 
   // Check for state snapshot first (used after history pruning)
   const stateSnapshot = getSetting<StateSnapshot | undefined>('stateSnapshot');
@@ -366,48 +367,48 @@ Hooks.once('ready', async function () {
 
   // Warn if command history is bloated (possible corruption or spam issue)
   if (totalCommands > 1000) {
-    console.warn(`FitGD | WARNING: Command history is large (${totalCommands} commands). This may indicate a previous spam issue.`);
-    console.warn(`FitGD | Breakdown: chars=${validHistory.characters.length}, crews=${validHistory.crews.length}, clocks=${validHistory.clocks.length}`);
+    logger.warn(`WARNING: Command history is large (${totalCommands} commands). This may indicate a previous spam issue.`);
+    logger.warn(`Breakdown: chars=${validHistory.characters.length}, crews=${validHistory.crews.length}, clocks=${validHistory.clocks.length}`);
 
     if (totalCommands > 3000) {
-      console.error(`FitGD | CRITICAL: Command history is VERY large (${totalCommands} commands)!`);
+      logger.error(`CRITICAL: Command history is VERY large (${totalCommands} commands)!`);
       ui.notifications!.warn(`FitGD: Large command history detected (${totalCommands} commands). Performance may be affected. Consider using History Management to prune old commands.`, { permanent: true });
     }
   }
 
   if (stateSnapshot?.timestamp) {
     // Load from snapshot first
-    console.log('FitGD | State snapshot found, hydrating from snapshot...');
-    console.log(`FitGD | Snapshot timestamp: ${new Date(stateSnapshot.timestamp).toLocaleString()}`);
+    logger.info('State snapshot found, hydrating from snapshot...');
+    logger.info(`Snapshot timestamp: ${new Date(stateSnapshot.timestamp).toLocaleString()}`);
 
     try {
       // Hydrate Redux store from snapshot
       game.fitgd!.foundry.importState(stateSnapshot);
-      console.log('FitGD | State restored from snapshot');
+      logger.info('State restored from snapshot');
 
       // Then replay any new commands that occurred after the snapshot
       if (totalCommands > 0) {
-        console.log(`FitGD | Replaying ${totalCommands} commands on top of snapshot...`);
+        logger.info(`Replaying ${totalCommands} commands on top of snapshot...`);
         game.fitgd!.foundry.replayCommands(validHistory);
-        console.log('FitGD | New commands applied');
+        logger.info('New commands applied');
       }
 
       // Track all commands as applied
       trackInitialCommandsAsApplied();
     } catch (error) {
-      console.error('FitGD | Error loading from snapshot:', error);
+      logger.error('Error loading from snapshot:', error);
       ui.notifications!.error('Failed to load game state from snapshot');
     }
   } else if (totalCommands > 0) {
     // No snapshot, use command history replay (old behavior)
-    console.log(`FitGD | Replaying ${totalCommands} commands from history...`);
+    logger.info(`Replaying ${totalCommands} commands from history...`);
     game.fitgd!.foundry.replayCommands(validHistory);
-    console.log('FitGD | State restored from command history');
+    logger.info('State restored from command history');
 
     // Track all initial commands as applied (prevents re-application on sync)
     trackInitialCommandsAsApplied();
   } else {
-    console.log('FitGD | No command history or snapshot found, starting fresh');
+    logger.info('No command history or snapshot found, starting fresh');
   }
 
   // Subscribe to store changes to auto-save
@@ -423,17 +424,17 @@ Hooks.once('ready', async function () {
         const history = game.fitgd!.foundry.exportHistory() as CommandHistory;
         setSetting('commandHistory', history);
         const total = history.characters.length + history.crews.length + history.clocks.length;
-        console.log(`FitGD | Saved ${total} commands (on unload - GM)`);
+        logger.info(`Saved ${total} commands (on unload - GM)`);
       } catch (error) {
-        console.error('FitGD | Failed to save on unload:', error);
+        logger.error('Failed to save on unload:', error);
       }
     }
   });
 
   // Expose test function for manual socket testing
   game.fitgd!.testSocket = async function (): Promise<void> {
-    console.log('FitGD | Testing socketlib...');
-    console.log('FitGD | Socket object:', game.fitgd!.socket);
+    logger.info('Testing socketlib...');
+    logger.info('Socket object:', game.fitgd!.socket);
 
     const testData = {
       test: 'Hello from ' + game.user!.name,
@@ -442,16 +443,16 @@ Hooks.once('ready', async function () {
     };
 
     try {
-      console.log('FitGD | Sending test message:', testData);
+      logger.info('Sending test message:', testData);
       const result = await game.fitgd!.socket.executeForOthers('syncCommands', testData);
-      console.log('FitGD | Test message sent, result:', result);
+      logger.info('Test message sent, result:', result);
     } catch (error) {
-      console.error('FitGD | Test message failed:', error);
+      logger.error('Test message failed:', error);
       throw error;
     }
   };
 
-  console.log('FitGD | Ready (socketlib handlers active)');
+  logger.info('Ready (socketlib handlers active)');
 });
 
 // Export helper for use in other modules if needed

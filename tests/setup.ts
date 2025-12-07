@@ -70,4 +70,4 @@
     }
 };
 
-console.log('Vitest setup: Foundry Application mocks initialized');
+// logger.info('Vitest setup: Foundry Application mocks initialized');

@@ -176,8 +176,47 @@ export class ConsequenceDataResolver {
       successClockId: transaction.successClockId || null,
       selectedSuccessClock,
       successClockOperation: transaction.successClockOperation || undefined,
-      calculatedSuccessClockSegments: transaction.calculatedSuccessClockSegments || undefined,
+      calculatedSuccessClockSegments: this.calculateSuccessClockSegments(playerState, selectedSuccessClock),
     };
+  }
+
+  /**
+   * Calculate segments for success clock advancement/reduction
+   */
+  private calculateSuccessClockSegments(
+    playerState: PlayerRoundState | null,
+    clock: Clock | null
+  ): number {
+    if (!clock || !playerState) return 0;
+
+    // Default base segments for effects
+    const effectSegments: Record<string, number> = {
+      limited: 1,
+      standard: 2,
+      great: 3,
+      spectacular: 5,
+    };
+
+    const effect = playerState.effect || 'standard';
+    let segments = effectSegments[effect] || 2;
+
+    // Critical success doubles the effect (or we could use rule-specific logic)
+    // Rules Primer says Critical = "Improved Effect" usually.
+    // But commonly enforced as +1 tick or double? 
+    // Let's assume Critical means "Spectacular" (5) or double?
+    // Using standard FitGD/FitD rules: Critical = Increased Effect.
+    // If Standard (2) -> Great (3). If Great (3) -> Spectacular (5).
+    if (playerState.outcome === 'critical') {
+      if (effect === 'limited') segments = 2; // Standard
+      else if (effect === 'standard') segments = 3; // Great
+      else if (effect === 'great') segments = 5; // Spectacular
+      else segments = 6; // Beyond
+    }
+
+    // For "Reduce Threat", the logic might be different (usually equals Effect level)
+    // We'll keep it symmetric for now unless specified otherwise.
+
+    return segments;
   }
 
   /**

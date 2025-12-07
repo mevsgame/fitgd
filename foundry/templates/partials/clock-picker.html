@@ -30,9 +30,9 @@ actionPrefix="harm"
         {{#if clocks.length}}
         <div class="clock-picker-items">
             {{#each clocks}}
-            <label class="clock-picker-item {{#if (eq ../selectedClockId this.id)}}selected{{/if}}">
-                <input type="radio" name="{{../actionPrefix}}-clock-selection" value="{{this.id}}"
-                    data-action="select-{{../actionPrefix}}-clock-item" data-clock-id="{{this.id}}" {{#if (eq
+            <label class="clock-picker-item {{#if (eq ../selectedClockId this.id)}}selected{{/if}}"
+                data-action="select-{{../actionPrefix}}-clock-item" data-clock-id="{{this.id}}">
+                <input type="radio" name="{{../actionPrefix}}-clock-selection" value="{{this.id}}" {{#if (eq
                     ../selectedClockId this.id)}}checked{{/if}} />
                 <div class="clock-picker-item-content">
                     <span class="clock-name">{{this.subtype}}</span>

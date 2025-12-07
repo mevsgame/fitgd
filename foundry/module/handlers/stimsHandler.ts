@@ -15,6 +15,7 @@ import type { RootState } from '@/store';
 import type { Trait } from '@/types/character';
 import type { Clock } from '@/types/clock';
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
+import { logger } from '../../../src/utils/logger';
 import { selectDicePool } from '@/selectors/playerRoundStateSelectors';
 import { asReduxId, type ReduxId } from '../types/ids';
 
@@ -69,7 +70,7 @@ export interface AddictionClockResult {
  * }
  */
 export class StimsHandler {
-  constructor(private config: StimsHandlerConfig) {}
+  constructor(private config: StimsHandlerConfig) { }
 
   /**
    * Validate that stims can be used
@@ -359,7 +360,7 @@ export class StimsHandler {
   validateAddictionRoll(rollAmount: number): number {
     // Validate roll is in range 1-6
     if (rollAmount < 1 || rollAmount > 6) {
-      console.warn(`Invalid addiction roll amount: ${rollAmount}, defaulting to 1`);
+      logger.warn(`Invalid addiction roll amount: ${rollAmount}, defaulting to 1`);
       return 1;
     }
     return rollAmount;

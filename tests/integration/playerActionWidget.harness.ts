@@ -284,7 +284,7 @@ export async function createWidgetHarness(
   await widget.getData();
 
   // Debug: Verify handler was initialized
-  console.log('DEBUG: After getData, handler exists?', !!(widget as any).consequenceApplicationHandler);
+  // console.log('DEBUG: After getData, handler exists?', !!(widget as any).consequenceApplicationHandler);
 
   /* -------------------------------------------- */
   /*  State Query Helpers                         */

@@ -3,10 +3,11 @@
 import { defineConfig } from 'vite';
 import path from 'path';
 
-export default defineConfig({
+// export default defineConfig({
+export default defineConfig(({ mode }) => ({
   // Keep this for Redux Toolkit
   define: {
-    'process.env.NODE_ENV': JSON.stringify('production'),
+    'process.env.NODE_ENV': JSON.stringify(mode === 'test' ? 'test' : 'production'),
   },
 
   // We are not using any special plugins for this simple bundle
@@ -61,9 +62,11 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
+    reporters: ['dot', 'junit'],
+    outputFile: 'test-results.xml',
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
     },
   },
-});
+}));

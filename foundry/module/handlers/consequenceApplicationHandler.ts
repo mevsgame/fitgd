@@ -15,6 +15,8 @@ import type { RootState } from '@/store';
 import type { ConsequenceTransaction } from '@/types/playerRoundState';
 import { selectEffectivePosition, selectConsequenceSeverity, selectMomentumGain, selectDefensiveSuccessValues } from '@/selectors/playerRoundStateSelectors';
 
+import { logger } from '@/utils/logger';
+
 /**
  * Configuration for consequence application
  */
@@ -85,7 +87,7 @@ export interface ConsequenceApplicationResult {
  * });
  */
 export class ConsequenceApplicationHandler {
-  constructor(private config: ConsequenceApplicationHandlerConfig) {}
+  constructor(private config: ConsequenceApplicationHandlerConfig) { }
 
   /**
    * Validate that consequence transaction is complete
@@ -153,7 +155,7 @@ export class ConsequenceApplicationHandler {
     type: string;
     payload: unknown;
   } {
-    console.log('FitGD | createApplyHarmAction:', {
+    logger.debug('createApplyHarmAction:', {
       clockId: transaction.harmClockId,
       amount: segments,
     });

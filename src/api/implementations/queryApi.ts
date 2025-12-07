@@ -1,4 +1,5 @@
 import type { Store } from '@reduxjs/toolkit';
+import { logger } from '../../utils/logger';
 import type { Trait } from '../../types';
 import {
   selectStimsAvailable,
@@ -95,12 +96,12 @@ export function createQueryAPI(store: Store) {
     }> {
       const state = store.getState();
       const harmClocks = selectHarmClocksByCharacter(state, characterId);
-      console.log(`FitGD | queryApi.getHarmClocks(${characterId}): found ${harmClocks.length} clocks`, harmClocks);
+      logger.debug(`queryApi.getHarmClocks(${characterId}): found ${harmClocks.length} clocks`, harmClocks);
 
       // Log the index to check for duplicates
       const key = `harm:${characterId}`;
       const clockIds = state.clocks.byTypeAndEntity[key] || [];
-      console.log(`FitGD | byTypeAndEntity index for ${key}:`, clockIds);
+      logger.debug(`byTypeAndEntity index for ${key}:`, clockIds);
 
       // Check for duplicate IDs in the index
       const uniqueIds = new Set(clockIds);
@@ -117,7 +118,7 @@ export function createQueryAPI(store: Store) {
         maxSegments: clock.maxSegments,
         metadata: clock.metadata,
       }));
-      console.log(`FitGD | queryApi.getHarmClocks result:`, result);
+      logger.debug(`queryApi.getHarmClocks result:`, result);
 
       return result;
     },

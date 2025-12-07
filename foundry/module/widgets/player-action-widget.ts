@@ -32,7 +32,9 @@ import { PlayerActionHandlerFactory } from '../services/playerActionHandlerFacto
 import { PlayerActionEventCoordinator } from '../services/playerActionEventCoordinator';
 import { DiceService, FoundryDiceService } from '../services/diceService';
 import { NotificationService, FoundryNotificationService } from '../services/notificationService';
+
 import { DialogFactory, FoundryDialogFactory } from '../services/dialogFactory';
+import { logger } from '../utils/logger';
 interface PlayerActionWidgetData {
   character: Character;
   crew: Crew | null;
@@ -235,7 +237,7 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
 
     // Null safety check
     if (!game.fitgd) {
-      console.error('FitGD | FitGD not initialized');
+      logger.error('FitGD not initialized');
       return;
     }
 
@@ -265,13 +267,20 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
 
         // Log subscription changes
         if (playerStateChanged || characterChanged || crewChanged || clocksChanged) {
-          console.log('FitGD | Widget subscription detected changes:', {
+          logger.info('Widget subscription detected changes:', {
             playerStateChanged,
             characterChanged,
             crewChanged,
             clocksChanged,
             currentPlayerState: currentState.playerRoundState.byCharacterId[this.characterId]?.state,
           });
+        }
+
+        // Check if turn is complete - if so, close widget immediately
+        // This handles cases where state update comes from remote client (or race conditions)
+        if (currentState.playerRoundState.byCharacterId[this.characterId]?.state === 'TURN_COMPLETE') {
+          logger.debug('Auto-closing widget'); void this.close();
+          return;
         }
 
         // Re-render if any relevant state changed
@@ -413,7 +422,7 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
 
     // Null safety check
     if (!game.fitgd) {
-      console.error('FitGD | FitGD not initialized');
+      logger.error('FitGD not initialized');
       return data as PlayerActionWidgetData;
     }
 
@@ -771,26 +780,55 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
       this.closeSidePanel();
     });
 
-    // Clock picker item selection
-    html.find('[data-action="select-harm-clock-item"]').click((e) => {
+    // Clock picker item selection - Use delegation for dynamic content
+    html.on('click', '[data-action="select-harm-clock-item"]', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const clockId = (e.currentTarget as HTMLElement).dataset.clockId;
       if (clockId) {
-        void this.coordinator.handleSidePanelClockSelect('harm', clockId);
-        this.closeSidePanel();
+        try {
+          logger.info('Selecting harm clock:', clockId);
+          await this.coordinator.handleSidePanelClockSelect('harm', clockId);
+          this.closeSidePanel();
+        } catch (err) {
+          logger.error('Failed to select harm clock:', err);
+          ui.notifications?.error('Failed to select clock');
+        }
       }
     });
-    html.find('[data-action="select-crew-clock-item"]').click((e) => {
+
+    html.on('click', '[data-action="select-crew-clock-item"]', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const clockId = (e.currentTarget as HTMLElement).dataset.clockId;
       if (clockId) {
-        void this.coordinator.handleSidePanelClockSelect('crew', clockId);
-        this.closeSidePanel();
+        try {
+          logger.debug('Selecting crew clock:', clockId);
+          await this.coordinator.handleSidePanelClockSelect('crew', clockId);
+          this.closeSidePanel();
+        } catch (err) {
+          logger.error('Failed to select crew clock:', err);
+          ui.notifications?.error('Failed to select clock');
+        }
       }
     });
-    html.find('[data-action="select-success-clock-item"]').click((e) => {
+
+    html.on('click', '[data-action="select-success-clock-item"]', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const clockId = (e.currentTarget as HTMLElement).dataset.clockId;
       if (clockId) {
-        void this.coordinator.handleSidePanelClockSelect('success', clockId);
-        this.closeSidePanel();
+        try {
+          logger.debug('Selecting success clock:', clockId);
+          await this.coordinator.handleSidePanelClockSelect('success', clockId);
+          logger.debug('Success clock selection dispatched');
+          this.closeSidePanel();
+        } catch (err) {
+          logger.error('Failed to select success clock:', err);
+          ui.notifications?.error('Failed to select clock');
+        }
+      } else {
+        logger.warn('Success clock item clicked but no ID found');
       }
     });
 

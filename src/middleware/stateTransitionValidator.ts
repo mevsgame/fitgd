@@ -16,6 +16,7 @@ import type { Middleware } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
 import { isValidTransition, STATE_TRANSITIONS } from '../types/playerRoundState';
 import type { PlayerRoundStateType } from '../types/playerRoundState';
+import { logger } from '@/utils/logger';
 
 /**
  * Redux middleware that validates all playerRoundState transitions
@@ -49,12 +50,12 @@ export const stateTransitionValidator: Middleware<{}, RootState> = store => next
     if (!isValidTransition(currentState, newState)) {
         const validTransitions = STATE_TRANSITIONS[currentState] || [];
 
-        console.error('❌ Invalid state transition detected!');
-        console.error(`   From: ${currentState}`);
-        console.error(`   To: ${newState}`);
-        console.error(`   Valid transitions from ${currentState}:`, validTransitions);
-        console.error(`   Character: ${characterId}`);
-        console.trace('Stack trace:');
+        logger.error('Invalid state transition detected!');
+        logger.error(`   From: ${currentState}`);
+        logger.error(`   To: ${newState}`);
+        logger.error(`   Valid transitions from ${currentState}:`, validTransitions);
+        logger.error(`   Character: ${characterId}`);
+        // logger.trace('Stack trace:'); // Logger doesn't have trace, and trace is noisy in tests anyway
 
         // In development or tests: throw error for immediate feedback
         // Check for Vitest environment in addition to NODE_ENV
@@ -68,7 +69,7 @@ export const stateTransitionValidator: Middleware<{}, RootState> = store => next
         }
 
         // In production: silently block (safer than crashing)
-        console.warn('⚠️  Transition blocked in production mode');
+        logger.warn('Transition blocked in production mode');
         return; // Don't dispatch
     }
 

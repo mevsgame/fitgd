@@ -14,6 +14,7 @@
 import type { Trait } from '@/types/character';
 import type { TraitTransaction } from '@/types/playerRoundState';
 import { asReduxId } from '../types/ids';
+import { logger } from '../../../src/utils/logger';
 
 /**
  * Configuration for trait operations
@@ -38,7 +39,7 @@ export interface TraitHandlerConfig {
  * await game.fitgd.bridge.executeBatch(actions);
  */
 export class TraitHandler {
-  constructor(private config: TraitHandlerConfig) {}
+  constructor(private config: TraitHandlerConfig) { }
 
   /**
    * Create Redux actions for a trait transaction
@@ -63,7 +64,7 @@ export class TraitHandler {
 
     if (transaction.mode === 'existing') {
       // No character changes needed for using existing trait
-      console.log(`FitGD | Using existing trait: ${transaction.selectedTraitId}`);
+      logger.debug(`Using existing trait: ${transaction.selectedTraitId}`);
 
     } else if (transaction.mode === 'new') {
       // Create new flashback trait
@@ -84,7 +85,7 @@ export class TraitHandler {
         },
       });
 
-      console.log(`FitGD | Will create new trait: ${newTrait.name}`);
+      logger.debug(`Will create new trait: ${newTrait.name}`);
 
     } else if (transaction.mode === 'consolidate') {
       // Remove 3 traits and create consolidated trait
@@ -119,7 +120,7 @@ export class TraitHandler {
         },
       });
 
-      console.log(`FitGD | Will consolidate traits into: ${consolidatedTrait.name}`);
+      logger.debug(`Will consolidate traits into: ${consolidatedTrait.name}`);
     }
 
     return actions;

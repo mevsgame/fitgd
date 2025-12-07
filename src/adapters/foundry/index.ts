@@ -12,6 +12,7 @@ import {
 } from './crewAdapter';
 import { createCharacter, pruneCharacterHistory, hydrateCharacters, cleanupOrphanedCharacters } from '../../slices/characterSlice';
 import { createCrew, pruneCrewHistory, hydrateCrews, cleanupOrphanedCrews } from '../../slices/crewSlice';
+import { logger } from '../../utils/logger';
 import { pruneClockHistory, hydrateClocks, cleanupOrphanedClocks } from '../../slices/clockSlice';
 import { selectHistoryStats } from '../../selectors/historySelectors';
 import type { HistoryStats } from '../../selectors/historySelectors';
@@ -164,9 +165,9 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
     },
 
     importState(serializedState: SerializedState): void {
-      console.log('FitGD | Importing state from snapshot');
-      console.log(`FitGD | Snapshot timestamp: ${new Date(serializedState.timestamp).toISOString()}`);
-      console.log(`FitGD | Snapshot version: ${serializedState.version}`);
+      logger.info('Importing state from snapshot');
+      logger.info(`Snapshot timestamp: ${new Date(serializedState.timestamp).toISOString()}`);
+      logger.info(`Snapshot version: ${serializedState.version}`);
 
       // Hydrate each slice with the serialized data
       store.dispatch(hydrateCharacters(serializedState.characters));
@@ -174,7 +175,11 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
       store.dispatch(hydrateClocks(serializedState.clocks));
 
       const state = store.getState();
-      console.log(`FitGD | State hydrated - ${state.characters.allIds.length} characters, ${state.crews.allIds.length} crews, ${state.clocks.allIds.length} clocks`);
+      logger.info(
+        `State hydrated - ${state.characters.allIds.length} characters, ` +
+        `${state.crews.allIds.length} crews, ` +
+        `${state.clocks.allIds.length} clocks`
+      );
     },
 
     // ===== Command history =====
@@ -189,10 +194,10 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
     },
 
     replayCommands(history: CommandHistory): void {
-      console.log('FitGD | Replaying commands from history');
-      console.log(`FitGD | Character commands: ${history.characters.length}`);
-      console.log(`FitGD | Crew commands: ${history.crews.length}`);
-      console.log(`FitGD | Clock commands: ${history.clocks.length}`);
+      logger.info('Replaying commands from history');
+      logger.info(`Character commands: ${history.characters.length}`);
+      logger.info(`Crew commands: ${history.crews.length}`);
+      logger.info(`Clock commands: ${history.clocks.length}`);
 
       // Replay all commands in order by timestamp
       const allCommands = [
@@ -201,7 +206,7 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
         ...history.clocks,
       ].sort((a, b) => a.timestamp - b.timestamp);
 
-      console.log(`FitGD | Total commands to replay: ${allCommands.length}`);
+      logger.info(`Total commands to replay: ${allCommands.length}`);
 
       // Dispatch each command to reconstruct state
       let successCount = 0;
@@ -223,16 +228,16 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
 
           if (isEntityNotFoundError) {
             // This is expected - commands for deleted entities can safely be skipped
-            console.warn(`FitGD | Skipped command ${command.type} for deleted entity (${error.message})`);
+            logger.warn(`Skipped command ${command.type} for deleted entity (${error.message})`);
             skippedCount++;
           } else {
             // Unexpected error - log as error
-            console.error(`FitGD | Error replaying command ${command.type}:`, error);
+            logger.error(`Error replaying command ${command.type}:`, error);
           }
         }
       }
 
-      console.log(`FitGD | Command replay complete: ${successCount} applied, ${skippedCount} skipped (deleted entities)`);
+      logger.info(`Command replay complete: ${successCount} applied, ${skippedCount} skipped (deleted entities)`);
     },
 
     // ===== History management =====
@@ -242,10 +247,10 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
     },
 
     pruneAllHistory(): void {
-      console.log('FitGD | Pruning all command history');
+      logger.info('Pruning all command history');
 
       const statsBefore = this.getHistoryStats();
-      console.log(`FitGD | History before pruning: ${statsBefore.totalCommands} commands (~${statsBefore.estimatedSizeKB}KB)`);
+      logger.info(`History before pruning: ${statsBefore.totalCommands} commands (~${statsBefore.estimatedSizeKB}KB)`);
 
       // Dispatch prune actions to all slices
       store.dispatch(pruneCharacterHistory());
@@ -253,12 +258,12 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
       store.dispatch(pruneClockHistory());
 
       const statsAfter = this.getHistoryStats();
-      console.log(`FitGD | History after pruning: ${statsAfter.totalCommands} commands (~${statsAfter.estimatedSizeKB}KB)`);
-      console.log('FitGD | History pruning complete - current state snapshot retained');
+      logger.info(`History after pruning: ${statsAfter.totalCommands} commands (~${statsAfter.estimatedSizeKB}KB)`);
+      logger.info('History pruning complete - current state snapshot retained');
     },
 
     cleanupOrphanedClocks(validEntityIds: string[]): void {
-      console.log('FitGD | Cleaning up orphaned clocks');
+      logger.info('Cleaning up orphaned clocks');
       store.dispatch(cleanupOrphanedClocks({ validEntityIds }));
     },
 

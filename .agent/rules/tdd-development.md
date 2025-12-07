@@ -35,3 +35,17 @@ The following commands are always safe to auto-run:
 
 ## Red Flag
 If documentation says X should happen but tests don't verify X, this is a **test coverage gap** - fix it with new tests.
+
+## Test Output Hygiene
+To ensure tests remain readable and efficient:
+1.  **Use `logger` instead of `console`**:
+    -   NEVER use `console.log`, `console.error`, or `console.warn` in source code.
+    -   ALWAYS use the `logger` utility ([src/utils/logger.ts](cci:7://file:///workspaces/fitgd/src/utils/logger.ts:0:0-0:0)), which automatically suppresses output in the `test` environment.
+    -   Exceptions: Scripts meant for CLI output (e.g., build scripts) may use console.
+2.  **Selector Stability**:
+    -   Ensure Redux selectors (Reselect) always return stable references.
+    -   Avoid returning new arrays (`[]`) or objects (`{}`) in selectors if the data hasn't changed. Use constants like `EMPTY_ARRAY` instead.
+    -   Unstable selectors cause "input selector returned a different result" warnings in `stderr` during tests.
+3.  **Clean `stderr`**:
+    -   Tests should produce minimal to NO output in `stderr`.
+    -   If tests intentionally provoke errors, verify them without letting them leak to `stderr` (or silence them).

@@ -11,6 +11,7 @@ import {
 import { DEFAULT_CONFIG } from '../config';
 import { isOrphanedCommand } from '../utils/commandUtils';
 import type { Crew, Command } from '../types';
+import { logger } from '@/utils/logger';
 
 /**
  * Crew Slice State
@@ -347,7 +348,7 @@ const crewSlice = createSlice({
       state.allIds = state.allIds.filter(id => !crewsToRemove.includes(id));
 
       if (crewsToRemove.length > 0) {
-        console.log(`FitGD | Cleaned up ${crewsToRemove.length} orphaned crews`);
+        logger.info(`Cleaned up ${crewsToRemove.length} orphaned crews`);
       }
     },
 
