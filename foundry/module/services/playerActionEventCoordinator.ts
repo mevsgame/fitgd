@@ -917,7 +917,10 @@ export class PlayerActionEventCoordinator {
 
   /**
    * Use stims during player's action (addiction check)
-   * NOTE: Large method (108 lines) - candidate for Phase 7 extraction to StimsWorkflowHandler.executeWorkflow()
+   * 
+   * State Machine Flow (per docs/player-action-widget.md):
+   *   GM_RESOLVING_CONSEQUENCE → STIMS_ROLLING → STIMS_LOCKED → GM_RESOLVING_CONSEQUENCE (if filled)
+   *   GM_RESOLVING_CONSEQUENCE → STIMS_ROLLING → ROLLING (if not filled, reroll)
    */
   async handleUseStims(): Promise<void> {
     const stimsWorkflowHandler = this.context.getHandlerFactory().getStimsWorkflowHandler();
@@ -947,6 +950,14 @@ export class PlayerActionEventCoordinator {
       addictionClockId = createAction.payload.id;
       this.context.getNotificationService().info('Addiction clock created');
     }
+
+    // ✅ FIX: Transition to STIMS_ROLLING FIRST (per state machine)
+    // This is required before any lockout check - you can't go directly to STIMS_LOCKED
+    const transitionToStimsAction = stimsWorkflowHandler.createTransitionToStimsRollingAction();
+    await game.fitgd.bridge.execute(transitionToStimsAction as any, {
+      affectedReduxIds: [asReduxId(this.context.getCharacterId())],
+      silent: true,
+    });
 
     // Roll d6 to determine addiction advance
     const addictionRoll = await Roll.create('1d6').evaluate({ async: true });
@@ -981,7 +992,7 @@ export class PlayerActionEventCoordinator {
     const updatedClock = updatedState.clocks.byId[addictionClockId!];
 
     if (updatedClock.segments >= updatedClock.maxSegments) {
-      // Lockout!
+      // Lockout! STIMS_ROLLING → STIMS_LOCKED (valid transition per state machine)
       this.context.getNotificationService().error('Addiction clock filled! Stims locked.');
 
       const lockoutAction = stimsWorkflowHandler.createStimsLockoutAction();
@@ -989,23 +1000,33 @@ export class PlayerActionEventCoordinator {
         affectedReduxIds: [asReduxId(this.context.getCharacterId())],
         force: true,
       });
+
+      // Brief wait for UI update
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Return to GM_RESOLVING_CONSEQUENCE (STIMS_LOCKED → GM_RESOLVING_CONSEQUENCE per state machine)
+      // Player still needs to accept the original consequence
+      await game.fitgd.bridge.execute({
+        type: 'playerRoundState/transitionState',
+        payload: {
+          characterId: this.context.getCharacterId(),
+          newState: 'GM_RESOLVING_CONSEQUENCE',
+        },
+      } as any, {
+        affectedReduxIds: [asReduxId(this.context.getCharacterId())],
+        force: true,
+      });
+
       return;
     }
 
     // If not locked out, proceed to reroll
     this.context.getNotificationService().info('Stims used! Rerolling...');
 
-    // Transition to STIMS_ROLLING
-    const transitionAction = stimsWorkflowHandler.createTransitionToStimsRollingAction();
-    await game.fitgd.bridge.execute(transitionAction as any, {
-      affectedReduxIds: [asReduxId(this.context.getCharacterId())],
-      silent: true,
-    });
-
     // Wait briefly for animation/state update
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // Transition back to ROLLING
+    // Transition from STIMS_ROLLING to ROLLING (valid transition per state machine)
     const diceRollingHandler = this.context.getHandlerFactory().getDiceRollingHandler();
     const rollingAction = diceRollingHandler.createTransitionToRollingAction();
     await game.fitgd.bridge.execute(rollingAction as any, {
@@ -1013,12 +1034,10 @@ export class PlayerActionEventCoordinator {
       silent: true,
     });
 
-    // ✅ FIX: Wait for Redux state transition to propagate before calculating dice
-    // Without this wait, state updates to subscribers haven't completed yet
-    // causing dice pool calculation to use stale state (captured 40+ lines earlier)
+    // Wait for Redux state transition to propagate before calculating dice
     await new Promise((resolve) => setTimeout(resolve, 200));
 
-    // ✅ FIX: Fetch fresh state instead of using stale 'updatedState' from line 917
+    // Fetch fresh state for dice pool calculation
     const freshState = game.fitgd.store.getState();
     const dicePool = diceRollingHandler.calculateDicePool(freshState);
     const rollResult = await this.context.getDiceService().roll(dicePool);

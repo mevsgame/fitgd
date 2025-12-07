@@ -71,10 +71,15 @@ Stims are **independent** of Push/Flashback:
 - **Addiction Fills**: Character becomes Addict, ALL crew clocks frozen, no reroll
 - **Multiple Characters**: One filled addiction locks entire crew
 
-## Bugs Fixed This Commit
+## Bugs Fixed
 
 1. **Validation Check**: Was blocking stims if Push/Flashback used (wrong flag check)
    - Fix: Now checks only `stimsUsedThisAction`
 
 2. **Missing Flag**: Addiction advanced but flag never set
    - Fix: Added `setStimsUsed` call after clock advancement
+
+3. **State Transition Order** (2024-12-07): When addiction clock fills, was attempting invalid transition
+   - Bug: `GM_RESOLVING_CONSEQUENCE` → `STIMS_LOCKED` (skipped intermediate state)
+   - Fix: Now correctly transitions `GM_RESOLVING_CONSEQUENCE` → `STIMS_ROLLING` first, then `STIMS_ROLLING` → `STIMS_LOCKED` → `GM_RESOLVING_CONSEQUENCE`
+   - This ensures the state machine is valid per docs/player-action-widget.md
