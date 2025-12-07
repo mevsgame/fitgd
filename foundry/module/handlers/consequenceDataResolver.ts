@@ -20,6 +20,7 @@ import {
   selectMomentumGain,
   selectDefensiveSuccessValues,
 } from '@/selectors/playerRoundStateSelectors';
+import { DEFAULT_CONFIG } from '@/config/gameConfig';
 
 /**
  * Resolved consequence data for template
@@ -189,32 +190,17 @@ export class ConsequenceDataResolver {
   ): number {
     if (!clock || !playerState) return 0;
 
-    // Default base segments for effects
-    const effectSegments: Record<string, number> = {
-      limited: 1,
-      standard: 2,
-      great: 3,
-      spectacular: 5,
-    };
-
     const effect = playerState.effect || 'standard';
-    let segments = effectSegments[effect] || 2;
+    let segments = DEFAULT_CONFIG.resolution.successSegments[effect];
 
-    // Critical success doubles the effect (or we could use rule-specific logic)
-    // Rules Primer says Critical = "Improved Effect" usually.
-    // But commonly enforced as +1 tick or double? 
-    // Let's assume Critical means "Spectacular" (5) or double?
-    // Using standard FitGD/FitD rules: Critical = Increased Effect.
-    // If Standard (2) -> Great (3). If Great (3) -> Spectacular (5).
+    // Critical success enhances effect by one tier
     if (playerState.outcome === 'critical') {
-      if (effect === 'limited') segments = 2; // Standard
-      else if (effect === 'standard') segments = 3; // Great
-      else if (effect === 'great') segments = 5; // Spectacular
-      else segments = 6; // Beyond
+      // Critical enhances effect: Limited->Standard, Standard->Great, Great->Spectacular
+      if (effect === 'limited') segments = DEFAULT_CONFIG.resolution.successSegments.standard;
+      else if (effect === 'standard') segments = DEFAULT_CONFIG.resolution.successSegments.great;
+      else if (effect === 'great') segments = DEFAULT_CONFIG.resolution.successSegments.spectacular;
+      else segments = DEFAULT_CONFIG.resolution.successSegments.spectacular; // Spectacular stays at max
     }
-
-    // For "Reduce Threat", the logic might be different (usually equals Effect level)
-    // We'll keep it symmetric for now unless specified otherwise.
 
     return segments;
   }

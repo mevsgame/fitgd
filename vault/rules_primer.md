@@ -202,7 +202,7 @@ Characters can have up to three active harm clocks. If you would take a fourth t
 When you succeed at an action that makes progress toward a goal (picking a lock, hacking a system, convincing a group, building a device), you advance a **success clock**. Success clocks are affected by Effect:
 
 **Progress on Success  Effect:**
-- **Base Progress:** Limited=1, Standard=3, Greater=4, Spectacular=6 segments 
+- **Base Progress:** Limited=1, Standard=2, Greater=4, Spectacular=6 segments 
  
 
 ---

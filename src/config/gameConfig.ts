@@ -82,6 +82,7 @@ export const DEFAULT_CONFIG: GameConfig = {
       spectacular: 2,
     },
     // Success clock segments based on Effect only (position doesn't affect success)
+    // Per rules_primer.md line 205: Limited=1, Standard=2, Great=4, Spectacular=6
     successSegments: {
       limited: 1,
       standard: 2,
