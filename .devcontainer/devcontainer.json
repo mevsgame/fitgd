@@ -14,5 +14,8 @@
         }
     },
     "postCreateCommand": "pnpm install",
-    "remoteUser": "node"
+    "remoteUser": "node",
+    "mounts": [
+        "source=${localWorkspaceFolderBasename}-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume"
+    ]
 }
