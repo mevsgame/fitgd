@@ -1,636 +1,670 @@
-<div class="player-action-widget-container">
-  <!-- Header -->
-  <div class="widget-header">
-    <h2>🎯 {{character.name}} - YOUR TURN</h2>
-  </div>
+<div class="player-action-widget-wrapper {{#if sidePanelOpen}}has-side-panel side-panel-{{sidePanelPosition}}{{/if}}">
+  {{!-- Side Panel (left position) --}}
+  {{#if (and sidePanelOpen (eq sidePanelPosition 'left'))}}
+  {{> side-panel
+  sidePanelOpen=sidePanelOpen
+  sidePanelPosition=sidePanelPosition
+  sidePanelTitle=sidePanelTitle
+  sidePanelMode=sidePanelMode
+  sidePanelClocks=sidePanelClocks
+  selectedHarmClockId=selectedHarmClock.id
+  selectedCrewClockId=selectedCrewClock.id
+  selectedSuccessClockId=selectedSuccessClock.id
+  }}
+  {{/if}}
 
-  <!-- ==================== DECISION PHASE ==================== -->
-  {{#if isDecisionPhase}}
-  <div class="widget-content decision-phase">
-
-    {{#unless isGM}}
-    <!-- ==================== PLAYER CONTROLS ==================== -->
-    <div class="player-controls">
-      <!-- Approach Selection -->
-      <div class="form-group">
-        <label>Primary Approach:</label>
-        <select name="approach" class="approach-select">
-          <option value="">-- Select Approach --</option>
-          {{#each approaches}}
-          <option value="{{this}}" {{#if (eq ../playerState.selectedApproach this)}}selected{{/if}}>
-            {{capitalize this}} ({{lookup ../character.approaches this}}d)
-          </option>
-          {{/each}}
-        </select>
-      </div>
-
-      <!-- Unified Secondary Approach/Equipment Selection -->
-      {{#if playerState.selectedApproach}}
-      <div class="form-group secondary-selection">
-        <label>Secondary Approach or Equipment:</label>
-        <select name="secondary-approach" class="secondary-approach-select approach-select">
-          <option value="">-- Select Secondary (optional) --</option>
-          {{#each secondaryOptions}}
-          {{#if (eq this.type 'approach')}}
-          <option value="{{this.value}}" {{#if (eq ../selectedSecondaryId this.value)}}selected{{/if}}>
-            {{this.name}} ({{this.bonus}})
-          </option>
-          {{else if (eq this.type 'separator')}}
-          <option disabled>────────────────</option>
-          {{else if (eq this.type 'active')}}
-          <option value="{{this.value}}" {{#if (eq ../selectedSecondaryId this.value)}}selected{{/if}}>
-            🗡️ {{this.name}} {{#if this.bonus}}({{this.bonus}}){{/if}}{{#if this.locked}} 🔒{{/if}}
-          </option>
-          {{else if (eq this.type 'consumable')}}
-          <option value="{{this.value}}" {{#if (eq ../selectedSecondaryId this.value)}}selected{{/if}}>
-            💊 {{this.name}} {{#if this.bonus}}({{this.bonus}}){{/if}}{{#if this.locked}} 🔒{{/if}}
-          </option>
-          {{/if}}
-          {{/each}}
-        </select>
-        <p class="help-text">Choose another approach for Synergy, or select an equipped item for its bonus.</p>
-      </div>
-      {{/if}}
-
-      <!-- Position & Effect Display (Read-Only for Player) -->
-      <div class="position-effect-display">
-        <div class="position">
-          Position: <span class="position-{{playerState.position}}">{{uppercase (default playerState.position
-            "RISKY")}}</span>
-        </div>
-        <div class="effect">
-          Effect: <span class="effect-level">{{uppercase (default playerState.effect "STANDARD")}}</span>
-        </div>
-      </div>
-
-      <!-- Harm Clocks Display -->
-      {{#if harmClocks.length}}
-      <div class="harm-clocks-display">
-        <h4>💔 HARM CLOCKS:</h4>
-        <div class="clocks-list">
-          {{#each harmClocks}}
-          <div class="clock-item">
-            <span class="clock-name">{{this.subtype}}:</span>
-            <span class="clock-segments">{{this.segments}}/{{this.maxSegments}}</span>
-          </div>
-          {{/each}}
-        </div>
-      </div>
-      {{/if}}
-
-      <!-- Momentum Replenishment -->
-      <div class="momentum-replenishment">
-        <h4>GET MOMENTUM:</h4>
-        <div class="replenishment-row">
-          <!-- Momentum Track (Compact) -->
-          <div class="momentum-track-compact">
-            {{#times 10}}
-            <span class="momentum-box-compact {{#if (lt this ../momentum)}}filled{{/if}}">
-              {{#if (eq this ../momentum)}}▶{{/if}}
-            </span>
-            {{/times}}
-          </div>
-          <!-- Replenishment Buttons -->
-          <div class="replenishment-buttons">
-            <button type="button" data-action="rally" {{#unless canRally}}disabled{{/unless}}>
-              Rally
-            </button>
-            <button type="button" data-action="lean-into-trait" {{#unless character.traits.length}}disabled{{/unless}}>
-              Lean Into Trait
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Action Modifiers Buttons -->
-      <div class="prepare-actions">
-        <h4>SPEND MOMENTUM:</h4>
-        <div class="button-row">
-          <button type="button" data-action="use-trait" class="{{#if playerState.traitTransaction}}active{{/if}}" {{#if
-            (and (eq playerState.position "controlled" ) (lt momentum 1))}}disabled{{/if}}>
-            Use Trait
-          </button>
-          <button type="button" data-action="push-die"
-            class="{{#if (and playerState.pushed (eq playerState.pushType 'extra-die'))}}active{{/if}}" {{#if (lt
-            momentum 1)}}disabled{{/if}}>
-            Push (+1d)
-          </button>
-          <button type="button" data-action="push-effect"
-            class="{{#if (and playerState.pushed (eq playerState.pushType 'improved-effect'))}}active{{/if}}" {{#if (lt
-            momentum 1)}}disabled{{/if}}>
-            Push (Effect)
-          </button>
-        </div>
-      </div>
+  <div class="player-action-widget-container">
+    <!-- Header -->
+    <div class="widget-header">
+      <h2>🎯 {{character.name}} - YOUR TURN</h2>
     </div>
-    {{/unless}}
 
-    {{#if isGM}}
-    <!-- ==================== GM CONTROLS ==================== -->
-    <div class="gm-controls">
-      <h4>⚙️ GM Controls:</h4>
-      <div class="form-group">
-        <label>Set Position:</label>
-        <select name="position" class="position-select">
-          <option value="controlled" {{#if (eq playerState.position "controlled" )}}selected{{/if}}>Controlled</option>
-          <option value="risky" {{#if (eq (default playerState.position "risky" ) "risky" )}}selected{{/if}}>Risky
-          </option>
-          <option value="desperate" {{#if (eq playerState.position "desperate" )}}selected{{/if}}>Desperate</option>
-          <option value="impossible" {{#if (eq playerState.position "impossible" )}}selected{{/if}}>Impossible</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Set Effect:</label>
-        <select name="effect" class="effect-select">
-          <option value="limited" {{#if (eq playerState.effect "limited" )}}selected{{/if}}>Limited</option>
-          <option value="standard" {{#if (eq (default playerState.effect "standard" ) "standard" )}}selected{{/if}}>
-            Standard</option>
-          <option value="great" {{#if (eq playerState.effect "great" )}}selected{{/if}}>Great</option>
-          <option value="spectacular" {{#if (eq playerState.effect "spectacular" )}}selected{{/if}}>Spectacular</option>
-        </select>
-      </div>
+    <!-- ==================== DECISION PHASE ==================== -->
+    {{#if isDecisionPhase}}
+    <div class="widget-content decision-phase">
 
-      <!-- GM Passive Equipment Grid -->
-      {{> gm-passive-grid passiveEquipment=passiveEquipment selectedPassiveId=selectedPassiveId isGM=true}}
-    </div>
-    {{/if}}
-
-    <!-- ==================== CURRENT PLAN (SHARED BY GM AND PLAYER) ==================== -->
-    {{#if playerState.selectedApproach}}
-    <div class="action-plan-preview">
-      <h4>📋 Current Plan:</h4>
-      <div class="plan-box">
-        <!-- Primary + Secondary + Passive summary -->
-        <div class="plan-line action-composition">
-          <strong>Action:</strong>
-          {{capitalize playerState.selectedApproach}}
-          {{#if selectedSecondaryName}}
-          + {{selectedSecondaryName}}
-          {{/if}}
-          {{#if approvedPassiveEquipment}}
-          + {{approvedPassiveEquipment.name}}
-          {{/if}}
-          = <strong>{{dicePool}}d</strong>
-        </div>
-
-        <!-- Position with Equipment + Trait Modifiers -->
-        <div class="plan-line">
-          Position: {{uppercase (default playerState.position "risky")}}
-          {{#if (ne improvedPosition playerState.position)}}
-          → <span
-            class="{{#if (or (ne equipmentModifiedPosition playerState.position) playerState.traitTransaction)}}improved{{/if}}">{{uppercase
-            improvedPosition}}</span>
-          {{/if}}
-        </div>
-
-        <!-- Effect with Equipment + Push Modifiers -->
-        <div class="plan-line">
-          Effect: {{uppercase (default playerState.effect "standard")}}
-          {{#if (ne improvedEffect playerState.effect)}}
-          → <span
-            class="{{#if (or (ne equipmentModifiedEffect playerState.effect) (and playerState.pushed (eq playerState.pushType 'improved-effect')))}}improved{{/if}}">{{uppercase
-            improvedEffect}}</span>
-          {{/if}}
-        </div>
-
-        {{#if improvements.length}}
-        <div class="plan-line improvements">
-          <strong>Improvements:</strong>
-          <ul>
-            {{#each improvements}}
-            <li>{{this}}</li>
+      {{#unless isGM}}
+      <!-- ==================== PLAYER CONTROLS ==================== -->
+      <div class="player-controls">
+        <!-- Approach Selection -->
+        <div class="form-group">
+          <label>Primary Approach:</label>
+          <select name="approach" class="approach-select">
+            <option value="">-- Select Approach --</option>
+            {{#each approaches}}
+            <option value="{{this}}" {{#if (eq ../playerState.selectedApproach this)}}selected{{/if}}>
+              {{capitalize this}} ({{lookup ../character.approaches this}}d)
+            </option>
             {{/each}}
-          </ul>
+          </select>
+        </div>
+
+        <!-- Unified Secondary Approach/Equipment Selection -->
+        {{#if playerState.selectedApproach}}
+        <div class="form-group secondary-selection">
+          <label>Secondary Approach or Equipment:</label>
+          <select name="secondary-approach" class="secondary-approach-select approach-select">
+            <option value="">-- Select Secondary (optional) --</option>
+            {{#each secondaryOptions}}
+            {{#if (eq this.type 'approach')}}
+            <option value="{{this.value}}" {{#if (eq ../selectedSecondaryId this.value)}}selected{{/if}}>
+              {{this.name}} ({{this.bonus}})
+            </option>
+            {{else if (eq this.type 'separator')}}
+            <option disabled>────────────────</option>
+            {{else if (eq this.type 'active')}}
+            <option value="{{this.value}}" {{#if (eq ../selectedSecondaryId this.value)}}selected{{/if}}>
+              🗡️ {{this.name}} {{#if this.bonus}}({{this.bonus}}){{/if}}{{#if this.locked}} 🔒{{/if}}
+            </option>
+            {{else if (eq this.type 'consumable')}}
+            <option value="{{this.value}}" {{#if (eq ../selectedSecondaryId this.value)}}selected{{/if}}>
+              💊 {{this.name}} {{#if this.bonus}}({{this.bonus}}){{/if}}{{#if this.locked}} 🔒{{/if}}
+            </option>
+            {{/if}}
+            {{/each}}
+          </select>
+          <p class="help-text">Choose another approach for Synergy, or select an equipped item for its bonus.</p>
         </div>
         {{/if}}
 
-        {{#if momentumCost}}
-        <div class="plan-line momentum-cost">
-          Momentum Cost: -{{momentumCost}}M ({{momentum}}→{{subtract momentum momentumCost}})
+        <!-- Position & Effect Display (Read-Only for Player) -->
+        <div class="position-effect-display">
+          <div class="position">
+            Position: <span class="position-{{playerState.position}}">{{uppercase (default playerState.position
+              "RISKY")}}</span>
+          </div>
+          <div class="effect">
+            Effect: <span class="effect-level">{{uppercase (default playerState.effect "STANDARD")}}</span>
+          </div>
+        </div>
+
+        <!-- Harm Clocks Display -->
+        {{#if harmClocks.length}}
+        <div class="harm-clocks-display">
+          <h4>💔 HARM CLOCKS:</h4>
+          <div class="clocks-list">
+            {{#each harmClocks}}
+            <div class="clock-item">
+              <span class="clock-name">{{this.subtype}}:</span>
+              <span class="clock-segments">{{this.segments}}/{{this.maxSegments}}</span>
+            </div>
+            {{/each}}
+          </div>
         </div>
         {{/if}}
+
+        <!-- Momentum Replenishment -->
+        <div class="momentum-replenishment">
+          <h4>GET MOMENTUM:</h4>
+          <div class="replenishment-row">
+            <!-- Momentum Track (Compact) -->
+            <div class="momentum-track-compact">
+              {{#times 10}}
+              <span class="momentum-box-compact {{#if (lt this ../momentum)}}filled{{/if}}">
+                {{#if (eq this ../momentum)}}▶{{/if}}
+              </span>
+              {{/times}}
+            </div>
+            <!-- Replenishment Buttons -->
+            <div class="replenishment-buttons">
+              <button type="button" data-action="rally" {{#unless canRally}}disabled{{/unless}}>
+                Rally
+              </button>
+              <button type="button" data-action="lean-into-trait" {{#unless
+                character.traits.length}}disabled{{/unless}}>
+                Lean Into Trait
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Modifiers Buttons -->
+        <div class="prepare-actions">
+          <h4>SPEND MOMENTUM:</h4>
+          <div class="button-row">
+            <button type="button" data-action="use-trait" class="{{#if playerState.traitTransaction}}active{{/if}}"
+              {{#if (and (eq playerState.position "controlled" ) (lt momentum 1))}}disabled{{/if}}>
+              Use Trait
+            </button>
+            <button type="button" data-action="push-die"
+              class="{{#if (and playerState.pushed (eq playerState.pushType 'extra-die'))}}active{{/if}}" {{#if (lt
+              momentum 1)}}disabled{{/if}}>
+              Push (+1d)
+            </button>
+            <button type="button" data-action="push-effect"
+              class="{{#if (and playerState.pushed (eq playerState.pushType 'improved-effect'))}}active{{/if}}" {{#if
+              (lt momentum 1)}}disabled{{/if}}>
+              Push (Effect)
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
-    {{else}}
-    <p class="waiting">⏳ Waiting for player to select an approach...</p>
-    {{/if}}
+      {{/unless}}
 
-    <!-- Action Buttons (different for GM vs Player) -->
-    <div class="action-buttons">
       {{#if isGM}}
-      <!-- GM sees "Accept Roll" button -->
-      <button type="button" data-action="approve-roll" class="primary {{#if playerState.gmApproved}}approved{{/if}}"
-        {{#unless playerState.selectedApproach}}disabled{{/unless}}>
-        {{#if playerState.gmApproved}}✅ Roll Approved{{else}}✓ Accept Roll{{/if}}
-      </button>
-      {{else}}
-      <!-- Player sees "Roll" button (disabled until GM approves) -->
-      <button type="button" data-action="cancel" class="secondary">Cancel</button>
-      <button type="button" data-action="roll" class="primary {{#if playerState.gmApproved}}approved{{/if}}" {{#unless
-        (and playerState.selectedApproach playerState.gmApproved)}}disabled{{/unless}}>
-        {{#if playerState.gmApproved}}🎲 ROLL ACTION{{else}}⏳ Waiting for GM Approval{{/if}}
-      </button>
-      {{/if}}
-    </div>
-  </div>
-  {{/if}}
+      <!-- ==================== GM CONTROLS ==================== -->
+      <div class="gm-controls">
+        <h4>⚙️ GM Controls:</h4>
+        <div class="form-group">
+          <label>Set Position:</label>
+          <select name="position" class="position-select">
+            <option value="controlled" {{#if (eq playerState.position "controlled" )}}selected{{/if}}>Controlled
+            </option>
+            <option value="risky" {{#if (eq (default playerState.position "risky" ) "risky" )}}selected{{/if}}>Risky
+            </option>
+            <option value="desperate" {{#if (eq playerState.position "desperate" )}}selected{{/if}}>Desperate</option>
+            <option value="impossible" {{#if (eq playerState.position "impossible" )}}selected{{/if}}>Impossible
+            </option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Set Effect:</label>
+          <select name="effect" class="effect-select">
+            <option value="limited" {{#if (eq playerState.effect "limited" )}}selected{{/if}}>Limited</option>
+            <option value="standard" {{#if (eq (default playerState.effect "standard" ) "standard" )}}selected{{/if}}>
+              Standard</option>
+            <option value="great" {{#if (eq playerState.effect "great" )}}selected{{/if}}>Great</option>
+            <option value="spectacular" {{#if (eq playerState.effect "spectacular" )}}selected{{/if}}>Spectacular
+            </option>
+          </select>
+        </div>
 
-  <!-- ==================== ROLLING ==================== -->
-  {{#if isRolling}}
-  <div class="widget-content rolling">
-    <h3>🎲 ROLLING...</h3>
-    <div class="dice-animation">
-      <!-- Dice animation would go here -->
-      <p>Rolling {{playerState.dicePool}}d6...</p>
-    </div>
-  </div>
-  {{/if}}
-
-  <!-- ==================== STIMS ROLLING ==================== -->
-  {{#if isStimsRolling}}
-  <div class="widget-content stims-rolling">
-    <h3>💉 STIMS ACTIVATED!</h3>
-    <div class="stims-animation">
-      <p>Advancing addiction clock...</p>
-      <p>Returning to decision phase for reroll.</p>
-    </div>
-  </div>
-  {{/if}}
-
-  <!-- ==================== STIMS LOCKED ==================== -->
-  {{#if isStimsLocked}}
-  <div class="widget-content stims-locked">
-    <h2 class="stims-error">🚫 STIMS LOCKED!</h2>
-    <div class="stims-locked-message">
-      <p>Addiction clock is filled!</p>
-      <p>Stims are no longer available for the entire crew.</p>
-      <p class="fade-text">Returning to consequence...</p>
-    </div>
-  </div>
-  {{/if}}
-
-  <!-- ==================== SUCCESS ==================== -->
-  {{#if isSuccess}}
-  <div class="widget-content success">
-    <div class="roll-outcome">
-      {{#if (eq playerState.outcome "critical")}}
-      <h2 class="outcome-critical">✨ CRITICAL SUCCESS! ✨</h2>
-      {{else if (eq playerState.outcome "partial")}}
-      <h2 class="outcome-partial">⚠️ PARTIAL SUCCESS - Clock Advancement</h2>
-      {{else}}
-      <h2 class="outcome-success">✅ FULL SUCCESS</h2>
-      {{/if}}
-      <div class="dice-display">
-        <div class="dice-result">Highest: {{max playerState.rollResult}}</div>
-        <div class="dice-rolled">Rolled: {{join playerState.rollResult ", "}}</div>
+        <!-- GM Passive Equipment Grid -->
+        {{> gm-passive-grid passiveEquipment=passiveEquipment selectedPassiveId=selectedPassiveId isGM=true}}
       </div>
-    </div>
+      {{/if}}
 
-    {{#unless isGM}}
-    <!-- Player View: Simple Success Message -->
-    {{#if (eq playerState.outcome "partial")}}
-    <p class="success-message">Consequences accepted. GM is configuring your success...</p>
-    {{else}}
-    <p class="success-message">You succeed without complications!</p>
-    {{/if}}
-    <p class="fade-text">Close this window when ready.</p>
-    {{/unless}}
-
-    {{#if isGM}}
-    <!-- GM View: Optional Clock Advancement -->
-    {{#if (eq playerState.outcome "partial")}}
-    <p class="success-message">Consequences applied. Now select a clock to advance:</p>
-    {{else}}
-    <p class="success-message">Success! Optionally advance a clock:</p>
-    {{/if}}
-
-    <div class="gm-consequence-config">
-      <h4>⏰ Clock Advancement (Optional):</h4>
-
-      <!-- Success Clock Configuration -->
-      <div class="success-clock-config">
-        <!-- Operation Selection Buttons -->
-        <div class="operation-buttons">
-          <button type="button" data-action="select-success-clock-operation" data-operation="add"
-            class="operation-btn {{#if (eq successClockOperation 'add')}}active{{/if}}">
-            ▲ Advance Progress Clock
-          </button>
-          <button type="button" data-action="select-success-clock-operation" data-operation="reduce"
-            class="operation-btn {{#if (eq successClockOperation 'reduce')}}active{{/if}}">
-            ▼ Reduce Threat Clock
-          </button>
-        </div>
-
-        <!-- Clock Selection Based on Operation -->
-        {{#if (eq successClockOperation 'add')}}
-        <div class="form-group">
-          <label>Progress Clock to Advance:</label>
-          <button type="button" data-action="select-success-clock" class="select-btn">
-            {{#if selectedSuccessClock}}
-            {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
-            {{else}}
-            Select or Create Clock...
+      <!-- ==================== CURRENT PLAN (SHARED BY GM AND PLAYER) ==================== -->
+      {{#if playerState.selectedApproach}}
+      <div class="action-plan-preview">
+        <h4>📋 Current Plan:</h4>
+        <div class="plan-box">
+          <!-- Primary + Secondary + Passive summary -->
+          <div class="plan-line action-composition">
+            <strong>Action:</strong>
+            {{capitalize playerState.selectedApproach}}
+            {{#if selectedSecondaryName}}
+            + {{selectedSecondaryName}}
             {{/if}}
-          </button>
-        </div>
-        {{else if (eq successClockOperation 'reduce')}}
-        <div class="form-group">
-          <label>Threat Clock to Reduce:</label>
-          <button type="button" data-action="select-success-clock" class="select-btn">
-            {{#if selectedSuccessClock}}
-            {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
-            {{else}}
-            Select Clock...
+            {{#if approvedPassiveEquipment}}
+            + {{approvedPassiveEquipment.name}}
             {{/if}}
-          </button>
-        </div>
-        {{/if}}
+            = <strong>{{dicePool}}d</strong>
+          </div>
 
-        <!-- Segments Preview -->
-        {{#if selectedSuccessClock}}
-        <div class="info-note">
-          {{#if (eq successClockOperation 'add')}}
-          Segments to add: <strong>{{calculatedSuccessClockSegments}}</strong>
-          {{else}}
-          Segments to reduce: <strong>{{calculatedSuccessClockSegments}}</strong>
+          <!-- Position with Equipment + Trait Modifiers -->
+          <div class="plan-line">
+            Position: {{uppercase (default playerState.position "risky")}}
+            {{#if (ne improvedPosition playerState.position)}}
+            → <span
+              class="{{#if (or (ne equipmentModifiedPosition playerState.position) playerState.traitTransaction)}}improved{{/if}}">{{uppercase
+              improvedPosition}}</span>
+            {{/if}}
+          </div>
+
+          <!-- Effect with Equipment + Push Modifiers -->
+          <div class="plan-line">
+            Effect: {{uppercase (default playerState.effect "standard")}}
+            {{#if (ne improvedEffect playerState.effect)}}
+            → <span
+              class="{{#if (or (ne equipmentModifiedEffect playerState.effect) (and playerState.pushed (eq playerState.pushType 'improved-effect')))}}improved{{/if}}">{{uppercase
+              improvedEffect}}</span>
+            {{/if}}
+          </div>
+
+          {{#if improvements.length}}
+          <div class="plan-line improvements">
+            <strong>Improvements:</strong>
+            <ul>
+              {{#each improvements}}
+              <li>{{this}}</li>
+              {{/each}}
+            </ul>
+          </div>
+          {{/if}}
+
+          {{#if momentumCost}}
+          <div class="plan-line momentum-cost">
+            Momentum Cost: -{{momentumCost}}M ({{momentum}}→{{subtract momentum momentumCost}})
+          </div>
           {{/if}}
         </div>
-        {{/if}}
       </div>
+      {{else}}
+      <p class="waiting">⏳ Waiting for player to select an approach...</p>
+      {{/if}}
 
-      <!-- Accept Button -->
+      <!-- Action Buttons (different for GM vs Player) -->
       <div class="action-buttons">
-        <button type="button" data-action="accept-success-clock" class="primary">
-          {{#if selectedSuccessClock}}
-          ✓ Apply Clock & Close
-          {{else}}
-          ✓ Close
-          {{/if}}
+        {{#if isGM}}
+        <!-- GM sees "Accept Roll" button -->
+        <button type="button" data-action="approve-roll" class="primary {{#if playerState.gmApproved}}approved{{/if}}"
+          {{#unless playerState.selectedApproach}}disabled{{/unless}}>
+          {{#if playerState.gmApproved}}✅ Roll Approved{{else}}✓ Accept Roll{{/if}}
         </button>
+        {{else}}
+        <!-- Player sees "Roll" button (disabled until GM approves) -->
+        <button type="button" data-action="cancel" class="secondary">Cancel</button>
+        <button type="button" data-action="roll" class="primary {{#if playerState.gmApproved}}approved{{/if}}" {{#unless
+          (and playerState.selectedApproach playerState.gmApproved)}}disabled{{/unless}}>
+          {{#if playerState.gmApproved}}🎲 ROLL ACTION{{else}}⏳ Waiting for GM Approval{{/if}}
+        </button>
+        {{/if}}
       </div>
     </div>
-
     {{/if}}
-  </div>
-  {{/if}}
 
-  <!-- ==================== GM RESOLVING CONSEQUENCE ==================== -->
-  {{#if isGMResolvingConsequence}}
-  <div class="widget-content gm-resolving-consequence">
-    <div class="roll-outcome">
-      {{#if (eq playerState.outcome "success")}}
-      <h2 class="outcome-success">✅ SUCCESS - Optional Clock Advancement</h2>
-      {{else if (eq playerState.outcome "critical")}}
-      <h2 class="outcome-critical">✨ CRITICAL SUCCESS - Optional Clock Advancement</h2>
-      {{else if (eq playerState.outcome "partial")}}
-      <h2 class="outcome-partial">⚠️ PARTIAL SUCCESS - Configuring Consequence</h2>
+    <!-- ==================== ROLLING ==================== -->
+    {{#if isRolling}}
+    <div class="widget-content rolling">
+      <h3>🎲 ROLLING...</h3>
+      <div class="dice-animation">
+        <!-- Dice animation would go here -->
+        <p>Rolling {{playerState.dicePool}}d6...</p>
+      </div>
+    </div>
+    {{/if}}
+
+    <!-- ==================== STIMS ROLLING ==================== -->
+    {{#if isStimsRolling}}
+    <div class="widget-content stims-rolling">
+      <h3>💉 STIMS ACTIVATED!</h3>
+      <div class="stims-animation">
+        <p>Advancing addiction clock...</p>
+        <p>Returning to decision phase for reroll.</p>
+      </div>
+    </div>
+    {{/if}}
+
+    <!-- ==================== STIMS LOCKED ==================== -->
+    {{#if isStimsLocked}}
+    <div class="widget-content stims-locked">
+      <h2 class="stims-error">🚫 STIMS LOCKED!</h2>
+      <div class="stims-locked-message">
+        <p>Addiction clock is filled!</p>
+        <p>Stims are no longer available for the entire crew.</p>
+        <p class="fade-text">Returning to consequence...</p>
+      </div>
+    </div>
+    {{/if}}
+
+    <!-- ==================== SUCCESS ==================== -->
+    {{#if isSuccess}}
+    <div class="widget-content success">
+      <div class="roll-outcome">
+        {{#if (eq playerState.outcome "critical")}}
+        <h2 class="outcome-critical">✨ CRITICAL SUCCESS! ✨</h2>
+        {{else if (eq playerState.outcome "partial")}}
+        <h2 class="outcome-partial">⚠️ PARTIAL SUCCESS - Clock Advancement</h2>
+        {{else}}
+        <h2 class="outcome-success">✅ FULL SUCCESS</h2>
+        {{/if}}
+        <div class="dice-display">
+          <div class="dice-result">Highest: {{max playerState.rollResult}}</div>
+          <div class="dice-rolled">Rolled: {{join playerState.rollResult ", "}}</div>
+        </div>
+      </div>
+
+      {{#unless isGM}}
+      <!-- Player View: Simple Success Message -->
+      {{#if (eq playerState.outcome "partial")}}
+      <p class="success-message">Consequences accepted. GM is configuring your success...</p>
       {{else}}
-      <h2 class="outcome-failure">❌ FAILURE - Configuring Consequence</h2>
+      <p class="success-message">You succeed without complications!</p>
       {{/if}}
-      <div class="dice-display">
-        <div class="dice-result">Highest: {{max playerState.rollResult}}</div>
-        <div class="dice-rolled">Rolled: {{join playerState.rollResult ", "}}</div>
-      </div>
-    </div>
+      <p class="fade-text">Close this window when ready.</p>
+      {{/unless}}
 
-    <!-- ==================== CURRENT CONSEQUENCE PLAN (SHARED BY GM AND PLAYER) ==================== -->
-    {{#if consequenceTransaction}}
-    <div class="consequence-plan-preview">
-      <h4>📋 Current Consequence Plan:</h4>
-      <div class="plan-box">
-        <div class="plan-line">
-          <strong>Type:</strong>
-          {{#if (eq consequenceTransaction.consequenceType 'harm')}}
-          💔 Harm
-          {{else}}
-          ⏱️ Crew Clock
-          {{/if}}
-        </div>
+      {{#if isGM}}
+      <!-- GM View: Optional Clock Advancement -->
+      {{#if (eq playerState.outcome "partial")}}
+      <p class="success-message">Consequences applied. Now select a clock to advance:</p>
+      {{else}}
+      <p class="success-message">Success! Optionally advance a clock:</p>
+      {{/if}}
 
-        {{#if (eq consequenceTransaction.consequenceType 'harm')}}
-        {{#if harmTargetCharacter}}
-        <div class="plan-line">
-          <strong>Target:</strong> {{harmTargetCharacter.name}}
-          {{#if (eq harmTargetCharacter.id character.id)}}
-          <span class="label">(Acting)</span>
-          {{else}}
-          <span class="label protect">(Protected)</span>
-          {{/if}}
-        </div>
-        {{/if}}
+      <div class="gm-consequence-config">
+        <h4>⏰ Clock Advancement (Optional):</h4>
 
-        {{#if selectedHarmClock}}
-        <div class="plan-line">
-          <strong>Clock:</strong> {{selectedHarmClock.subtype}}
-          ({{selectedHarmClock.segments}}/{{selectedHarmClock.maxSegments}})
-        </div>
-        {{/if}}
+        <!-- Success Clock Configuration -->
+        <div class="success-clock-config">
+          <!-- Operation Selection Buttons -->
+          <div class="operation-buttons">
+            <button type="button" data-action="select-success-clock-operation" data-operation="add"
+              class="operation-btn {{#if (eq successClockOperation 'add')}}active{{/if}}">
+              ▲ Advance Progress Clock
+            </button>
+            <button type="button" data-action="select-success-clock-operation" data-operation="reduce"
+              class="operation-btn {{#if (eq successClockOperation 'reduce')}}active{{/if}}">
+              ▼ Reduce Threat Clock
+            </button>
+          </div>
 
-        {{#if effectivePosition}}
-        <div class="plan-line highlight">
-          <strong>Harm:</strong> +{{calculatedHarmSegments}} segments
-          <span class="calculation">({{uppercase effectivePosition}}/{{uppercase effectiveEffect}})</span>
-        </div>
-        {{/if}}
-        {{/if}}
-
-        {{#if (eq consequenceTransaction.consequenceType 'crew-clock')}}
-        {{#if selectedCrewClock}}
-        <div class="plan-line">
-          <strong>Clock:</strong> {{selectedCrewClock.subtype}}
-          ({{selectedCrewClock.segments}}/{{selectedCrewClock.maxSegments}})
-        </div>
-        <div class="plan-line highlight">
-          <strong>Advance:</strong> +{{calculatedHarmSegments}} segments
-          <span class="calculation">({{uppercase effectivePosition}})</span>
-        </div>
-        {{/if}}
-        {{/if}}
-
-        {{#if calculatedMomentumGain}}
-        <div class="plan-line momentum-gain">
-          <strong>Momentum Gain:</strong> <span class="positive">+{{calculatedMomentumGain}}M</span>
-        </div>
-        {{/if}}
-      </div>
-    </div>
-    {{else}}
-    <p class="waiting">⏳ {{#if isGM}}Select consequence type to begin...{{else}}Waiting for GM to configure
-      consequence...{{/if}}</p>
-    {{/if}}
-
-    {{#if isGM}}
-    <!-- ==================== GM CONSEQUENCE CONFIGURATION ==================== -->
-    <div class="gm-consequence-config">
-      {{#if (or (eq playerState.outcome 'success') (eq playerState.outcome 'critical'))}}
-      <h4>⏰ Clock Advancement (Optional):</h4>
-
-      <!-- Success Clock Configuration -->
-      <div class="success-clock-config">
-        <!-- Operation Selection Buttons -->
-        <div class="operation-buttons">
-          <button type="button" data-action="select-success-clock-operation" data-operation="add"
-            class="operation-btn {{#if (eq successClockOperation 'add')}}active{{/if}}">
-            ⬆️ Advance Progress Clock
-          </button>
-          <button type="button" data-action="select-success-clock-operation" data-operation="reduce"
-            class="operation-btn {{#if (eq successClockOperation 'reduce')}}active{{/if}}">
-            ⬇️ Reduce Threat Clock
-          </button>
-        </div>
-
-        <!-- Clock Selection Based on Operation -->
-        {{#if (eq successClockOperation 'add')}}
-        <div class="form-group">
-          <label>Progress Clock to Advance:</label>
-          <button type="button" data-action="select-success-clock" class="select-btn">
-            {{#if selectedSuccessClock}}
-            {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
-            {{else}}
-            Select or Create Clock...
-            {{/if}}
-          </button>
-        </div>
-        {{else if (eq successClockOperation 'reduce')}}
-        <div class="form-group">
-          <label>Threat Clock to Reduce:</label>
-          <button type="button" data-action="select-success-clock" class="select-btn">
-            {{#if selectedSuccessClock}}
-            {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
-            {{else}}
-            Select Clock...
-            {{/if}}
-          </button>
-        </div>
-        {{/if}}
-
-        <!-- Segments Preview -->
-        {{#if selectedSuccessClock}}
-        <div class="info-note">
+          <!-- Clock Selection Based on Operation -->
           {{#if (eq successClockOperation 'add')}}
-          Segments to add: <strong>{{calculatedSuccessClockSegments}}</strong>
-          {{else}}
-          Segments to reduce: <strong>{{calculatedSuccessClockSegments}}</strong>
+          <div class="form-group">
+            <label>Progress Clock to Advance:</label>
+            <button type="button" data-action="select-success-clock" class="select-btn">
+              {{#if selectedSuccessClock}}
+              {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
+              {{else}}
+              Select or Create Clock...
+              {{/if}}
+            </button>
+          </div>
+          {{else if (eq successClockOperation 'reduce')}}
+          <div class="form-group">
+            <label>Threat Clock to Reduce:</label>
+            <button type="button" data-action="select-success-clock" class="select-btn">
+              {{#if selectedSuccessClock}}
+              {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
+              {{else}}
+              Select Clock...
+              {{/if}}
+            </button>
+          </div>
+          {{/if}}
+
+          <!-- Segments Preview -->
+          {{#if selectedSuccessClock}}
+          <div class="info-note">
+            {{#if (eq successClockOperation 'add')}}
+            Segments to add: <strong>{{calculatedSuccessClockSegments}}</strong>
+            {{else}}
+            Segments to reduce: <strong>{{calculatedSuccessClockSegments}}</strong>
+            {{/if}}
+          </div>
           {{/if}}
         </div>
-        {{/if}}
 
-        <!-- Skip Button -->
-        <button type="button" data-action="skip-success-clock" class="secondary-btn">
-          ⏭️ Skip Clock Advancement
-        </button>
-      </div>
-      {{else}}
-      <h4>⚙️ Configure Consequence:</h4>
-
-      <!-- Consequence Type Toggles -->
-      <div class="consequence-type-toggles">
-        <button type="button" data-action="select-consequence-type" data-type="harm"
-          class="consequence-type-btn {{#if (eq consequenceTransaction.consequenceType 'harm')}}active{{/if}}">
-          💔 Harm
-        </button>
-        <button type="button" data-action="select-consequence-type" data-type="crew-clock"
-          class="consequence-type-btn {{#if (eq consequenceTransaction.consequenceType 'crew-clock')}}active{{/if}}">
-          ⏱️ Crew Clock
-        </button>
-      </div>
-      {{/if}}
-
-      <!-- Harm Configuration (shown when harm type selected) -->
-      {{#if (eq consequenceTransaction.consequenceType 'harm')}}
-      <div class="harm-config">
-        <div class="form-group">
-          <label>Target Character:</label>
-          <button type="button" data-action="select-harm-target" class="select-btn">
-            {{#if harmTargetCharacter}}
-            {{harmTargetCharacter.name}} {{#if (eq harmTargetCharacter.id
-            character.id)}}(Acting){{else}}(Protected){{/if}}
+        <!-- Accept Button -->
+        <div class="action-buttons">
+          <button type="button" data-action="accept-success-clock" class="primary">
+            {{#if selectedSuccessClock}}
+            ✓ Apply Clock & Close
             {{else}}
-            Select Character...
+            ✓ Close
             {{/if}}
           </button>
         </div>
-
-        <div class="form-group">
-          <label>Harm Clock:</label>
-          <button type="button" data-action="select-harm-clock" class="select-btn" {{#unless
-            harmTargetCharacter}}disabled{{/unless}}>
-            {{#if selectedHarmClock}}
-            {{selectedHarmClock.subtype}} ({{selectedHarmClock.segments}}/{{selectedHarmClock.maxSegments}})
-            {{else}}
-            {{#if harmTargetCharacter}}Select or Create Clock...{{else}}(Select target first){{/if}}
-            {{/if}}
-          </button>
-        </div>
-
       </div>
-      {{/if}}
 
-      <!-- Crew Clock Configuration (shown when crew-clock type selected) -->
-      {{#if (eq consequenceTransaction.consequenceType 'crew-clock')}}
-      <div class="crew-clock-config">
-        <div class="form-group">
-          <label>Select Clock:</label>
-          <button type="button" data-action="select-crew-clock" class="select-btn">
-            {{#if selectedCrewClock}}
-            {{selectedCrewClock.subtype}} ({{selectedCrewClock.segments}}/{{selectedCrewClock.maxSegments}})
-            {{else}}
-            Select or Create Clock...
-            {{/if}}
-          </button>
-        </div>
-
-        {{#if selectedCrewClock}}
-        <div class="info-note">
-          Segments to add: <strong>{{calculatedHarmSegments}}</strong>
-          <span class="calculation">({{uppercase effectivePosition}})</span>
-        </div>
-        {{/if}}
-
-      </div>
       {{/if}}
     </div>
     {{/if}}
 
-    {{#unless isGM}}
-    <!-- ==================== PLAYER ACTIONS ==================== -->
-    <div class="player-consequence-actions">
-      <h4>⚡ Your Options:</h4>
-      <div class="player-action-buttons">
-        <!-- Player can use stims to reroll (unless locked by addiction) -->
-        <button type="button" data-action="use-stims-gm-phase" class="stims-btn" {{#if (or
-          playerState.stimsUsedThisAction stimsLocked)}}disabled{{/if}}>
-          {{#if stimsLocked}}
-          💉 Stims LOCKED (Addiction)
-          {{else if playerState.stimsUsedThisAction}}
-          💉 Stims Already Used
-          {{else}}
-          💉 Use Stims & Reroll
-          {{/if}}
-        </button>
+    <!-- ==================== GM RESOLVING CONSEQUENCE ==================== -->
+    {{#if isGMResolvingConsequence}}
+    <div class="widget-content gm-resolving-consequence">
+      <div class="roll-outcome">
+        {{#if (eq playerState.outcome "success")}}
+        <h2 class="outcome-success">✅ SUCCESS - Optional Clock Advancement</h2>
+        {{else if (eq playerState.outcome "critical")}}
+        <h2 class="outcome-critical">✨ CRITICAL SUCCESS - Optional Clock Advancement</h2>
+        {{else if (eq playerState.outcome "partial")}}
+        <h2 class="outcome-partial">⚠️ PARTIAL SUCCESS - Configuring Consequence</h2>
+        {{else}}
+        <h2 class="outcome-failure">❌ FAILURE - Configuring Consequence</h2>
+        {{/if}}
+        <div class="dice-display">
+          <div class="dice-result">Highest: {{max playerState.rollResult}}</div>
+          <div class="dice-rolled">Rolled: {{join playerState.rollResult ", "}}</div>
+        </div>
+      </div>
 
-        {{!-- DEFENSIVE SUCCESS TOGGLE (Player Only) --}}
-        {{#if (and defensiveSuccessValues.available (not isGM))}}
-        <div class="plan-line defensive-success-toggle">
-          <button type="button" data-action="toggle-defensive-success" data-enabled="{{not useDefensiveSuccess}}"
-            class="toggle-btn {{#if useDefensiveSuccess}}defensive-active{{/if}}">
-            {{#if useDefensiveSuccess}}
-            ✓ Defensive Success
+      <!-- ==================== CURRENT CONSEQUENCE PLAN (SHARED BY GM AND PLAYER) ==================== -->
+      {{#if consequenceTransaction}}
+      <div class="consequence-plan-preview">
+        <h4>📋 Current Consequence Plan:</h4>
+        <div class="plan-box">
+          <div class="plan-line">
+            <strong>Type:</strong>
+            {{#if (eq consequenceTransaction.consequenceType 'harm')}}
+            💔 Harm
             {{else}}
-            ✗ Defensive Success
+            ⏱️ Crew Clock
             {{/if}}
+          </div>
+
+          {{#if (eq consequenceTransaction.consequenceType 'harm')}}
+          {{#if harmTargetCharacter}}
+          <div class="plan-line">
+            <strong>Target:</strong> {{harmTargetCharacter.name}}
+            {{#if (eq harmTargetCharacter.id character.id)}}
+            <span class="label">(Acting)</span>
+            {{else}}
+            <span class="label protect">(Protected)</span>
+            {{/if}}
+          </div>
+          {{/if}}
+
+          {{#if selectedHarmClock}}
+          <div class="plan-line">
+            <strong>Clock:</strong> {{selectedHarmClock.subtype}}
+            ({{selectedHarmClock.segments}}/{{selectedHarmClock.maxSegments}})
+          </div>
+          {{/if}}
+
+          {{#if effectivePosition}}
+          <div class="plan-line highlight">
+            <strong>Harm:</strong> +{{calculatedHarmSegments}} segments
+            <span class="calculation">({{uppercase effectivePosition}}/{{uppercase effectiveEffect}})</span>
+          </div>
+          {{/if}}
+          {{/if}}
+
+          {{#if (eq consequenceTransaction.consequenceType 'crew-clock')}}
+          {{#if selectedCrewClock}}
+          <div class="plan-line">
+            <strong>Clock:</strong> {{selectedCrewClock.subtype}}
+            ({{selectedCrewClock.segments}}/{{selectedCrewClock.maxSegments}})
+          </div>
+          <div class="plan-line highlight">
+            <strong>Advance:</strong> +{{calculatedHarmSegments}} segments
+            <span class="calculation">({{uppercase effectivePosition}})</span>
+          </div>
+          {{/if}}
+          {{/if}}
+
+          {{#if calculatedMomentumGain}}
+          <div class="plan-line momentum-gain">
+            <strong>Momentum Gain:</strong> <span class="positive">+{{calculatedMomentumGain}}M</span>
+          </div>
+          {{/if}}
+        </div>
+      </div>
+      {{else}}
+      <p class="waiting">⏳ {{#if isGM}}Select consequence type to begin...{{else}}Waiting for GM to configure
+        consequence...{{/if}}</p>
+      {{/if}}
+
+      {{#if isGM}}
+      <!-- ==================== GM CONSEQUENCE CONFIGURATION ==================== -->
+      <div class="gm-consequence-config">
+        {{#if (or (eq playerState.outcome 'success') (eq playerState.outcome 'critical'))}}
+        <h4>⏰ Clock Advancement (Optional):</h4>
+
+        <!-- Success Clock Configuration -->
+        <div class="success-clock-config">
+          <!-- Operation Selection Buttons -->
+          <div class="operation-buttons">
+            <button type="button" data-action="select-success-clock-operation" data-operation="add"
+              class="operation-btn {{#if (eq successClockOperation 'add')}}active{{/if}}">
+              ⬆️ Advance Progress Clock
+            </button>
+            <button type="button" data-action="select-success-clock-operation" data-operation="reduce"
+              class="operation-btn {{#if (eq successClockOperation 'reduce')}}active{{/if}}">
+              ⬇️ Reduce Threat Clock
+            </button>
+          </div>
+
+          <!-- Clock Selection Based on Operation -->
+          {{#if (eq successClockOperation 'add')}}
+          <div class="form-group">
+            <label>Progress Clock to Advance:</label>
+            <button type="button" data-action="select-success-clock" class="select-btn">
+              {{#if selectedSuccessClock}}
+              {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
+              {{else}}
+              Select or Create Clock...
+              {{/if}}
+            </button>
+          </div>
+          {{else if (eq successClockOperation 'reduce')}}
+          <div class="form-group">
+            <label>Threat Clock to Reduce:</label>
+            <button type="button" data-action="select-success-clock" class="select-btn">
+              {{#if selectedSuccessClock}}
+              {{selectedSuccessClock.subtype}} ({{selectedSuccessClock.segments}}/{{selectedSuccessClock.maxSegments}})
+              {{else}}
+              Select Clock...
+              {{/if}}
+            </button>
+          </div>
+          {{/if}}
+
+          <!-- Segments Preview -->
+          {{#if selectedSuccessClock}}
+          <div class="info-note">
+            {{#if (eq successClockOperation 'add')}}
+            Segments to add: <strong>{{calculatedSuccessClockSegments}}</strong>
+            {{else}}
+            Segments to reduce: <strong>{{calculatedSuccessClockSegments}}</strong>
+            {{/if}}
+          </div>
+          {{/if}}
+
+          <!-- Skip Button -->
+          <button type="button" data-action="skip-success-clock" class="secondary-btn">
+            ⏭️ Skip Clock Advancement
+          </button>
+        </div>
+        {{else}}
+        <h4>⚙️ Configure Consequence:</h4>
+
+        <!-- Consequence Type Toggles -->
+        <div class="consequence-type-toggles">
+          <button type="button" data-action="select-consequence-type" data-type="harm"
+            class="consequence-type-btn {{#if (eq consequenceTransaction.consequenceType 'harm')}}active{{/if}}">
+            💔 Harm
+          </button>
+          <button type="button" data-action="select-consequence-type" data-type="crew-clock"
+            class="consequence-type-btn {{#if (eq consequenceTransaction.consequenceType 'crew-clock')}}active{{/if}}">
+            ⏱️ Crew Clock
           </button>
         </div>
         {{/if}}
 
-        <!-- Player approves GM's configured consequence -->
-        <button type="button" data-action="approve-consequence" class="primary" {{#unless
-          consequenceConfigured}}disabled{{/unless}}>
-          {{#if consequenceConfigured}}✓ Accept Consequence{{else}}⏳ Waiting for GM...{{/if}}
-        </button>
+        <!-- Harm Configuration (shown when harm type selected) -->
+        {{#if (eq consequenceTransaction.consequenceType 'harm')}}
+        <div class="harm-config">
+          <div class="form-group">
+            <label>Target Character:</label>
+            <button type="button" data-action="select-harm-target" class="select-btn">
+              {{#if harmTargetCharacter}}
+              {{harmTargetCharacter.name}} {{#if (eq harmTargetCharacter.id
+              character.id)}}(Acting){{else}}(Protected){{/if}}
+              {{else}}
+              Select Character...
+              {{/if}}
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label>Harm Clock:</label>
+            <button type="button" data-action="select-harm-clock" class="select-btn" {{#unless
+              harmTargetCharacter}}disabled{{/unless}}>
+              {{#if selectedHarmClock}}
+              {{selectedHarmClock.subtype}} ({{selectedHarmClock.segments}}/{{selectedHarmClock.maxSegments}})
+              {{else}}
+              {{#if harmTargetCharacter}}Select or Create Clock...{{else}}(Select target first){{/if}}
+              {{/if}}
+            </button>
+          </div>
+
+        </div>
+        {{/if}}
+
+        <!-- Crew Clock Configuration (shown when crew-clock type selected) -->
+        {{#if (eq consequenceTransaction.consequenceType 'crew-clock')}}
+        <div class="crew-clock-config">
+          <div class="form-group">
+            <label>Select Clock:</label>
+            <button type="button" data-action="select-crew-clock" class="select-btn">
+              {{#if selectedCrewClock}}
+              {{selectedCrewClock.subtype}} ({{selectedCrewClock.segments}}/{{selectedCrewClock.maxSegments}})
+              {{else}}
+              Select or Create Clock...
+              {{/if}}
+            </button>
+          </div>
+
+          {{#if selectedCrewClock}}
+          <div class="info-note">
+            Segments to add: <strong>{{calculatedHarmSegments}}</strong>
+            <span class="calculation">({{uppercase effectivePosition}})</span>
+          </div>
+          {{/if}}
+
+        </div>
+        {{/if}}
       </div>
+      {{/if}}
+
+      {{#unless isGM}}
+      <!-- ==================== PLAYER ACTIONS ==================== -->
+      <div class="player-consequence-actions">
+        <h4>⚡ Your Options:</h4>
+        <div class="player-action-buttons">
+          <!-- Player can use stims to reroll (unless locked by addiction) -->
+          <button type="button" data-action="use-stims-gm-phase" class="stims-btn" {{#if (or
+            playerState.stimsUsedThisAction stimsLocked)}}disabled{{/if}}>
+            {{#if stimsLocked}}
+            💉 Stims LOCKED (Addiction)
+            {{else if playerState.stimsUsedThisAction}}
+            💉 Stims Already Used
+            {{else}}
+            💉 Use Stims & Reroll
+            {{/if}}
+          </button>
+
+          {{!-- DEFENSIVE SUCCESS TOGGLE (Player Only) --}}
+          {{#if (and defensiveSuccessValues.available (not isGM))}}
+          <div class="plan-line defensive-success-toggle">
+            <button type="button" data-action="toggle-defensive-success" data-enabled="{{not useDefensiveSuccess}}"
+              class="toggle-btn {{#if useDefensiveSuccess}}defensive-active{{/if}}">
+              {{#if useDefensiveSuccess}}
+              ✓ Defensive Success
+              {{else}}
+              ✗ Defensive Success
+              {{/if}}
+            </button>
+          </div>
+          {{/if}}
+
+          <!-- Player approves GM's configured consequence -->
+          <button type="button" data-action="approve-consequence" class="primary" {{#unless
+            consequenceConfigured}}disabled{{/unless}}>
+            {{#if consequenceConfigured}}✓ Accept Consequence{{else}}⏳ Waiting for GM...{{/if}}
+          </button>
+        </div>
+      </div>
+      {{/unless}}
     </div>
-    {{/unless}}
+    {{/if}}
   </div>
+
+  {{!-- Side Panel (right position) --}}
+  {{#if (and sidePanelOpen (eq sidePanelPosition 'right'))}}
+  {{> side-panel
+  sidePanelOpen=sidePanelOpen
+  sidePanelPosition=sidePanelPosition
+  sidePanelTitle=sidePanelTitle
+  sidePanelMode=sidePanelMode
+  sidePanelClocks=sidePanelClocks
+  selectedHarmClockId=selectedHarmClock.id
+  selectedCrewClockId=selectedCrewClock.id
+  selectedSuccessClockId=selectedSuccessClock.id
+  }}
   {{/if}}
 </div>

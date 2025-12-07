@@ -4091,3 +4091,285 @@
   border-radius: 4px;
   margin-top: 2rem;
 }
+
+/* ========================================================================== */
+/*  Side Panel Styles                                                        */
+/* ========================================================================== */
+
+/* Wrapper with flex layout for side panel */
+.player-action-widget-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.player-action-widget-wrapper.has-side-panel {
+  gap: 0;
+}
+
+.player-action-widget-wrapper.side-panel-left {
+  flex-direction: row;
+}
+
+.player-action-widget-wrapper.side-panel-right {
+  flex-direction: row;
+}
+
+/* Side panel container */
+.side-panel {
+  width: 280px;
+  background: #1a1a1a;
+  border: 2px solid #555;
+  border-radius: 4px;
+  animation: sidePanelSlideIn 0.2s ease-out;
+}
+
+.side-panel-left .side-panel {
+  border-right: 3px solid #ff6347;
+  margin-right: -2px;
+  border-radius: 4px 0 0 4px;
+}
+
+.side-panel-right .side-panel {
+  border-left: 3px solid #ff6347;
+  margin-left: -2px;
+  border-radius: 0 4px 4px 0;
+}
+
+@keyframes sidePanelSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.side-panel-right .side-panel {
+  animation-name: sidePanelSlideInRight;
+}
+
+@keyframes sidePanelSlideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.side-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+  border-bottom: 1px solid #555;
+}
+
+.side-panel-header h4 {
+  margin: 0;
+  color: #ffd700;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.side-panel-close {
+  background: transparent;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 1rem;
+  transition: color 0.2s;
+}
+
+.side-panel-close:hover {
+  color: #ff6347;
+}
+
+.side-panel-content {
+  padding: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* -------------------------------------------- */
+/*  Clock Picker Styles                          */
+/* -------------------------------------------- */
+
+.clock-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.clock-picker-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.clock-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clock-picker-item:hover {
+  border-color: #ffd700;
+  background: #333;
+}
+
+.clock-picker-item.selected {
+  border-color: #ff6347;
+  background: linear-gradient(135deg, #3a2a2a 0%, #2a1a1a 100%);
+  box-shadow: 0 0 8px rgba(255, 99, 71, 0.3);
+}
+
+.clock-picker-item input[type="radio"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.clock-picker-item-content {
+  display: flex;
+  flex: 1;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.clock-picker-item .clock-name {
+  font-weight: 500;
+  color: #e0e0e0;
+}
+
+.clock-picker-item .clock-progress {
+  color: #ff6347;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+
+.clock-picker-empty {
+  text-align: center;
+  color: #777;
+  font-style: italic;
+  padding: 20px;
+}
+
+/* Create New Section */
+.clock-picker-create {
+  border-top: 1px solid #444;
+  padding-top: 10px;
+}
+
+.clock-picker-create-toggle {
+  width: 100%;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #444 0%, #333 100%);
+  border: 1px solid #555;
+  color: #e0e0e0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.clock-picker-create-toggle:hover {
+  background: linear-gradient(135deg, #555 0%, #444 100%);
+  border-color: #ffd700;
+}
+
+.clock-picker-create-toggle i {
+  margin-right: 6px;
+}
+
+.clock-picker-create-form {
+  margin-top: 10px;
+  padding: 12px;
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 4px;
+}
+
+.clock-picker-create-form .form-group {
+  margin-bottom: 10px;
+}
+
+.clock-picker-create-form .form-group label {
+  display: block;
+  font-size: 0.85rem;
+  color: #ccc;
+  margin-bottom: 4px;
+}
+
+.clock-picker-create-form .clock-name-input,
+.clock-picker-create-form .clock-category-select,
+.clock-picker-create-form .clock-segments-select {
+  width: 100%;
+  padding: 6px 8px;
+  background: #2a2a2a;
+  border: 1px solid #555;
+  color: #e0e0e0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.clock-picker-create-form .locked-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #999;
+  font-style: italic;
+}
+
+.clock-picker-create-form .locked-value i {
+  font-size: 0.8em;
+}
+
+.clock-picker-create-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.clock-picker-create-actions .btn-create {
+  flex: 1;
+  padding: 8px;
+  background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+  border: 1px solid #42a5f5;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.clock-picker-create-actions .btn-create:hover {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  box-shadow: 0 0 8px rgba(66, 165, 245, 0.5);
+}
+
+.clock-picker-create-actions .btn-cancel {
+  padding: 8px 12px;
+  background: #444;
+  border: 1px solid #555;
+  color: #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clock-picker-create-actions .btn-cancel:hover {
+  background: #555;
+}

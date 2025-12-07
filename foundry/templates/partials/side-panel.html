@@ -1,0 +1,62 @@
+{{!--
+Side Panel Container
+
+Attached side panel that expands the widget horizontally.
+Used for inline clock selection/creation without modal dialogs.
+
+Context Parameters:
+- sidePanelOpen: Boolean - whether panel is visible
+- sidePanelPosition: 'left' | 'right' - which side panel appears
+- sidePanelTitle: String - header title
+- sidePanelMode: String - 'harm-clock' | 'crew-clock' | 'success-clock'
+
+Usage:
+{{> side-panel 
+    sidePanelOpen=sidePanelOpen 
+    sidePanelPosition=sidePanelPosition 
+    sidePanelTitle="Select Clock"
+    sidePanelMode=sidePanelMode
+}}
+--}}
+
+{{#if sidePanelOpen}}
+<div class="side-panel side-panel-{{sidePanelPosition}}" data-panel-mode="{{sidePanelMode}}">
+  <div class="side-panel-header">
+    <h4>{{sidePanelTitle}}</h4>
+    <button type="button" class="side-panel-close" data-action="close-side-panel" title="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="side-panel-content">
+    {{!-- Content injected based on mode --}}
+    {{#if (eq sidePanelMode 'harm-clock')}}
+      {{> clock-picker 
+          clocks=sidePanelClocks 
+          selectedClockId=selectedHarmClockId
+          allowCreate=true
+          categoryLocked=false
+          defaultCategory="harm"
+          actionPrefix="harm"
+      }}
+    {{else if (eq sidePanelMode 'crew-clock')}}
+      {{> clock-picker 
+          clocks=sidePanelClocks 
+          selectedClockId=selectedCrewClockId
+          allowCreate=true
+          categoryLocked=true
+          defaultCategory="threat"
+          actionPrefix="crew"
+      }}
+    {{else if (eq sidePanelMode 'success-clock')}}
+      {{> clock-picker 
+          clocks=sidePanelClocks 
+          selectedClockId=selectedSuccessClockId
+          allowCreate=true
+          categoryLocked=false
+          defaultCategory=(default successClockCategory "long-term-project")
+          actionPrefix="success"
+      }}
+    {{/if}}
+  </div>
+</div>
+{{/if}}

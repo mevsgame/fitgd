@@ -122,6 +122,13 @@ interface PlayerActionWidgetData {
   // Defensive success option (for GM_RESOLVING_CONSEQUENCE state)
   defensiveSuccessValues?: any; // DefensiveSuccessValues from Redux
   useDefensiveSuccess?: boolean;
+
+  // Side panel state (for inline clock selection)
+  sidePanelOpen?: boolean;
+  sidePanelMode?: 'harm-clock' | 'crew-clock' | 'success-clock' | null;
+  sidePanelPosition?: 'left' | 'right';
+  sidePanelTitle?: string;
+  sidePanelClocks?: Clock[];
 }
 
 // ClockData moved to coordinator implementations
@@ -186,6 +193,11 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
 
   // Event coordinator (delegates all 24 event handlers)
   private coordinator: PlayerActionEventCoordinator;
+
+  // Side panel state (transient UI state, not persisted to Redux)
+  private sidePanelOpen: boolean = false;
+  private sidePanelMode: 'harm-clock' | 'crew-clock' | 'success-clock' | null = null;
+  private sidePanelPosition: 'left' | 'right' = 'right';
 
   /**
    * Create a new Player Action Widget
@@ -421,11 +433,15 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     // Get state-specific data (consequence config, etc.)
     const stateSpecificData = this._getStateSpecificData(entities);
 
+    // Get side panel data
+    const sidePanelData = this._getSidePanelData(entities.state);
+
     // Combine all data for template
     return {
       ...data,
       ...templateData,
       ...stateSpecificData,
+      ...sidePanelData,
     } as PlayerActionWidgetData;
   }
 
@@ -671,7 +687,7 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     });
     html.find('[data-action="use-trait"]').click((_e) => {
       void this.coordinator.handleUseTrait();
-    }); 
+    });
     html.find('[data-action="push-die"]').click((_e) => {
       void this.coordinator.handleTogglePushDie();
     });
@@ -718,11 +734,15 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     html.find('[data-action="select-harm-target"]').click((_e) => {
       void this.coordinator.handleHarmTargetSelect();
     });
+    // Side panel clock selection (replaces modal dialogs)
     html.find('[data-action="select-harm-clock"]').click((_e) => {
-      void this.coordinator.handleHarmClockSelect();
+      this.openSidePanel('harm-clock');
     });
     html.find('[data-action="select-crew-clock"]').click((_e) => {
-      void this.coordinator.handleCrewClockSelect();
+      this.openSidePanel('crew-clock');
+    });
+    html.find('[data-action="select-success-clock"]').click((_e) => {
+      this.openSidePanel('success-clock');
     });
     html.find('[data-action="approve-consequence"]').click((_e) => {
       void this.coordinator.handleAcceptConsequence();
@@ -737,6 +757,92 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     html.find('[data-action="cancel"]').click((_e) => {
       void this.coordinator.handleCancel();
     });
+
+    // Side panel controls
+    html.find('[data-action="close-side-panel"]').click((_e) => {
+      this.closeSidePanel();
+    });
+
+    // Clock picker item selection
+    html.find('[data-action="select-harm-clock-item"]').click((e) => {
+      const clockId = (e.currentTarget as HTMLElement).dataset.clockId;
+      if (clockId) {
+        void this.coordinator.handleSidePanelClockSelect('harm', clockId);
+        this.closeSidePanel();
+      }
+    });
+    html.find('[data-action="select-crew-clock-item"]').click((e) => {
+      const clockId = (e.currentTarget as HTMLElement).dataset.clockId;
+      if (clockId) {
+        void this.coordinator.handleSidePanelClockSelect('crew', clockId);
+        this.closeSidePanel();
+      }
+    });
+    html.find('[data-action="select-success-clock-item"]').click((e) => {
+      const clockId = (e.currentTarget as HTMLElement).dataset.clockId;
+      if (clockId) {
+        void this.coordinator.handleSidePanelClockSelect('success', clockId);
+        this.closeSidePanel();
+      }
+    });
+
+    // Clock picker create toggle
+    html.find('[data-action="toggle-harm-clock-create"]').click((e) => {
+      this._toggleClockCreateForm(e.currentTarget as HTMLElement, 'harm');
+    });
+    html.find('[data-action="toggle-crew-clock-create"]').click((e) => {
+      this._toggleClockCreateForm(e.currentTarget as HTMLElement, 'crew');
+    });
+    html.find('[data-action="toggle-success-clock-create"]').click((e) => {
+      this._toggleClockCreateForm(e.currentTarget as HTMLElement, 'success');
+    });
+
+    // Clock picker create actions
+    html.find('[data-action="create-harm-clock"]').click((_e) => {
+      void this._handleClockCreate('harm');
+    });
+    html.find('[data-action="create-crew-clock"]').click((_e) => {
+      void this._handleClockCreate('crew');
+    });
+    html.find('[data-action="create-success-clock"]').click((_e) => {
+      void this._handleClockCreate('success');
+    });
+  }
+
+  /**
+   * Toggle clock create form visibility
+   */
+  private _toggleClockCreateForm(_button: HTMLElement, prefix: string): void {
+    const form = this.element?.find(`.clock-picker[data-action-prefix="${prefix}"] .clock-picker-create-form`);
+    if (form) {
+      form.toggle();
+    }
+  }
+
+  /**
+   * Handle clock creation from side panel
+   */
+  private async _handleClockCreate(prefix: 'harm' | 'crew' | 'success'): Promise<void> {
+    const panel = this.element?.find(`.clock-picker[data-action-prefix="${prefix}"]`);
+    if (!panel) return;
+
+    const name = panel.find('.clock-name-input').val() as string;
+    const category = panel.find(`[name="${prefix}-clock-category"]`).val() as string;
+    const segments = parseInt(panel.find(`[name="${prefix}-clock-segments"]`).val() as string) || 6;
+
+    if (!name) {
+      this.notificationService.warn('Please enter a clock name');
+      return;
+    }
+
+    // Create clock via coordinator
+    await this.coordinator.handleSidePanelClockCreate(prefix, {
+      name,
+      category,
+      maxSegments: segments,
+    });
+
+    this.closeSidePanel();
   }
 
   /* -------------------------------------------- */
@@ -910,6 +1016,134 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
   private _getConsequenceData(state: RootState) {
     const consequenceDataResolver = this.handlerFactory.getConsequenceDataResolver();
     return consequenceDataResolver.resolveConsequenceData(state, this.playerState);
+  }
+
+  /* -------------------------------------------- */
+  /*  Side Panel Methods                          */
+  /* -------------------------------------------- */
+
+  /**
+   * Get side panel data for template rendering
+   * 
+   * @param state - Redux state
+   * @returns Side panel data including clocks list
+   */
+  private _getSidePanelData(state: RootState): Partial<PlayerActionWidgetData> {
+    if (!this.sidePanelOpen || !this.sidePanelMode) {
+      return {
+        sidePanelOpen: false,
+        sidePanelMode: null,
+        sidePanelPosition: 'right',
+        sidePanelTitle: '',
+        sidePanelClocks: [],
+      };
+    }
+
+    // Determine which clocks to show based on mode
+    let clocks: Clock[] = [];
+    let title = '';
+
+    switch (this.sidePanelMode) {
+      case 'harm-clock':
+        // Get harm clocks for the target character (from consequence transaction)
+        const harmTargetId = this.playerState?.consequenceTransaction?.harmTargetCharacterId;
+        if (harmTargetId) {
+          clocks = Object.values(state.clocks.byId).filter(
+            c => c.entityId === harmTargetId && c.clockType === 'harm'
+          );
+        }
+        title = 'Select Harm Clock';
+        break;
+
+      case 'crew-clock':
+        // Get threat clocks for the crew (consequences only use threat category)
+        if (this.crewId) {
+          clocks = Object.values(state.clocks.byId).filter(
+            c => c.entityId === this.crewId &&
+              c.clockType === 'progress' &&
+              c.metadata?.category === 'threat'
+          );
+        }
+        title = 'Select Threat Clock';
+        break;
+
+      case 'success-clock':
+        // Get progress or threat clocks based on operation
+        // successClockOperation is stored in consequenceTransaction
+        const operation = this.playerState?.consequenceTransaction?.successClockOperation;
+        if (this.crewId) {
+          if (operation === 'reduce') {
+            clocks = Object.values(state.clocks.byId).filter(
+              c => c.entityId === this.crewId &&
+                c.clockType === 'progress' &&
+                c.metadata?.category === 'threat'
+            );
+            title = 'Select Threat Clock to Reduce';
+          } else {
+            // Default: add to progress clocks
+            clocks = Object.values(state.clocks.byId).filter(
+              c => c.entityId === this.crewId &&
+                c.clockType === 'progress' &&
+                (c.metadata?.category === 'long-term-project' || c.metadata?.category === 'obstacle')
+            );
+            title = 'Select Clock to Advance';
+          }
+        }
+        break;
+    }
+
+    return {
+      sidePanelOpen: this.sidePanelOpen,
+      sidePanelMode: this.sidePanelMode,
+      sidePanelPosition: this.sidePanelPosition,
+      sidePanelTitle: title,
+      sidePanelClocks: clocks,
+    };
+  }
+
+  /**
+   * Open the side panel with specified mode
+   * Calculates optimal position based on widget location
+   * 
+   * @param mode - Panel mode determining content type
+   */
+  openSidePanel(mode: 'harm-clock' | 'crew-clock' | 'success-clock'): void {
+    this.sidePanelMode = mode;
+    this.sidePanelOpen = true;
+
+    // Calculate optimal position based on widget location on screen
+    this._calculateSidePanelPosition();
+
+    // Re-render to show panel
+    this.render(true);
+  }
+
+  /**
+   * Close the side panel
+   */
+  closeSidePanel(): void {
+    this.sidePanelOpen = false;
+    this.sidePanelMode = null;
+    this.render(true);
+  }
+
+  /**
+   * Calculate optimal side panel position based on widget location
+   * Panel appears on the side with more available space
+   */
+  private _calculateSidePanelPosition(): void {
+    const element = this.element;
+    if (!element || !element[0]) {
+      this.sidePanelPosition = 'right';
+      return;
+    }
+
+    const rect = element[0].getBoundingClientRect();
+    const screenWidth = window.innerWidth;
+    const widgetCenterX = rect.left + rect.width / 2;
+
+    // If widget is on the left half of screen, panel goes right; otherwise left
+    this.sidePanelPosition = widgetCenterX < screenWidth / 2 ? 'right' : 'left';
   }
 
   /**

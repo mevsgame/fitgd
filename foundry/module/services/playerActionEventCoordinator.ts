@@ -1326,4 +1326,173 @@ export class PlayerActionEventCoordinator {
       };
     }
   }
+
+  /* ========================================
+     SIDE PANEL CLOCK HANDLERS
+     ======================================== */
+
+  /**
+   * Handle clock selection from side panel
+   * Routes to appropriate handler based on panel type
+   * 
+   * @param panelType - Type of panel ('harm' | 'crew' | 'success')
+   * @param clockId - Selected clock ID
+   */
+  async handleSidePanelClockSelect(panelType: 'harm' | 'crew' | 'success', clockId: string): Promise<void> {
+    const consequenceHandler = this.context.getHandlerFactory().getConsequenceHandler();
+
+    switch (panelType) {
+      case 'harm':
+        const harmAction = consequenceHandler.createSetHarmClockAction(clockId);
+        await game.fitgd.bridge.execute(harmAction, {
+          affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
+          silent: true,
+        });
+        break;
+
+      case 'crew':
+        const crewAction = consequenceHandler.createSetCrewClockAction(clockId);
+        await game.fitgd.bridge.execute(crewAction, {
+          affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
+          silent: true,
+        });
+        break;
+
+      case 'success':
+        // Set success clock in transaction
+        await game.fitgd.bridge.execute({
+          type: 'playerRoundState/setSuccessClockTransaction',
+          payload: {
+            characterId: this.context.getCharacterId(),
+            successClockId: clockId,
+          },
+        }, {
+          affectedReduxIds: [asReduxId(this.context.getCharacterId())],
+          silent: true,
+        });
+        break;
+    }
+  }
+
+  /**
+   * Handle clock creation from side panel
+   * Creates clock and selects it in one flow
+   * 
+   * @param panelType - Type of panel ('harm' | 'crew' | 'success')
+   * @param clockData - Clock data with name, category, maxSegments
+   */
+  async handleSidePanelClockCreate(
+    panelType: 'harm' | 'crew' | 'success',
+    clockData: { name: string; category: string; maxSegments: number }
+  ): Promise<void> {
+    const consequenceHandler = this.context.getHandlerFactory().getConsequenceHandler();
+    const crewId = this.context.getCrewId();
+
+    switch (panelType) {
+      case 'harm': {
+        const targetId = this.context.getPlayerState()?.consequenceTransaction?.harmTargetCharacterId;
+        if (!targetId) {
+          this.context.getNotificationService().warn('Select target character first');
+          return;
+        }
+
+        // Create harm clock
+        const createAction = consequenceHandler.createNewHarmClockAction({
+          name: clockData.name,
+          segments: clockData.maxSegments,
+        });
+
+        await game.fitgd.bridge.execute(createAction, {
+          affectedReduxIds: [asReduxId(targetId)],
+          silent: true,
+        });
+
+        // Select the new clock
+        const updateAction = consequenceHandler.createUpdateHarmClockInTransactionAction(
+          createAction.payload.id,
+          clockData.name
+        );
+
+        await game.fitgd.bridge.execute(updateAction, {
+          affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
+          silent: true,
+        });
+        break;
+      }
+
+      case 'crew': {
+        if (!crewId) {
+          this.context.getNotificationService().warn('Character must be in a crew');
+          return;
+        }
+
+        // Create crew clock (category locked to threat for consequences)
+        const createAction = consequenceHandler.createNewCrewClockAction({
+          name: clockData.name,
+          category: 'threat',
+          segments: clockData.maxSegments,
+        });
+
+        await game.fitgd.bridge.execute(createAction, {
+          affectedReduxIds: [asReduxId(crewId)],
+          silent: true,
+        });
+
+        // Select the new clock
+        const updateAction = consequenceHandler.createUpdateCrewClockInTransactionAction(
+          createAction.payload.id
+        );
+
+        await game.fitgd.bridge.execute(updateAction, {
+          affectedReduxIds: [asReduxId(consequenceHandler.getAffectedReduxId())],
+          silent: true,
+        });
+        break;
+      }
+
+      case 'success': {
+        if (!crewId) {
+          this.context.getNotificationService().warn('Character must be in a crew');
+          return;
+        }
+
+        const clockId = foundry.utils.randomID();
+
+        // Create progress clock
+        await game.fitgd.bridge.execute({
+          type: 'clocks/addClock',
+          payload: {
+            id: clockId,
+            entityId: crewId,
+            clockType: 'progress',
+            subtype: clockData.name,
+            segments: 0,
+            maxSegments: clockData.maxSegments,
+            metadata: {
+              category: clockData.category || 'long-term-project',
+            },
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          },
+        }, {
+          affectedReduxIds: [asReduxId(crewId)],
+          silent: true,
+        });
+
+        // Select the new clock
+        await game.fitgd.bridge.execute({
+          type: 'playerRoundState/setSuccessClockTransaction',
+          payload: {
+            characterId: this.context.getCharacterId(),
+            successClockId: clockId,
+          },
+        }, {
+          affectedReduxIds: [asReduxId(this.context.getCharacterId())],
+          silent: true,
+        });
+        break;
+      }
+    }
+  }
 }
+

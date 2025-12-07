@@ -1,0 +1,105 @@
+{{!--
+Clock Picker Partial
+
+Unified clock selection and creation UI.
+Displays list of existing clocks with radio selection,
+plus inline form for creating new clocks.
+
+Context Parameters:
+- clocks: Array of Clock objects to display
+- selectedClockId: Currently selected clock ID (or null)
+- allowCreate: Boolean - show create new form
+- categoryLocked: Boolean - lock category dropdown (for consequences)
+- defaultCategory: String - default/locked category value
+- actionPrefix: String - 'harm' | 'crew' | 'success' for data-action naming
+
+Usage:
+{{> clock-picker
+clocks=harmClocks
+selectedClockId=selectedHarmClockId
+allowCreate=true
+categoryLocked=false
+defaultCategory="harm"
+actionPrefix="harm"
+}}
+--}}
+
+<div class="clock-picker" data-action-prefix="{{actionPrefix}}">
+    {{!-- Existing Clocks List --}}
+    <div class="clock-picker-list">
+        {{#if clocks.length}}
+        <div class="clock-picker-items">
+            {{#each clocks}}
+            <label class="clock-picker-item {{#if (eq ../selectedClockId this.id)}}selected{{/if}}">
+                <input type="radio" name="{{../actionPrefix}}-clock-selection" value="{{this.id}}"
+                    data-action="select-{{../actionPrefix}}-clock-item" data-clock-id="{{this.id}}" {{#if (eq
+                    ../selectedClockId this.id)}}checked{{/if}} />
+                <div class="clock-picker-item-content">
+                    <span class="clock-name">{{this.subtype}}</span>
+                    <span class="clock-progress">{{this.segments}}/{{this.maxSegments}}</span>
+                </div>
+            </label>
+            {{/each}}
+        </div>
+        {{else}}
+        <div class="clock-picker-empty">
+            <p>No clocks available</p>
+        </div>
+        {{/if}}
+    </div>
+
+    {{!-- Create New Section --}}
+    {{#if allowCreate}}
+    <div class="clock-picker-create">
+        <div class="clock-picker-create-header">
+            <button type="button" class="clock-picker-create-toggle" data-action="toggle-{{actionPrefix}}-clock-create">
+                <i class="fas fa-plus"></i> Create New Clock
+            </button>
+        </div>
+
+        <div class="clock-picker-create-form" style="display: none;">
+            <div class="form-group">
+                <label>Name:</label>
+                <input type="text" name="{{actionPrefix}}-clock-name" class="clock-name-input"
+                    placeholder="e.g. Broken Leg, Alarm Rising" />
+            </div>
+
+            <div class="form-group">
+                <label>Category:</label>
+                {{#if categoryLocked}}
+                <input type="hidden" name="{{actionPrefix}}-clock-category" value="{{defaultCategory}}" />
+                <span class="locked-value">{{capitalize defaultCategory}} <i class="fas fa-lock"
+                        title="Locked for consequence"></i></span>
+                {{else}}
+                <select name="{{actionPrefix}}-clock-category" class="clock-category-select">
+                    <option value="harm" {{#if (eq defaultCategory "harm" )}}selected{{/if}}>Harm</option>
+                    <option value="threat" {{#if (eq defaultCategory "threat" )}}selected{{/if}}>Threat</option>
+                    <option value="long-term-project" {{#if (eq defaultCategory "long-term-project" )}}selected{{/if}}>
+                        Long-term Project</option>
+                    <option value="obstacle" {{#if (eq defaultCategory "obstacle" )}}selected{{/if}}>Obstacle</option>
+                </select>
+                {{/if}}
+            </div>
+
+            <div class="form-group">
+                <label>Segments:</label>
+                <select name="{{actionPrefix}}-clock-segments" class="clock-segments-select">
+                    <option value="4">4 segments</option>
+                    <option value="6" selected>6 segments</option>
+                    <option value="8">8 segments</option>
+                    <option value="12">12 segments</option>
+                </select>
+            </div>
+
+            <div class="clock-picker-create-actions">
+                <button type="button" class="btn-create" data-action="create-{{actionPrefix}}-clock">
+                    <i class="fas fa-check"></i> Create & Select
+                </button>
+                <button type="button" class="btn-cancel" data-action="toggle-{{actionPrefix}}-clock-create">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+    {{/if}}
+</div>
