@@ -132,12 +132,16 @@ export async function registerHandlebarsHelpers(): Promise<void> {
         break;
       case 'progress':
         // Check if it's a threat/countdown
+        // Note: getProgressClocks extracts category/isCountdown to top level,
+        // but original clocks have them in metadata - check both places
         const metadata = clockData.metadata || {};
-        if (metadata.isCountdown || metadata.category === 'threat') {
+        const category = (clockData as any).category || metadata.category;
+        const isCountdown = (clockData as any).isCountdown || metadata.isCountdown;
+        if (isCountdown || category === 'threat') {
           color = 'red';
-        } else if (metadata.category === 'personal-goal') {
+        } else if (category === 'personal-goal') {
           color = 'white';
-        } else if (metadata.category === 'faction') {
+        } else if (category === 'faction') {
           color = 'black';
         } else {
           color = 'blue';

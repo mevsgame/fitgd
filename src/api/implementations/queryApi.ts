@@ -144,6 +144,7 @@ export function createQueryAPI(store: Store) {
       return progressClocks.map((clock) => ({
         id: clock.id,
         name: clock.subtype ?? 'Unknown',
+        clockType: 'progress' as const,
         segments: clock.segments,
         maxSegments: clock.maxSegments,
         category: clock.metadata?.category as string | undefined,
