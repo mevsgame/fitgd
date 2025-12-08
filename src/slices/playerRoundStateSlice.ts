@@ -160,7 +160,19 @@ const playerRoundStateSlice = createSlice({
      */
     initializePlayerState: (state, action: PayloadAction<InitializePlayerStatePayload>) => {
       const { characterId } = action.payload;
+
+      // Always initialize/reset the character's state
       state.byCharacterId[characterId] = createInitialPlayerRoundState(characterId);
+
+      // Log command to history for persistence
+      state.history.push({
+        type: 'playerRoundState/initializePlayerState',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: 'system',
+      });
     },
 
     /**

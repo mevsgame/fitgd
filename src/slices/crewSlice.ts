@@ -424,6 +424,16 @@ const crewSlice = createSlice({
         startedAt: Date.now(),
       };
       crew.updatedAt = Date.now();
+
+      // Log command to history for persistence
+      state.history.push({
+        type: 'crews/startPlayerAction',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: playerId,
+      });
     },
 
     /**
@@ -445,6 +455,16 @@ const crewSlice = createSlice({
 
       crew.activePlayerAction.committedToRoll = true;
       crew.updatedAt = Date.now();
+
+      // Log command to history for persistence
+      state.history.push({
+        type: 'crews/commitToRoll',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: 'system',
+      });
     },
 
     /**
@@ -464,6 +484,16 @@ const crewSlice = createSlice({
       // Clear active action (no-op if already null)
       crew.activePlayerAction = null;
       crew.updatedAt = Date.now();
+
+      // Log command to history for persistence
+      state.history.push({
+        type: 'crews/abortPlayerAction',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: 'system',
+      });
     },
   },
 });

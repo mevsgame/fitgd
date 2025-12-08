@@ -296,13 +296,21 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
 
         const clocksChanged = currentState.clocks !== previousState.clocks;
 
-        // Widget Lifecycle Sync: Check if activePlayerAction was cleared (GM aborted or turn ended)
+        // Widget Lifecycle Sync: Check if activePlayerAction was cleared OR changed to different character
         if (currentCrewId) {
           const prevAction = selectActivePlayerAction(previousState, currentCrewId);
           const currAction = selectActivePlayerAction(currentState, currentCrewId);
+
+          // Close if action was cleared (GM or Player closed widget, or turn ended)
           if (prevAction && !currAction) {
-            // Action was cleared - close widget
             logger.debug('Active player action cleared, closing widget');
+            void this.close();
+            return;
+          }
+
+          // Close if action changed to a DIFFERENT character (turn passed to someone else)
+          if (currAction && currAction.characterId !== this.characterId) {
+            logger.debug(`Active player changed to ${currAction.characterId}, closing stale widget for ${this.characterId}`);
             void this.close();
             return;
           }
@@ -388,14 +396,17 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
       }
     }
 
-    // Widget Lifecycle Sync: Clear active player action (only if one exists)
+    // Widget Lifecycle Sync: Clear active player action (only if one exists FOR THIS CHARACTER)
     // CRITICAL: Don't dispatch if action is already cleared - prevents infinite loop
     // when close() is called from subscription detecting remote abort
+    // CRITICAL: Don't dispatch if action is for a DIFFERENT character - prevents stale
+    // widget from canceling the next player's turn (e.g., after round change)
     if (game.fitgd && this.crewId) {
       const state = game.fitgd.store.getState();
       const existingAction = selectActivePlayerAction(state, this.crewId);
 
-      if (existingAction) {
+      // Only abort if the action belongs to THIS widget's character
+      if (existingAction && existingAction.characterId === this.characterId) {
         try {
           await game.fitgd.bridge.execute(
             {

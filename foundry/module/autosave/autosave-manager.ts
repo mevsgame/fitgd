@@ -130,6 +130,9 @@ export function applyCommandsIncremental(commands: CommandHistory): number {
 
   console.log(`FitGD | Applying ${allCommands.length} commands incrementally...`);
 
+  // Track startPlayerAction commands for widget opening
+  const startPlayerActionCommands: any[] = [];
+
   for (const command of allCommands) {
     const cmd = command as any;
     // Skip if already applied (idempotency check)
@@ -149,12 +152,44 @@ export function applyCommandsIncremental(commands: CommandHistory): number {
       // Track as applied
       appliedCommandIds.add(cmd.commandId);
       appliedCount++;
+
+      // Track startPlayerAction for widget opening
+      if (cmd.type === 'crews/startPlayerAction') {
+        startPlayerActionCommands.push(cmd);
+      }
     } catch (error) {
       console.error(`FitGD | Error applying command ${cmd.type}:`, error);
     }
   }
 
   console.log(`FitGD | Applied ${appliedCount} commands, skipped ${skippedCount} duplicates`);
+
+  // PLAYER WIDGET OPENING: Open widget for non-GM users when startPlayerAction arrives
+  // This is the counterpart to GM opening widget in combat-hooks
+  if (!game.user!.isGM && startPlayerActionCommands.length > 0) {
+    for (const cmd of startPlayerActionCommands) {
+      const characterId = cmd.payload.characterId;
+
+      // Check if current user owns this character's actor
+      const actor = game.actors?.get(characterId);
+      if (actor && actor.isOwner) {
+        // Check if widget already exists
+        const existingWidget = Object.values(ui.windows).find(
+          (app: any) => app.constructor.name === 'PlayerActionWidget' && app.characterId === characterId
+        );
+
+        if (!existingWidget) {
+          console.log(`FitGD | Opening Player Action Widget for owned character ${characterId} (from socket)`);
+          // Dynamically import to avoid circular dependency
+          import('../widgets/player-action-widget').then(({ PlayerActionWidget }) => {
+            const widget = new PlayerActionWidget(characterId);
+            widget.render(true);
+          });
+        }
+      }
+    }
+  }
+
   return appliedCount;
 }
 
