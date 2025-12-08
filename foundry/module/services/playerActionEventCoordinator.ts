@@ -632,6 +632,15 @@ export class PlayerActionEventCoordinator {
         });
       }
 
+      // Widget lifecycle sync: Mark player as committed to roll
+      // After this, player cannot close widget - only GM can abort
+      if (crew) {
+        rollBatch.push({
+          type: 'crews/commitToRoll',
+          payload: { crewId: crew.id },
+        });
+      }
+
       await game.fitgd.bridge.executeBatch(
         rollBatch,
         {
@@ -1284,6 +1293,12 @@ export class PlayerActionEventCoordinator {
         characterId,
         newState: 'TURN_COMPLETE',
       },
+    });
+
+    // Prune playerRoundState history after turn completes
+    // This prevents unbounded history growth while current state is preserved
+    actions.push({
+      type: 'playerRoundState/pruneHistory',
     });
 
     await game.fitgd.bridge.executeBatch(

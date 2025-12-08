@@ -61,7 +61,7 @@ export interface DialogCallbacks {
  * await handler.applyConsequence(transaction, state);
  */
 export class ConsequenceResolutionHandler {
-  constructor(private config: ConsequenceResolutionConfig) {}
+  constructor(private config: ConsequenceResolutionConfig) { }
 
   /**
    * Validate that a consequence transaction is fully configured
@@ -561,6 +561,8 @@ export class ConsequenceResolutionHandler {
     return [
       this.createClearConsequenceTransactionAction(),
       this.createTransitionStateAction('TURN_COMPLETE'),
+      // Prune playerRoundState history after turn completes
+      { type: 'playerRoundState/pruneHistory', payload: {} },
     ];
   }
 

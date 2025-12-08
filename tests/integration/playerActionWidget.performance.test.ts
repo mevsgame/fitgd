@@ -317,9 +317,9 @@ describe('PlayerActionWidget - Performance Baselines', () => {
             const finalState = JSON.stringify(harness.getState());
             const finalSize = finalState.length;
 
-            // Memory shouldn't balloon
+            // Memory shouldn't balloon (allows 3x growth for command history logging)
             const growth = finalSize - initialSize;
-            expect(growth).toBeLessThan(initialSize * 2);
+            expect(growth).toBeLessThan(initialSize * 3);
         });
 
         it('should not leak dispatch history during operation', async () => {

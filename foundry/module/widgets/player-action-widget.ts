@@ -15,6 +15,7 @@ import type { TraitTransaction, ConsequenceTransaction } from '@/types/playerRou
 
 import { selectCanUseRally } from '@/selectors/characterSelectors';
 import { selectStimsAvailable } from '@/selectors/clockSelectors';
+import { selectActivePlayerAction, selectCanPlayerCloseWidget } from '@/selectors/crewSelectors';
 
 import { selectActiveEquipment, selectPassiveEquipment, selectConsumableEquipment, selectFirstLockCost } from '@/selectors/equipmentSelectors';
 import { selectDicePool, selectMomentumCost, selectHarmClocksWithStatus, selectIsDying, selectEffectivePosition, selectEffectiveEffect, selectEquipmentEffects, selectEquipmentModifiedPosition, selectEquipmentModifiedEffect, selectDefensiveSuccessValues } from '@/selectors/playerRoundStateSelectors';
@@ -178,6 +179,9 @@ interface PlayerActionWidgetData {
  * @implements IPlayerActionWidgetContext
  */
 export class PlayerActionWidget extends Application implements IPlayerActionWidgetContext {
+  // Track closing state to prevent multiple dialogs/re-entrant calls
+  private _closing = false;
+
   private characterId: string;
   private character: Character | null = null;
   private crew: Crew | null = null;
@@ -241,6 +245,33 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
       return;
     }
 
+    // Widget Lifecycle Sync: Register this action with the crew on first render
+    // This allows GM to see when a player opens their widget
+    if (!this.storeUnsubscribe && this.crewId) {
+      const state = game.fitgd.store.getState();
+      const existingAction = selectActivePlayerAction(state, this.crewId);
+
+      // Only dispatch if no action in progress or if it's for the same character (idempotent)
+      if (!existingAction || existingAction.characterId === this.characterId) {
+        try {
+          await game.fitgd.bridge.execute(
+            {
+              type: 'crews/startPlayerAction',
+              payload: {
+                crewId: this.crewId,
+                characterId: this.characterId,
+                playerId: game.user?.id || 'unknown',
+              },
+            },
+            { affectedReduxIds: [asReduxId(this.crewId)], silent: true }
+          );
+        } catch (err) {
+          // Another action in progress - show error but continue rendering
+          logger.warn('Could not start player action:', err);
+        }
+      }
+    }
+
     // Subscribe to Redux store changes for real-time updates
     if (!this.storeUnsubscribe) {
       let previousState = game.fitgd.store.getState();
@@ -264,6 +295,18 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
         );
 
         const clocksChanged = currentState.clocks !== previousState.clocks;
+
+        // Widget Lifecycle Sync: Check if activePlayerAction was cleared (GM aborted or turn ended)
+        if (currentCrewId) {
+          const prevAction = selectActivePlayerAction(previousState, currentCrewId);
+          const currAction = selectActivePlayerAction(currentState, currentCrewId);
+          if (prevAction && !currAction) {
+            // Action was cleared - close widget
+            logger.debug('Active player action cleared, closing widget');
+            void this.close();
+            return;
+          }
+        }
 
         // Log subscription changes
         if (playerStateChanged || characterChanged || crewChanged || clocksChanged) {
@@ -294,6 +337,79 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
   }
 
   override async close(options?: FormApplication.CloseOptions): Promise<void> {
+    // Widget Lifecycle Sync: Check if player is allowed to close
+    if (game.fitgd && this.crewId && !game.user?.isGM) {
+      const state = game.fitgd.store.getState();
+      const playerId = game.user?.id || 'unknown';
+      const canClose = selectCanPlayerCloseWidget(state, this.crewId, playerId);
+
+      if (!canClose) {
+        // Player has committed to roll - cannot close
+        ui.notifications?.warn('You cannot close the widget after committing to roll. Wait for the GM to resolve.');
+        return; // Prevent close
+      }
+    }
+
+    // Widget Lifecycle Sync: GM abort requires confirmation if action is committed
+    if (game.fitgd && this.crewId && game.user?.isGM) {
+      const state = game.fitgd.store.getState();
+      const action = selectActivePlayerAction(state, this.crewId);
+
+      if (action && action.committedToRoll) {
+        // Prevent multiple dialogs
+        if (this._closing) return;
+        this._closing = true;
+
+        // GM is aborting a committed action - show confirmation dialog
+        const characterName = state.characters.byId[action.characterId]?.name || 'player';
+        const confirmed = await new Promise<boolean>((resolve) => {
+          new Dialog(
+            {
+              title: 'Abort Player Action?',
+              content: `<p>Are you sure you want to abort <strong>${characterName}'s</strong> action? This will cancel the current roll.</p>`,
+              buttons: {
+                cancel: { icon: '<i class="fas fa-times"></i>', label: 'Cancel', callback: () => resolve(false) },
+                abort: { icon: '<i class="fas fa-ban"></i>', label: 'Abort Action', callback: () => resolve(true) },
+              },
+              default: 'cancel',
+              close: () => resolve(false), // Handle X button on dialog
+            },
+            {
+              classes: ['fitgd', 'dialog'],
+              width: 400,
+            }
+          ).render(true);
+        });
+
+        if (!confirmed) {
+          this._closing = false; // Reset flag if cancelled
+          return; // User cancelled
+        }
+      }
+    }
+
+    // Widget Lifecycle Sync: Clear active player action (only if one exists)
+    // CRITICAL: Don't dispatch if action is already cleared - prevents infinite loop
+    // when close() is called from subscription detecting remote abort
+    if (game.fitgd && this.crewId) {
+      const state = game.fitgd.store.getState();
+      const existingAction = selectActivePlayerAction(state, this.crewId);
+
+      if (existingAction) {
+        try {
+          await game.fitgd.bridge.execute(
+            {
+              type: 'crews/abortPlayerAction',
+              payload: { crewId: this.crewId },
+            },
+            { affectedReduxIds: [asReduxId(this.crewId)], silent: true }
+          );
+        } catch (err) {
+          logger.warn('Could not abort player action:', err);
+        }
+      }
+    }
+
     // Unsubscribe from store updates
     if (this.storeUnsubscribe) {
       this.storeUnsubscribe();

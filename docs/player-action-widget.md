@@ -577,6 +577,57 @@ The defensive success option allows players to balance offense and defense, trad
 - Obstacles (mechanical blocks to overcome)
 - Faction clocks (relationship tracking)
 
+## Lifecycle & Synchronization
+
+### Overview
+To ensure a shared experience, the widget's open/closed state is synchronized between the Player and GM. When a player opens their widget, it automatically opens on the GM's screen. Closing logic is permission-gated to prevent accidental data loss during active rolls.
+
+### Redux State
+The synchronization is driven by the `activePlayerAction` field on the `Crew` object (persistent state), rather than ephemeral UI state.
+
+**Structure ([crew.ts](file:///workspaces/fitgd/src/types/crew.ts)):**
+```typescript
+interface ActivePlayerAction {
+  characterId: string;        // Who is acting
+  playerId: string;           // Owner ID
+  crewId: string;             // Context
+  committedToRoll: boolean;   // Lock flag
+  startedAt: number;          // Timestamp
+}
+```
+
+### Redux Actions
+| Action | Purpose |
+|--------|---------|
+| `startPlayerAction` | Player opens widget. Sets `activePlayerAction`. Triggers auto-open for GM. |
+| `commitToRoll` | Player clicks "Roll". Sets `committedToRoll: true`. Prevents player closing. |
+| `abortPlayerAction` | GM or Player closes widget. Clears action. Triggers auto-close. |
+
+### Synchronization Logic (Anti-Loop Mechanisms)
+
+To prevent infinite loops (where receiving a state update triggers a re-broadcast), the synchronization system implements **three layers of protection**:
+
+1.  **Deduplication (`activePlayerActionsChanged`)**:
+    *   The broadcaster (`fitgd.ts`) tracks the JSON string of the *last successfully broadcast* `activePlayerActions`.
+    *   It only broadcasts if the current state differs from the last broadcast state.
+
+2.  **Reflexive Suppression (`isReceivingFromSocket`)**:
+    *   The socket handler sets a flag `isReceivingFromSocket = true` while applying received updates.
+    *   Usage of `saveImmediate()` checks this flag and **blocks broadcast** if strictly receiving.
+
+3.  **Tracking Synchronization (`syncActivePlayerActionsTracking`)**:
+    *   **Crucial Fix**: When a client receives an update (e.g., `activePlayerAction: null`), it *must* update its local "last broadcast" tracking to match the received data.
+    *   Without this, the receiver's state updates, but their "last broadcast" remains stale. The next save check sees a "change" (Current vs Stale Last) and broadcasts back, causing a "Ping Pong" infinite loop.
+    *   The socket handler calls `game.fitgd.syncActivePlayerActionsTracking(receivedData)` to align these states immediately.
+
+### Permission Rules
+
+| State | Player Can Close? | GM Can Close? | Behavior |
+|-------|-------------------|---------------|----------|
+| **Planning** | ✅ Yes | ✅ Yes (Remote) | Normal close. Dispatches `abortPlayerAction`. |
+| **Rolling (Committed)** | ❌ **NO** | ✅ Yes (With Confirm) | Player close blocked. GM shows "Abort Action?" dialog. |
+| **Turn Complete** | ✅ Yes | ✅ Yes | Normal close. |
+
 ## Side Panel (Contextual Configuration)
 
 ### Overview
