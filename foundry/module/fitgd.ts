@@ -51,6 +51,7 @@ interface CommandHistory {
   characters: unknown[];
   crews: unknown[];
   clocks: unknown[];
+  playerRoundState: unknown[];  // NEW: Player round state commands
 }
 
 /**
@@ -387,17 +388,18 @@ Hooks.once('ready', async function () {
 
   // Check for state snapshot first (used after history pruning)
   const stateSnapshot = getSetting<StateSnapshot | undefined>('stateSnapshot');
-  const defaultHistory: CommandHistory = { characters: [], crews: [], clocks: [] };
+  const defaultHistory: CommandHistory = { characters: [], crews: [], clocks: [], playerRoundState: [] };
   const history = getSetting<CommandHistory | undefined>('commandHistory') || defaultHistory;
 
   // Ensure history has the correct structure
   const validHistory: CommandHistory = {
     characters: history.characters || [],
     crews: history.crews || [],
-    clocks: history.clocks || []
+    clocks: history.clocks || [],
+    playerRoundState: history.playerRoundState || []
   };
 
-  const totalCommands = validHistory.characters.length + validHistory.crews.length + validHistory.clocks.length;
+  const totalCommands = validHistory.characters.length + validHistory.crews.length + validHistory.clocks.length + validHistory.playerRoundState.length;
 
   // Warn if command history is bloated (possible corruption or spam issue)
   if (totalCommands > 1000) {
@@ -488,7 +490,7 @@ Hooks.once('ready', async function () {
 
   // Widget Lifecycle Sync: Auto-open widget on page ready if there's an active action for a character this user owns
   // This ensures players reconnecting mid-action see their widget
-  setTimeout(() => {
+  setTimeout(async () => {
     try {
       const state = game.fitgd!.store.getState();
       for (const crewId of state.crews.allIds) {
@@ -504,7 +506,19 @@ Hooks.once('ready', async function () {
             );
             if (!existingWidget) {
               logger.info(`Widget Lifecycle Sync: Reopening widget for ${action.characterId} (active action found)`);
-              const { PlayerActionWidget } = require('./widgets/player-action-widget');
+
+              // Ensure playerRoundState is initialized for this character before opening widget
+              const currentState = game.fitgd!.store.getState();
+              if (!currentState.playerRoundState.byCharacterId[action.characterId]) {
+                logger.info(`Widget Lifecycle Sync: Initializing playerRoundState for ${action.characterId}`);
+                game.fitgd!.store.dispatch({
+                  type: 'playerRoundState/initializePlayerState',
+                  payload: { characterId: action.characterId }
+                });
+              }
+
+              // Use dynamic import for ESM compatibility
+              const { PlayerActionWidget } = await import('./widgets/player-action-widget');
               const widget = new PlayerActionWidget(action.characterId);
               widget.render(true);
             }

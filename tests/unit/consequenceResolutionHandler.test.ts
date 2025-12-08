@@ -401,10 +401,11 @@ describe('ConsequenceResolutionHandler', () => {
 
       const batch = handler.createConsequenceApplicationBatch(transaction);
 
-      expect(batch).toHaveLength(2);
+      expect(batch).toHaveLength(3);
       expect(batch[0].type).toBe('playerRoundState/clearConsequenceTransaction');
       expect(batch[1].type).toBe('playerRoundState/transitionState');
       expect(batch[1].payload.newState).toBe('TURN_COMPLETE');
+      expect(batch[2].type).toBe('playerRoundState/pruneHistory');
     });
   });
 

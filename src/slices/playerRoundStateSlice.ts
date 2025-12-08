@@ -1,8 +1,8 @@
 /**
  * Player Round State Slice
  *
- * Manages the ephemeral state of players during their turns.
- * This is UI state, not persisted to Foundry - it tracks the current round flow.
+ * Manages the persistent state of players during their turns.
+ * This state is event-sourced and synced across clients via command history.
  */
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
@@ -20,6 +20,8 @@ import {
   isValidTransition,
 } from '../types/playerRoundState';
 import type { Approaches } from '../types/character';
+import type { Command } from '../types/command';
+import { generateId } from '../utils/uuid';
 
 /**
  * Player Round State Slice State
@@ -30,11 +32,15 @@ export interface PlayerRoundStateSliceState {
 
   /** Currently active player (whose turn it is) */
   activeCharacterId: string | null;
+
+  /** Command history for event sourcing */
+  history: Command[];
 }
 
 const initialState: PlayerRoundStateSliceState = {
   byCharacterId: {},
   activeCharacterId: null,
+  history: [],
 };
 
 /**
@@ -185,6 +191,17 @@ const playerRoundStateSlice = createSlice({
         stateEnteredAt: Date.now(),
         previousState,
       };
+
+      // Log command to history for persistence
+      const command: Command = {
+        type: 'playerRoundState/transitionState',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: 'system',
+      };
+      state.history.push(command);
     },
 
     /**
@@ -232,6 +249,16 @@ const playerRoundStateSlice = createSlice({
           state: 'DECISION_PHASE',
         };
       }
+
+      // Log command to history
+      state.history.push({
+        type: 'playerRoundState/setActivePlayer',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: (action.payload as any).userId,
+      });
     },
 
     /**
@@ -262,6 +289,16 @@ const playerRoundStateSlice = createSlice({
         position,
         effect,
       };
+
+      // Log command to history (Player action)
+      state.history.push({
+        type: 'playerRoundState/setActionPlan',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: (action.payload as any).userId,
+      });
     },
 
     /**
@@ -279,6 +316,16 @@ const playerRoundStateSlice = createSlice({
         ...currentState,
         position,
       };
+
+      // Log command to history (GM action)
+      state.history.push({
+        type: 'playerRoundState/setPosition',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: (action.payload as any).userId,
+      });
     },
 
     /**
@@ -296,6 +343,16 @@ const playerRoundStateSlice = createSlice({
         ...currentState,
         effect,
       };
+
+      // Log command to history (GM action)
+      state.history.push({
+        type: 'playerRoundState/setEffect',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: (action.payload as any).userId,
+      });
     },
 
     /**
@@ -313,6 +370,16 @@ const playerRoundStateSlice = createSlice({
         ...currentState,
         gmApproved: approved,
       };
+
+      // Log command to history (GM action)
+      state.history.push({
+        type: 'playerRoundState/setGmApproved',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: (action.payload as any).userId,
+      });
     },
 
     /**
@@ -341,6 +408,16 @@ const playerRoundStateSlice = createSlice({
         pushType,
         flashbackApplied,
       };
+
+      // Log command to history (Player action)
+      state.history.push({
+        type: 'playerRoundState/setImprovements',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: (action.payload as any).userId,
+      });
     },
 
     /**
@@ -360,6 +437,16 @@ const playerRoundStateSlice = createSlice({
         rollResult,
         outcome,
       };
+
+      // Log command to history (Player action)
+      state.history.push({
+        type: 'playerRoundState/setRollResult',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: (action.payload as any).userId,
+      });
     },
 
     /**
@@ -396,6 +483,16 @@ const playerRoundStateSlice = createSlice({
         ...currentState,
         traitTransaction: transaction,
       };
+
+      // Log command to history
+      state.history.push({
+        type: 'playerRoundState/setTraitTransaction',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: 'system',
+      });
     },
 
     /**
@@ -413,6 +510,16 @@ const playerRoundStateSlice = createSlice({
         ...currentState,
         traitTransaction: undefined,
       };
+
+      // Log command to history
+      state.history.push({
+        type: 'playerRoundState/clearTraitTransaction',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: 'system',
+      });
     },
 
     /**
@@ -430,6 +537,16 @@ const playerRoundStateSlice = createSlice({
         ...currentState,
         consequenceTransaction: transaction,
       };
+
+      // Log command to history (GM action)
+      state.history.push({
+        type: 'playerRoundState/setConsequenceTransaction',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: 'system',
+      });
     },
 
     /**
@@ -462,6 +579,16 @@ const playerRoundStateSlice = createSlice({
           },
         };
       }
+
+      // Log command to history (GM action)
+      state.history.push({
+        type: 'playerRoundState/updateConsequenceTransaction',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: 'system',
+      });
     },
 
     /**
@@ -479,6 +606,16 @@ const playerRoundStateSlice = createSlice({
         ...currentState,
         consequenceTransaction: undefined,
       };
+
+      // Log command to history
+      state.history.push({
+        type: 'playerRoundState/clearConsequenceTransaction',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: 'system',
+      });
     },
 
     /**
@@ -530,6 +667,16 @@ const playerRoundStateSlice = createSlice({
         ...currentState,
         approvedPassiveId: equipmentId,
       };
+
+      // Log command to history (GM action)
+      state.history.push({
+        type: 'playerRoundState/setApprovedPassive',
+        payload: action.payload,
+        timestamp: Date.now(),
+        version: 1,
+        commandId: generateId(),
+        userId: 'system',
+      });
     },
 
     /**
@@ -560,6 +707,34 @@ const playerRoundStateSlice = createSlice({
     clearAllStates: (state) => {
       state.byCharacterId = {};
       state.activeCharacterId = null;
+      state.history = [];
+    },
+
+    /**
+     * Hydrate state from serialized snapshot
+     *
+     * Used when loading saved state from Foundry world settings.
+     * Replaces entire state with the provided snapshot.
+     */
+    hydratePlayerRoundState: (state, action: PayloadAction<{
+      byCharacterId: Record<string, PlayerRoundState>;
+      activeCharacterId: string | null;
+    }>) => {
+      const { byCharacterId, activeCharacterId } = action.payload;
+      state.byCharacterId = byCharacterId;
+      state.activeCharacterId = activeCharacterId;
+      state.history = []; // No history in snapshots
+    },
+
+    /**
+     * Prune command history
+     *
+     * Clears all command history, keeping only the current state snapshot.
+     * This reduces memory/storage usage while maintaining current game state.
+     * Should be called on TURN_COMPLETE to flatten history.
+     */
+    pruneHistory: (state) => {
+      state.history = [];
     },
   },
 });
@@ -586,6 +761,8 @@ export const {
   resetPlayerState,
   undoState,
   clearAllStates,
+  hydratePlayerRoundState,
+  pruneHistory: prunePlayerRoundStateHistory,
 } = playerRoundStateSlice.actions;
 
 export { playerRoundStateSlice };

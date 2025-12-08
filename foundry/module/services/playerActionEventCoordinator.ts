@@ -1295,6 +1295,12 @@ export class PlayerActionEventCoordinator {
       },
     });
 
+    // Prune playerRoundState history after turn completes
+    // This prevents unbounded history growth while current state is preserved
+    actions.push({
+      type: 'playerRoundState/pruneHistory',
+    });
+
     await game.fitgd.bridge.executeBatch(
       actions,
       {

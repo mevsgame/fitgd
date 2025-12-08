@@ -75,6 +75,7 @@ export interface CommandHistory {
   characters: any[];
   crews: any[];
   clocks: any[];
+  playerRoundState: any[];  // NEW: Player round state history
 }
 
 /**
@@ -190,6 +191,7 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
         characters: state.characters.history,
         crews: state.crews.history,
         clocks: state.clocks.history,
+        playerRoundState: state.playerRoundState.history || [],
       };
     },
 
@@ -204,6 +206,7 @@ export function createFoundryAdapter(store: Store): FoundryAdapter {
         ...history.characters,
         ...history.crews,
         ...history.clocks,
+        ...(history.playerRoundState || []),
       ].sort((a, b) => a.timestamp - b.timestamp);
 
       logger.info(`Total commands to replay: ${allCommands.length}`);

@@ -15,6 +15,7 @@ interface CommandHistory {
   characters: any[];
   crews: any[];
   clocks: any[];
+  playerRoundState: any[];  // NEW: Player round state commands
 }
 
 /**
@@ -24,6 +25,7 @@ interface CommandCount {
   characters: number;
   crews: number;
   clocks: number;
+  playerRoundState: number;  // NEW: Player round state command count
 }
 
 /* -------------------------------------------- */
@@ -39,7 +41,8 @@ const appliedCommandIds = new Set<string>();
 let lastBroadcastCount: CommandCount = {
   characters: 0,
   crews: 0,
-  clocks: 0
+  clocks: 0,
+  playerRoundState: 0  // NEW: Player round state command count
 };
 
 /**
@@ -48,31 +51,41 @@ let lastBroadcastCount: CommandCount = {
 export function getNewCommandsSinceLastBroadcast(): CommandHistory {
   const history = game.fitgd!.foundry.exportHistory();
 
-  console.log(`FitGD | Current history counts: chars=${history.characters.length}, crews=${history.crews.length}, clocks=${history.clocks.length}`);
-  console.log(`FitGD | Last broadcast counts: chars=${lastBroadcastCount.characters}, crews=${lastBroadcastCount.crews}, clocks=${lastBroadcastCount.clocks}`);
+  // Get playerRoundState commands from Redux state
+  const playerRoundStateHistory = game.fitgd!.store.getState().playerRoundState.history || [];
+
+  console.log(`FitGD | Current history counts: chars=${history.characters.length}, crews=${history.crews.length}, clocks=${history.clocks.length}, playerRoundState=${playerRoundStateHistory.length}`);
+  console.log(`FitGD | Last broadcast counts: chars=${lastBroadcastCount.characters}, crews=${lastBroadcastCount.crews}, clocks=${lastBroadcastCount.clocks}, playerRoundState=${lastBroadcastCount.playerRoundState}`);
 
   const newCommands: CommandHistory = {
     characters: history.characters.slice(lastBroadcastCount.characters),
     crews: history.crews.slice(lastBroadcastCount.crews),
-    clocks: history.clocks.slice(lastBroadcastCount.clocks)
+    clocks: history.clocks.slice(lastBroadcastCount.clocks),
+    playerRoundState: playerRoundStateHistory.slice(lastBroadcastCount.playerRoundState)
   };
 
   // Update the tracking counts
   lastBroadcastCount = {
     characters: history.characters.length,
     crews: history.crews.length,
-    clocks: history.clocks.length
+    clocks: history.clocks.length,
+    playerRoundState: playerRoundStateHistory.length
   };
 
-  const totalNew = newCommands.characters.length + newCommands.crews.length + newCommands.clocks.length;
+  const totalNew = newCommands.characters.length + newCommands.crews.length + newCommands.clocks.length + newCommands.playerRoundState.length;
   console.log(`FitGD | Found ${totalNew} new commands to broadcast:`, {
     characters: newCommands.characters.length,
     crews: newCommands.crews.length,
-    clocks: newCommands.clocks.length
+    clocks: newCommands.clocks.length,
+    playerRoundState: newCommands.playerRoundState.length
   });
 
   if (totalNew > 0) {
-    console.log(`FitGD | New command types:`, newCommands.characters.map((c: any) => c.type), newCommands.crews.map((c: any) => c.type), newCommands.clocks.map((c: any) => c.type));
+    console.log(`FitGD | New command types:`,
+      newCommands.characters.map((c: any) => c.type),
+      newCommands.crews.map((c: any) => c.type),
+      newCommands.clocks.map((c: any) => c.type),
+      newCommands.playerRoundState.map((c: any) => c.type));
 
     // DIAGNOSTIC: Warn if suspiciously large number of commands
     if (totalNew > 100) {
@@ -80,7 +93,8 @@ export function getNewCommandsSinceLastBroadcast(): CommandHistory {
       console.error(`FitGD | Command breakdown:`, {
         characters: newCommands.characters.length,
         crews: newCommands.crews.length,
-        clocks: newCommands.clocks.length
+        clocks: newCommands.clocks.length,
+        playerRoundState: newCommands.playerRoundState.length
       });
       console.error(`FitGD | Stack trace:`, new Error().stack);
 
@@ -110,7 +124,8 @@ export function applyCommandsIncremental(commands: CommandHistory): number {
   const allCommands = [
     ...commands.characters,
     ...commands.crews,
-    ...commands.clocks
+    ...commands.clocks,
+    ...(commands.playerRoundState || [])
   ].sort((a: any, b: any) => a.timestamp - b.timestamp);
 
   console.log(`FitGD | Applying ${allCommands.length} commands incrementally...`);
@@ -174,10 +189,12 @@ export function checkCircuitBreaker(commandCount: number): boolean {
  */
 export function updateBroadcastTracking(): void {
   const history = game.fitgd!.foundry.exportHistory();
+  const playerRoundStateHistory = game.fitgd!.store.getState().playerRoundState.history || [];
   lastBroadcastCount = {
     characters: history.characters.length,
     crews: history.crews.length,
-    clocks: history.clocks.length
+    clocks: history.clocks.length,
+    playerRoundState: playerRoundStateHistory.length
   };
   console.log(`FitGD | Updated broadcast tracking after receiving commands`);
 }
@@ -187,6 +204,7 @@ export function updateBroadcastTracking(): void {
  */
 export function trackInitialCommandsAsApplied(): void {
   const history = game.fitgd!.foundry.exportHistory();
+  const playerRoundStateHistory = game.fitgd!.store.getState().playerRoundState.history || [];
 
   // Track all initial commands as applied
   for (const command of history.characters) {
@@ -198,15 +216,19 @@ export function trackInitialCommandsAsApplied(): void {
   for (const command of history.clocks) {
     appliedCommandIds.add((command as any).commandId);
   }
+  for (const command of playerRoundStateHistory) {
+    appliedCommandIds.add((command as any).commandId);
+  }
 
   // Set initial broadcast counts
   lastBroadcastCount = {
     characters: history.characters.length,
     crews: history.crews.length,
-    clocks: history.clocks.length
+    clocks: history.clocks.length,
+    playerRoundState: playerRoundStateHistory.length
   };
 
-  const total = history.characters.length + history.crews.length + history.clocks.length;
+  const total = history.characters.length + history.crews.length + history.clocks.length + playerRoundStateHistory.length;
   console.log(`FitGD | Tracked ${total} initial commands as applied`);
 }
 
@@ -303,17 +325,18 @@ export async function reloadStateFromSettings(): Promise<void> {
     console.log('FitGD | Reloading state from settings...');
 
     // Load command history from settings
-    const defaultHistory: CommandHistory = { characters: [], crews: [], clocks: [] };
+    const defaultHistory: CommandHistory = { characters: [], crews: [], clocks: [], playerRoundState: [] };
     const history = (game.settings as any).get('forged-in-the-grimdark', 'commandHistory') || defaultHistory;
 
     // Ensure history has the correct structure
     const validHistory: CommandHistory = {
       characters: history.characters || [],
       crews: history.crews || [],
-      clocks: history.clocks || []
+      clocks: history.clocks || [],
+      playerRoundState: history.playerRoundState || []
     };
 
-    const totalCommands = validHistory.characters.length + validHistory.crews.length + validHistory.clocks.length;
+    const totalCommands = validHistory.characters.length + validHistory.crews.length + validHistory.clocks.length + validHistory.playerRoundState.length;
 
     if (totalCommands > 0) {
       console.log(`FitGD | Replaying ${totalCommands} commands...`);

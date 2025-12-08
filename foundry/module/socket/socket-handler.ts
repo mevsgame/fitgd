@@ -30,6 +30,7 @@ interface CommandHistory {
   characters: unknown[];
   crews: unknown[];
   clocks: unknown[];
+  playerRoundState: unknown[];  // NEW: Player round state commands
 }
 
 /**
