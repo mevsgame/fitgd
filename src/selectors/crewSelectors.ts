@@ -105,3 +105,47 @@ export const selectIsCharacterInCrew = createSelector(
   [selectCrewCharacters, (_state: RootState, _crewId: string, characterId: string) => characterId],
   (characters, characterId): boolean => characters.includes(characterId)
 );
+
+/**
+ * Get active player action for a crew (widget lifecycle sync)
+ */
+export const selectActivePlayerAction = createSelector(
+  [selectCrewById],
+  (crew) => crew?.activePlayerAction ?? null
+);
+
+/**
+ * Check if a player action is in progress for a crew
+ */
+export const selectIsPlayerActionInProgress = createSelector(
+  [selectActivePlayerAction],
+  (action): boolean => action !== null
+);
+
+/**
+ * Check if a player can close the widget (pre-commit only)
+ *
+ * Returns true if:
+ * - No action in progress, OR
+ * - Action is in progress AND player owns it AND not committed to roll
+ */
+export const selectCanPlayerCloseWidget = createSelector(
+  [
+    selectActivePlayerAction,
+    (_state: RootState, _crewId: string, playerId: string) => playerId,
+  ],
+  (action, playerId): boolean => {
+    if (!action) return true; // No action, can close
+    return action.playerId === playerId && !action.committedToRoll;
+  }
+);
+
+/**
+ * Check if GM can close the widget (always true, with confirmation)
+ *
+ * This selector exists for API consistency - GM can always close.
+ */
+export const selectCanGMCloseWidget = createSelector(
+  [selectActivePlayerAction],
+  (_action): boolean => true // GM can always close
+);

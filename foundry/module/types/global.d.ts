@@ -50,6 +50,11 @@ export interface FitGDGame {
    */
   saveImmediate(): Promise<void>;
 
+  /**
+   * Sync activePlayerActions tracking when receiving from socket (prevents ping-pong)
+   */
+  syncActivePlayerActionsTracking(receivedActions: Record<string, unknown>): void;
+
   /** Debug function to test socket communication */
   testSocket?(): Promise<void>;
 
@@ -70,4 +75,4 @@ declare global {
 }
 
 // This file is a module (required for global augmentation)
-export {};
+export { };

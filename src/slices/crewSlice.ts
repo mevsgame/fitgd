@@ -72,6 +72,23 @@ interface ResetMomentumPayload {
   userId?: string;
 }
 
+interface StartPlayerActionPayload {
+  crewId: string;
+  characterId: string;
+  playerId: string;
+  userId?: string;
+}
+
+interface CommitToRollPayload {
+  crewId: string;
+  userId?: string;
+}
+
+interface AbortPlayerActionPayload {
+  crewId: string;
+  userId?: string;
+}
+
 /**
  * Crew Slice
  */
@@ -373,6 +390,81 @@ const crewSlice = createSlice({
       state.allIds = Object.keys(crews);
       state.history = []; // No history in snapshots
     },
+
+    /**
+     * Start a player action (widget lifecycle sync)
+     *
+     * Called when a player opens their action widget.
+     * Only one action can be in progress per crew at a time.
+     */
+    startPlayerAction: (state, action: PayloadAction<StartPlayerActionPayload>) => {
+      const { crewId, characterId, playerId } = action.payload;
+      const crew = state.byId[crewId];
+
+      if (!crew) {
+        throw new Error(`Crew ${crewId} not found`);
+      }
+
+      // Check if action already in progress for a DIFFERENT character
+      if (
+        crew.activePlayerAction &&
+        crew.activePlayerAction.characterId !== characterId
+      ) {
+        throw new Error(
+          `Action already in progress for character ${crew.activePlayerAction.characterId}`
+        );
+      }
+
+      // Set active player action (idempotent for same character)
+      crew.activePlayerAction = {
+        characterId,
+        playerId,
+        crewId,
+        committedToRoll: false,
+        startedAt: Date.now(),
+      };
+      crew.updatedAt = Date.now();
+    },
+
+    /**
+     * Commit to roll (widget lifecycle sync)
+     *
+     * Called when player clicks Roll. After this, only GM can abort.
+     */
+    commitToRoll: (state, action: PayloadAction<CommitToRollPayload>) => {
+      const { crewId } = action.payload;
+      const crew = state.byId[crewId];
+
+      if (!crew) {
+        throw new Error(`Crew ${crewId} not found`);
+      }
+
+      if (!crew.activePlayerAction) {
+        throw new Error('No active player action to commit');
+      }
+
+      crew.activePlayerAction.committedToRoll = true;
+      crew.updatedAt = Date.now();
+    },
+
+    /**
+     * Abort player action (widget lifecycle sync)
+     *
+     * Called when widget closes. Clears the active action.
+     * Can be called by player (pre-commit) or GM (anytime).
+     */
+    abortPlayerAction: (state, action: PayloadAction<AbortPlayerActionPayload>) => {
+      const { crewId } = action.payload;
+      const crew = state.byId[crewId];
+
+      if (!crew) {
+        throw new Error(`Crew ${crewId} not found`);
+      }
+
+      // Clear active action (no-op if already null)
+      crew.activePlayerAction = null;
+      crew.updatedAt = Date.now();
+    },
   },
 });
 
@@ -388,6 +480,9 @@ export const {
   pruneOrphanedHistory: pruneOrphanedCrewHistory,
   cleanupOrphanedCrews,
   hydrateCrews,
+  startPlayerAction,
+  commitToRoll,
+  abortPlayerAction,
 } = crewSlice.actions;
 
 export { crewSlice };

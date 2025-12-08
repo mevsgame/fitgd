@@ -13,6 +13,12 @@ import { refreshSheetsByReduxId } from '../helpers/sheet-helpers';
 import { PlayerActionWidget } from '../widgets/player-action-widget';
 import { logger } from '@/utils/logger';
 
+// Flag to prevent re-broadcasting when receiving from socket
+let isReceivingFromSocket = false;
+export function getIsReceivingFromSocket(): boolean {
+  return isReceivingFromSocket;
+}
+
 /* -------------------------------------------- */
 /*  Socket Communication (socketlib)            */
 /* -------------------------------------------- */
@@ -69,6 +75,7 @@ interface SocketMessageData {
   commandCount?: number;
   commands?: CommandHistory;
   playerRoundState?: PlayerRoundStateCollection;
+  activePlayerActions?: Record<string, any>; // Widget lifecycle sync
   timestamp?: number;
 }
 
@@ -329,6 +336,67 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
           payload: { characterId: data.playerRoundState.activeCharacterId }
         });
       }
+    }
+
+
+    // Widget Lifecycle Sync: Apply activePlayerActions from remote client
+    if (data.activePlayerActions && Object.keys(data.activePlayerActions).length > 0) {
+      logger.debug('Applying received activePlayerActions:', data.activePlayerActions);
+
+      // Set flag to prevent re-broadcasting received state
+      isReceivingFromSocket = true;
+
+      try {
+        for (const [crewId, receivedAction] of Object.entries(data.activePlayerActions)) {
+          const currentCrew = game.fitgd!.store.getState().crews.byId[crewId];
+          if (!currentCrew) continue;
+
+          const currentAction = currentCrew.activePlayerAction;
+
+          // Compare and update if different
+          if (JSON.stringify(currentAction) !== JSON.stringify(receivedAction)) {
+            if (receivedAction === null) {
+              // Action was cleared (aborted or completed)
+              logger.debug(`Crew ${crewId}: activePlayerAction cleared`);
+              game.fitgd!.store.dispatch({
+                type: 'crews/abortPlayerAction',
+                payload: { crewId }
+              });
+            } else if (!currentAction) {
+              // New action started
+              logger.debug(`Crew ${crewId}: new activePlayerAction started`);
+              game.fitgd!.store.dispatch({
+                type: 'crews/startPlayerAction',
+                payload: {
+                  crewId,
+                  characterId: receivedAction.characterId,
+                  playerId: receivedAction.playerId
+                }
+              });
+              // If already committed, update that too
+              if (receivedAction.committedToRoll) {
+                game.fitgd!.store.dispatch({
+                  type: 'crews/commitToRoll',
+                  payload: { crewId }
+                });
+              }
+            } else if (currentAction && receivedAction.committedToRoll && !currentAction.committedToRoll) {
+              logger.debug(`Crew ${crewId}: activePlayerAction committed to roll`);
+              game.fitgd!.store.dispatch({
+                type: 'crews/commitToRoll',
+                payload: { crewId }
+              });
+            }
+          }
+        }
+      } finally {
+        // Always clear the flag
+        isReceivingFromSocket = false;
+      }
+
+      // CRITICAL: Sync the tracking with what we received to prevent ping-pong
+      // This ensures our "last broadcast" matches what the remote sent us
+      game.fitgd!.syncActivePlayerActionsTracking(data.activePlayerActions);
     }
 
     if (appliedCount > 0 || data.playerRoundState) {

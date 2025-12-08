@@ -632,6 +632,15 @@ export class PlayerActionEventCoordinator {
         });
       }
 
+      // Widget lifecycle sync: Mark player as committed to roll
+      // After this, player cannot close widget - only GM can abort
+      if (crew) {
+        rollBatch.push({
+          type: 'crews/commitToRoll',
+          payload: { crewId: crew.id },
+        });
+      }
+
       await game.fitgd.bridge.executeBatch(
         rollBatch,
         {

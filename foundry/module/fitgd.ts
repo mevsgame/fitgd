@@ -33,7 +33,7 @@ import { registerActorHooks } from './hooks/actor-hooks';
 import { registerHotbarHooks } from './hooks/hotbar-hooks';
 
 // Socket and autosave modules
-import { receiveCommandsFromSocket, handleTakeAction } from './socket/socket-handler';
+import { receiveCommandsFromSocket, handleTakeAction, getIsReceivingFromSocket } from './socket/socket-handler';
 import { saveCommandHistory, trackInitialCommandsAsApplied, getNewCommandsSinceLastBroadcast, checkCircuitBreaker } from './autosave/autosave-manager';
 
 // Developer commands
@@ -72,6 +72,7 @@ interface SocketCommandData {
   commandCount: number;
   commands: CommandHistory;
   playerRoundState: RootState['playerRoundState'];
+  activePlayerActions: Record<string, RootState['crews']['byId'][string]['activePlayerAction']>;
   timestamp: number;
 }
 
@@ -156,6 +157,14 @@ Hooks.once('init', async function () {
     return;
   }
 
+  // Track last broadcast activePlayerActions to prevent re-broadcasting unchanged state
+  let lastBroadcastActivePlayerActions = '';
+
+  // Expose function to sync tracking when receiving from socket (prevents ping-pong)
+  game.fitgd!.syncActivePlayerActionsTracking = function (receivedActions: Record<string, unknown>): void {
+    lastBroadcastActivePlayerActions = JSON.stringify(receivedActions);
+  };
+
   // Expose save function for dialogs and sheets to use
   game.fitgd!.saveImmediate = async function (): Promise<void> {
     try {
@@ -173,8 +182,25 @@ Hooks.once('init', async function () {
       const state = game.fitgd!.store.getState();
       const playerRoundState = state.playerRoundState;
 
+      // Get activePlayerActions from all crews for widget lifecycle sync
+      const activePlayerActions: Record<string, typeof state.crews.byId[string]['activePlayerAction']> = {};
+      for (const crewId of state.crews.allIds) {
+        const crew = state.crews.byId[crewId];
+        if (crew?.activePlayerAction !== undefined) {
+          activePlayerActions[crewId] = crew.activePlayerAction;
+        }
+      }
+
+      // Check if activePlayerActions actually changed to prevent infinite broadcast loop
+      const currentActivePlayerActionsJson = JSON.stringify(activePlayerActions);
+      const activePlayerActionsChanged = currentActivePlayerActionsJson !== lastBroadcastActivePlayerActions;
+
+      // Skip broadcasting activePlayerActions if we're currently receiving from socket (prevents loop)
+      const shouldBroadcastActivePlayerActions = activePlayerActionsChanged && !getIsReceivingFromSocket();
+
       // Broadcast commands FIRST (before persistence) - all users can do this
-      if (newCommandCount > 0 || Object.keys(playerRoundState.byCharacterId).length > 0) {
+      // Only broadcast activePlayerActions if they actually changed (to prevent infinite loop)
+      if (newCommandCount > 0 || Object.keys(playerRoundState.byCharacterId).length > 0 || shouldBroadcastActivePlayerActions) {
         const socketData: SocketCommandData = {
           type: 'commandsAdded',
           userId: game.user!.id,
@@ -182,8 +208,16 @@ Hooks.once('init', async function () {
           commandCount: newCommandCount,
           commands: newCommands,
           playerRoundState: playerRoundState, // Include ephemeral UI state
+          activePlayerActions: shouldBroadcastActivePlayerActions ? activePlayerActions : {}, // Only if changed and not receiving
           timestamp: Date.now()
         };
+
+        // DEBUG: Log activePlayerActions being broadcast
+        if (shouldBroadcastActivePlayerActions) {
+          console.log('FitGD | Broadcasting activePlayerActions (changed):', activePlayerActions);
+          // Update tracking to prevent re-broadcast
+          lastBroadcastActivePlayerActions = currentActivePlayerActionsJson;
+        }
 
         logger.info(`Broadcasting ${newCommandCount} commands + playerRoundState via socketlib`);
         logger.debug(`PlayerRoundState being broadcast:`, JSON.stringify(playerRoundState, null, 2));
@@ -451,6 +485,36 @@ Hooks.once('ready', async function () {
       throw error;
     }
   };
+
+  // Widget Lifecycle Sync: Auto-open widget on page ready if there's an active action for a character this user owns
+  // This ensures players reconnecting mid-action see their widget
+  setTimeout(() => {
+    try {
+      const state = game.fitgd!.store.getState();
+      for (const crewId of state.crews.allIds) {
+        const crew = state.crews.byId[crewId];
+        const action = crew?.activePlayerAction;
+        if (action) {
+          // Check if this user owns the character or is GM
+          const actor = game.actors!.get(action.characterId);
+          if (actor && (actor.isOwner || game.user!.isGM)) {
+            // Check if widget is already open
+            const existingWidget = Object.values(ui.windows).find(
+              (app) => (app as any).characterId === action.characterId
+            );
+            if (!existingWidget) {
+              logger.info(`Widget Lifecycle Sync: Reopening widget for ${action.characterId} (active action found)`);
+              const { PlayerActionWidget } = require('./widgets/player-action-widget');
+              const widget = new PlayerActionWidget(action.characterId);
+              widget.render(true);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      logger.warn('Error checking for active player actions on ready:', err);
+    }
+  }, 500); // Short delay to ensure state is hydrated
 
   logger.info('Ready (socketlib handlers active)');
 });

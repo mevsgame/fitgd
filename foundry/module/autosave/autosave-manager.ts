@@ -278,7 +278,7 @@ export function refreshAffectedSheets(commands: CommandHistory, clockEntityIds: 
         try {
           const actor = (app as any).actor;
           const permission = actor?.testUserPermission(game.user, 'OBSERVER') ? 'observer+' :
-                           actor?.testUserPermission(game.user, 'OWNER') ? 'owner' : 'limited';
+            actor?.testUserPermission(game.user, 'OWNER') ? 'owner' : 'limited';
           console.log(`FitGD | Re-rendering ${app.constructor.name} for ${entityId} (user: ${game.user!.name}, permission: ${permission})`);
 
           // Force a full re-render (true = force) to ensure observers see updates
@@ -349,56 +349,12 @@ export async function reloadStateFromSettings(): Promise<void> {
 }
 
 export async function saveCommandHistoryImmediate(): Promise<void> {
-  // Save immediately without debounce
-  console.log(`FitGD | saveCommandHistoryImmediate() called`);
-  try {
-    // Get new commands since last broadcast
-    const newCommands = getNewCommandsSinceLastBroadcast();
-    const newCommandCount = newCommands.characters.length + newCommands.crews.length + newCommands.clocks.length;
-
-    // Circuit breaker: prevent infinite broadcast loops
-    if (!checkCircuitBreaker(newCommandCount)) {
-      console.error(`FitGD | Broadcast blocked by circuit breaker (auto-save)`);
-      return;
-    }
-
-    // Broadcast commands FIRST (before persistence) - all users can do this
-    if (newCommandCount > 0) {
-      const socketData = {
-        type: 'commandsAdded',
-        userId: game.user!.id,
-        userName: game.user!.name,
-        commandCount: newCommandCount,
-        commands: newCommands,
-        timestamp: Date.now()
-      };
-
-      console.log(`FitGD | Broadcasting ${newCommandCount} commands via socketlib:`, socketData);
-      console.log(`FitGD | game.fitgd.socket exists?`, !!game.fitgd!.socket);
-
-      try {
-        // Use socketlib to broadcast to OTHER clients (not self)
-        const result = await game.fitgd!.socket.executeForOthers('syncCommands', socketData);
-        console.log(`FitGD | socketlib broadcast completed, result:`, result);
-      } catch (error) {
-        console.error('FitGD | socketlib broadcast error:', error);
-      }
-    } else {
-      console.log(`FitGD | No new commands to broadcast (count = 0)`);
-    }
-
-    // Save to Foundry settings (only if user has permission - typically GM)
-    if (game.user!.isGM) {
-      const history = game.fitgd!.foundry.exportHistory();
-      await (game.settings as any).set('forged-in-the-grimdark', 'commandHistory', history);
-      const total = history.characters.length + history.crews.length + history.clocks.length;
-      console.log(`FitGD | Saved ${total} commands to world settings (GM only)`);
-    } else {
-      console.log(`FitGD | Skipped settings save (player - GM will persist on receipt)`);
-    }
-  } catch (error) {
-    console.error('FitGD | Error in saveCommandHistoryImmediate:', error);
-    // Don't throw - we still want broadcasts to work even if save fails
+  // Delegate to the centralized save function in fitgd.ts
+  // This ensures all broadcast logic (activePlayerActions, circuit breakers, etc.) is unified
+  if (game.fitgd?.saveImmediate) {
+    return game.fitgd.saveImmediate();
+  } else {
+    console.error('FitGD | game.fitgd.saveImmediate is not defined!');
   }
 }
 
