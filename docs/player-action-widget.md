@@ -583,9 +583,15 @@ The defensive success option allows players to balance offense and defense, trad
 To ensure a shared experience, the widget's open/closed state is synchronized between the Player and GM. When a player opens their widget, it automatically opens on the GM's screen. Closing logic is permission-gated to prevent accidental data loss during active rolls.
 
 ### Redux State
-The synchronization is driven by the `activePlayerAction` field on the `Crew` object (persistent state), rather than ephemeral UI state.
 
-**Structure ([crew.ts](file:///workspaces/fitgd/src/types/crew.ts)):**
+The synchronization is driven by **two persistent state sources**:
+
+1. **`activePlayerAction`** on the `Crew` object - determines widget open/closed lifecycle
+2. **`playerRoundState`** via command history - tracks all in-turn state changes
+
+Both are persisted to Foundry settings via the unified command history pattern.
+
+**ActivePlayerAction Structure ([crew.ts](file:///workspaces/fitgd/src/types/crew.ts)):**
 ```typescript
 interface ActivePlayerAction {
   characterId: string;        // Who is acting
@@ -595,6 +601,43 @@ interface ActivePlayerAction {
   startedAt: number;          // Timestamp
 }
 ```
+
+### State Persistence
+
+> [!IMPORTANT]
+> As of the event-sourcing migration, `playerRoundState` is now **fully persisted** via command history. All state transitions, roll results, and configurations survive browser refreshes.
+
+**Command History Pattern:**
+- Each reducer logs a `Command` object to `state.history[]` with type, payload, timestamp, and commandId
+- Commands are exported via `foundry.exportHistory()` and saved to Foundry world settings
+- On page load, commands are replayed via `foundry.replayCommands()` to reconstruct state
+
+**Persisted Actions (logged to history):**
+| Action | Description |
+|--------|-------------|
+| `transitionState` | State machine transitions (DECISION_PHASE → ROLLING → etc.) |
+| `setActionPlan` | Approach, position, effect selections |
+| `setRollResult` | Dice pool and roll outcome |
+| `setTraitTransaction` | Trait usage (Flashback, Lean, etc.) |
+| `clearTraitTransaction` | Clearing trait usage |
+| `setConsequenceTransaction` | GM consequence configuration |
+| `updateConsequenceTransaction` | GM consequence updates |
+| `clearConsequenceTransaction` | Consequence cleanup |
+| `setApprovedPassive` | GM passive equipment approval |
+| `setGmApproved` | GM approval flag |
+| `setImprovements` | Push, flashback, equipment selections |
+| `setPosition` / `setEffect` | Position and effect changes |
+
+**Lifecycle:**
+- **On TURN_COMPLETE**: `pruneHistory` action clears history (preserves current state)
+- **On combatEnd**: `clearAllStates` action clears all playerRoundState including history
+
+**Synchronization Flow:**
+1. Client modifies state → reducer logs command to history
+2. `saveImmediate()` broadcasts commands via socket
+3. Other clients receive → `applyCommandsIncremental()` dispatches commands
+4. GM persists all command history to Foundry world settings
+5. On page reload → commands replayed → state reconstructed
 
 ### Redux Actions
 | Action | Purpose |
