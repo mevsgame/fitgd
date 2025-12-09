@@ -1496,7 +1496,7 @@ export class PlayerActionEventCoordinator {
         const createAction = consequenceHandler.createNewHarmClockAction({
           name: clockData.name,
           segments: clockData.maxSegments,
-        });
+        }, targetId);
 
         await game.fitgd.bridge.execute(createAction, {
           affectedReduxIds: [asReduxId(targetId)],

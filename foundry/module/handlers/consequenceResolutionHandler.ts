@@ -193,11 +193,13 @@ export class ConsequenceResolutionHandler {
    * Create Redux action to create a new harm clock
    *
    * @param clockData - Clock configuration
+   * @param targetCharacterId - Optional explicit target character ID (preferred over config)
    * @param generateId - Optional ID generator (for testing)
    * @returns Redux action payload
    */
   createNewHarmClockAction(
     clockData: ClockData,
+    targetCharacterId?: string,
     generateId?: () => string
   ): {
     type: string;
@@ -212,9 +214,10 @@ export class ConsequenceResolutionHandler {
     };
   } {
     const newClockId = generateId ? generateId() : (foundry?.utils?.randomID?.() || this._defaultIdGenerator());
-    const targetCharacterId = this.config.playerState?.consequenceTransaction?.harmTargetCharacterId;
+    // Use explicit parameter first, fall back to config's playerState
+    const effectiveTargetId = targetCharacterId || this.config.playerState?.consequenceTransaction?.harmTargetCharacterId;
 
-    if (!targetCharacterId) {
+    if (!effectiveTargetId) {
       throw new Error('Cannot create harm clock: no target character selected');
     }
 
@@ -222,7 +225,7 @@ export class ConsequenceResolutionHandler {
       type: 'clocks/createClock',
       payload: {
         id: newClockId,
-        entityId: targetCharacterId,
+        entityId: effectiveTargetId,
         clockType: 'harm',
         subtype: clockData.name,
         maxSegments: clockData.segments,

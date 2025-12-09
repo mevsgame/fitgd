@@ -210,7 +210,7 @@ describe('ConsequenceResolutionHandler', () => {
         description: 'Serious wound',
       };
 
-      const action = handlerWithTarget.createNewHarmClockAction(clockData, () => 'test-clock-id');
+      const action = handlerWithTarget.createNewHarmClockAction(clockData, undefined, () => 'test-clock-id');
 
       expect(action.type).toBe('clocks/createClock');
       expect(action.payload.clockType).toBe('harm');
@@ -228,7 +228,7 @@ describe('ConsequenceResolutionHandler', () => {
         segments: 6,
       };
 
-      expect(() => handler.createNewHarmClockAction(clockData, () => 'test-id')).toThrow(
+      expect(() => handler.createNewHarmClockAction(clockData, undefined, () => 'test-id')).toThrow(
         /no target character selected/i
       );
     });
@@ -251,7 +251,7 @@ describe('ConsequenceResolutionHandler', () => {
         segments: 6,
       };
 
-      const action = handlerWithTarget.createNewHarmClockAction(clockData, () => 'test-id');
+      const action = handlerWithTarget.createNewHarmClockAction(clockData, undefined, () => 'test-id');
 
       expect(action.payload.metadata).toBeUndefined();
     });
@@ -494,7 +494,7 @@ describe('ConsequenceResolutionHandler', () => {
         segments: 6,
       };
 
-      const action = handlerWithTarget.createNewHarmClockAction(clockData, () => 'custom-id');
+      const action = handlerWithTarget.createNewHarmClockAction(clockData, undefined, () => 'custom-id');
 
       // Should use provided ID generator
       expect(action.payload.id).toBe('custom-id');
@@ -532,7 +532,7 @@ describe('ConsequenceResolutionHandler', () => {
         name: 'Bleeding',
         segments: 6,
       };
-      const createClock = handlerWithTarget.createNewHarmClockAction(clockData, () => 'test-id');
+      const createClock = handlerWithTarget.createNewHarmClockAction(clockData, undefined, () => 'test-id');
       expect(createClock.type).toBe('clocks/createClock');
 
       // Step 4: Validate complete transaction
