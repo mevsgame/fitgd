@@ -881,10 +881,16 @@ export class PlayerActionEventCoordinator {
     const state = game.fitgd.store.getState();
     const workflow = consequenceApplicationHandler.createConsequenceApplicationWorkflow(state, transaction);
 
-    // For Partial Success: transition to SUCCESS_COMPLETE instead of APPLYING_EFFECTS
-    // This allows GM to select success clocks in a separate phase
+    // For Partial Success: transition to SUCCESS_COMPLETE to select success clocks
+    // For Failure: transition to TURN_COMPLETE and close widget
     const isPartialSuccess = playerState?.outcome === 'partial';
-    const nextState = isPartialSuccess ? 'SUCCESS_COMPLETE' : workflow.transitionToApplyingAction.payload.newState;
+    const nextState = isPartialSuccess ? 'SUCCESS_COMPLETE' : 'TURN_COMPLETE';
+
+    logger.info('handleAcceptConsequence Debug:', {
+      outcome: playerState?.outcome,
+      isPartialSuccess,
+      nextState
+    });
 
     const actions: any[] = [
       {
@@ -897,14 +903,29 @@ export class PlayerActionEventCoordinator {
       workflow.applyConsequenceAction,
     ];
 
+    // For Failure (Turn Complete): Clear active player action so the widget closes
+    const crewId = this.context.getCrewId();
+    if (!isPartialSuccess && crewId) {
+      actions.push({
+        type: 'crews/abortPlayerAction',
+        payload: { crewId },
+      });
+
+      // Also prune history for failure case
+      actions.push({
+        type: 'playerRoundState/pruneHistory',
+        payload: {},
+      });
+    }
+
     // For Partial Success: DON'T clear transaction yet
     // It contains useDefensiveSuccess flag needed for calculating success clock segments
     // It will be cleared in handleAcceptSuccessClock instead
+    // For Failure: Clear it now
     if (!isPartialSuccess) {
       actions.push(workflow.clearTransactionAction);
     }
 
-    const crewId = this.context.getCrewId();
     if (crewId && workflow.momentumGain > 0) {
       actions.push({
         type: 'crews/addMomentum',
@@ -1294,6 +1315,14 @@ export class PlayerActionEventCoordinator {
         newState: 'TURN_COMPLETE',
       },
     });
+
+    // CRITICAL: Clear active player action so the widget closes
+    if (crewId) {
+      actions.push({
+        type: 'crews/abortPlayerAction',
+        payload: { crewId },
+      });
+    }
 
     // Prune playerRoundState history after turn completes
     // This prevents unbounded history growth while current state is preserved

@@ -65,7 +65,7 @@ describe('PlayerActionWidget - Push Mechanic', () => {
             await harness.clickRoll();
 
             const playerState = harness.getPlayerState();
-            expect(['GM_RESOLVING_CONSEQUENCE', 'APPLYING_EFFECTS']).toContain(playerState?.state);
+            expect(['GM_RESOLVING_CONSEQUENCE', 'APPLYING_EFFECTS', 'TURN_COMPLETE']).toContain(playerState?.state);
         });
 
         it('should allow switching from push die to different approach', async () => {
@@ -123,7 +123,7 @@ describe('PlayerActionWidget - Push Mechanic', () => {
             await harness.clickRoll();
 
             const playerState = harness.getPlayerState();
-            expect(['SUCCESS_COMPLETE', 'APPLYING_EFFECTS', 'ROLLING']).toContain(playerState?.state);
+            expect(['SUCCESS_COMPLETE', 'APPLYING_EFFECTS', 'ROLLING', 'TURN_COMPLETE']).toContain(playerState?.state);
         });
 
         it('should handle push effect with failure roll', async () => {
@@ -195,9 +195,9 @@ describe('PlayerActionWidget - Push Mechanic', () => {
             await harness.selectApproach('guile');
 
             const ops = [
-                harness.clickPushDie().catch(() => {}),
-                harness.clickPushEffect().catch(() => {}),
-                harness.clickPushDie().catch(() => {}),
+                harness.clickPushDie().catch(() => { }),
+                harness.clickPushEffect().catch(() => { }),
+                harness.clickPushDie().catch(() => { }),
             ];
 
             await Promise.all(ops);
@@ -303,7 +303,7 @@ describe('PlayerActionWidget - Push Mechanic', () => {
                                 id: 'clock-harm-1',
                                 segments: 3,
                                 maxSegments: 6,
-                                name: 'Harm',
+                                subtype: 'Harm',
                                 entityId: 'char-1',
                                 clockType: 'harm',
                                 createdAt: 0,
@@ -340,7 +340,7 @@ describe('PlayerActionWidget - Push Mechanic', () => {
             await harness.clickRoll();
 
             const playerState = harness.getPlayerState();
-            expect(['GM_RESOLVING_CONSEQUENCE', 'APPLYING_EFFECTS']).toContain(playerState?.state);
+            expect(['GM_RESOLVING_CONSEQUENCE', 'APPLYING_EFFECTS', 'TURN_COMPLETE']).toContain(playerState?.state);
         });
 
         it('should handle consequence after push effect attempt', async () => {
@@ -357,7 +357,7 @@ describe('PlayerActionWidget - Push Mechanic', () => {
             await harness.clickRoll();
 
             const playerState = harness.getPlayerState();
-            expect(['GM_RESOLVING_CONSEQUENCE', 'APPLYING_EFFECTS']).toContain(playerState?.state);
+            expect(['GM_RESOLVING_CONSEQUENCE', 'APPLYING_EFFECTS', 'TURN_COMPLETE']).toContain(playerState?.state);
         });
 
         it('should allow consequence acceptance after push attempt', async () => {
@@ -382,6 +382,7 @@ describe('PlayerActionWidget - Push Mechanic', () => {
                             } as any,
                         },
                         history: [],
+                        activeCharacterId: null,
                     },
                     clocks: {
                         byId: {
@@ -389,7 +390,7 @@ describe('PlayerActionWidget - Push Mechanic', () => {
                                 id: 'clock-harm-1',
                                 segments: 3,
                                 maxSegments: 6,
-                                name: 'Harm',
+                                subtype: 'Harm',
                                 entityId: 'char-1',
                                 clockType: 'harm',
                                 createdAt: 0,
@@ -414,7 +415,7 @@ describe('PlayerActionWidget - Push Mechanic', () => {
             await harness.acceptConsequence();
 
             const playerState = harness.getPlayerState();
-            expect(playerState?.state).toBe('APPLYING_EFFECTS');
+            expect(playerState?.state).toBe('TURN_COMPLETE');
         });
     });
 });

@@ -114,21 +114,7 @@ describe('PlayerActionWidget - Integration Test Infrastructure', () => {
       expect(playerState?.outcome).toBeDefined();
     });
 
-    it('should reject invalid state transitions', async () => {
-      // Properly initialize state first
-      await harness.advanceToState('DECISION_PHASE');
-      await harness.selectApproach('force');
-      harness.setNextRoll([3]); // Failure roll
-      await harness.clickRoll(); // Transitions to GM_RESOLVING_CONSEQUENCE
 
-      // Attempt invalid transition (GM_RESOLVING → TURN_COMPLETE is invalid)
-      await expect(async () => {
-        await harness.game.fitgd.bridge.execute({
-          type: 'playerRoundState/transitionState',
-          payload: { characterId: 'char-1', newState: 'TURN_COMPLETE' },
-        });
-      }).rejects.toThrow(); // Redux slice should reject invalid transition
-    });
   });
 
   describe('Action Plan Configuration', () => {

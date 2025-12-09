@@ -351,7 +351,11 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
       const playerId = game.user?.id || 'unknown';
       const canClose = selectCanPlayerCloseWidget(state, this.crewId, playerId);
 
-      if (!canClose) {
+      // Allow close if turn is already complete (auto-close, not manual close)
+      const playerRoundState = state.playerRoundState.byCharacterId[this.characterId];
+      const isNormalClose = playerRoundState?.state === 'TURN_COMPLETE' || playerRoundState?.state === 'SUCCESS_COMPLETE';
+
+      if (!canClose && !isNormalClose) {
         // Player has committed to roll - cannot close
         ui.notifications?.warn('You cannot close the widget after committing to roll. Wait for the GM to resolve.');
         return; // Prevent close
@@ -363,7 +367,11 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
       const state = game.fitgd.store.getState();
       const action = selectActivePlayerAction(state, this.crewId);
 
-      if (action && action.committedToRoll) {
+      // Skip confirmation if turn is already complete or success (auto-close, not manual abort)
+      const playerRoundState = state.playerRoundState.byCharacterId[action?.characterId ?? ''];
+      const isNormalClose = playerRoundState?.state === 'TURN_COMPLETE' || playerRoundState?.state === 'SUCCESS_COMPLETE';
+
+      if (action && action.committedToRoll && !isNormalClose) {
         // Prevent multiple dialogs
         if (this._closing) return;
         this._closing = true;

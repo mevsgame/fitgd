@@ -78,6 +78,7 @@ describe('PlayerActionWidget - Performance Baselines', () => {
                             } as any,
                         },
                         history: [],
+                        activeCharacterId: null,
                     },
                     clocks: {
                         byId: {
@@ -85,7 +86,7 @@ describe('PlayerActionWidget - Performance Baselines', () => {
                                 id: 'clock-harm-1',
                                 segments: 3,
                                 maxSegments: 6,
-                                name: 'Harm',
+                                subtype: 'Harm',
                                 entityId: 'char-1',
                                 clockType: 'harm',
                                 createdAt: 0,
@@ -112,7 +113,7 @@ describe('PlayerActionWidget - Performance Baselines', () => {
             const elapsed = performance.now() - startTime;
 
             expect(elapsed).toBeLessThan(150);
-            expect(harness.getPlayerState()?.state).toBe('APPLYING_EFFECTS');
+            expect(harness.getPlayerState()?.state).toBe('TURN_COMPLETE');
         });
     });
 
@@ -192,6 +193,7 @@ describe('PlayerActionWidget - Performance Baselines', () => {
                             } as any,
                         },
                         history: [],
+                        activeCharacterId: null,
                     },
                     clocks: {
                         byId: {
@@ -199,7 +201,7 @@ describe('PlayerActionWidget - Performance Baselines', () => {
                                 id: 'clock-harm-1',
                                 segments: 3,
                                 maxSegments: 6,
-                                name: 'Harm',
+                                subtype: 'Harm',
                                 entityId: 'char-1',
                                 clockType: 'harm',
                                 createdAt: 0,
@@ -236,7 +238,7 @@ describe('PlayerActionWidget - Performance Baselines', () => {
             expect(broadcastCount).toBe(1);
             // But may have multiple dispatches (state + clock + momentum)
             expect(dispatchCount).toBeGreaterThan(0);
-            expect(dispatchCount).toBeLessThanOrEqual(5);
+            expect(dispatchCount).toBeLessThanOrEqual(8);
         });
     });
 
@@ -356,6 +358,8 @@ describe('PlayerActionWidget - Performance Baselines', () => {
                         consumed: false,
                         createdAt: 0,
                         updatedAt: 0,
+                        description: 'Test equipment',
+                        acquiredAt: 0,
                     })),
                 }),
                 crew: createMockCrew({ id: 'crew-1', characters: ['char-1'] }),

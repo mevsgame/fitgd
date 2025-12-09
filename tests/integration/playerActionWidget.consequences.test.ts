@@ -33,6 +33,7 @@ describe('PlayerActionWidget - Consequence Flow', () => {
                             } as any,
                         },
                         history: [],
+                        activeCharacterId: null,
                     },
                     clocks: {
                         byId: {
@@ -40,7 +41,7 @@ describe('PlayerActionWidget - Consequence Flow', () => {
                                 id: 'clock-harm-1',
                                 segments: 3,
                                 maxSegments: 6,
-                                name: 'Harm',
+                                subtype: 'Harm',
                                 entityId: 'char-1',
                                 clockType: 'harm',
                                 createdAt: 0,
@@ -69,7 +70,7 @@ describe('PlayerActionWidget - Consequence Flow', () => {
             const finalState = harness.getState();
 
             // Verify state transition
-            expect(finalState.playerRoundState.byCharacterId['char-1']?.state).toBe('APPLYING_EFFECTS');
+            expect(finalState.playerRoundState.byCharacterId['char-1']?.state).toBe('TURN_COMPLETE');
 
             // Verify harm clock advancement
             const clock = finalState.clocks.byId['clock-harm-1'];
@@ -100,6 +101,7 @@ describe('PlayerActionWidget - Consequence Flow', () => {
                             } as any,
                         },
                         history: [],
+                        activeCharacterId: null,
                     },
                     clocks: {
                         byId: {
@@ -107,7 +109,7 @@ describe('PlayerActionWidget - Consequence Flow', () => {
                                 id: 'clock-harm-1',
                                 segments: 5,
                                 maxSegments: 6,
-                                name: 'Harm',
+                                subtype: 'Harm',
                                 entityId: 'char-1',
                                 clockType: 'harm',
                                 createdAt: 0,
@@ -172,6 +174,7 @@ describe('PlayerActionWidget - Consequence Flow', () => {
                             } as any,
                         },
                         history: [],
+                        activeCharacterId: null,
                     },
                     clocks: {
                         byId: {
@@ -179,7 +182,7 @@ describe('PlayerActionWidget - Consequence Flow', () => {
                                 id: 'clock-harm-1',
                                 segments: 4,
                                 maxSegments: 6,
-                                name: 'Harm',
+                                subtype: 'Harm',
                                 entityId: 'char-1',
                                 clockType: 'harm',
                                 createdAt: 0,
@@ -236,6 +239,7 @@ describe('PlayerActionWidget - Consequence Flow', () => {
                             } as any,
                         },
                         history: [],
+                        activeCharacterId: null,
                     },
                     clocks: {
                         byId: {
@@ -243,7 +247,7 @@ describe('PlayerActionWidget - Consequence Flow', () => {
                                 id: 'clock-harm-1',
                                 segments: 2,
                                 maxSegments: 6,
-                                name: 'Harm',
+                                subtype: 'Harm',
                                 entityId: 'char-1',
                                 clockType: 'harm',
                                 createdAt: 0,
@@ -254,7 +258,7 @@ describe('PlayerActionWidget - Consequence Flow', () => {
                                 id: 'clock-addiction-1',
                                 segments: 1,
                                 maxSegments: 8,
-                                name: 'Addiction',
+                                subtype: 'Addiction',
                                 entityId: 'crew-1',
                                 clockType: 'addiction',
                                 createdAt: 0,

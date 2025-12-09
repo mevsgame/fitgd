@@ -75,9 +75,9 @@ describe('PlayerActionWidget - Race Conditions', () => {
             const character = createMockCharacter({
                 id: 'char-1',
                 equipment: [
-                    { id: 'eq-1', name: 'Weapon 1', tier: 'common', category: 'active', slots: 1, locked: false, equipped: false, consumed: false, createdAt: 0, updatedAt: 0 },
-                    { id: 'eq-2', name: 'Weapon 2', tier: 'rare', category: 'active', slots: 1, locked: false, equipped: false, consumed: false, createdAt: 0, updatedAt: 0 },
-                    { id: 'eq-3', name: 'Weapon 3', tier: 'epic', category: 'active', slots: 1, locked: false, equipped: false, consumed: false, createdAt: 0, updatedAt: 0 },
+                    { id: 'eq-1', name: 'Weapon 1', tier: 'common', category: 'active', slots: 1, locked: false, equipped: false, consumed: false, description: 'Test', acquiredAt: 0 },
+                    { id: 'eq-2', name: 'Weapon 2', tier: 'rare', category: 'active', slots: 1, locked: false, equipped: false, consumed: false, description: 'Test', acquiredAt: 0 },
+                    { id: 'eq-3', name: 'Weapon 3', tier: 'epic', category: 'active', slots: 1, locked: false, equipped: false, consumed: false, description: 'Test', acquiredAt: 0 },
                 ],
             });
 
@@ -132,6 +132,7 @@ describe('PlayerActionWidget - Race Conditions', () => {
                             } as any,
                         },
                         history: [],
+                        activeCharacterId: null,
                     },
                     clocks: {
                         byId: {
@@ -139,7 +140,7 @@ describe('PlayerActionWidget - Race Conditions', () => {
                                 id: 'clock-harm-1',
                                 segments: 3,
                                 maxSegments: 6,
-                                name: 'Harm',
+                                subtype: 'Harm',
                                 entityId: 'char-1',
                                 clockType: 'harm',
                                 createdAt: 0,
@@ -178,7 +179,7 @@ describe('PlayerActionWidget - Race Conditions', () => {
             // State should be valid
             const finalState = harness.getPlayerState();
             expect(finalState?.state).toBeDefined();
-            expect(['APPLYING_EFFECTS', 'SUCCESS_COMPLETE', 'ROLLING', 'GM_RESOLVING_CONSEQUENCE']).toContain(
+            expect(['APPLYING_EFFECTS', 'SUCCESS_COMPLETE', 'ROLLING', 'GM_RESOLVING_CONSEQUENCE', 'TURN_COMPLETE']).toContain(
                 finalState?.state
             );
         });
@@ -231,7 +232,7 @@ describe('PlayerActionWidget - Race Conditions', () => {
                                 id: 'clock-harm-1',
                                 segments: 2,
                                 maxSegments: 6,
-                                name: 'Harm',
+                                subtype: 'Harm',
                                 entityId: 'char-1',
                                 clockType: 'harm',
                                 createdAt: 0,
@@ -242,7 +243,7 @@ describe('PlayerActionWidget - Race Conditions', () => {
                                 id: 'clock-addiction-1',
                                 segments: 1,
                                 maxSegments: 8,
-                                name: 'Addiction',
+                                subtype: 'Addiction',
                                 entityId: 'crew-1',
                                 clockType: 'addiction',
                                 createdAt: 0,
@@ -293,7 +294,7 @@ describe('PlayerActionWidget - Race Conditions', () => {
             // Fire roll and approach change attempt simultaneously
             const promises = [
                 harness.clickRoll(),
-                harness.selectApproach('guile').catch(() => {}), // Might fail due to race
+                harness.selectApproach('guile').catch(() => { }), // Might fail due to race
             ];
 
             const results = await Promise.allSettled(promises);
@@ -306,7 +307,7 @@ describe('PlayerActionWidget - Race Conditions', () => {
             expect(finalState?.state).toBeDefined();
 
             // Should have transitioned from DECISION_PHASE
-            expect(['ROLLING', 'GM_RESOLVING_CONSEQUENCE', 'SUCCESS_COMPLETE', 'APPLYING_EFFECTS']).toContain(
+            expect(['ROLLING', 'GM_RESOLVING_CONSEQUENCE', 'SUCCESS_COMPLETE', 'APPLYING_EFFECTS', 'TURN_COMPLETE']).toContain(
                 finalState?.state
             );
         });
@@ -343,16 +344,17 @@ describe('PlayerActionWidget - Race Conditions', () => {
 
         it('should handle missed broadcasts gracefully', async () => {
             let broadcastCount = 0;
-            const originalEmit = harness.game.socket?.emit;
+            const game = harness.game as any;
+            const originalEmit = game.socket?.emit;
 
-            if (harness.game.socket) {
-                harness.game.socket.emit = vi.fn((event: string, data: any) => {
+            if (game.socket) {
+                game.socket.emit = vi.fn((event: string, data: any) => {
                     broadcastCount++;
                     // Skip every other broadcast
                     if (broadcastCount % 2 === 0) {
                         return; // Simulate missed broadcast
                     }
-                    return originalEmit?.call(harness.game.socket, event, data);
+                    return originalEmit?.call(game.socket, event, data);
                 });
             }
 
@@ -366,8 +368,8 @@ describe('PlayerActionWidget - Race Conditions', () => {
                 expect(state?.selectedApproach).toBe('force');
             } finally {
                 // Restore original
-                if (harness.game.socket && originalEmit) {
-                    harness.game.socket.emit = originalEmit;
+                if (game.socket && originalEmit) {
+                    game.socket.emit = originalEmit;
                 }
             }
         });

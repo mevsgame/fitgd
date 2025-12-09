@@ -248,7 +248,8 @@ export const STATE_TRANSITIONS: Record<PlayerRoundStateType, PlayerRoundStateTyp
   GM_RESOLVING_CONSEQUENCE: [
     'APPLYING_EFFECTS',           // GM applies consequence
     'SUCCESS_COMPLETE',           // Partial success: transition to success clock phase
-    'STIMS_ROLLING'               // Player interrupts with stims
+    'STIMS_ROLLING',              // Player interrupts with stims
+    'TURN_COMPLETE'               // Failure: apply consequence and end turn
   ],
   APPLYING_EFFECTS: ['TURN_COMPLETE'],
   TURN_COMPLETE: ['IDLE_WAITING'],

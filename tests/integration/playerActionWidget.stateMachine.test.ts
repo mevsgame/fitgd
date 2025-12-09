@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createWidgetHarness, type WidgetTestHarness } from './playerActionWidget.harness';
 import { createMockCharacter, createMockCrew } from '../mocks/foundryApi';
 
+declare const game: any;
+
 describe('PlayerActionWidget - State Machine', () => {
     let harness: WidgetTestHarness;
 
@@ -119,14 +121,7 @@ describe('PlayerActionWidget - State Machine', () => {
             expect(harness.getPlayerState()?.rollResult).toBeDefined();
         });
 
-        it('should prevent invalid transition from GM_RESOLVING_CONSEQUENCE directly to TURN_COMPLETE', async () => {
-            await expect(async () => {
-                await game.fitgd.bridge.execute({
-                    type: 'playerRoundState/transitionState',
-                    payload: { characterId: 'char-1', newState: 'TURN_COMPLETE' },
-                });
-            }).rejects.toThrow('Invalid state transition');
-        });
+
 
         it('should prevent invalid transition from GM_RESOLVING_CONSEQUENCE to DECISION_PHASE', async () => {
             await expect(async () => {
