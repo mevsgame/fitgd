@@ -26,12 +26,6 @@ interface CrewHUDData {
     crewName: string;
     currentMomentum: number;
     isGM: boolean;
-    addictionClock: {
-        id: string;
-        segments: number;
-        maxSegments: number;
-        clockImage: string;
-    } | null;
     crewClocks: Array<{
         id: string;
         name: string;
@@ -53,6 +47,12 @@ interface CrewHUDData {
             maxSegments: number;
             clockImage: string;
         }>;
+        addictionClock: {
+            id: string;
+            segments: number;
+            maxSegments: number;
+            clockImage: string;
+        } | null;
     }>;
     activeCharacterId: string | null;
 }
@@ -205,14 +205,18 @@ export class CrewHUDPanel extends Application {
      * Enable drag-to-reposition functionality
      */
     private _enableDragging(): void {
-        const element = this.element;
-        if (!element || !element.length) return;
+        // The Application renders inside a wrapper; we need to find our panel
+        const panel = this.element;
+        if (!panel || !panel.length) return;
 
-        const panel = element.find('.crew-hud-panel');
-        if (!panel.length) return;
+        // Find the actual panel content (might be directly .crew-hud-panel or inside)
+        const hudPanel = panel.hasClass('crew-hud-panel') ? panel : panel.find('.crew-hud-panel');
+        if (!hudPanel.length) return;
 
         // Make the header draggable
-        const header = panel.find('.hud-crew-header');
+        const header = hudPanel.find('.hud-crew-header');
+        if (!header.length) return;
+
         header.css('cursor', 'move');
 
         let isDragging = false;
@@ -221,14 +225,14 @@ export class CrewHUDPanel extends Application {
         let startLeft = 0;
         let startTop = 0;
 
-        header.on('mousedown', (e: JQuery.MouseDownEvent) => {
+        header.on('mousedown.crewHudDrag', (e: JQuery.MouseDownEvent) => {
             // Don't drag if clicking on buttons
             if ($(e.target).closest('button').length) return;
 
             isDragging = true;
             startX = e.clientX;
             startY = e.clientY;
-            const rect = panel[0].getBoundingClientRect();
+            const rect = hudPanel[0].getBoundingClientRect();
             startLeft = rect.left;
             startTop = rect.top;
             e.preventDefault();
@@ -240,7 +244,7 @@ export class CrewHUDPanel extends Application {
             const deltaX = e.clientX - startX;
             const deltaY = e.clientY - startY;
 
-            panel.css({
+            hudPanel.css({
                 left: startLeft + deltaX + 'px',
                 top: startTop + deltaY + 'px',
                 right: 'auto',
@@ -309,7 +313,6 @@ export class CrewHUDPanel extends Application {
                 crewName: 'No Crew',
                 currentMomentum: 0,
                 isGM: game.user?.isGM ?? false,
-                addictionClock: null,
                 crewClocks: [],
                 characters: [],
                 activeCharacterId: null
@@ -318,15 +321,6 @@ export class CrewHUDPanel extends Application {
 
         // Get active character from crew's active player action
         const activeCharacterId = crew.activePlayerAction?.characterId ?? null;
-
-        // Get addiction clock
-        const addictionClockData = game.fitgd?.api.query.getAddictionClock(this.crewId!);
-        const addictionClock = addictionClockData ? {
-            id: addictionClockData.id,
-            segments: addictionClockData.segments,
-            maxSegments: addictionClockData.maxSegments,
-            clockImage: this._getClockImage(addictionClockData, 'addiction')
-        } : null;
 
         // Get crew clocks (progress type only)
         const crewClockIds = state?.clocks.byEntityId[this.crewId!] ?? [];
@@ -342,7 +336,7 @@ export class CrewHUDPanel extends Application {
                 category: c.metadata?.category as string | undefined
             }));
 
-        // Get character data with harm clocks
+        // Get character data with harm clocks and addiction clocks
         const characters = crew.characters.map((charId: string) => {
             const char = state?.characters.byId[charId];
             const actor = game.actors?.get(charId);
@@ -361,6 +355,22 @@ export class CrewHUDPanel extends Application {
                 };
             });
 
+            // Get addiction clock for this character (per-character, not per-crew)
+            const addictionClockKey = `addiction:${charId}`;
+            const addictionClockIds = state?.clocks.byTypeAndEntity[addictionClockKey] ?? [];
+            let addictionClock = null;
+            if (addictionClockIds.length > 0) {
+                const clock = state?.clocks.byId[addictionClockIds[0]];
+                if (clock) {
+                    addictionClock = {
+                        id: clock.id as string,
+                        segments: clock.segments as number,
+                        maxSegments: clock.maxSegments as number,
+                        clockImage: this._getClockImage(clock, 'addiction')
+                    };
+                }
+            }
+
             // Can take action if user is GM or owns the character
             const canTakeAction: boolean = game.user?.isGM === true || actor?.isOwner === true;
 
@@ -370,7 +380,8 @@ export class CrewHUDPanel extends Application {
                 portrait: (actor?.img || 'icons/svg/mystery-man.svg') as string,
                 canTakeAction,
                 isActive: charId === activeCharacterId,
-                harmClocks
+                harmClocks,
+                addictionClock
             };
         });
 
@@ -379,7 +390,6 @@ export class CrewHUDPanel extends Application {
             crewName: crew.name,
             currentMomentum: crew.currentMomentum,
             isGM: game.user?.isGM ?? false,
-            addictionClock,
             crewClocks,
             characters,
             activeCharacterId

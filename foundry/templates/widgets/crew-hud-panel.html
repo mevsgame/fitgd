@@ -3,9 +3,8 @@ Crew HUD Panel Template
 
 Persistent overlay showing crew status at a glance:
 - Crew name and momentum track (with GM reset button)
-- Addiction clock (stims usage)
 - Crew progress/threat clocks (SVG previews)
-- Character cards with portraits, harm clocks, and active indicator
+- Character cards with portraits, harm clocks, addiction clocks, and active indicator
 
 @see docs/crew-hud-panel.md
 --}}
@@ -42,38 +41,20 @@ Persistent overlay showing crew status at a glance:
     </div>
   </header>
 
-  {{!-- Clocks Section --}}
+  {{!-- Clocks Section (crew-level only) --}}
+  {{#if crewClocks.length}}
   <section class="hud-crew-clocks">
     <h3 class="section-title">Clocks</h3>
     <div class="clock-list">
-      {{!-- Addiction Clock --}}
-      {{#if addictionClock}}
-      <div class="clock-mini addiction-clock" data-clock-id="{{addictionClock.id}}"
-        title="Addiction: {{addictionClock.segments}}/{{addictionClock.maxSegments}}">
-        <img class="clock-svg" src="{{addictionClock.clockImage}}" alt="Addiction" />
-        <span class="clock-label">Addiction</span>
-      </div>
-      {{/if}}
-
-      {{!-- Crew Progress/Threat Clocks --}}
       {{#each crewClocks}}
       <div class="clock-mini" data-clock-id="{{id}}" title="{{name}}: {{segments}}/{{maxSegments}}">
         <img class="clock-svg" src="{{clockImage}}" alt="{{name}}" />
         <span class="clock-label">{{name}}</span>
       </div>
       {{/each}}
-
-      {{!-- Add Clock button --}}
-      {{#if isGM}}
-      <div class="clock-mini add-clock-placeholder" title="Add a clock from the Crew Sheet">
-        <span class="clock-placeholder">
-          <i class="fas fa-plus-circle"></i>
-        </span>
-        <span class="clock-label">New clock</span>
-      </div>
-      {{/if}}
     </div>
   </section>
+  {{/if}}
 
   {{!-- Characters Section --}}
   <section class="hud-characters">
@@ -87,14 +68,18 @@ Persistent overlay showing crew status at a glance:
           {{#if isActive}}<i class="fas fa-dice-d20 active-indicator" title="Taking action"></i>{{/if}}
           {{name}}
         </span>
-        {{#if harmClocks.length}}
-        <div class="harm-clocks">
+        <div class="character-clocks">
+          {{!-- Harm clocks --}}
           {{#each harmClocks}}
-          <img class="clock-mini-svg" src="{{clockImage}}" alt="{{subtype}}"
+          <img class="clock-mini-svg harm" src="{{clockImage}}" alt="{{subtype}}"
             title="{{subtype}}: {{segments}}/{{maxSegments}}" />
           {{/each}}
+          {{!-- Addiction clock (per-character) --}}
+          {{#if ../addictionClock}}
+          <img class="clock-mini-svg addiction" src="{{../addictionClock.clockImage}}" alt="Addiction"
+            title="Addiction: {{../addictionClock.segments}}/{{../addictionClock.maxSegments}}" />
+          {{/if}}
         </div>
-        {{/if}}
       </div>
       {{#if canTakeAction}}
       <button class="take-action-btn" data-character-id="{{id}}" title="Take Action">

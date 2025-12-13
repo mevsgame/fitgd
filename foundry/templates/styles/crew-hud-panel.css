@@ -274,15 +274,22 @@
   color: #fff;
 }
 
-.crew-hud-panel .harm-clocks {
+/* Character clocks container (harm + addiction in a row) */
+.crew-hud-panel .character-clocks {
   display: flex;
   gap: 3px;
   margin-top: 3px;
+  flex-wrap: wrap;
 }
 
 .crew-hud-panel .clock-mini-svg {
   width: 20px;
   height: 20px;
+}
+
+/* Addiction clock has a slight purple tint to distinguish it */
+.crew-hud-panel .clock-mini-svg.addiction {
+  filter: hue-rotate(-20deg);
 }
 
 .crew-hud-panel .take-action-btn {
