@@ -521,8 +521,10 @@ export class CrewHUDPanel extends Application {
     private _getClockImage(clock: any, type: string): string {
         // Determine color theme
         let color = 'blue'; // Default for progress
-        if (type === 'harm' || type === 'addiction') {
+        if (type === 'harm') {
             color = 'red';
+        } else if (type === 'addiction') {
+            color = 'yellow';
         } else if (clock.metadata?.category === 'threat') {
             color = 'red';
         }
