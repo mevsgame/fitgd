@@ -2,7 +2,7 @@
   "id": "forged-in-the-grimdark",
   "title": "Forged in the Grimdark",
   "description": "A Forged in the Dark variant set in a grimdark universe. Features Momentum-based resource management, harm clocks, Rally mechanics, and event-sourced state management.",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "compatibility": {
     "minimum": "10",
     "verified": "13"
