@@ -314,13 +314,42 @@ export class FoundryReduxBridge {
     const affectedIds = new Set(ids.filter(id => isValidId(id)));
 
     for (const app of Object.values(ui.windows)) {
-      if (app.constructor.name === 'FitGDCharacterSheet' ||
-        app.constructor.name === 'FitGDCrewSheet') {
+      const appName = app.constructor.name;
 
-        const actorId = (app as any).actor?.id as ReduxId | undefined; // Unified IDs: actor.id === Redux ID
-
+      // Handle Character/Crew Sheets
+      if (appName === 'FitGDCharacterSheet' || appName === 'FitGDCrewSheet') {
+        const actorId = (app as any).actor?.id as ReduxId | undefined;
+        // unified IDs: actor.id === Redux ID
         if (actorId && affectedIds.has(actorId)) {
           app.render(force);
+        }
+      }
+      // Handle Crew HUD Panel
+      else if (appName === 'CrewHUDPanel') {
+        const hud = app as any;
+        const hudCrewId = hud.crewId as ReduxId | undefined;
+
+        if (hudCrewId) {
+          // Refresh if HUD's crew is affected
+          if (affectedIds.has(hudCrewId)) {
+            hud.render(force);
+            continue;
+          }
+
+          // Refresh if any of the crew's characters are affected
+          // We need to look up the crew to know its characters
+          const state = this.getState();
+          const crew = state.crews.byId[hudCrewId];
+
+          if (crew) {
+            const hasAffectedCharacter = crew.characters.some(charId =>
+              affectedIds.has(charId as ReduxId)
+            );
+
+            if (hasAffectedCharacter) {
+              hud.render(force);
+            }
+          }
         }
       }
     }
