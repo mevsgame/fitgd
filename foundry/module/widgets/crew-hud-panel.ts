@@ -68,6 +68,7 @@ export class CrewHUDPanel extends Application {
 
     private crewId: string | null = null;
     private storeUnsubscribe: (() => void) | null = null;
+    private currentPosition: { left: number; top: number } | null = null;
 
     // ===== STATIC METHODS =====
 
@@ -261,42 +262,57 @@ export class CrewHUDPanel extends Application {
     }
 
     /**
-     * Save current position to client settings
+     * Save current position to instance and client settings
      */
     private _savePosition(): void {
-        const panel = this.element?.find('.crew-hud-panel');
-        if (!panel?.length) return;
+        const hudPanel = this.element?.hasClass('crew-hud-panel')
+            ? this.element
+            : this.element?.find('.crew-hud-panel');
+        if (!hudPanel?.length) return;
 
-        const rect = panel[0].getBoundingClientRect();
-        const position = { left: rect.left, top: rect.top };
+        const rect = hudPanel[0].getBoundingClientRect();
+        this.currentPosition = { left: rect.left, top: rect.top };
 
         try {
-            game.settings.set('forged-in-the-grimdark', 'hudPosition', JSON.stringify(position));
+            game.settings.set('forged-in-the-grimdark', 'hudPosition', JSON.stringify(this.currentPosition));
         } catch (error) {
             logger.warn('Could not save HUD position:', error);
         }
     }
 
     /**
-     * Restore position from client settings
+     * Restore position from instance variable or client settings
      */
     private _restorePosition(): void {
-        try {
-            const positionStr = game.settings.get('forged-in-the-grimdark', 'hudPosition') as string;
-            if (!positionStr) return;
+        const hudPanel = this.element?.hasClass('crew-hud-panel')
+            ? this.element
+            : this.element?.find('.crew-hud-panel');
+        if (!hudPanel?.length) return;
 
-            const position = JSON.parse(positionStr);
-            const panel = this.element?.find('.crew-hud-panel');
-            if (panel?.length && position.left !== undefined && position.top !== undefined) {
-                panel.css({
-                    left: position.left + 'px',
-                    top: position.top + 'px',
-                    right: 'auto',
-                    bottom: 'auto'
-                });
+        // First try instance variable (for re-renders)
+        let position = this.currentPosition;
+
+        // If no instance position, try loading from settings (initial load)
+        if (!position) {
+            try {
+                const positionStr = game.settings.get('forged-in-the-grimdark', 'hudPosition') as string;
+                if (positionStr) {
+                    position = JSON.parse(positionStr);
+                    this.currentPosition = position;
+                }
+            } catch (error) {
+                logger.warn('Could not load HUD position from settings:', error);
             }
-        } catch (error) {
-            logger.warn('Could not restore HUD position:', error);
+        }
+
+        // Apply position if available
+        if (position && position.left !== undefined && position.top !== undefined) {
+            hudPanel.css({
+                left: position.left + 'px',
+                top: position.top + 'px',
+                right: 'auto',
+                bottom: 'auto'
+            });
         }
     }
 

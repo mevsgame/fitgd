@@ -75,9 +75,9 @@ Persistent overlay showing crew status at a glance:
             title="{{subtype}}: {{segments}}/{{maxSegments}}" />
           {{/each}}
           {{!-- Addiction clock (per-character) --}}
-          {{#if ../addictionClock}}
-          <img class="clock-mini-svg addiction" src="{{../addictionClock.clockImage}}" alt="Addiction"
-            title="Addiction: {{../addictionClock.segments}}/{{../addictionClock.maxSegments}}" />
+          {{#if addictionClock}}
+          <img class="clock-mini-svg addiction" src="{{addictionClock.clockImage}}" alt="Addiction"
+            title="Addiction: {{addictionClock.segments}}/{{addictionClock.maxSegments}}" />
           {{/if}}
         </div>
       </div>
