@@ -13,25 +13,47 @@ import { logger } from '../utils/logger';
  */
 export function registerHUDHooks(): void {
     // Add toggle button to scene controls
-    // Using 'as any' for hook name since Foundry types don't include all hooks
-    Hooks.on('getSceneControlButtons' as any, (controls: any[]) => {
-        // Add to token controls group (first control group in the sidebar)
-        const tokenControls = controls.find((c: any) => c.name === 'token');
-        if (tokenControls) {
-            tokenControls.tools.push({
-                name: 'crew-hud',
-                title: 'Toggle Crew HUD',
-                icon: 'fas fa-users',
-                toggle: true,
-                active: CrewHUDPanel.isVisible(),
-                onClick: (toggled: boolean) => {
-                    if (toggled) {
-                        CrewHUDPanel.show();
-                    } else {
-                        CrewHUDPanel.hide();
-                    }
+    // Foundry V12 changed the hook signature - controls may be an object with categories
+    Hooks.on('getSceneControlButtons' as any, (controls: any) => {
+        try {
+            // Handle both V11 (array) and V12 (object with categories) formats
+            let tokenControls: any = null;
+
+            if (Array.isArray(controls)) {
+                // V11 format: controls is an array
+                tokenControls = controls.find((c: any) => c.name === 'token');
+            } else if (controls && typeof controls === 'object') {
+                // V12 format: controls may be an object or have a different structure
+                // Try to find the token group
+                if (controls.token) {
+                    tokenControls = controls.token;
+                } else if (controls.controls && Array.isArray(controls.controls)) {
+                    tokenControls = controls.controls.find((c: any) => c.name === 'token');
                 }
-            });
+            }
+
+            if (tokenControls && tokenControls.tools) {
+                // Check if we haven't already added the button
+                const existingTool = tokenControls.tools.find?.((t: any) => t.name === 'crew-hud');
+                if (!existingTool) {
+                    tokenControls.tools.push({
+                        name: 'crew-hud',
+                        title: 'Toggle Crew HUD',
+                        icon: 'fas fa-users',
+                        toggle: true,
+                        active: CrewHUDPanel.isVisible(),
+                        onClick: (toggled: boolean) => {
+                            if (toggled) {
+                                CrewHUDPanel.show();
+                            } else {
+                                CrewHUDPanel.hide();
+                            }
+                        }
+                    });
+                }
+            }
+        } catch (error) {
+            logger.warn('Could not add Crew HUD toggle to scene controls:', error);
         }
     });
 

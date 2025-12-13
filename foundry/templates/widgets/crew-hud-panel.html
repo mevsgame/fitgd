@@ -2,15 +2,16 @@
 Crew HUD Panel Template
 
 Persistent overlay showing crew status at a glance:
-- Crew name and momentum track
+- Crew name and momentum track (with GM reset button)
+- Addiction clock (stims usage)
 - Crew progress/threat clocks (SVG previews)
-- Character cards with portraits and harm clocks
+- Character cards with portraits, harm clocks, and active indicator
 
 @see docs/crew-hud-panel.md
 --}}
 
 <div class="crew-hud-panel" data-crew-id="{{crewId}}">
-  {{!-- Close Button --}}
+  {{!-- Close Button (hidden via CSS) --}}
   <button class="hud-close-btn" title="Close HUD">
     <i class="fas fa-times"></i>
   </button>
@@ -21,7 +22,8 @@ Persistent overlay showing crew status at a glance:
     <div class="momentum-section">
       <div class="momentum-track">
         {{#times 10}}
-        <span class="momentum-box {{#if (lt this ../currentMomentum)}}filled{{/if}}" title="Momentum {{plus this 1}}"></span>
+        <span class="momentum-box {{#if (lt this ../currentMomentum)}}filled{{/if}}"
+          title="Momentum {{add this 1}}"></span>
         {{/times}}
       </div>
       {{#if isGM}}
@@ -32,38 +34,64 @@ Persistent overlay showing crew status at a glance:
         <button class="momentum-btn spend" title="Spend 1 Momentum">
           <i class="fas fa-minus"></i>
         </button>
+        <button class="momentum-btn reset" title="Perform Momentum Reset">
+          <i class="fas fa-redo"></i>
+        </button>
       </div>
       {{/if}}
     </div>
   </header>
 
-  {{!-- Crew Clocks Section --}}
-  {{#if crewClocks.length}}
+  {{!-- Clocks Section --}}
   <section class="hud-crew-clocks">
     <h3 class="section-title">Clocks</h3>
     <div class="clock-list">
+      {{!-- Addiction Clock --}}
+      {{#if addictionClock}}
+      <div class="clock-mini addiction-clock" data-clock-id="{{addictionClock.id}}"
+        title="Addiction: {{addictionClock.segments}}/{{addictionClock.maxSegments}}">
+        <img class="clock-svg" src="{{addictionClock.clockImage}}" alt="Addiction" />
+        <span class="clock-label">Addiction</span>
+      </div>
+      {{/if}}
+
+      {{!-- Crew Progress/Threat Clocks --}}
       {{#each crewClocks}}
       <div class="clock-mini" data-clock-id="{{id}}" title="{{name}}: {{segments}}/{{maxSegments}}">
         <img class="clock-svg" src="{{clockImage}}" alt="{{name}}" />
         <span class="clock-label">{{name}}</span>
       </div>
       {{/each}}
+
+      {{!-- Add Clock button --}}
+      {{#if isGM}}
+      <div class="clock-mini add-clock-placeholder" title="Add a clock from the Crew Sheet">
+        <span class="clock-placeholder">
+          <i class="fas fa-plus-circle"></i>
+        </span>
+        <span class="clock-label">New clock</span>
+      </div>
+      {{/if}}
     </div>
   </section>
-  {{/if}}
 
   {{!-- Characters Section --}}
   <section class="hud-characters">
     <h3 class="section-title">Characters</h3>
     {{#each characters}}
-    <div class="character-card" data-character-id="{{id}}" title="Double-click to open sheet">
+    <div class="character-card {{#if isActive}}active{{/if}}" data-character-id="{{id}}"
+      title="Double-click to open sheet">
       <img class="portrait" src="{{portrait}}" alt="{{name}}" />
       <div class="card-info">
-        <span class="char-name">{{name}}</span>
+        <span class="char-name">
+          {{#if isActive}}<i class="fas fa-dice-d20 active-indicator" title="Taking action"></i>{{/if}}
+          {{name}}
+        </span>
         {{#if harmClocks.length}}
         <div class="harm-clocks">
           {{#each harmClocks}}
-          <img class="clock-mini-svg" src="{{clockImage}}" alt="{{subtype}}" title="{{subtype}}: {{segments}}/{{maxSegments}}" />
+          <img class="clock-mini-svg" src="{{clockImage}}" alt="{{subtype}}"
+            title="{{subtype}}: {{segments}}/{{maxSegments}}" />
           {{/each}}
         </div>
         {{/if}}

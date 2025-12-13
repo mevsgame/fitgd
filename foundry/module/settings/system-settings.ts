@@ -85,4 +85,14 @@ export function registerSystemSettings(): void {
     type: Boolean,
     default: false
   });
+
+  // HUD position (per-client, for drag-to-reposition)
+  (game.settings as any).register('forged-in-the-grimdark', 'hudPosition', {
+    name: 'HUD Position',
+    hint: 'Saved position of the HUD panel',
+    scope: 'client',
+    config: false,
+    type: String,
+    default: ''
+  });
 }

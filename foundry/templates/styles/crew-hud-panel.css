@@ -2,18 +2,21 @@
  * Crew HUD Panel Styles
  *
  * Persistent overlay on left side of screen showing crew status.
+ * ALL styles are scoped to .crew-hud-panel to avoid affecting other components.
  * @see docs/crew-hud-panel.md
  */
 
 /* Main Container */
 .crew-hud-panel {
   position: fixed;
-  left: 60px; /* Offset for Foundry scene controls */
+  left: 60px;
+  /* Offset for Foundry scene controls */
   top: 80px;
   width: 260px;
   max-height: calc(100vh - 100px);
   overflow-y: auto;
-  z-index: 60; /* Above canvas, below dialogs */
+  z-index: 60;
+  /* Above canvas, below dialogs */
   background: rgba(30, 30, 30, 0.95);
   border: 1px solid #444;
   border-radius: 6px;
@@ -42,32 +45,18 @@
   background: #666;
 }
 
-/* Close Button */
-.hud-close-btn {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  background: transparent;
-  border: none;
-  color: #888;
-  cursor: pointer;
-  padding: 4px 6px;
-  font-size: 12px;
-  border-radius: 3px;
-}
-
-.hud-close-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ccc;
+/* Close Button - HIDDEN for now */
+.crew-hud-panel .hud-close-btn {
+  display: none;
 }
 
 /* Crew Header */
-.hud-crew-header {
+.crew-hud-panel .hud-crew-header {
   margin-bottom: 12px;
-  padding-right: 24px; /* Space for close button */
+  padding-right: 8px;
 }
 
-.hud-crew-header .crew-name {
+.crew-hud-panel .hud-crew-header .crew-name {
   margin: 0 0 8px 0;
   font-size: 16px;
   font-weight: bold;
@@ -77,20 +66,21 @@
   white-space: nowrap;
 }
 
-/* Momentum Section */
-.momentum-section {
+/* Momentum Section - SCOPED to HUD only */
+.crew-hud-panel .momentum-section {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.momentum-track {
+.crew-hud-panel .momentum-track {
   display: flex;
   gap: 3px;
   flex-wrap: wrap;
 }
 
-.momentum-box {
+/* RED momentum boxes to match existing crew sheet */
+.crew-hud-panel .momentum-box {
   width: 16px;
   height: 16px;
   border: 1px solid #555;
@@ -99,17 +89,17 @@
   transition: background-color 0.15s ease;
 }
 
-.momentum-box.filled {
-  background: #4a9eff;
-  border-color: #6bb3ff;
+.crew-hud-panel .momentum-box.filled {
+  background: #c44;
+  border-color: #d66;
 }
 
-.momentum-controls {
+.crew-hud-panel .momentum-controls {
   display: flex;
   gap: 4px;
 }
 
-.momentum-btn {
+.crew-hud-panel .momentum-btn {
   padding: 3px 8px;
   font-size: 11px;
   border: 1px solid #555;
@@ -120,24 +110,29 @@
   transition: all 0.15s ease;
 }
 
-.momentum-btn:hover {
+.crew-hud-panel .momentum-btn:hover {
   background: #444;
   border-color: #666;
   color: #fff;
 }
 
-.momentum-btn.add:hover {
+.crew-hud-panel .momentum-btn.add:hover {
   background: #3a5a3a;
   border-color: #4a7a4a;
 }
 
-.momentum-btn.spend:hover {
+.crew-hud-panel .momentum-btn.spend:hover {
   background: #5a3a3a;
   border-color: #7a4a4a;
 }
 
+.crew-hud-panel .momentum-btn.reset:hover {
+  background: #4a4a5a;
+  border-color: #6a6a7a;
+}
+
 /* Section Titles */
-.section-title {
+.crew-hud-panel .section-title {
   margin: 0 0 8px 0;
   font-size: 11px;
   text-transform: uppercase;
@@ -148,31 +143,31 @@
 }
 
 /* Crew Clocks Section */
-.hud-crew-clocks {
+.crew-hud-panel .hud-crew-clocks {
   margin-top: 12px;
   padding-top: 8px;
   border-top: 1px solid #3a3a3a;
 }
 
-.clock-list {
+.crew-hud-panel .clock-list {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
-.clock-mini {
+.crew-hud-panel .clock-mini {
   display: flex;
   flex-direction: column;
   align-items: center;
   cursor: default;
 }
 
-.clock-mini .clock-svg {
+.crew-hud-panel .clock-mini .clock-svg {
   width: 36px;
   height: 36px;
 }
 
-.clock-mini .clock-label {
+.crew-hud-panel .clock-mini .clock-label {
   font-size: 10px;
   color: #aaa;
   max-width: 60px;
@@ -183,14 +178,35 @@
   margin-top: 2px;
 }
 
+/* Addiction clock special styling */
+.crew-hud-panel .addiction-clock .clock-label {
+  color: #e88;
+}
+
+/* Add clock placeholder */
+.crew-hud-panel .add-clock-placeholder {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.crew-hud-panel .add-clock-placeholder .clock-placeholder {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #666;
+}
+
 /* Characters Section */
-.hud-characters {
+.crew-hud-panel .hud-characters {
   margin-top: 12px;
   padding-top: 8px;
   border-top: 1px solid #3a3a3a;
 }
 
-.character-card {
+.crew-hud-panel .character-card {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -201,15 +217,39 @@
   transition: background-color 0.15s ease;
 }
 
-.character-card:hover {
+.crew-hud-panel .character-card:hover {
   background: rgba(255, 255, 255, 0.08);
 }
 
-.character-card:last-child {
+/* Active character indicator */
+.crew-hud-panel .character-card.active {
+  background: rgba(100, 150, 100, 0.2);
+  border: 1px solid rgba(100, 200, 100, 0.3);
+}
+
+.crew-hud-panel .active-indicator {
+  color: #8c8;
+  margin-right: 4px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.crew-hud-panel .character-card:last-child {
   margin-bottom: 0;
 }
 
-.character-card .portrait {
+.crew-hud-panel .character-card .portrait {
   width: 40px;
   height: 40px;
   border-radius: 4px;
@@ -218,13 +258,13 @@
   flex-shrink: 0;
 }
 
-.card-info {
+.crew-hud-panel .card-info {
   flex: 1;
   min-width: 0;
   overflow: hidden;
 }
 
-.char-name {
+.crew-hud-panel .char-name {
   font-weight: bold;
   font-size: 13px;
   display: block;
@@ -234,18 +274,18 @@
   color: #fff;
 }
 
-.harm-clocks {
+.crew-hud-panel .harm-clocks {
   display: flex;
   gap: 3px;
   margin-top: 3px;
 }
 
-.clock-mini-svg {
+.crew-hud-panel .clock-mini-svg {
   width: 20px;
   height: 20px;
 }
 
-.take-action-btn {
+.crew-hud-panel .take-action-btn {
   background: #4a7c59;
   border: none;
   padding: 6px 10px;
@@ -256,16 +296,16 @@
   transition: all 0.15s ease;
 }
 
-.take-action-btn:hover {
+.crew-hud-panel .take-action-btn:hover {
   background: #5a9069;
   transform: scale(1.05);
 }
 
-.take-action-btn:active {
+.crew-hud-panel .take-action-btn:active {
   transform: scale(0.98);
 }
 
-.no-characters {
+.crew-hud-panel .no-characters {
   color: #666;
   font-style: italic;
   font-size: 12px;
@@ -273,8 +313,8 @@
   padding: 10px 0;
 }
 
-/* Set Primary Button (in Crew Sheet) */
-.set-primary-btn {
+/* Set Primary Button (in Crew Sheet header) */
+.hud-controls .set-primary-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -288,17 +328,17 @@
   transition: all 0.15s ease;
 }
 
-.set-primary-btn:hover {
+.hud-controls .set-primary-btn:hover {
   background: #444;
   border-color: #666;
 }
 
-.set-primary-btn.active {
+.hud-controls .set-primary-btn.active {
   background: #4a5a3a;
   border-color: #6a8a4a;
   color: #ffd700;
 }
 
-.set-primary-btn.active i {
+.hud-controls .set-primary-btn.active i {
   color: #ffd700;
 }
