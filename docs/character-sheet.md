@@ -24,7 +24,7 @@ The system uses a "Unified ID" strategy where the Foundry Actor ID is identical 
 The sheet features an explicit **Edit Mode** for Action Dots.
 - **View Mode**: Dots are read-only. Clicking them does nothing (or rolls, in future iterations).
 - **Edit Mode**: Clicking a dot updates the rating.
-    - *Logic*: Clicking the Nth dot sets rating to N. Clicking the current rating (N) sets it to N-1 (or 0 if it was 1).
+    - *Logic*: Clicking the Nth dot sets rating to N. To reset to 0, click the first dot when the rating is currently 1.
     - *Validation*: The sheet prevents saving if there are unallocated dots remaining.
 
 ### Sub-Features
@@ -36,16 +36,20 @@ The sheet features an explicit **Edit Mode** for Action Dots.
 **Visual Layout**:
 - **Header**: Shows current load ("3/5 slots") and "Show Equipped Only" filter checkbox
 - **Equipment List**: Uses Equipment Row View Template (full configuration)
-  - Sort order: Passive → Consumable → Active (alphabetical within groups)
+  - Sort order: Active → Passive → Consumable (alphabetical within groups)
   - All elements visible (name, category icon, tier, bonuses, locked icon, equipped checkbox, toggleable slots/description)
   - No image thumbnails
 
 **Item Management**:
 - **Add Items**:
-  - Drag-drop from compendium to Character Sheet
+  - Drag-drop from compendium: *Note: Currently creates a raw Foundry Item which does not sync to the Redux store. Use "Create Equipment" or "Browse Equipment" instead.*
   - Click "Create Equipment" button → Opens Equipment Sheet Dialog (create mode, restricted for players)
   - Click "Browse Equipment" button → Opens Equipment Browser
-  - Players can create Common items (Active +1d or Passive), GM can create any tier
+  - Players can create:
+    - **Active**: +1d
+    - **Passive**: +1d (previously no bonus)
+    - **Consumable**: +1d, +1 position
+  - GM can create any item tier/category without restriction
 - **Edit Items**:
   - Double-click item → Opens Equipment Sheet Dialog (edit mode)
   - Player: Can edit unlocked Common items only

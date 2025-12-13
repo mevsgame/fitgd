@@ -33,7 +33,7 @@ describe('Equipment Creation Logic (prepareEquipmentData)', () => {
             expect(data.modifiers?.positionBonus).toBeUndefined();
         });
 
-        it('should create Passive equipment with no bonuses', () => {
+        it('should create Passive equipment with +1d bonus', () => {
             const formData: EquipmentFormData = {
                 name: 'My Custom Armor',
                 slots: 2,
@@ -49,7 +49,25 @@ describe('Equipment Creation Logic (prepareEquipmentData)', () => {
 
             expect(data.category).toBe('passive');
             expect(data.tier).toBe('common');
-            expect(data.modifiers).toEqual({}); // Empty modifiers
+            expect(data.modifiers?.diceBonus).toBe(1); // Updated: Passive gets +1d
+        });
+
+        it('should create Consumable equipment with +1d and +1 pos', () => {
+            const formData: EquipmentFormData = {
+                name: 'My Custom Stim',
+                slots: 1,
+                restrictedType: 'consumable' as any, // 'consumable' will be valid now
+            };
+
+            const result = prepareEquipmentData(formData, isGM, mode);
+
+            expect(result.success).toBe(true);
+            const data = result.data!;
+
+            expect(data.category).toBe('consumable');
+            expect(data.tier).toBe('common');
+            expect(data.modifiers?.diceBonus).toBe(1);
+            expect(data.modifiers?.positionBonus).toBe(1);
         });
 
         it('should reject invalid restrictedType', () => {

@@ -9,7 +9,7 @@ export interface EquipmentFormData {
     'modifiers.dice'?: string | number;
     'modifiers.position'?: string | number;
     'modifiers.effect'?: string | number;
-    restrictedType?: 'active' | 'passive';
+    restrictedType?: 'active' | 'passive' | 'consumable';
 }
 
 export interface ValidationResult {
@@ -75,7 +75,8 @@ export function prepareEquipmentData(
     };
 
     if (restrictedCreation) {
-        const restrictedType = formData.restrictedType;
+        const restrictedType = formData.restrictedType?.toString().trim();
+        console.log('FitGD | Validating restricted equipment creation:', { restrictedType, formData });
 
         if (restrictedType === 'active') {
             finalData.category = 'active';
@@ -84,9 +85,13 @@ export function prepareEquipmentData(
         } else if (restrictedType === 'passive') {
             finalData.category = 'passive';
             finalData.tier = 'common';
-            finalData.modifiers = {};
+            finalData.modifiers = { diceBonus: 1 };
+        } else if (restrictedType === 'consumable') {
+            finalData.category = 'consumable';
+            finalData.tier = 'common';
+            finalData.modifiers = { diceBonus: 1, positionBonus: 1 };
         } else {
-            return { success: false, error: 'Invalid equipment type selected' };
+            return { success: false, error: `Invalid equipment type selected: "${restrictedType}"` };
         }
     } else {
         // Normal mode validation
