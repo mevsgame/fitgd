@@ -31,6 +31,10 @@ import { registerHandlebarsHelpers } from './helpers/handlebars-helpers';
 import { registerCombatHooks } from './hooks/combat-hooks';
 import { registerActorHooks } from './hooks/actor-hooks';
 import { registerHotbarHooks } from './hooks/hotbar-hooks';
+import { registerHUDHooks } from './hooks/hud-hooks';
+
+// Widgets
+import { CrewHUDPanel } from './widgets/crew-hud-panel';
 
 // Socket and autosave modules
 import { receiveCommandsFromSocket, handleTakeAction, getIsReceivingFromSocket } from './socket/socket-handler';
@@ -358,19 +362,32 @@ Hooks.once('init', async function () {
   registerCombatHooks();
   registerActorHooks();
   registerHotbarHooks();
+  registerHUDHooks();
 
   // Register developer console commands
   registerDevCommands();
 
-  // Manually load equipment-row-view.css if not loaded (workaround for system.json hot reload)
-  const cssPath = 'systems/forged-in-the-grimdark/templates/styles/equipment-row-view.css';
-  if (!document.querySelector(`link[href="${cssPath}"]`)) {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = cssPath;
-    document.head.appendChild(link);
-    logger.info('Manually loaded equipment-row-view.css');
+  // Manually load CSS files if not loaded (workaround for system.json hot reload)
+  const cssFiles = [
+    'systems/forged-in-the-grimdark/templates/styles/equipment-row-view.css',
+    'systems/forged-in-the-grimdark/templates/styles/crew-hud-panel.css'
+  ];
+  for (const cssPath of cssFiles) {
+    if (!document.querySelector(`link[href="${cssPath}"]`)) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = cssPath;
+      document.head.appendChild(link);
+      logger.info(`Manually loaded ${cssPath}`);
+    }
   }
+
+  // Expose HUD API for console/macro access
+  game.fitgd!.hud = {
+    show: CrewHUDPanel.show.bind(CrewHUDPanel),
+    hide: CrewHUDPanel.hide.bind(CrewHUDPanel),
+    isVisible: CrewHUDPanel.isVisible.bind(CrewHUDPanel)
+  };
 
   logger.info('Initialization complete');
 });

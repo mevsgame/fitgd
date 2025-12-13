@@ -9,6 +9,7 @@ Each feature should have a dedicated document linked below.
 - [Player Action Widget](./player-action-widget.md) - The core interface for action resolution.
 - [Character Sheet](./character-sheet.md) - Managing character state, traits, and equipment.
 - [Crew Sheet](./crew-sheet.md) - Managing crew resources, momentum, and clocks.
+- [Crew HUD Panel](./crew-hud-panel.md) - Persistent overlay showing crew status at a glance.
 - [Action Roll Dialog](./action-roll-dialog.md) - A lighter alternative for quick rolls.
 - [Take Harm Dialog](./take-harm-dialog.md) - Interface for applying harm and consequences.
 - [Equipment Sheet Dialog](./equipment-sheet-dialog.md) - Creating and editing equipment items.

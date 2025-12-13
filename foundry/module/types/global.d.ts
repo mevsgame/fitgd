@@ -60,6 +60,13 @@ export interface FitGDGame {
 
   /** Migration backup (temporary, only during migration) */
   __migrationBackup?: unknown;
+
+  /** Crew HUD Panel API */
+  hud?: {
+    show(crewId?: string): void;
+    hide(): void;
+    isVisible(): boolean;
+  };
 }
 
 // Extend Foundry's Game interface

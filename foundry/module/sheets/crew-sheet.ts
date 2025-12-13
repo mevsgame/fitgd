@@ -39,6 +39,7 @@ interface CrewSheetData extends ActorSheet.Data {
     }>;
   };
   reduxId?: string;
+  isPrimary?: boolean;  // Whether this crew is set as the primary HUD crew
 }
 
 /**
@@ -103,6 +104,10 @@ class FitGDCrewSheet extends ActorSheet {
         };
         context.reduxId = reduxId;
 
+        // Check if this crew is the primary HUD crew
+        const primaryCrewId = game.settings.get('forged-in-the-grimdark', 'primaryCrewId') as string;
+        context.isPrimary = (reduxId === primaryCrewId);
+
         console.log('FitGD | Crew system data:', context.system);
       }
     }
@@ -139,6 +144,9 @@ class FitGDCrewSheet extends ActorSheet {
     // Crew members
     html.find('.add-character-btn').click(this._onAddCharacter.bind(this));
     html.find('.remove-character-btn').click(this._onRemoveCharacter.bind(this));
+
+    // HUD controls
+    html.find('.set-primary-btn').click(this._onSetPrimary.bind(this));
   }
 
   /**
@@ -146,6 +154,36 @@ class FitGDCrewSheet extends ActorSheet {
    */
   private _getReduxId(): string {
     return this.actor.id; // Unified IDs: Foundry Actor ID === Redux ID
+  }
+
+  /**
+   * Set this crew as the primary HUD crew (GM only)
+   */
+  private async _onSetPrimary(event: JQuery.ClickEvent): Promise<void> {
+    event.preventDefault();
+    if (!game.user?.isGM) {
+      ui.notifications?.warn('Only the GM can set the primary crew.');
+      return;
+    }
+
+    const crewId = this._getReduxId();
+    if (!crewId) return;
+
+    try {
+      await game.settings.set('forged-in-the-grimdark', 'primaryCrewId', crewId);
+      ui.notifications?.info(`${this.actor.name} set as primary crew`);
+
+      // If HUD is visible, refresh it to show this crew
+      if (game.fitgd?.hud?.isVisible()) {
+        game.fitgd.hud.show(crewId);
+      }
+
+      this.render(false);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      ui.notifications?.error(`Error setting primary crew: ${errorMessage}`);
+      console.error('FitGD | Set Primary error:', error);
+    }
   }
 
   private async _onAddMomentum(event: JQuery.ClickEvent): Promise<void> {

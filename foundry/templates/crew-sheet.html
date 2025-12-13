@@ -32,6 +32,17 @@
           {{/if}}
         </div>
       </div>
+
+      {{!-- HUD Primary Crew Toggle (GM only) --}}
+      {{#if @root.editable}}
+      <div class="hud-controls">
+        <button class="set-primary-btn {{#if isPrimary}}active{{/if}}" type="button"
+          title="{{#if isPrimary}}This is the primary HUD crew{{else}}Set as Primary HUD Crew{{/if}}">
+          <i class="fas fa-star{{#unless isPrimary}}-half-alt{{/unless}}"></i>
+          {{#if isPrimary}}Primary Crew{{else}}Set as Primary{{/if}}
+        </button>
+      </div>
+      {{/if}}
     </div>
   </header>
 

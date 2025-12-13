@@ -65,4 +65,24 @@ export function registerSystemSettings(): void {
     default: false,
     requiresReload: false
   });
+
+  // Primary Crew ID (world-level, GM sets which crew shows in HUD)
+  (game.settings as any).register('forged-in-the-grimdark', 'primaryCrewId', {
+    name: 'Primary Crew',
+    hint: 'The crew shown in the HUD panel',
+    scope: 'world',
+    config: false,
+    type: String,
+    default: ''
+  });
+
+  // HUD visible state (per-client, persists across sessions)
+  (game.settings as any).register('forged-in-the-grimdark', 'hudVisible', {
+    name: 'HUD Visible',
+    hint: 'Whether the Crew HUD panel is shown',
+    scope: 'client',
+    config: false,
+    type: Boolean,
+    default: false
+  });
 }

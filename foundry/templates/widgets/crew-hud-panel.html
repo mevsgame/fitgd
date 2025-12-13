@@ -1,0 +1,81 @@
+{{!--
+Crew HUD Panel Template
+
+Persistent overlay showing crew status at a glance:
+- Crew name and momentum track
+- Crew progress/threat clocks (SVG previews)
+- Character cards with portraits and harm clocks
+
+@see docs/crew-hud-panel.md
+--}}
+
+<div class="crew-hud-panel" data-crew-id="{{crewId}}">
+  {{!-- Close Button --}}
+  <button class="hud-close-btn" title="Close HUD">
+    <i class="fas fa-times"></i>
+  </button>
+
+  {{!-- Crew Header --}}
+  <header class="hud-crew-header">
+    <h2 class="crew-name">{{crewName}}</h2>
+    <div class="momentum-section">
+      <div class="momentum-track">
+        {{#times 10}}
+        <span class="momentum-box {{#if (lt this ../currentMomentum)}}filled{{/if}}" title="Momentum {{plus this 1}}"></span>
+        {{/times}}
+      </div>
+      {{#if isGM}}
+      <div class="momentum-controls">
+        <button class="momentum-btn add" title="Add 1 Momentum">
+          <i class="fas fa-plus"></i>
+        </button>
+        <button class="momentum-btn spend" title="Spend 1 Momentum">
+          <i class="fas fa-minus"></i>
+        </button>
+      </div>
+      {{/if}}
+    </div>
+  </header>
+
+  {{!-- Crew Clocks Section --}}
+  {{#if crewClocks.length}}
+  <section class="hud-crew-clocks">
+    <h3 class="section-title">Clocks</h3>
+    <div class="clock-list">
+      {{#each crewClocks}}
+      <div class="clock-mini" data-clock-id="{{id}}" title="{{name}}: {{segments}}/{{maxSegments}}">
+        <img class="clock-svg" src="{{clockImage}}" alt="{{name}}" />
+        <span class="clock-label">{{name}}</span>
+      </div>
+      {{/each}}
+    </div>
+  </section>
+  {{/if}}
+
+  {{!-- Characters Section --}}
+  <section class="hud-characters">
+    <h3 class="section-title">Characters</h3>
+    {{#each characters}}
+    <div class="character-card" data-character-id="{{id}}" title="Double-click to open sheet">
+      <img class="portrait" src="{{portrait}}" alt="{{name}}" />
+      <div class="card-info">
+        <span class="char-name">{{name}}</span>
+        {{#if harmClocks.length}}
+        <div class="harm-clocks">
+          {{#each harmClocks}}
+          <img class="clock-mini-svg" src="{{clockImage}}" alt="{{subtype}}" title="{{subtype}}: {{segments}}/{{maxSegments}}" />
+          {{/each}}
+        </div>
+        {{/if}}
+      </div>
+      {{#if canTakeAction}}
+      <button class="take-action-btn" data-character-id="{{id}}" title="Take Action">
+        <i class="fas fa-dice-d20"></i>
+      </button>
+      {{/if}}
+    </div>
+    {{else}}
+    <p class="no-characters">No characters in crew</p>
+    {{/each}}
+  </section>
+</div>
