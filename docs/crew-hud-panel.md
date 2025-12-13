@@ -2,166 +2,89 @@
 
 ## Overview
 
-The **Crew HUD Panel** is a persistent, always-visible overlay on the left side of the screen that provides at-a-glance status for the **primary crew**. It displays crew momentum, active clocks (with SVG previews), and compact character cards with harm status and quick-action buttons.
+A persistent overlay panel on the left side of the screen that displays the primary crew's status at a glance. The HUD provides quick access to momentum controls, crew clocks, and character actions.
 
-**Why this is useful:**
-During gameplay, players and GMs often need to reference crew status without opening the full Crew Sheet. The HUD provides instant visibility of:
-- Current Momentum (with GM controls)
-- Active progress/threat clocks
-- Each character's harm clocks
-- Quick "Take Action" buttons for initiating the Player Action Widget
+## Features
+
+- **Momentum track** with red-filled boxes (0-10)
+- **GM controls**: +1, -1, and full reset buttons
+- **Crew clocks** section (progress/threat clocks with SVG previews)
+- **Character cards** with:
+  - Portrait
+  - Name
+  - Harm clocks (red SVGs)
+  - Addiction clocks (purple-tinted, per-character)
+  - Active indicator (pulsing dice icon when taking action)
+  - Take Action button
 
 ## Architecture & State
 
-### Primary Crew Concept
-
-Only one crew can be designated as "primary" at a time. The GM sets this via a button on the Crew Sheet.
-
-**World Setting:**
-- `primaryCrewId` (world scope) - The crew ID that the HUD displays
-
-**Client Settings:**
-- `hudVisible` (client scope) - Whether the HUD is currently shown (persists across sessions)
-
 ### Redux Integration
+- Subscribes to store for real-time updates
+- Reads from `crews`, `characters`, and `clocks` slices
+- Updates on momentum, clock, or character changes
 
-**Reads:**
-- `crewSlice` - Crew name, momentum, character list
-- `clockSlice` - Crew clocks (progress, threat) and character harm clocks
-- `characterSlice` - Character names (for card display)
+### Settings
+| Setting | Scope | Purpose |
+|---------|-------|---------|
+| `primaryCrewId` | World | Which crew to display |
+| `hudVisible` | Client | Visibility persistence |
+| `hudPosition` | Client | Drag position persistence |
 
-**Writes:** None - HUD is read-only except for momentum controls (dispatched via Bridge API)
-
-### Foundry Integration
-
-**Actor Data:**
-- Token portraits fetched from Foundry Actor (`actor.img`)
-- Character sheet opened via `actor.sheet.render(true)`
+### State Machine
+N/A - HUD is a passive display widget
 
 ## UI/UX Design
 
-### Panel Layout
-
-```
-┌─────────────────────────┐
-│  Crew Name              │
-│  ■■■■■□□□□□  [+][-]     │
-│  (Momentum: 5/10)       │
-├─────────────────────────┤
-│  CLOCKS                 │
-│  [SVG] Patrol 2/6       │
-│  [SVG] Alarm 4/8        │
-├─────────────────────────┤
-│ ┌────┬──────────┬───┐   │
-│ │ 📷 │ Marcus   │ 🎲│   │
-│ │    │ [SVG][SVG]│   │   │
-│ └────┴──────────┴───┘   │
-│ ┌────┬──────────┬───┐   │
-│ │ 📷 │ Lyra     │ 🎲│   │
-│ │    │ [SVG]    │   │   │
-│ └────┴──────────┴───┘   │
-└─────────────────────────┘
-```
-
-### Visual Elements
-
-| Element | Description |
-|---------|-------------|
-| **Crew Header** | Crew name and momentum track (10 boxes) |
-| **Momentum Controls** | +/- buttons (GM only) |
-| **Crew Clocks** | SVG clock images with names (progress/threat clocks) |
-| **Character Cards** | Portrait thumbnail, name, harm clocks (SVG), Take Action button |
+### Visuals
+- Dark semi-transparent background matching Foundry theme
+- Red momentum boxes (filled = current momentum)
+- SVG clock previews (36px for crew clocks, 20px for character clocks)
+- Green highlight + pulsing icon for active character
 
 ### Interactions
+| Action | Result |
+|--------|--------|
+| Drag header | Reposition HUD (saved to settings) |
+| Click +/- | Add/spend 1 momentum (GM only) |
+| Click redo icon | Perform full momentum reset (GM only) |
+| Double-click character | Open character sheet |
+| Click Take Action | Open Player Action Widget |
 
-| Action | Behavior |
-|--------|----------|
-| Double-click character card | Opens character sheet |
-| Click "Take Action" button | Opens Player Action Widget for that character |
-| Click momentum +/- | Adds/spends 1 momentum (GM only) |
-| Scene controls toggle | Shows/hides the HUD |
-
-### Clock SVG Display
-
-Clocks display using the existing SVG assets from `assets/clocks/themes/`:
-
-| Clock Type | Color Theme | Example Path |
-|------------|-------------|--------------|
-| Harm | Red | `themes/red/6clock_3.svg` |
-| Progress | Blue | `themes/blue/8clock_4.svg` |
-| Threat | Red | `themes/red/6clock_2.svg` |
-
-The clock image path is computed based on:
-- Color theme (by clock type)
-- Max segments (4/6/8/12)
-- Current segments
+### GM vs Player View
+- **GM**: Sees momentum controls (+, -, reset), can Take Action for any character
+- **Player**: No momentum controls, can only Take Action for owned characters
 
 ## Implementation Details
 
-### Entry Points
+### Files
+| File | Purpose |
+|------|---------|
+| [crew-hud-panel.ts](file:///workspaces/fitgd/foundry/module/widgets/crew-hud-panel.ts) | Singleton widget class |
+| [crew-hud-panel.html](file:///workspaces/fitgd/foundry/templates/widgets/crew-hud-panel.html) | Handlebars template |
+| [crew-hud-panel.css](file:///workspaces/fitgd/foundry/templates/styles/crew-hud-panel.css) | Scoped styles |
+| [hud-hooks.ts](file:///workspaces/fitgd/foundry/module/hooks/hud-hooks.ts) | Scene controls + auto-restore |
+| [system-settings.ts](file:///workspaces/fitgd/foundry/module/settings/system-settings.ts) | Settings registration |
 
-1. **Crew Sheet "Set as Primary" Button** (GM only)
-   - Sets `primaryCrewId` world setting
-   - Button shows filled star when crew is primary
-   
-2. **Scene Controls Toggle**
-   - Added to token controls group via `getSceneControlButtons` hook
-   - Icon: `fas fa-users`
-   - Toggles HUD visibility
-
-### Session Persistence
-
-The HUD auto-restores on page load:
-1. On `ready` hook, check `hudVisible` client setting
-2. If true, retrieve `primaryCrewId` from world settings
-3. Call `CrewHUDPanel.show(primaryCrewId)` after slight delay
-
-### Widget Class
-
-**Singleton Pattern:**
+### API Exposure
 ```typescript
-class CrewHUDPanel extends Application {
-  private static _instance: CrewHUDPanel | null = null;
-  
-  static show(crewId?: string): void { ... }
-  static hide(): void { ... }
-  static isVisible(): boolean { ... }
-}
+game.fitgd.hud.show(crewId?)  // Show HUD
+game.fitgd.hud.hide()         // Hide HUD
+game.fitgd.hud.isVisible()    // Check visibility
 ```
 
-**Application Options:**
-- `popOut: false` - Renders as inline HTML, not a draggable window
-- Fixed position via CSS (not Foundry window management)
-
-### Redux Subscription
-
-The HUD subscribes to the Redux store for real-time updates:
-```typescript
-this.storeUnsubscribe = store.subscribe(() => {
-  if (this.rendered) {
-    this.render(false);  // Re-render on any state change
-  }
-});
-```
-
-This ensures momentum changes, clock updates, and character modifications are immediately reflected.
-
-### Permission Checks
-
-| Control | Visibility |
-|---------|------------|
-| Momentum +/- buttons | GM only |
-| Take Action button | Character owner OR GM |
-| Set as Primary button | GM only |
+### Crew Sheet Integration
+- "Set as Primary" button in crew sheet header
+- Updates `primaryCrewId` setting
+- Refreshes HUD if visible
 
 ## Rules Integration
 
-- **Momentum**: Displays current crew momentum (0-10), enforces max via Redux
-- **Clocks**: Shows all crew progress clocks and per-character harm clocks
-- **Take Action**: Invokes same flow as combat turn or character sheet button
+### Primary Rules
+- Momentum: 0-10 scale, used for Push/Flashback
+- Momentum Reset: Resets to starting value, recovers harm/addiction clocks
 
-## Related Features
-
-- [Crew Sheet](./crew-sheet.md) - Full crew management interface
-- [Character Sheet](./character-sheet.md) - Full character management
-- [Player Action Widget](./player-action-widget.md) - Action resolution flow
+### Edge Cases
+- No primary crew set: Warning notification, HUD doesn't open
+- No characters in crew: "No characters in crew" message
+- Addiction clocks only appear after stims usage
