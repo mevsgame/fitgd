@@ -6,8 +6,10 @@ import {
   setMomentum,
   addMomentum,
   spendMomentum as spendMomentumAction,
+  updateCrewName,
 } from '../../slices/crewSlice';
 import { performMomentumReset } from '../../resources';
+
 
 /**
  * Crew API Implementation
@@ -119,6 +121,17 @@ export function createCrewAPI(store: Store) {
     getMomentum(crewId: string): number {
       const state = store.getState();
       return state.crews.byId[crewId]?.currentMomentum ?? 0;
+    },
+
+    /**
+     * Update crew name (sync from Foundry actor)
+     *
+     * This is used when the crew's Foundry actor name is changed
+     * to keep Redux in sync.
+     */
+    updateName(params: { crewId: string; name: string }): void {
+      const { crewId, name } = params;
+      store.dispatch(updateCrewName({ crewId, name }));
     },
   };
 }

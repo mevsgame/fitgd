@@ -23,6 +23,7 @@ A persistent overlay panel on the left side of the screen that displays the prim
 - Subscribes to store for real-time updates
 - Reads from `crews`, `characters`, and `clocks` slices
 - Updates on momentum, clock, or character changes
+- **Name sync**: Actor name changes in Foundry trigger HUD re-render via `updateActor` hook
 
 ### Settings
 | Setting | Scope | Purpose |

@@ -392,7 +392,7 @@ export class CrewHUDPanel extends Application {
 
             return {
                 id: charId,
-                name: (char?.name || actor?.name || 'Unknown') as string,
+                name: (actor?.name || char?.name || 'Unknown') as string,
                 portrait: (actor?.img || 'icons/svg/mystery-man.svg') as string,
                 canTakeAction,
                 isActive: charId === activeCharacterId,

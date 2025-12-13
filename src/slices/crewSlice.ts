@@ -89,9 +89,16 @@ interface AbortPlayerActionPayload {
   userId?: string;
 }
 
+interface UpdateCrewNamePayload {
+  crewId: string;
+  name: string;
+  userId?: string;
+}
+
 /**
  * Crew Slice
  */
+
 const crewSlice = createSlice({
   name: 'crews',
   initialState,
@@ -495,8 +502,31 @@ const crewSlice = createSlice({
         userId: 'system',
       });
     },
+
+    /**
+     * Update crew name
+     *
+     * Syncs crew name from Foundry actor updates to Redux state.
+     * This is a lightweight sync action that doesn't record to history
+     * since it's syncing from Foundry's authoritative data.
+     */
+    updateCrewName: (state, action: PayloadAction<UpdateCrewNamePayload>) => {
+      const { crewId, name } = action.payload;
+      const crew = state.byId[crewId];
+
+      if (!crew) {
+        return; // Silently ignore if crew not found (could be during initialization)
+      }
+
+      // Only update if name actually changed
+      if (crew.name !== name) {
+        crew.name = name;
+        crew.updatedAt = Date.now();
+      }
+    },
   },
 });
+
 
 export const {
   createCrew,
@@ -513,6 +543,7 @@ export const {
   startPlayerAction,
   commitToRoll,
   abortPlayerAction,
+  updateCrewName,
 } = crewSlice.actions;
 
 export { crewSlice };

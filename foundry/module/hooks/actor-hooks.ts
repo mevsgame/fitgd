@@ -86,4 +86,49 @@ export function registerActorHooks(): void {
       }
     }
   });
+
+  /**
+   * When a Foundry actor is updated, sync name changes to HUD and Redux
+   *
+   * This hook handles:
+   * 1. Character name changes: re-render HUD if visible
+   * 2. Crew name changes: sync to Redux and re-render HUD
+   */
+  Hooks.on('updateActor', async function (actor: Actor, changes: Record<string, unknown>, _options: object, _userId: string) {
+    // Only process if name changed
+    if (!('name' in changes)) return;
+
+    const newName = changes.name as string;
+    console.log(`FitGD | Actor name changed: ${actor.type} "${actor.name}" -> "${newName}"`);
+
+    // For crew actors, sync name to Redux
+    if ((actor.type as string) === 'crew' && actor.id) {
+      try {
+        game.fitgd?.api.crew.updateName({ crewId: actor.id, name: newName });
+        await game.fitgd?.saveImmediate();
+        console.log(`FitGD | Crew name synced to Redux: ${newName}`);
+      } catch (error) {
+        console.error('FitGD | Failed to sync crew name to Redux:', error);
+      }
+    }
+
+    // Re-render HUD if visible and actor is relevant (character in crew or crew itself)
+    if (game.fitgd?.hud?.isVisible()) {
+      const state = game.fitgd?.store.getState();
+      const primaryCrewId = game.settings.get('forged-in-the-grimdark', 'primaryCrewId') as string | undefined;
+
+      if (!primaryCrewId) return;
+
+      const crew = state?.crews.byId[primaryCrewId];
+
+      // Check if this actor is the primary crew or a character in it
+      const isRelevant = actor.id === primaryCrewId || crew?.characters.includes(actor.id!);
+
+      if (isRelevant) {
+        console.log(`FitGD | Re-rendering HUD due to relevant actor name change`);
+        game.fitgd.hud.show(); // Force re-render
+      }
+    }
+  });
 }
+
