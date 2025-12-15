@@ -90,8 +90,8 @@ class FitGDCharacterSheet extends ActorSheet {
       return context;
     }
 
-    // Override editable to be GM-only for clock editing
-    context.editable = game.user?.isGM || false;
+    // Allow GMs and owners to edit traits, but clocks remain GM-only
+    context.editable = game.user?.isGM || Boolean(this.actor.isOwner);
 
     // Unified IDs: Foundry Actor ID === Redux ID
     const reduxId = this.actor.id;
@@ -579,7 +579,7 @@ class FitGDCharacterSheet extends ActorSheet {
   }
 
   private async _onDeleteTrait(event: JQuery.ClickEvent): Promise<void> {
-    if (!game.user?.isGM) return;
+    if (!game.user?.isGM && !this.actor.isOwner) return;
 
     event.preventDefault();
 
@@ -619,7 +619,7 @@ class FitGDCharacterSheet extends ActorSheet {
   }
 
   private async _onRenameTraitBlur(event: JQuery.BlurEvent): Promise<void> {
-    if (!game.user?.isGM) return;
+    if (!game.user?.isGM && !this.actor.isOwner) return;
 
     try {
       const element = event.currentTarget as HTMLElement;

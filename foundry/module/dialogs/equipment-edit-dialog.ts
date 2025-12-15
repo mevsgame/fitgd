@@ -140,7 +140,7 @@ export class EquipmentEditDialog extends FormApplication {
     if (this.mode === 'create') {
       // Create mode
       const newEquipment: Equipment = {
-        id: crypto.randomUUID(),
+        id: foundry.utils.randomID(),
         name: finalData.name!,
         category: finalData.category!,
         tier: finalData.tier!,
