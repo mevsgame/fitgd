@@ -167,9 +167,33 @@
               Standard</option>
             <option value="great" {{#if (eq playerState.effect "great" )}}selected{{/if}}>Great</option>
             <option value="spectacular" {{#if (eq playerState.effect "spectacular" )}}selected{{/if}}>Spectacular
-            </option>
-          </select>
+        </select>
         </div>
+
+        <!-- Dice Probabilities Display -->
+        {{#if dicePool}}
+        <div class="dice-probabilities">
+          <h4>📊 Probabilities ({{dicePool}}d):</h4>
+          <div class="probability-rows">
+            <div class="probability-row critical">
+              <span class="prob-label">✨ Critical:</span>
+              <span class="prob-value">{{diceProbabilities.critical}}%</span>
+            </div>
+            <div class="probability-row success">
+              <span class="prob-label">✅ Success:</span>
+              <span class="prob-value">{{diceProbabilities.success}}%</span>
+            </div>
+            <div class="probability-row partial">
+              <span class="prob-label">⚠️ Partial:</span>
+              <span class="prob-value">{{diceProbabilities.partial}}%</span>
+            </div>
+            <div class="probability-row failure">
+              <span class="prob-label">❌ Failure:</span>
+              <span class="prob-value">{{diceProbabilities.failure}}%</span>
+            </div>
+          </div>
+        </div>
+        {{/if}}
 
         <!-- GM Passive Equipment Grid -->
         {{> gm-passive-grid passiveEquipment=passiveEquipment selectedPassiveId=selectedPassiveId isGM=true}}

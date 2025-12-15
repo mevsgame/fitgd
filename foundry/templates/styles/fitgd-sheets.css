@@ -2686,6 +2686,64 @@
   color: #fff;
 }
 
+/* Dice Probabilities Display */
+.dice-probabilities {
+  margin: 10px 0;
+  padding: 10px;
+  background: #2a2a2a;
+  border-radius: 4px;
+  border: 1px solid #555;
+}
+
+.dice-probabilities h4 {
+  margin: 0 0 8px 0;
+  color: #ce93d8;
+  font-size: 0.9em;
+}
+
+.probability-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.probability-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+
+.probability-row .prob-label {
+  font-weight: 500;
+}
+
+.probability-row .prob-value {
+  font-weight: bold;
+  font-family: monospace;
+}
+
+.probability-row.critical {
+  background: rgba(255, 215, 0, 0.15);
+  color: #ffd700;
+}
+
+.probability-row.success {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+}
+
+.probability-row.partial {
+  background: rgba(255, 152, 0, 0.15);
+  color: #ff9800;
+}
+
+.probability-row.failure {
+  background: rgba(244, 67, 54, 0.15);
+  color: #f44336;
+}
+
 .harm-clocks-display {
   margin: 15px 0;
   padding: 10px;

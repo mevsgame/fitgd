@@ -23,6 +23,7 @@ import { selectDicePool, selectMomentumCost, selectHarmClocksWithStatus, selectI
 import { DEFAULT_CONFIG } from '@/config/gameConfig';
 
 import { calculateOutcome } from '@/utils/diceRules';
+import { calculateDiceProbabilities } from '@/utils/diceProbabilities';
 // Equipment utilities will be used in coordinator handler implementations (Phase 4)
 // import { getEquipmentToLock, getConsumablesToDeplete } from '@/utils/equipmentRules';
 
@@ -714,6 +715,7 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
       selectedSecondaryId: playerState?.equippedForAction?.[0] || playerState?.secondaryApproach,
       selectedSecondaryName: this._getSelectedSecondaryName(playerState, character),
       improvements: this._computeImprovements(),
+      diceProbabilities: calculateDiceProbabilities(selectDicePool(state, this.characterId)),
     };
   }
 
