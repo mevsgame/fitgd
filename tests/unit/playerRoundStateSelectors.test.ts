@@ -310,6 +310,56 @@ describe('playerRoundStateSelectors', () => {
       expect(result).toBe(0);
     });
 
+    it('should preserve equipment selection when adding push (Regression Test)', () => {
+      // 1. Add equipment
+      const equipment = {
+        id: 'equip-bonus-reg',
+        name: 'Bonus Item',
+        tier: 'common' as const,
+        category: 'active' as const,
+        description: 'Bonus',
+        slots: 1,
+        equipped: true,
+        locked: false,
+        consumed: false,
+        modifiers: {
+          diceBonus: 1,
+        },
+        acquiredAt: Date.now(),
+      };
+      store.dispatch(addEquipment({ characterId, equipment }));
+
+      // 2. Set Action Plan with Equipment
+      store.dispatch(
+        setActionPlan({
+          characterId,
+          approach: 'force',
+          position: 'risky',
+          effect: 'standard',
+          rollMode: 'equipment',
+          equippedForAction: [equipment.id],
+        })
+      );
+
+      // Verify intermediate state
+      let result = selectDicePool(store.getState(), characterId);
+      expect(result).toBe(3); // 2 + 1 (equip)
+
+      // 3. Add Push (via setImprovements separate call)
+      store.dispatch(
+        setImprovements({
+          characterId,
+          pushed: true,
+          pushType: 'extra-die',
+          // Omit equippedForAction to test persistence
+        })
+      );
+
+      // 4. Verify combined result
+      result = selectDicePool(store.getState(), characterId);
+      expect(result).toBe(4); // 2 + 1 (equip) + 1 (push)
+    });
+
     it('should add +1d for passive equipment (if approved)', () => {
       // Add passive equipment with bonus tag to character
       const equipment = {

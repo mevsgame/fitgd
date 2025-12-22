@@ -412,13 +412,22 @@ const playerRoundStateSlice = createSlice({
         throw new Error(`No state found for character ${characterId}`);
       }
 
+      // Determine new pushed state
+      const newPushed = pushed !== undefined ? pushed : currentState.pushed;
+
+      // Determine new push type (but clear it if not pushed)
+      let newPushType = pushType !== undefined ? pushType : currentState.pushType;
+      if (newPushed === false) {
+        newPushType = undefined;
+      }
+
       state.byCharacterId[characterId] = {
         ...currentState,
-        selectedTraitId,
-        equippedForAction,
-        pushed,
-        pushType,
-        flashbackApplied,
+        selectedTraitId: selectedTraitId !== undefined ? selectedTraitId : currentState.selectedTraitId,
+        equippedForAction: equippedForAction !== undefined ? equippedForAction : currentState.equippedForAction,
+        pushed: newPushed,
+        pushType: newPushType,
+        flashbackApplied: flashbackApplied !== undefined ? flashbackApplied : currentState.flashbackApplied,
       };
 
       // Log command to history (Player action)
