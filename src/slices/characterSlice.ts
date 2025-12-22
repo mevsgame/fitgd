@@ -1169,6 +1169,15 @@ const characterSlice = createSlice({
       state.allIds = Object.keys(characters);
       state.history = [];
     },
+
+    updateCharacterName: (state, action: PayloadAction<{ characterId: string; name: string }>) => {
+      const { characterId, name } = action.payload;
+      const character = state.byId[characterId];
+      if (character && character.name !== name) {
+        character.name = name;
+        character.updatedAt = Date.now();
+      }
+    },
   },
 });
 
@@ -1200,6 +1209,7 @@ export const {
   pruneOrphanedHistory,
   cleanupOrphanedCharacters,
   hydrateCharacters,
+  updateCharacterName,
 } = characterSlice.actions;
 
 export { characterSlice };

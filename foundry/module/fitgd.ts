@@ -464,6 +464,46 @@ Hooks.once('ready', async function () {
     logger.info('No command history or snapshot found, starting fresh');
   }
 
+  // Synchronize Redux state from Foundry Actors (Authoritative Source for Names)
+  // This ensures that if Redux state was stale (e.g. name change not persisted in history),
+  // it is updated to match the Foundry world data on load.
+  logger.info('Syncing Redux state from Foundry Actors...');
+  try {
+    const state = game.fitgd!.store.getState();
+
+    // Sync Characters
+    game.actors!.filter(a => a.type === 'character').forEach(actor => {
+      const reduxChar = state.characters.byId[actor.id as string];
+      if (reduxChar && reduxChar.name !== actor.name) {
+        logger.info(`Syncing character name for ${actor.name} (${actor.id})`);
+        game.fitgd!.store.dispatch({
+          type: 'characters/updateCharacterName',
+          payload: { characterId: actor.id, name: actor.name }
+        });
+      }
+    });
+
+    // Sync Crews
+    game.actors!.filter(a => a.type === 'crew').forEach(actor => {
+      const reduxCrew = state.crews.byId[actor.id as string];
+      if (reduxCrew && reduxCrew.name !== actor.name) {
+        logger.info(`Syncing crew name for ${actor.name} (${actor.id})`);
+        game.fitgd!.store.dispatch({
+          type: 'crews/updateCrewName',
+          payload: { crewId: actor.id, name: actor.name }
+        });
+      }
+    });
+
+    // If any changes were made during sync, we should probably save them to the snapshot/history
+    // But since these are "lightweight" syncs that don't generate history, they won't be saved to history anyway.
+    // They are just ensuring the in-memory state is correct for the session.
+    // The next snapshot save will capture them.
+
+  } catch (err) {
+    logger.error('Error syncing from Foundry Actors:', err);
+  }
+
   // Subscribe to store changes to auto-save
   game.fitgd!.store.subscribe(() => {
     saveCommandHistory();

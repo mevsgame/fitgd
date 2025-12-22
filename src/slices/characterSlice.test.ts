@@ -4,6 +4,7 @@ import characterReducer, {
     setApproach,
     toggleEquipped,
     addEquipment,
+    updateCharacterName,
 } from './characterSlice';
 import { Approaches } from '../types';
 
@@ -161,5 +162,25 @@ describe('characterSlice', () => {
                 })
             );
         }).toThrow(/Cannot unequip locked item/);
+    });
+
+    it('should update character name', () => {
+        const initialState = { byId: {}, allIds: [], history: [] };
+        const createAction = createCharacter({
+            name: 'Old Name',
+            traits: mockTraits,
+            approaches: mockApproaches,
+        });
+        let state = characterReducer(initialState, createAction);
+        const charId = state.allIds[0];
+
+        expect(state.byId[charId].name).toBe('Old Name');
+
+        state = characterReducer(state, updateCharacterName({
+            characterId: charId,
+            name: 'New Name'
+        }));
+
+        expect(state.byId[charId].name).toBe('New Name');
     });
 });

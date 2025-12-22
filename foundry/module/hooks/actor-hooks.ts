@@ -111,6 +111,25 @@ export function registerActorHooks(): void {
         console.error('FitGD | Failed to sync crew name to Redux:', error);
       }
     }
+    // For character actors, sync name to Redux
+    else if ((actor.type as string) === 'character' && actor.id) {
+      try {
+        // We dispatch directly here since we haven't exposed text-based API for character rename yet,
+        // or we can add it to api.character. But direct dispatch is fine for now as per crew pattern.
+        // Wait, crew uses api.crew.updateName. Ideally character should too.
+        // But for speed, I'll dispatch directly or add to API?
+        // Let's check api.character.
+        // Actually, just dispatching the action is easiest given the constraints.
+        game.fitgd?.store.dispatch({
+          type: 'characters/updateCharacterName',
+          payload: { characterId: actor.id, name: newName }
+        });
+        await game.fitgd?.saveImmediate();
+        console.log(`FitGD | Character name synced to Redux: ${newName}`);
+      } catch (error) {
+        console.error('FitGD | Failed to sync character name to Redux:', error);
+      }
+    }
 
     // Re-render HUD if visible and actor is relevant (character in crew or crew itself)
     if (game.fitgd?.hud?.isVisible()) {
