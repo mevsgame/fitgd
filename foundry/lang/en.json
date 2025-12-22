@@ -278,6 +278,7 @@
       "Spectacular": "Spectacular"
     },
     "ActionWidget": {
+      "Title": "Player Action",
       "YourTurn": "{name} - YOUR TURN",
       "DecisionPhase": "Decision Phase",
       "PrimaryApproach": "Primary Approach",
