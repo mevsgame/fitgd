@@ -32,6 +32,7 @@ import { registerCombatHooks } from './hooks/combat-hooks';
 import { registerActorHooks } from './hooks/actor-hooks';
 import { registerHotbarHooks } from './hooks/hotbar-hooks';
 import { registerHUDHooks } from './hooks/hud-hooks';
+import { registerItemHooks } from './hooks/item-hooks';
 
 // Widgets
 import { CrewHUDPanel } from './widgets/crew-hud-panel';
@@ -363,6 +364,7 @@ Hooks.once('init', async function () {
   registerActorHooks();
   registerHotbarHooks();
   registerHUDHooks();
+  registerItemHooks();
 
   // Register developer console commands
   registerDevCommands();

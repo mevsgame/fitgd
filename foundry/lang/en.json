@@ -35,6 +35,16 @@
         "Name": "Auto-Prune Deleted Entity History",
         "Hint": "Automatically remove command history for deleted characters, crews, and clocks during world saves. Deletion commands are kept for audit purposes. This reduces storage usage over time."
       },
+      "CompendiumUtils": {
+        "Name": "Compendium Utilities",
+        "Label": "Open Compendium Tools",
+        "Hint": "Tools for syncing actor equipment to the system compendium.",
+        "Title": "Compendium Utilities",
+        "Sync": "Sync Equipment to Compendium",
+        "SyncHint": "Scans all Actors in the world. Equipment found on actors will be created in the System Compendium if missing, or updated if existing.",
+        "SyncButton": "Sync All Equipment",
+        "RequireGM": "Requires GM privileges and Compendium unlocked."
+      },
       "HistoryManagement": {
         "Name": "History Management",
         "Label": "Manage Command History",

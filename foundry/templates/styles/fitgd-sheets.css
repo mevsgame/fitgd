@@ -4559,3 +4559,48 @@
 .fitgd.player-action-widget .config-action-btn i {
   margin-right: 6px;
 }
+
+/* -------------------------------------------- */
+/*  Compendium Utilities Dialog                 */
+/* -------------------------------------------- */
+
+.fitgd.compendium-utils form {
+  height: auto;
+  overflow: visible;
+  display: block;
+  padding: 10px;
+}
+
+.fitgd.compendium-utils .form-group {
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background: #2a2a2a;
+}
+
+.fitgd.compendium-utils .form-group label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #e0e0e0;
+}
+
+.fitgd.compendium-utils .form-fields {
+  margin-bottom: 8px;
+}
+
+.fitgd.compendium-utils .form-fields button {
+  width: 100%;
+  padding: 8px 12px;
+}
+
+.fitgd.compendium-utils .notes {
+  font-size: 0.9em;
+  color: #aaa;
+  margin: 0;
+}
+
+.fitgd.compendium-utils .notes strong {
+  color: #ff9999;
+}

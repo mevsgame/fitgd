@@ -35,6 +35,16 @@
                 "Name": "Automatyczne czyszczenie historii usuniętych elementów",
                 "Hint": "Automatycznie usuwaj historię komend dla usuniętych postaci, załóg i zegarów podczas zapisu świata. Komendy usunięcia są zachowywane do celów audytowych. Zmniejsza to użycie pamięci w czasie."
             },
+            "CompendiumUtils": {
+                "Name": "Narzędzia Kompendium",
+                "Label": "Otwórz Narzędzia Kompendium",
+                "Hint": "Narzędzia do synchronizacji ekwipunku postaci z kompendium systemowym.",
+                "Title": "Narzędzia Kompendium",
+                "Sync": "Synchronizuj Ekwipunek z Kompendium",
+                "SyncHint": "Skanuje wszystkich Aktorów w świecie. Ekwipunek znaleziony u aktorów zostanie utworzony w Kompendium Systemowym jeśli go brakuje, lub zaktualizowany jeśli istnieje.",
+                "SyncButton": "Synchronizuj Cały Ekwipunek",
+                "RequireGM": "Wymaga uprawnień GM i odblokowanego Kompendium."
+            },
             "HistoryManagement": {
                 "Name": "Zarządzanie historią",
                 "Label": "Zarządzaj historią komend",

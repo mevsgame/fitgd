@@ -5,6 +5,7 @@
  */
 
 import { HistoryManagementConfig } from '../history-management';
+import { CompendiumUtilsConfig } from '../apps/compendium-utils-config';
 
 /**
  * Register all system settings
@@ -17,6 +18,16 @@ export function registerSystemSettings(): void {
     hint: game.i18n!.localize('FITGD.Settings.HistoryManagement.Hint'),
     icon: 'fas fa-database',
     type: HistoryManagementConfig,
+    restricted: true // GM only
+  });
+
+  // Compendium Utilities Menu
+  (game.settings as any).registerMenu('forged-in-the-grimdark', 'compendiumUtils', {
+    name: game.i18n!.localize('FITGD.Settings.CompendiumUtils.Name'),
+    label: game.i18n!.localize('FITGD.Settings.CompendiumUtils.Label'),
+    hint: game.i18n!.localize('FITGD.Settings.CompendiumUtils.Hint'),
+    icon: 'fas fa-book',
+    type: CompendiumUtilsConfig,
     restricted: true // GM only
   });
 
