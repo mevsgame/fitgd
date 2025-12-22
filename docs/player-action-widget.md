@@ -336,7 +336,8 @@ The widget is designed as a **shared experience**. Both the GM and the Player se
 ### Redux Integration
 - **Reads**: `playerRoundState`, `characters`, `crews`, `clocks`.
 - **Writes**: Dispatches actions via `FoundryReduxBridge` to update round state, spend resources, and apply consequences.
-- **Subscription**: The widget subscribes to the Redux store to trigger real-time re-renders when *any* relevant state changes (e.g., GM changes Position, Player sees it instantly).
+- **Subscription**: The widget subscribes to the Redux store to trigger real-time re-renders when *any* relevant state changes.
+- **Refresh**: The `FoundryReduxBridge` and `refreshSheetsByReduxId` helper explicitly include this widget in their refresh logic to ensure it updates during remote state changes (e.g., when viewing another player's roll).
 
 ## Implementation Details
 
