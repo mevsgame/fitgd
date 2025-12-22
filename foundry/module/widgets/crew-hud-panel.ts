@@ -1,3 +1,4 @@
+import { selectIdsWithFewestTraits } from '../../../src/selectors/traitSelectors';
 /**
  * Crew HUD Panel
  *
@@ -352,6 +353,12 @@ export class CrewHUDPanel extends Application {
                 category: c.metadata?.category as string | undefined
             }));
 
+        // Identify characters with fewest traits
+        const characterObjects = crew.characters
+            .map((id: string) => state?.characters.byId[id])
+            .filter((c: any) => !!c);
+        const idsWithFewestTraits = selectIdsWithFewestTraits(characterObjects);
+
         // Get character data with harm clocks and addiction clocks
         const characters = crew.characters.map((charId: string) => {
             const char = state?.characters.byId[charId];
@@ -390,6 +397,8 @@ export class CrewHUDPanel extends Application {
             // Can take action if user is GM or owns the character
             const canTakeAction: boolean = game.user?.isGM === true || actor?.isOwner === true;
 
+            const hasFewestTraits = idsWithFewestTraits.includes(charId);
+
             return {
                 id: charId,
                 name: (actor?.name || char?.name || 'Unknown') as string,
@@ -397,7 +406,8 @@ export class CrewHUDPanel extends Application {
                 canTakeAction,
                 isActive: charId === activeCharacterId,
                 harmClocks,
-                addictionClock
+                addictionClock,
+                hasFewestTraits
             };
         });
 

@@ -67,6 +67,8 @@ Persistent overlay showing crew status at a glance:
         <span class="char-name">
           {{#if isActive}}<i class="fas fa-dice-d20 active-indicator" title="Taking action"></i>{{/if}}
           {{name}}
+          {{#if hasFewestTraits}}<i class="fas fa-bolt fewest-traits-indicator"
+            title="New Flashback Available (Fewest Traits)"></i>{{/if}}
         </span>
         <div class="character-clocks">
           {{!-- Harm clocks --}}

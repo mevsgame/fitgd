@@ -344,3 +344,17 @@
 .hud-controls .set-primary-btn.active i {
   color: #ffd700;
 }
+/* Flashback Indicator (Fewest Traits) */
+.fewest-traits-indicator {
+    color: #ffd700; /* Gold/Lightning color */
+    margin-left: 0.3em;
+    font-size: 0.9em;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+    animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+    0% { filter: drop-shadow(0 0 1px rgba(255, 215, 0, 0.5)); }
+    50% { filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.8)); }
+    100% { filter: drop-shadow(0 0 1px rgba(255, 215, 0, 0.5)); }
+}
