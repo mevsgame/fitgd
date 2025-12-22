@@ -119,8 +119,13 @@
             </div>
             {{/if}}
           </div>
+          {{#if @root.editable}}
+          <p class="trait-description editable" data-trait-id="{{trait.id}}" contenteditable="true"
+            placeholder="{{localize 'FITGD.Traits.DescriptionPlaceholder'}}">{{trait.description}}</p>
+          {{else}}
           {{#if trait.description}}
           <p class="trait-description">{{trait.description}}</p>
+          {{/if}}
           {{/if}}
         </div>
         {{/each}}

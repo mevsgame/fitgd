@@ -7,6 +7,7 @@ import {
   enableTrait as enableTraitAction,
   removeTrait as removeTraitAction,
   updateTraitName as updateTraitNameAction,
+  updateTraitDescription as updateTraitDescriptionAction,
   setApproach as setApproachAction,
   advanceApproach as advanceApproachAction,
   addEquipment,
@@ -84,6 +85,13 @@ export function createCharacterAPI(store: Store) {
      */
     updateTraitName(characterId: string, traitId: string, name: string): void {
       store.dispatch(updateTraitNameAction({ characterId, traitId, name }));
+    },
+
+    /**
+     * Update a trait's description
+     */
+    updateTraitDescription(characterId: string, traitId: string, description: string): void {
+      store.dispatch(updateTraitDescriptionAction({ characterId, traitId, description }));
     },
 
     /**

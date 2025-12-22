@@ -187,6 +187,7 @@ class FitGDCharacterSheet extends ActorSheet {
     html.find('.add-trait-btn').click(this._onAddTrait.bind(this));
     html.find('.delete-trait-btn').click(this._onDeleteTrait.bind(this));
     html.find('.trait-name').blur(this._onRenameTraitBlur.bind(this));
+    html.find('.trait-description.editable').blur(this._onUpdateTraitDescriptionBlur.bind(this));
 
     // Rally checkbox
     html.find('input[name="system.rallyAvailable"]').change(this._onRallyChange.bind(this));
@@ -649,6 +650,35 @@ class FitGDCharacterSheet extends ActorSheet {
       ui.notifications?.error(`Error: ${errorMessage}`);
       console.error('FitGD | Trait rename error:', error);
       this.render(false); // Reset to original name
+    }
+  }
+
+  private async _onUpdateTraitDescriptionBlur(event: JQuery.BlurEvent): Promise<void> {
+    if (!game.user?.isGM && !this.actor.isOwner) return;
+
+    try {
+      const element = event.currentTarget as HTMLElement;
+      const { traitId } = getTraitDataset(element);
+      const newDescription = element.textContent?.trim() || '';
+
+      const characterId = this._getReduxId();
+      if (!characterId) return;
+
+      // Get original description to check if it changed
+      const character = game.fitgd.api.character.getCharacter(characterId);
+      const trait = character?.traits.find((t: Trait) => t.id === traitId);
+      const originalDescription = trait?.description || '';
+
+      if (newDescription === originalDescription) return; // No change
+
+      game.fitgd.api.character.updateTraitDescription(characterId, traitId, newDescription);
+      await game.fitgd.saveImmediate();
+      ui.notifications?.info('Trait description updated');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      ui.notifications?.error(`Error: ${errorMessage}`);
+      console.error('FitGD | Trait description update error:', error);
+      this.render(false); // Reset to original description
     }
   }
 

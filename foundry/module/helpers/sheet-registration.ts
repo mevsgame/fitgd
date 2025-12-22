@@ -3,10 +3,10 @@
  *
  * Registers Foundry sheet classes for Actors and Items
  */
- 
+
 import { FitGDCharacterSheet } from '../sheets/character-sheet';
 import { FitGDCrewSheet } from '../sheets/crew-sheet';
-import { FitGDTraitSheet, FitGDEquipmentSheet } from '../sheets/item-sheets';
+import { FitGDEquipmentSheet } from '../sheets/item-sheets';
 
 /* -------------------------------------------- */
 /*  Sheet Registration                          */
@@ -33,12 +33,7 @@ export function registerSheetClasses(): void {
     makeDefault: true
   });
 
-  // Register trait item sheet
-  // @ts-ignore - Foundry sheet registration type mismatch (v4 type system)
-  Items.registerSheet('forged-in-the-grimdark', FitGDTraitSheet, {
-    types: ['trait'],
-    makeDefault: true
-  });
+
 
   // Register equipment item sheet
   // @ts-ignore - Foundry sheet registration type mismatch (v4 type system)

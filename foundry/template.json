@@ -37,21 +37,12 @@
   },
   "Item": {
     "types": [
-      "trait",
       "equipment"
     ],
     "templates": {
       "base": {
         "description": ""
       }
-    },
-    "trait": {
-      "templates": [
-        "base"
-      ],
-      "category": "role",
-      "disabled": false,
-      "acquiredAt": 0
     },
     "equipment": {
       "templates": [

@@ -60,6 +60,13 @@ interface UpdateTraitNamePayload {
   userId?: string;
 }
 
+interface UpdateTraitDescriptionPayload {
+  characterId: string;
+  traitId: string;
+  description: string;
+  userId?: string;
+}
+
 interface SetApproachPayload {
   characterId: string;
   approach: keyof Approaches;
@@ -462,6 +469,54 @@ const characterSlice = createSlice({
       prepare: (payload: UpdateTraitNamePayload) => {
         const command: Command = {
           type: 'characters/updateTraitName',
+          payload,
+          timestamp: Date.now(),
+          version: 1,
+          userId: payload.userId,
+          commandId: generateId(),
+        };
+
+        return {
+          payload,
+          meta: { command },
+        };
+      },
+    },
+
+    updateTraitDescription: {
+      reducer: (state, action: PayloadAction<UpdateTraitDescriptionPayload>) => {
+        const { characterId, traitId, description } = action.payload;
+        const character = state.byId[characterId];
+
+        if (!character) {
+          throw new Error(`Character ${characterId} not found`);
+        }
+
+        // Pass validation using validateTraitUpdate (ignoring name for now, or assume it's safe)
+        // Since we are just updating description, we can skip complex validation or reuse existing
+        // For now, let's just find the trait and update it.
+        // If strict validation is needed, we should update validateTraitUpdate signatures.
+        // Assuming description update is always allowed if trait exists.
+
+        const trait = character.traits.find((t) => t.id === traitId);
+        if (trait) {
+          trait.description = description;
+          character.updatedAt = Date.now();
+
+          // Log command to history
+          state.history.push({
+            type: 'characters/updateTraitDescription',
+            payload: action.payload,
+            timestamp: character.updatedAt,
+            version: 1,
+            commandId: generateId(),
+            userId: undefined,
+          });
+        }
+      },
+      prepare: (payload: UpdateTraitDescriptionPayload) => {
+        const command: Command = {
+          type: 'characters/updateTraitDescription',
           payload,
           timestamp: Date.now(),
           version: 1,
@@ -1190,6 +1245,7 @@ export const {
   enableTrait,
   removeTrait,
   updateTraitName,
+  updateTraitDescription,
   setApproach,
   addEquipment,
   removeEquipment,
