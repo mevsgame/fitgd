@@ -313,11 +313,7 @@ export class PlayerActionEventCoordinator {
     // Validate rally eligibility
     const validation = rallyHandler.validateRally(crew);
     if (!validation.isValid) {
-      const messages: { [key: string]: string } = {
-        'no-crew': 'Character must be in a crew to rally',
-        'no-teammates': 'No other teammates in crew to rally',
-      };
-      this.context.getNotificationService().warn(messages[validation.reason!]);
+      this.context.getNotificationService().warn(game.i18n.format('FITGD.Messages.NoCrew', { action: 'rally' }));
       return;
     }
 
@@ -337,11 +333,11 @@ export class PlayerActionEventCoordinator {
     // Validate lean into trait eligibility
     const validation = leanIntoTraitHandler.validateLeanIntoTrait();
     if (!validation.isValid) {
-      const messages: { [key: string]: string } = {
-        'no-crew': 'Character must be in a crew to lean into trait',
-        'no-available-traits': 'No available traits - all traits are currently disabled',
-      };
-      this.context.getNotificationService().warn(messages[validation.reason!]);
+      if (validation.reason === 'no-crew') {
+        this.context.getNotificationService().warn(game.i18n.format('FITGD.Messages.NoCrew', { action: 'lean into trait' }));
+      } else {
+        this.context.getNotificationService().warn(game.i18n.localize('FITGD.Messages.NoAvailableTraits'));
+      }
       return;
     }
 
@@ -364,11 +360,11 @@ export class PlayerActionEventCoordinator {
     // Validate use trait eligibility
     const validation = useTraitHandler.validateUseTrait(playerState);
     if (!validation.isValid) {
-      const messages: { [key: string]: string } = {
-        'no-crew': 'Character must be in a crew to use trait',
-        'position-controlled': 'Position is already Controlled - cannot improve further',
-      };
-      this.context.getNotificationService().warn(messages[validation.reason!]);
+      if (validation.reason === 'no-crew') {
+        this.context.getNotificationService().warn(game.i18n.format('FITGD.Messages.NoCrew', { action: 'use trait' }));
+      } else {
+        this.context.getNotificationService().warn(game.i18n.localize('FITGD.Messages.PositionAlreadyControlled'));
+      }
       return;
     }
 
@@ -378,8 +374,7 @@ export class PlayerActionEventCoordinator {
         useTraitHandler.createClearTraitTransactionAction(),
         { affectedReduxIds: [asReduxId(useTraitHandler.getAffectedReduxId())], force: false }
       );
-
-      this.context.getNotificationService().info('Trait flashback canceled');
+      this.context.getNotificationService().info(game.i18n.localize('FITGD.Messages.TraitFlashbackCanceled'));
       return;
     }
 
@@ -398,36 +393,36 @@ export class PlayerActionEventCoordinator {
     const character = this.context.getCharacter();
     const crew = this.context.getCrew();
     if (!character || !crew) {
-      this.context.getNotificationService().warn('Character and crew required for flashback');
+      this.context.getNotificationService().warn(game.i18n.localize('FITGD.Messages.NoCrew').replace('{action}', 'flashback'));
       return;
     }
 
     const content = `
       <form>
         <div class="form-group">
-          <label>Item Name</label>
+          <label>${game.i18n.localize('FITGD.Dialogs.FlashbackItem.ItemName')}</label>
           <input type="text" name="name" placeholder="e.g. Heavy Blaster" autofocus style="width: 100%; margin-bottom: 10px;">
         </div>
         <div class="form-group">
-          <label>Tags</label>
+          <label>${game.i18n.localize('FITGD.Dialogs.FlashbackItem.Tags')}</label>
           <input type="text" name="tags" value="bonus" placeholder="comma separated" style="width: 100%; margin-bottom: 10px;">
-          <p class="notes" style="font-size: 0.8em; color: #666;">Default "bonus" tag grants +1d.</p>
+          <p class="notes" style="font-size: 0.8em; color: #666;">${game.i18n.localize('FITGD.Dialogs.FlashbackItem.TagsHint')}</p>
         </div>
         <div class="form-group">
-          <label>Momentum Cost</label>
+          <label>${game.i18n.localize('FITGD.Dialogs.FlashbackItem.MomentumCost')}</label>
           <input type="number" name="cost" value="1" min="0" max="10" style="width: 100%;">
-          <p class="notes" style="font-size: 0.8em; color: #666;">Usually 0 for Standard, 1 for Fine/Special.</p>
+          <p class="notes" style="font-size: 0.8em; color: #666;">${game.i18n.localize('FITGD.Dialogs.FlashbackItem.CostHint')}</p>
         </div>
       </form>
     `;
 
     new Dialog({
-      title: 'Flashback Item',
+      title: game.i18n.localize('FITGD.Dialogs.FlashbackItem.Title'),
       content: content,
       buttons: {
         add: {
           icon: '<i class="fas fa-check"></i>',
-          label: 'Add Item',
+          label: game.i18n.localize('FITGD.Buttons.Create'),
           callback: async (html: JQuery | HTMLElement | undefined) => {
             if (!html) return;
             const $html = $(html as HTMLElement);
@@ -500,12 +495,12 @@ export class PlayerActionEventCoordinator {
               }
             );
 
-            this.context.getNotificationService().info(`Added and equipped ${name} (-${cost}M)`);
+            this.context.getNotificationService().info(game.i18n.format('FITGD.Messages.FlashbackItemAdded', { name, cost }));
           },
         },
         cancel: {
           icon: '<i class="fas fa-times"></i>',
-          label: 'Cancel',
+          label: game.i18n.localize('FITGD.Global.Cancel'),
         },
       },
       default: 'add',
@@ -528,7 +523,7 @@ export class PlayerActionEventCoordinator {
     const playerState = this.context.getPlayerState();
 
     if (!character || !playerState) {
-      this.context.getNotificationService().error('Character and player state required for roll');
+      this.context.getNotificationService().error(game.i18n.localize('FITGD.Messages.CharacterAndStateRequired'));
       return;
     }
 
@@ -561,10 +556,10 @@ export class PlayerActionEventCoordinator {
       const validation = diceRollingHandler.validateRoll(state, playerState, crew);
       if (!validation.isValid) {
         if (validation.reason === 'no-action-selected') {
-          this.context.getNotificationService().warn('Please select an action first');
+          this.context.getNotificationService().warn(game.i18n.localize('FITGD.Messages.SelectActionFirst'));
         } else if (validation.reason === 'insufficient-momentum') {
           this.context.getNotificationService().error(
-            `Insufficient Momentum! Need ${validation.momentumNeeded}, have ${validation.momentumAvailable}`
+            game.i18n.format('FITGD.Messages.InsufficientMomentumDetail', { needed: validation.momentumNeeded, available: validation.momentumAvailable })
           );
         }
         return;
@@ -573,7 +568,7 @@ export class PlayerActionEventCoordinator {
       // Additional check for equipment first-lock cost
       if (crew && firstLockMomentumCost > 0 && crew.currentMomentum < totalMomentumCost) {
         this.context.getNotificationService().error(
-          `Insufficient Momentum for equipment! Need ${totalMomentumCost}M (includes ${firstLockMomentumCost}M for first-lock), have ${crew.currentMomentum}M`
+          game.i18n.format('FITGD.Messages.InsufficientMomentumEquipment', { total: totalMomentumCost, lock: firstLockMomentumCost, available: crew.currentMomentum })
         );
         return;
       }
@@ -591,10 +586,11 @@ export class PlayerActionEventCoordinator {
       // Post the roll to chat with approach flavor
       const approach = playerState.selectedApproach || 'unknown';
       const characterName = character.name || 'Character';
+      const localizedApproach = game.i18n.localize(`FITGD.Approaches.${approach.charAt(0).toUpperCase() + approach.slice(1)}`);
       await this.context.getDiceService().postRollToChat(
         rollResult,
         this.context.getCharacterId(),
-        `${characterName} - ${approach} approach`
+        game.i18n.format('FITGD.Messages.RollFlavor', { name: characterName, approach: localizedApproach })
       );
 
       const outcome = calculateOutcome(rollResult);
@@ -659,7 +655,7 @@ export class PlayerActionEventCoordinator {
     } catch (error) {
       logger.error('Error in handleRoll:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.context.getNotificationService().error(`Roll failed: ${errorMessage}`);
+      this.context.getNotificationService().error(game.i18n.format('FITGD.Messages.RollFailed', { error: errorMessage }));
     }
   }
 
@@ -736,7 +732,7 @@ export class PlayerActionEventCoordinator {
     const targetCharacterId = transaction?.harmTargetCharacterId;
 
     if (!targetCharacterId || !consequenceHandler) {
-      this.context.getNotificationService().warn('Select target character first');
+      this.context.getNotificationService().warn(game.i18n.localize('FITGD.Messages.SelectTargetFirst'));
       return;
     }
 
@@ -773,7 +769,7 @@ export class PlayerActionEventCoordinator {
                 } catch (error) {
                   logger.error('Error creating harm clock:', error);
                   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                  this.context.getNotificationService().error(`Error creating clock: ${errorMessage}`);
+                  this.context.getNotificationService().error(game.i18n.format('FITGD.Messages.RollFailed', { error: errorMessage }));
                 }
               }
             );
@@ -789,7 +785,7 @@ export class PlayerActionEventCoordinator {
         } catch (error) {
           logger.error('Error in harm clock selection:', error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          this.context.getNotificationService().error(`Error selecting clock: ${errorMessage}`);
+          this.context.getNotificationService().error(game.i18n.format('FITGD.Messages.RollFailed', { error: errorMessage }));
         }
       }
     );
@@ -805,7 +801,7 @@ export class PlayerActionEventCoordinator {
     const consequenceHandler = this.context.getHandlerFactory().getConsequenceHandler();
 
     if (!crewId || !consequenceHandler) {
-      this.context.getNotificationService().warn('Character must be in a crew');
+      this.context.getNotificationService().warn(game.i18n.format('FITGD.Messages.NoCrew', { action: 'action' }));
       return;
     }
 
@@ -842,7 +838,7 @@ export class PlayerActionEventCoordinator {
                 } catch (error) {
                   logger.error('Error creating crew clock:', error);
                   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                  this.context.getNotificationService().error(`Error creating clock: ${errorMessage}`);
+                  this.context.getNotificationService().error(game.i18n.format('FITGD.Messages.RollFailed', { error: errorMessage }));
                 }
               },
               {},
@@ -860,7 +856,7 @@ export class PlayerActionEventCoordinator {
         } catch (error) {
           logger.error('Error in crew clock selection:', error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          this.context.getNotificationService().error(`Error selecting clock: ${errorMessage}`);
+          this.context.getNotificationService().error(game.i18n.format('FITGD.Messages.RollFailed', { error: errorMessage }));
         }
       }
     );
@@ -980,7 +976,7 @@ export class PlayerActionEventCoordinator {
         silent: true,
       });
       addictionClockId = createAction.payload.id;
-      this.context.getNotificationService().info('Addiction clock created');
+      this.context.getNotificationService().info(game.i18n.localize('FITGD.Messages.ClockCreated').replace('{name}', 'Addiction Clock'));
     }
 
     // ✅ FIX: Transition to STIMS_ROLLING FIRST (per state machine)
@@ -998,7 +994,7 @@ export class PlayerActionEventCoordinator {
     // Post addiction roll to chat
     await addictionRoll.toMessage({
       speaker: ChatMessage.getSpeaker(),
-      flavor: `${this.context.getCharacter()?.name || 'Character'} - Addiction Roll (Stims)`,
+      flavor: game.i18n.format('FITGD.Messages.AddictionRollFlavor', { name: this.context.getCharacter()?.name || 'Character' }),
     });
 
     // Advance addiction clock
@@ -1025,7 +1021,7 @@ export class PlayerActionEventCoordinator {
 
     if (updatedClock.segments >= updatedClock.maxSegments) {
       // Lockout! STIMS_ROLLING → STIMS_LOCKED (valid transition per state machine)
-      this.context.getNotificationService().error('Addiction clock filled! Stims locked.');
+      this.context.getNotificationService().error(game.i18n.localize('FITGD.ActionWidget.StimsLocked'));
 
       const lockoutAction = stimsWorkflowHandler.createStimsLockoutAction();
       await game.fitgd.bridge.execute(lockoutAction as any, {
@@ -1053,13 +1049,13 @@ export class PlayerActionEventCoordinator {
     }
 
     // If not locked out, proceed to reroll
-    this.context.getNotificationService().info('Stims used! Rerolling...');
+    const diceRollingHandler = this.context.getHandlerFactory().getDiceRollingHandler();
+    this.context.getNotificationService().info(game.i18n.localize('FITGD.ActionWidget.RollingDice').replace('{dice}', diceRollingHandler.calculateDicePool(game.fitgd.store.getState()) as any));
 
     // Wait briefly for animation/state update
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Transition from STIMS_ROLLING to ROLLING (valid transition per state machine)
-    const diceRollingHandler = this.context.getHandlerFactory().getDiceRollingHandler();
     const rollingAction = diceRollingHandler.createTransitionToRollingAction();
     await game.fitgd.bridge.execute(rollingAction as any, {
       affectedReduxIds: [asReduxId(this.context.getCharacterId())],
@@ -1078,10 +1074,11 @@ export class PlayerActionEventCoordinator {
     const character = this.context.getCharacter();
     const characterName = character?.name || 'Character';
     const approach = this.context.getPlayerState()?.selectedApproach || 'unknown';
+    const localizedApproach = game.i18n.localize(`FITGD.Approaches.${approach.charAt(0).toUpperCase() + approach.slice(1)}`);
     await this.context.getDiceService().postRollToChat(
       rollResult,
       this.context.getCharacterId(),
-      `${characterName} - ${approach} approach (Stims Reroll)`
+      game.i18n.format('FITGD.Messages.RollFlavor', { name: characterName, approach: localizedApproach }) + ' ' + game.i18n.localize('FITGD.Messages.StimsRerollSuffix')
     );
 
     const outcome = calculateOutcome(rollResult);
@@ -1150,7 +1147,7 @@ export class PlayerActionEventCoordinator {
 
     const operation = playerState.consequenceTransaction.successClockOperation;
     if (!operation) {
-      this.context.getNotificationService().warn('Select clock operation (Advance/Reduce) first');
+      this.context.getNotificationService().warn(game.i18n.localize('FITGD.ActionWidget.SelectConsequenceType'));
       return;
     }
 
@@ -1207,7 +1204,7 @@ export class PlayerActionEventCoordinator {
                 } catch (error) {
                   logger.error('Error creating success clock:', error);
                   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                  this.context.getNotificationService().error(`Error creating clock: ${errorMessage}`);
+                  this.context.getNotificationService().error(game.i18n.format('FITGD.Messages.RollFailed', { error: errorMessage }));
                 }
               },
               {},
@@ -1246,7 +1243,7 @@ export class PlayerActionEventCoordinator {
         } catch (error) {
           logger.error('Error in success clock selection:', error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          this.context.getNotificationService().error(`Error selecting clock: ${errorMessage}`);
+          this.context.getNotificationService().error(game.i18n.format('FITGD.Messages.RollFailed', { error: errorMessage }));
         }
       }
     );
@@ -1292,9 +1289,9 @@ export class PlayerActionEventCoordinator {
         if (clock) {
           const segments = transaction.calculatedSuccessClockSegments || 1;
           const operation = transaction.successClockOperation;
-          const actionType = operation === 'add' ? 'advanced' : 'reduced';
+          const msgKey = operation === 'add' ? 'FITGD.Messages.ClockAdvanced' : 'FITGD.Messages.ClockReduced';
           this.context.getNotificationService().info(
-            `${clock.subtype} ${actionType} by ${segments} segment(s)`
+            game.i18n.format(msgKey, { name: clock.subtype, segments })
           );
         }
       }
@@ -1488,7 +1485,7 @@ export class PlayerActionEventCoordinator {
       case 'harm': {
         const targetId = this.context.getPlayerState()?.consequenceTransaction?.harmTargetCharacterId;
         if (!targetId) {
-          this.context.getNotificationService().warn('Select target character first');
+          this.context.getNotificationService().warn(game.i18n.localize('FITGD.Messages.SelectTargetFirst'));
           return;
         }
 
@@ -1518,7 +1515,7 @@ export class PlayerActionEventCoordinator {
 
       case 'crew': {
         if (!crewId) {
-          this.context.getNotificationService().warn('Character must be in a crew');
+          this.context.getNotificationService().warn(game.i18n.format('FITGD.Messages.NoCrew', { action: 'action' }));
           return;
         }
 
@@ -1548,7 +1545,7 @@ export class PlayerActionEventCoordinator {
 
       case 'success': {
         if (!crewId) {
-          this.context.getNotificationService().warn('Character must be in a crew');
+          this.context.getNotificationService().warn(game.i18n.format('FITGD.Messages.NoCrew', { action: 'action' }));
           return;
         }
 

@@ -43,7 +43,7 @@ actionPrefix="harm"
         </div>
         {{else}}
         <div class="clock-picker-empty">
-            <p>No clocks available</p>
+            <p>{{localize "FITGD.ActionWidget.NoClocksAvailable"}}</p>
         </div>
         {{/if}}
     </div>
@@ -53,50 +53,53 @@ actionPrefix="harm"
     <div class="clock-picker-create">
         <div class="clock-picker-create-header">
             <button type="button" class="clock-picker-create-toggle" data-action="toggle-{{actionPrefix}}-clock-create">
-                <i class="fas fa-plus"></i> Create New Clock
+                <i class="fas fa-plus"></i> {{localize "FITGD.Clocks.Create"}}
             </button>
         </div>
 
         <div class="clock-picker-create-form" style="display: none;">
             <div class="form-group">
-                <label>Name:</label>
-                <input type="text" name="{{actionPrefix}}-clock-name" class="clock-name-input"
-                    placeholder="e.g. Broken Leg, Alarm Rising" />
+                <label>{{localize "FITGD.Global.Name"}}:</label>
+                <input type="text" name="{{actionPrefix}}-clock-name" class="clock-name-input" placeholder="{{localize "
+                    FITGD.Clocks.Placeholder"}}" />
             </div>
 
             <div class="form-group">
-                <label>Category:</label>
+                <label>{{localize "FITGD.Global.Category"}}:</label>
                 {{#if categoryLocked}}
                 <input type="hidden" name="{{actionPrefix}}-clock-category" value="{{defaultCategory}}" />
-                <span class="locked-value">{{capitalize defaultCategory}} <i class="fas fa-lock"
-                        title="Locked for consequence"></i></span>
+                <span class="locked-value">{{localize (concat 'FITGD.Clocks.Category' (capitalize defaultCategory))}} <i
+                        class="fas fa-lock" title="{{localize " FITGD.ActionWidget.LockedForConsequence"}}"></i></span>
                 {{else}}
                 <select name="{{actionPrefix}}-clock-category" class="clock-category-select">
-                    <option value="harm" {{#if (eq defaultCategory "harm" )}}selected{{/if}}>Harm</option>
-                    <option value="threat" {{#if (eq defaultCategory "threat" )}}selected{{/if}}>Threat</option>
+                    <option value="harm" {{#if (eq defaultCategory "harm" )}}selected{{/if}}>{{localize
+                        "FITGD.Clocks.CategoryHarm"}}</option>
+                    <option value="threat" {{#if (eq defaultCategory "threat" )}}selected{{/if}}>{{localize
+                        "FITGD.Clocks.CategoryThreat"}}</option>
                     <option value="long-term-project" {{#if (eq defaultCategory "long-term-project" )}}selected{{/if}}>
-                        Long-term Project</option>
-                    <option value="obstacle" {{#if (eq defaultCategory "obstacle" )}}selected{{/if}}>Obstacle</option>
+                        {{localize "FITGD.Clocks.CategoryLongTermProject"}}</option>
+                    <option value="obstacle" {{#if (eq defaultCategory "obstacle" )}}selected{{/if}}>{{localize
+                        "FITGD.Clocks.CategoryObstacle"}}</option>
                 </select>
                 {{/if}}
             </div>
 
             <div class="form-group">
-                <label>Segments:</label>
+                <label>{{localize "FITGD.ActionWidget.Segments"}}:</label>
                 <select name="{{actionPrefix}}-clock-segments" class="clock-segments-select">
-                    <option value="4">4 segments</option>
-                    <option value="6" selected>6 segments</option>
-                    <option value="8">8 segments</option>
-                    <option value="12">12 segments</option>
+                    <option value="4">{{localize "FITGD.Clocks.SegmentsN" n=4}}</option>
+                    <option value="6" selected>{{localize "FITGD.Clocks.SegmentsN" n=6}}</option>
+                    <option value="8">{{localize "FITGD.Clocks.SegmentsN" n=8}}</option>
+                    <option value="12">{{localize "FITGD.Clocks.SegmentsN" n=12}}</option>
                 </select>
             </div>
 
             <div class="clock-picker-create-actions">
                 <button type="button" class="btn-create" data-action="create-{{actionPrefix}}-clock">
-                    <i class="fas fa-check"></i> Create & Select
+                    <i class="fas fa-check"></i> {{localize "FITGD.Buttons.CreateAndSelect"}}
                 </button>
                 <button type="button" class="btn-cancel" data-action="toggle-{{actionPrefix}}-clock-create">
-                    Cancel
+                    {{localize "FITGD.Global.Cancel"}}
                 </button>
             </div>
         </div>

@@ -6,7 +6,7 @@
     <div class="header-fields">
       <h1 class="charname"><input name="name" type="text" value="{{actor.name}}" placeholder="Name" /></h1>
       <div class="resource">
-        <label class="allocation-label">Rally Available</label>
+        <label class="allocation-label">{{localize "FITGD.Character.RallyAvailable"}}</label>
         <input type="checkbox" name="system.rallyAvailable" {{checked system.rallyAvailable}} {{#unless
           editable}}disabled{{/unless}} />
       </div>
@@ -15,10 +15,10 @@
 
   {{!-- Sheet Tab Navigation --}}
   <nav class="sheet-tabs tabs" data-group="primary">
-    <a class="item" data-tab="approaches">Approaches</a>
-    <a class="item" data-tab="traits">Traits</a>
-    <a class="item" data-tab="harm">Harm</a>
-    <a class="item" data-tab="equipment">Equipment</a>
+    <a class="item" data-tab="approaches">{{localize "FITGD.Character.Approaches"}}</a>
+    <a class="item" data-tab="traits">{{localize "FITGD.Character.Traits"}}</a>
+    <a class="item" data-tab="harm">{{localize "FITGD.Character.Harm"}}</a>
+    <a class="item" data-tab="equipment">{{localize "FITGD.Character.Equipment"}}</a>
   </nav>
 
   {{!-- Sheet Body --}}
@@ -27,17 +27,17 @@
     {{!-- Approaches Tab --}}
     <div class="tab approaches" data-group="primary" data-tab="approaches">
       <div class="approaches-header">
-        <h2>Approaches</h2>
+        <h2>{{localize "FITGD.Character.Approaches"}}</h2>
         <div class="header-buttons">
           <button class="take-action-btn draggable" type="button" draggable="true" data-action-type="take-action"
-            title="Take an action (drag to hotbar to create macro)">
-            <i class="fas fa-cube"></i> Take Action
+            title="{{localize 'FITGD.Buttons.TakeActionTooltip'}}">
+            <i class="fas fa-cube"></i> {{localize "FITGD.Buttons.TakeAction"}}
           </button>
           <button class="toggle-edit-btn" type="button">
             {{#if editMode}}
-            <i class="fas fa-save"></i> Save
+            <i class="fas fa-save"></i> {{localize "FITGD.Buttons.Save"}}
             {{else}}
-            <i class="fas fa-edit"></i> Edit
+            <i class="fas fa-edit"></i> {{localize "FITGD.Buttons.Edit"}}
             {{/if}}
           </button>
         </div>
@@ -46,7 +46,7 @@
       {{!-- Dot Allocation Display --}}
       <div class="dot-allocation-display">
         <div class="allocation-track">
-          <span class="allocation-label">Dots:</span>
+          <span class="allocation-label">{{localize "FITGD.Character.Dots"}}:</span>
           {{#times system.totalApproachDots}}
           <span class="allocation-dot {{#if (lt this ../system.allocatedApproachDots)}}filled{{/if}}"></span>
           {{/times}}
@@ -55,7 +55,7 @@
             {{#if (eq system.unallocatedApproachDots 0)}}
             <i class="fas fa-check-circle allocation-complete"></i>
             {{else}}
-            ({{system.unallocatedApproachDots}} to allocate)
+            ({{system.unallocatedApproachDots}} {{localize "FITGD.Character.ToAllocate"}})
             {{/if}}
           </span>
         </div>
@@ -63,17 +63,17 @@
 
       {{#if editMode}}
       <p class="help-text edit-mode-active">
-        <i class="fas fa-edit"></i> Edit Mode Active: Click dots to allocate. Click Save when done.
+        <i class="fas fa-edit"></i> {{localize "FITGD.Character.EditModeActive"}}
       </p>
       {{else}}
-      <p class="help-text">Click Edit to allocate approach dots. Maximum: 4 dots per approach.</p>
+      <p class="help-text">{{localize "FITGD.Character.EditModeHint"}}</p>
       {{/if}}
 
       <div class="approaches-grid">
         {{#each system.approaches}}
         <div class="approach-row">
           <label class="approach-label">
-            {{approach}}
+            {{localize (concat 'FITGD.Approaches.' (capitalize approach))}}
           </label>
           <div class="approach-dots" data-approach="{{approach}}">
             {{#times 4}}
@@ -91,10 +91,10 @@
     {{!-- Traits Tab --}}
     <div class="tab traits" data-group="primary" data-tab="traits">
       <div class="traits-header">
-        <h2>Traits</h2>
+        <h2>{{localize "FITGD.Character.Traits"}}</h2>
         <div class="header-buttons">
           <button class="add-trait-btn" type="button">
-            <i class="fas fa-plus"></i> Add Trait
+            <i class="fas fa-plus"></i> {{localize "FITGD.Traits.Add"}}
           </button>
         </div>
       </div>
@@ -111,7 +111,8 @@
 
             {{#if @root.editable}}
             <div class="trait-header-right">
-              <button class="delete-trait-btn" type="button" data-trait-id="{{trait.id}}" title="Delete Trait">
+              <button class="delete-trait-btn" type="button" data-trait-id="{{trait.id}}"
+                title="{{localize 'FITGD.Traits.Delete'}}">
                 <i class="fas fa-trash"></i>
               </button>
 
@@ -129,9 +130,9 @@
     {{!-- Harm Tab --}}
     <div class="tab harm" data-group="primary" data-tab="harm">
       <div class="harm-header">
-        <h2>Harm Clocks</h2>
+        <h2>{{localize "FITGD.Character.HarmClocks"}}</h2>
         <button class="add-harm-btn" type="button">
-          <i class="fas fa-plus"></i> Take Harm
+          <i class="fas fa-plus"></i> {{localize "FITGD.Harm.Take"}}
         </button>
       </div>
 
@@ -142,7 +143,8 @@
             <h4 class="clock-name {{#if @root.editable}}editable{{/if}}" data-clock-id="{{clock.id}}"
               contenteditable="{{@root.editable}}">{{clock.subtype}}</h4>
             {{#if @root.editable}}
-            <button class="delete-clock-btn" type="button" data-clock-id="{{clock.id}}" title="Delete Clock">
+            <button class="delete-clock-btn" type="button" data-clock-id="{{clock.id}}"
+              title="{{localize 'FITGD.Clocks.Delete'}}">
               <i class="fas fa-trash"></i>
             </button>
             {{/if}}
@@ -153,7 +155,7 @@
           <div class="clock-controls">
             {{#if @root.editable}}
             <input type="number" class="clock-value-input" data-clock-id="{{clock.id}}" value="{{clock.segments}}"
-              min="0" max="{{clock.maxSegments}}" title="Click to edit value directly" />
+              min="0" max="{{clock.maxSegments}}" title="{{localize 'FITGD.Clocks.ValueTooltip'}}" />
             {{else}}
             <span class="clock-value">{{clock.segments}}/{{clock.maxSegments}}</span>
             {{/if}}
@@ -162,14 +164,14 @@
         {{/each}}
 
         {{#unless system.harmClocks}}
-        <p class="no-clocks">No harm taken yet.</p>
+        <p class="no-clocks">{{localize "FITGD.Character.NoHarm"}}</p>
         {{/unless}}
       </div>
 
       {{!-- Addiction Clock Section --}}
       {{#if system.addictionClock}}
       <div class="addiction-clock-section">
-        <h3>💉 Addiction Clock</h3>
+        <h3>💉 {{localize "FITGD.Crew.AddictionClock"}}</h3>
         <div class="clock-item addiction-clock" data-clock-id="{{system.addictionClock.id}}">
           <div class="clock-display">
             {{clockSVG system.addictionClock width="120px" height="120px" class="addiction-clock-svg"}}
@@ -178,14 +180,14 @@
             {{#if @root.editable}}
             <input type="number" class="clock-value-input" data-clock-id="{{system.addictionClock.id}}"
               value="{{system.addictionClock.segments}}" min="0" max="{{system.addictionClock.maxSegments}}"
-              title="Click to edit value directly" />
+              title="{{localize 'FITGD.Clocks.ValueTooltip'}}" />
             {{else}}
             <span class="clock-value">{{system.addictionClock.segments}}/{{system.addictionClock.maxSegments}}</span>
             {{/if}}
           </div>
           {{#if (gte system.addictionClock.segments system.addictionClock.maxSegments)}}
           <div class="addiction-warning">
-            <i class="fas fa-exclamation-triangle"></i> ADDICTED! Stims locked for entire crew.
+            <i class="fas fa-exclamation-triangle"></i> {{localize "FITGD.Crew.Addicted"}}
           </div>
           {{/if}}
         </div>
@@ -196,19 +198,20 @@
     {{!-- Equipment Tab --}}
     <div class="tab equipment" data-group="primary" data-tab="equipment">
       <div class="equipment-header">
-        <h2>Equipment</h2>
+        <h2>{{localize "FITGD.Character.Equipment"}}</h2>
         <div class="equipment-header-info">
           <span class="load-display">
             <i class="fas fa-weight"></i>
-            Load: <span class="load-value">{{loadUsed}}</span>/<span class="load-limit">{{#if
-              system.loadLimit}}{{system.loadLimit}}{{else}}5{{/if}}</span> slots
+            {{localize "FITGD.Character.Load"}}: <span class="load-value">{{loadUsed}}</span>/<span
+              class="load-limit">{{#if
+              system.loadLimit}}{{system.loadLimit}}{{else}}5{{/if}}</span> {{localize "FITGD.Character.Slots"}}
           </span>
           <div class="action-buttons">
             <button class="create-equipment-btn" type="button">
-              <i class="fas fa-hammer"></i> Create Equipment
+              <i class="fas fa-hammer"></i> {{localize "FITGD.Character.CreateEquipment"}}
             </button>
             <button class="add-equipment-btn" type="button">
-              <i class="fas fa-search"></i> Browse Equipment
+              <i class="fas fa-search"></i> {{localize "FITGD.Character.BrowseEquipment"}}
             </button>
           </div>
         </div>
@@ -220,17 +223,19 @@
         {{#if (hasEquipmentByCategory system.equipment "active")}}
         <div class="equipment-category-section active-section">
           <div class="category-label">
-            <i class="fas fa-crossed-swords"></i> Active Equipment
+            <i class="fas fa-crossed-swords"></i> {{localize "FITGD.Character.ActiveEquipment"}}
           </div>
           <div class="equipment-list">
             {{#each system.equipment as |item|}}
             {{#if (eq item.category "active")}}
             {{> equipment-row-view item=item config=(getConfigForContext "character-sheet")}}
             <div class="equipment-actions">
-              <button class="edit-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Edit">
+              <button class="edit-equipment-btn" type="button" data-equipment-id="{{item.id}}"
+                title="{{localize 'FITGD.Global.Edit'}}">
                 <i class="fas fa-edit"></i>
               </button>
-              <button class="delete-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Remove">
+              <button class="delete-equipment-btn" type="button" data-equipment-id="{{item.id}}"
+                title="{{localize 'FITGD.Global.Remove'}}">
                 <i class="fas fa-trash"></i>
               </button>
             </div>
@@ -244,17 +249,19 @@
         {{#if (hasEquipmentByCategory system.equipment "passive")}}
         <div class="equipment-category-section passive-section">
           <div class="category-label">
-            <i class="fas fa-shield-alt"></i> Passive Equipment
+            <i class="fas fa-shield-alt"></i> {{localize "FITGD.Character.PassiveEquipment"}}
           </div>
           <div class="equipment-list">
             {{#each system.equipment as |item|}}
             {{#if (eq item.category "passive")}}
             {{> equipment-row-view item=item config=(getConfigForContext "character-sheet")}}
             <div class="equipment-actions">
-              <button class="edit-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Edit">
+              <button class="edit-equipment-btn" type="button" data-equipment-id="{{item.id}}"
+                title="{{localize 'FITGD.Global.Edit'}}">
                 <i class="fas fa-edit"></i>
               </button>
-              <button class="delete-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Remove">
+              <button class="delete-equipment-btn" type="button" data-equipment-id="{{item.id}}"
+                title="{{localize 'FITGD.Global.Remove'}}">
                 <i class="fas fa-trash"></i>
               </button>
             </div>
@@ -268,17 +275,19 @@
         {{#if (hasEquipmentByCategory system.equipment "consumable")}}
         <div class="equipment-category-section consumable-section">
           <div class="category-label">
-            <i class="fas fa-vial"></i> Consumable Equipment
+            <i class="fas fa-vial"></i> {{localize "FITGD.Character.ConsumableEquipment"}}
           </div>
           <div class="equipment-list">
             {{#each system.equipment as |item|}}
             {{#if (eq item.category "consumable")}}
             {{> equipment-row-view item=item config=(getConfigForContext "character-sheet")}}
             <div class="equipment-actions">
-              <button class="edit-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Edit">
+              <button class="edit-equipment-btn" type="button" data-equipment-id="{{item.id}}"
+                title="{{localize 'FITGD.Global.Edit'}}">
                 <i class="fas fa-edit"></i>
               </button>
-              <button class="delete-equipment-btn" type="button" data-equipment-id="{{item.id}}" title="Remove">
+              <button class="delete-equipment-btn" type="button" data-equipment-id="{{item.id}}"
+                title="{{localize 'FITGD.Global.Remove'}}">
                 <i class="fas fa-trash"></i>
               </button>
             </div>
@@ -290,7 +299,7 @@
       </div>
       {{else}}
       <p class="no-equipment">
-        <i class="fas fa-inbox"></i> No equipment yet. Click "Add Equipment" to browse available items.
+        <i class="fas fa-inbox"></i> {{localize "FITGD.Character.NoEquipment"}}
       </p>
       {{/if}}
     </div>

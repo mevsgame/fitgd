@@ -46,18 +46,18 @@ export class ClockCreationDialog extends Dialog {
   ) {
     const isHarm = clockType === 'harm';
     const isLockedCategory = preSelectedCategory !== undefined;
-    const title = isHarm ? 'Create Harm Clock' : (isLockedCategory ? 'Create Threat Clock' : 'Create Crew Clock');
-    const placeholder = isHarm ? 'e.g., Physical Harm, Morale Damage' : 'e.g., Threat Level, Investigation';
+    const title = isHarm ? game.i18n.localize('FITGD.Dialogs.ClockCreation.TitleHarm') : (isLockedCategory ? game.i18n.localize('FITGD.Dialogs.ClockCreation.TitleThreat') : game.i18n.localize('FITGD.Dialogs.ClockCreation.TitleCrew'));
+    const placeholder = isHarm ? game.i18n.localize('FITGD.Dialogs.ClockCreation.PlaceholderHarm') : game.i18n.localize('FITGD.Dialogs.ClockCreation.PlaceholderCrew');
 
     const content = `
       <div class="clock-creation-dialog">
         <div class="dialog-header">
-          <p class="help-text">Configure the new clock properties</p>
+          <p class="help-text">${game.i18n.localize('FITGD.Dialogs.ClockCreation.HelpText')}</p>
         </div>
 
         <form class="clock-creation-form">
           <div class="form-group">
-            <label>Clock Name</label>
+            <label>${game.i18n.localize('FITGD.Dialogs.ClockCreation.ClockName')}</label>
             <input type="text"
                    name="clockName"
                    placeholder="${placeholder}"
@@ -65,34 +65,34 @@ export class ClockCreationDialog extends Dialog {
           </div>
 
           <div class="form-group">
-            <label>Segments</label>
+            <label>${game.i18n.localize('FITGD.Dialogs.ClockCreation.Segments')}</label>
             <select name="segments">
-              <option value="4">4 segments (short)</option>
-              <option value="6" ${isHarm ? 'selected' : ''}>6 segments</option>
-              <option value="8" ${!isHarm ? 'selected' : ''}>8 segments</option>
-              <option value="12">12 segments (long)</option>
+              <option value="4">4 ${game.i18n.localize('FITGD.Dialogs.ClockCreation.Segments')} (${game.i18n.localize('FITGD.Dialogs.ClockCreation.Short')})</option>
+              <option value="6" ${isHarm ? 'selected' : ''}>6 ${game.i18n.localize('FITGD.Dialogs.ClockCreation.Segments')}</option>
+              <option value="8" ${!isHarm ? 'selected' : ''}>8 ${game.i18n.localize('FITGD.Dialogs.ClockCreation.Segments')}</option>
+              <option value="12">12 ${game.i18n.localize('FITGD.Dialogs.ClockCreation.Segments')} (${game.i18n.localize('FITGD.Dialogs.ClockCreation.Long')})</option>
             </select>
           </div>
 
           ${!isHarm ? `
           <div class="form-group">
-            <label>Category${isLockedCategory ? ' (locked for consequence)' : ''}</label>
+            <label>${game.i18n.localize('FITGD.Dialogs.ClockCreation.Category')}${isLockedCategory ? game.i18n.localize('FITGD.Dialogs.ClockCreation.LockedConsequence') : ''}</label>
             <select name="category" ${isLockedCategory ? 'disabled' : ''}>
-              <option value="long-term-project" ${preSelectedCategory === 'long-term-project' ? 'selected' : ''}>Long-term Project</option>
-              <option value="threat" ${preSelectedCategory === 'threat' ? 'selected' : ''}>Threat (countdown)</option>
-              <option value="personal-goal" ${preSelectedCategory === 'personal-goal' ? 'selected' : ''}>Personal Goal</option>
-              <option value="obstacle" ${preSelectedCategory === 'obstacle' ? 'selected' : ''}>Obstacle</option>
-              <option value="faction" ${preSelectedCategory === 'faction' ? 'selected' : ''}>Faction</option>
+              <option value="long-term-project" ${preSelectedCategory === 'long-term-project' ? 'selected' : ''}>${game.i18n.localize('FITGD.Clocks.CategoryLongTermProject')}</option>
+              <option value="threat" ${preSelectedCategory === 'threat' ? 'selected' : ''}>${game.i18n.localize('FITGD.Clocks.CategoryThreat')}</option>
+              <option value="personal-goal" ${preSelectedCategory === 'personal-goal' ? 'selected' : ''}>${game.i18n.localize('FITGD.Clocks.CategoryPersonalGoal')}</option>
+              <option value="obstacle" ${preSelectedCategory === 'obstacle' ? 'selected' : ''}>${game.i18n.localize('FITGD.Clocks.CategoryObstacle')}</option>
+              <option value="faction" ${preSelectedCategory === 'faction' ? 'selected' : ''}>${game.i18n.localize('FITGD.Clocks.CategoryFaction')}</option>
             </select>
-            ${isLockedCategory ? '<p class="form-help">Category is locked because this clock is being created for consequence resolution</p>' : ''}
+            ${isLockedCategory ? `<p class="form-help">${game.i18n.localize('FITGD.Dialogs.ClockCreation.LockedHelp')}</p>` : ''}
           </div>
           ` : ''}
 
           <div class="form-group">
-            <label>Description (optional)</label>
+            <label>${game.i18n.localize('FITGD.Dialogs.ClockCreation.DescriptionOptional')}</label>
             <textarea name="description"
                       rows="2"
-                      placeholder="Optional notes about this clock..."></textarea>
+                      placeholder="${game.i18n.localize('FITGD.Dialogs.ClockCreation.DescriptionPlaceholder')}"></textarea>
           </div>
         </form>
       </div>
@@ -101,14 +101,14 @@ export class ClockCreationDialog extends Dialog {
     const buttons = {
       create: {
         icon: '<i class="fas fa-clock"></i>',
-        label: 'Create Clock',
+        label: game.i18n.localize('FITGD.Dialogs.ClockCreation.CreateClock'),
         callback: async (html?: JQuery<HTMLElement>) => {
           await this._onApply(html!, onCreate, clockType, preSelectedCategory);
         }
       },
       cancel: {
         icon: '<i class="fas fa-times"></i>',
-        label: 'Cancel'
+        label: game.i18n.localize('FITGD.Global.Cancel')
       }
     };
 
@@ -154,12 +154,12 @@ export class ClockCreationDialog extends Dialog {
 
     // Validation
     if (!clockName) {
-      ui.notifications!.warn('Please enter a clock name');
+      ui.notifications!.warn(game.i18n.localize('FITGD.Messages.EnterClockName'));
       return false; // Prevent dialog from closing
     }
 
     if (!segments || segments < 4 || segments > 12) {
-      ui.notifications!.error('Invalid segment count');
+      ui.notifications!.error(game.i18n.localize('FITGD.Messages.InvalidSegments'));
       return false;
     }
 
@@ -179,11 +179,11 @@ export class ClockCreationDialog extends Dialog {
     try {
       // Call the onCreate callback with the clock data
       await onCreate(clockData);
-      ui.notifications!.info(`Clock "${clockName}" created`);
+      ui.notifications!.info(game.i18n.format('FITGD.Messages.ClockCreated', { name: clockName }));
     } catch (error) {
       console.error('FitGD | Clock creation error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      ui.notifications!.error(`Error creating clock: ${errorMessage}`);
+      ui.notifications!.error(game.i18n.format('FITGD.Messages.RollFailed', { error: errorMessage }));
       return false; // Prevent dialog from closing on error
     }
 

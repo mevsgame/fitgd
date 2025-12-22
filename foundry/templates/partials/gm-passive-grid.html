@@ -19,7 +19,7 @@ Data Flow:
 {{#if isGM}}
 {{#if passiveEquipment.length}}
 <div class="gm-passive-grid-container">
-  <h4>⚙️ GM Passive Equipment Approval:</h4>
+  <h4>{{localize "FITGD.ActionWidget.GMPassiveApproval"}}:</h4>
 
   <div class="passive-grid">
     {{#each passiveEquipment}}
@@ -27,28 +27,22 @@ Data Flow:
       <!-- Column 1: Equipment Row View (approval config) -->
       <div class="passive-grid-equipment">
         {{> equipment-row-view
-          item=this
-          config=(object
-            showTier=true
-            showBonuses=true
-            showSlots=false
-            showDescription=false
-            showLocked=true
-            showEquipped=false
-          )
+        item=this
+        config=(object
+        showTier=true
+        showBonuses=true
+        showSlots=false
+        showDescription=false
+        showLocked=true
+        showEquipped=false
+        )
         }}
       </div>
 
       <!-- Column 2: Radio Button Selection -->
       <div class="passive-grid-selection">
-        <input
-          type="radio"
-          class="passive-equipment-radio"
-          name="approved-passive"
-          value="{{this.id}}"
-          data-equipment-id="{{this.id}}"
-          {{#if (eq ../selectedPassiveId this.id)}}checked{{/if}}
-        />
+        <input type="radio" class="passive-equipment-radio" name="approved-passive" value="{{this.id}}"
+          data-equipment-id="{{this.id}}" {{#if (eq ../selectedPassiveId this.id)}}checked{{/if}} />
       </div>
     </div>
     {{/each}}
@@ -58,18 +52,13 @@ Data Flow:
       <div class="passive-grid-equipment">
         <div class="equipment-row none">
           <div class="equipment-primary">
-            <div class="equipment-name">-- No Passive --</div>
+            <div class="equipment-name">{{localize "FITGD.ActionWidget.NoPassive"}}</div>
           </div>
         </div>
       </div>
       <div class="passive-grid-selection">
-        <input
-          type="radio"
-          class="passive-equipment-radio"
-          name="approved-passive"
-          value=""
-          {{#unless selectedPassiveId}}checked{{/unless}}
-        />
+        <input type="radio" class="passive-equipment-radio" name="approved-passive" value="" {{#unless
+          selectedPassiveId}}checked{{/unless}} />
       </div>
     </div>
   </div>

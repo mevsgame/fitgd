@@ -23,7 +23,8 @@ sidePanelMode=sidePanelMode
 <div class="side-panel side-panel-{{sidePanelPosition}}" data-panel-mode="{{sidePanelMode}}">
   <div class="side-panel-header">
     <h4>{{sidePanelTitle}}</h4>
-    <button type="button" class="side-panel-close" data-action="close-side-panel" title="Close">
+    <button type="button" class="side-panel-close" data-action="close-side-panel" title="{{localize "
+      FITGD.Global.Close"}}">
       <i class="fas fa-times"></i>
     </button>
   </div>
@@ -32,13 +33,14 @@ sidePanelMode=sidePanelMode
     {{#if (eq sidePanelMode 'harm-clock')}}
     {{!-- Target Character Selection --}}
     <div class="side-panel-section target-section">
-      <label class="section-label">Target Character:</label>
+      <label class="section-label">{{localize "FITGD.ActionWidget.TargetCharacter"}}</label>
       <button type="button" data-action="select-harm-target" class="target-select-btn">
         {{#if harmTargetCharacter}}
         <span class="target-name">{{harmTargetCharacter.name}}</span>
-        <span class="target-badge">{{#if (eq harmTargetCharacter.id characterId)}}(Self){{else}}(Other){{/if}}</span>
+        <span class="target-badge">{{#if (eq harmTargetCharacter.id characterId)}}({{localize
+          "FITGD.ActionWidget.Self"}}){{else}}({{localize "FITGD.ActionWidget.Other"}}){{/if}}</span>
         {{else}}
-        <span class="target-placeholder">Select Target...</span>
+        <span class="target-placeholder">{{localize "FITGD.ActionWidget.SelectTargetPrompt"}}</span>
         {{/if}}
       </button>
     </div>

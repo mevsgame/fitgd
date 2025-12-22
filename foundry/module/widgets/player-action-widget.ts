@@ -358,7 +358,7 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
 
       if (!canClose && !isNormalClose) {
         // Player has committed to roll - cannot close
-        ui.notifications?.warn('You cannot close the widget after committing to roll. Wait for the GM to resolve.');
+        ui.notifications?.warn(game.i18n.localize('FITGD.ActionWidget.CommitCloseWarning'));
         return; // Prevent close
       }
     }
@@ -382,11 +382,11 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
         const confirmed = await new Promise<boolean>((resolve) => {
           new Dialog(
             {
-              title: 'Abort Player Action?',
-              content: `<p>Are you sure you want to abort <strong>${characterName}'s</strong> action? This will cancel the current roll.</p>`,
+              title: game.i18n.localize('FITGD.ActionWidget.AbortTitle'),
+              content: `<p>${game.i18n.format('FITGD.ActionWidget.AbortMessage', { name: characterName })}</p>`,
               buttons: {
-                cancel: { icon: '<i class="fas fa-times"></i>', label: 'Cancel', callback: () => resolve(false) },
-                abort: { icon: '<i class="fas fa-ban"></i>', label: 'Abort Action', callback: () => resolve(true) },
+                cancel: { icon: '<i class="fas fa-times"></i>', label: game.i18n.localize('FITGD.Global.Cancel'), callback: () => resolve(false) },
+                abort: { icon: '<i class="fas fa-ban"></i>', label: game.i18n.localize('FITGD.ActionWidget.AbortTitle'), callback: () => resolve(true) },
               },
               default: 'cancel',
               close: () => resolve(false), // Handle X button on dialog
@@ -450,7 +450,7 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
       height: 'auto',
       minimizable: false,
       resizable: false,
-      title: 'Your Turn',
+      title: game.i18n.localize('FITGD.ActionWidget.Title'),
       popOut: true,
     });
   }
@@ -1540,14 +1540,14 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     const isCritical = outcome === 'critical';
 
     const content = `
-      < div class="fitgd-chat-message success" >
-        <h3>${isCritical ? '✨ CRITICAL SUCCESS! ✨' : '✅ FULL SUCCESS'} </h3>
-          < div class="dice-result" > Highest: ${highestDie} </div>
-            < div class="message" >
-              ${this.character!.name} succeeds without consequences!
-                </div>
-                </div>
-                  `;
+    <div class="fitgd-chat-message success">
+      <h3>${isCritical ? game.i18n.localize('FITGD.ActionWidget.OutcomeCritical') : game.i18n.localize('FITGD.ActionWidget.OutcomeSuccess')}</h3>
+        <div class="dice-result">${game.i18n.format('FITGD.ActionWidget.DiceResult', { max: highestDie })}</div>
+          <div class="message">
+            ${game.i18n.format('FITGD.ActionWidget.FullSuccessResultMessage', { name: this.character!.name })}
+              </div>
+              </div>
+                `;
 
     ChatMessage.create({
       content,

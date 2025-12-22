@@ -8,7 +8,7 @@
 
       {{!-- Momentum Display --}}
       <div class="momentum-display">
-        <label>Momentum</label>
+        <label>{{localize "FITGD.Crew.Momentum"}}</label>
         <div class="momentum-row">
           <div class="momentum-track">
             {{#times 10}}
@@ -19,14 +19,16 @@
           </div>
           <div class="momentum-value">{{system.currentMomentum}}/10</div>
 
-          <button class="momentum-add-btn" type="button" data-amount="1" title="Add 1 Momentum">
+          <button class="momentum-add-btn" type="button" data-amount="1"
+            title="{{localize 'FITGD.Momentum.AddTooltip'}}">
             <i class="fas fa-plus"></i>
           </button>
-          <button class="momentum-spend-btn" type="button" data-amount="1" title="Spend 1 Momentum">
+          <button class="momentum-spend-btn" type="button" data-amount="1"
+            title="{{localize 'FITGD.Momentum.SpendTooltip'}}">
             <i class="fas fa-minus"></i>
           </button>
           {{#if @root.editable}}
-          <button class="momentum-reset-btn" type="button" title="Perform Momentum Reset (GM only)">
+          <button class="momentum-reset-btn" type="button" title="{{localize 'FITGD.Momentum.ResetTooltip'}}">
             <i class="fas fa-redo"></i>
           </button>
           {{/if}}
@@ -37,9 +39,9 @@
       {{#if @root.editable}}
       <div class="hud-controls">
         <button class="set-primary-btn {{#if isPrimary}}active{{/if}}" type="button"
-          title="{{#if isPrimary}}This is the primary HUD crew{{else}}Set as Primary HUD Crew{{/if}}">
+          title="{{#if isPrimary}}{{localize 'FITGD.Crew.PrimaryHUDTooltip'}}{{else}}{{localize 'FITGD.Crew.SetPrimaryHUDTooltip'}}{{/if}}">
           <i class="fas fa-star{{#unless isPrimary}}-half-alt{{/unless}}"></i>
-          {{#if isPrimary}}Primary Crew{{else}}Set as Primary{{/if}}
+          {{#if isPrimary}}{{localize "FITGD.Crew.PrimaryHUD"}}{{else}}{{localize "FITGD.Crew.SetPrimaryHUD"}}{{/if}}
         </button>
       </div>
       {{/if}}
@@ -48,8 +50,8 @@
 
   {{!-- Sheet Tab Navigation --}}
   <nav class="sheet-tabs tabs" data-group="primary">
-    <a class="item" data-tab="members">Members</a>
-    <a class="item" data-tab="clocks">Clocks</a>
+    <a class="item" data-tab="members">{{localize "FITGD.Crew.Members"}}</a>
+    <a class="item" data-tab="clocks">{{localize "FITGD.Crew.Clocks"}}</a>
   </nav>
 
   {{!-- Sheet Body --}}
@@ -58,10 +60,10 @@
     {{!-- Members Tab --}}
     <div class="tab members" data-group="primary" data-tab="members">
       <div class="members-header">
-        <h2>Crew Members</h2>
+        <h2>{{localize "FITGD.Crew.CrewMembers"}}</h2>
         <div class="header-buttons">
           <button class="add-character-btn" type="button">
-            <i class="fas fa-user-plus"></i> Add Character
+            <i class="fas fa-user-plus"></i> {{localize "FITGD.Crew.AddCharacter"}}
           </button>
         </div>
       </div>
@@ -80,7 +82,7 @@
           </div>
           {{#if @root.editable}}
           <button class="remove-character-btn" type="button" data-character-id="{{character.id}}"
-            title="Remove from crew">
+            title="{{localize 'FITGD.Crew.RemoveFromCrew'}}">
             <i class="fas fa-times"></i>
           </button>
           {{/if}}
@@ -88,7 +90,7 @@
         {{/each}}
 
         {{#unless system.characters.length}}
-        <p class="no-members">No crew members yet. Use the Add Character button above.</p>
+        <p class="no-members">{{localize "FITGD.Crew.NoMembers"}}</p>
         {{/unless}}
       </div>
     </div>
@@ -96,10 +98,10 @@
     {{!-- Clocks Tab --}}
     <div class="tab clocks" data-group="primary" data-tab="clocks">
       <div class="clocks-header">
-        <h2>Progress Clocks</h2>
+        <h2>{{localize "FITGD.Crew.ProgressClocks"}}</h2>
         <div class="header-buttons">
           <button class="add-clock-btn" type="button">
-            <i class="fas fa-clock"></i> Add Clock
+            <i class="fas fa-clock"></i> {{localize "FITGD.Clocks.Add"}}
           </button>
         </div>
       </div>
@@ -107,7 +109,7 @@
       {{!-- Progress Clocks --}}
       {{#if system.progressClocks}}
       <div class="clock-section">
-        <h3>Progress & Threat Clocks</h3>
+        <h3>{{localize "FITGD.Crew.ProgressThreatClocks"}}</h3>
         <div class="clocks-flow-grid">
           {{#each system.progressClocks as |clock|}}
           <div class="clock-item progress-clock" data-clock-id="{{clock.id}}" data-category="{{clock.category}}">
@@ -116,7 +118,8 @@
                 <h4 class="clock-name {{#if @root.editable}}editable{{/if}}" data-clock-id="{{clock.id}}"
                   contenteditable="{{@root.editable}}">{{clock.name}}</h4>
                 {{#if @root.editable}}
-                <button class="delete-clock-btn" type="button" data-clock-id="{{clock.id}}" title="Delete Clock">
+                <button class="delete-clock-btn" type="button" data-clock-id="{{clock.id}}"
+                  title="{{localize 'FITGD.Clocks.Delete'}}">
                   <i class="fas fa-trash"></i>
                 </button>
                 {{/if}}
@@ -125,7 +128,7 @@
               <div class="clock-controls">
                 {{#if @root.editable}}
                 <input type="number" class="clock-value-input" data-clock-id="{{clock.id}}" value="{{clock.segments}}"
-                  min="0" max="{{clock.maxSegments}}" title="Click to edit value directly" />
+                  min="0" max="{{clock.maxSegments}}" title="{{localize 'FITGD.Clocks.ValueTooltip'}}" />
                 {{else}}
                 <span class="clock-value">{{clock.segments}}/{{clock.maxSegments}}</span>
                 {{/if}}

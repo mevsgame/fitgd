@@ -118,13 +118,13 @@ export class StimsWorkflowHandler {
   getErrorMessage(reason?: string): string {
     switch (reason) {
       case 'no-crew':
-        return 'Character must be in a crew to use stims';
+        return game.i18n.format('FITGD.Messages.NoCrew', { action: 'stims' });
       case 'already-used':
-        return 'Stims already used this action - cannot use again!';
+        return game.i18n.localize('FITGD.ActionWidget.StimsAlreadyUsed');
       case 'team-addiction-locked':
-        return 'Stims are LOCKED due to crew addiction! Cannot use stims.';
+        return game.i18n.localize('FITGD.ActionWidget.StimsLockedAddiction');
       default:
-        return 'Cannot use stims';
+        return game.i18n.localize('FITGD.ActionWidget.StimsLocked');
     }
   }
 
@@ -222,8 +222,8 @@ export class StimsWorkflowHandler {
         characterId: this.config.characterId,
         trait: {
           id: this._generateId(),
-          name: 'Addict',
-          description: 'You are addicted to combat stims. Stims are locked for your entire crew.',
+          name: game.i18n.localize('FITGD.ActionWidget.OutcomeAddict'), // Need to add this to en.json if not there, or use "Addict"
+          description: game.i18n.localize('FITGD.ActionWidget.AddictionFilledChat').replace('{name}', this.config.characterName || 'Character'),
           disabled: false,
         },
       },
@@ -240,7 +240,7 @@ export class StimsWorkflowHandler {
    * @returns Notification text
    */
   generateAddictionNotification(_rollValue: number, segments: number, currentSegments: number, maxSegments: number): string {
-    return `Addiction clock: ${currentSegments}/${maxSegments} (+${segments})`;
+    return game.i18n.format('FITGD.Messages.AddictionClockNotification', { current: currentSegments, max: maxSegments, segments });
   }
 
   /**
@@ -249,7 +249,7 @@ export class StimsWorkflowHandler {
    * @returns Notification text
    */
   generateAddictionFilledNotification(): string {
-    return `${this.config.characterName || 'Character'} is now an ADDICT! Stims are LOCKED for the crew.`;
+    return game.i18n.format('FITGD.Messages.AddictionFilledNotification', { name: this.config.characterName || 'Character' });
   }
 
   /**
@@ -370,8 +370,8 @@ export class StimsWorkflowHandler {
    */
   generateStimsUsedChatMessage(): { title: string; content: string } {
     return {
-      title: '💉 STIMS USED!',
-      content: `${this.config.characterName || 'Character'} used combat stims! Addiction clock advanced. Re-rolling...`,
+      title: game.i18n.localize('FITGD.ActionWidget.StimsActivated'),
+      content: game.i18n.format('FITGD.ActionWidget.StimsUsedChat', { name: this.config.characterName || 'Character' }),
     };
   }
 
@@ -382,8 +382,8 @@ export class StimsWorkflowHandler {
    */
   generateAddictionFilledChatMessage(): { title: string; content: string } {
     return {
-      title: '⚠️ ADDICTION FILLS!',
-      content: `${this.config.characterName || 'Character'} has become addicted to combat stims! Trait Added: Addict. Stims are now locked for the entire crew.`,
+      title: game.i18n.localize('FITGD.ActionWidget.StimsLocked'),
+      content: game.i18n.format('FITGD.ActionWidget.AddictionFilledChat', { name: this.config.characterName || 'Character' }),
     };
   }
 
