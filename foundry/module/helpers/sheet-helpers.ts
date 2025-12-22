@@ -35,6 +35,17 @@ export function refreshSheetsByReduxId(reduxIds: string[], force = true): void {
       } catch (error) {
         console.warn(`FitGD | Could not refresh sheet:`, error);
       }
+    } else if (app.constructor.name === 'PlayerActionWidget') {
+      try {
+        const widgetCharId = (app as any).characterId;
+        if (widgetCharId && affectedIds.has(widgetCharId)) {
+          console.log(`FitGD | Re-rendering PlayerActionWidget for ID ${widgetCharId}`);
+          app.render(force);
+          refreshedCount++;
+        }
+      } catch (error) {
+        console.warn(`FitGD | Could not refresh PlayerActionWidget:`, error);
+      }
     }
   }
 

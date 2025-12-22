@@ -352,6 +352,15 @@ export class FoundryReduxBridge {
           }
         }
       }
+      // Handle Player Action Widget
+      else if (appName === 'PlayerActionWidget') {
+        const widget = app as any;
+        const charId = widget.characterId as ReduxId | undefined;
+
+        if (charId && affectedIds.has(charId)) {
+          widget.render(force);
+        }
+      }
     }
   }
 }
