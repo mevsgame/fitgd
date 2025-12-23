@@ -70,10 +70,20 @@ N/A - HUD is a passive display widget
 
 ### API Exposure
 ```typescript
-game.fitgd.hud.show(crewId?)  // Show HUD
-game.fitgd.hud.hide()         // Hide HUD
-game.fitgd.hud.isVisible()    // Check visibility
+game.fitgd.hud.show(crewId?)   // Show HUD
+game.fitgd.hud.hide()          // Hide HUD
+game.fitgd.hud.isVisible()     // Check visibility
+game.fitgd.hud.getInstance()   // Get singleton instance (for programmatic refresh)
 ```
+
+### Multi-Client Synchronization
+The HUD is explicitly refreshed by `autosave-manager.ts` when commands are received via socket. This is necessary because:
+- The HUD uses `popOut: false`, so it may not appear in `ui.windows`.
+- The internal Redux subscription handles local changes, but socket-received updates require an external trigger.
+
+The refresh logic checks:
+1. If the HUD's `crewId` is in the affected entity list (e.g., momentum change).
+2. If any of the crew's `characters` are in the affected entity list (e.g., harm clock change).
 
 ### Crew Sheet Integration
 - "Set as Primary" button in crew sheet header
