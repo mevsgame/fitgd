@@ -217,6 +217,41 @@ const playerRoundStateSlice = createSlice({
     },
 
     /**
+     * Force transition to a new state (WITHOUT validation)
+     * 
+     * ONLY use this for socket synchronization where the remote client
+     * is authoritative and we may have missed intermediate states.
+     * For local transitions, always use transitionState instead.
+     */
+    forceTransitionState: (state, action: PayloadAction<TransitionStatePayload>) => {
+      const { characterId, newState } = action.payload;
+      const currentState = state.byCharacterId[characterId];
+
+      if (!currentState) {
+        // Initialize state if it doesn't exist
+        state.byCharacterId[characterId] = {
+          ...createInitialPlayerRoundState(characterId),
+          state: newState,
+          stateEnteredAt: Date.now(),
+        };
+      } else {
+        // Store previous state for undo
+        const previousState = { ...currentState };
+
+        // Update state WITHOUT validation
+        state.byCharacterId[characterId] = {
+          ...currentState,
+          state: newState,
+          stateEnteredAt: Date.now(),
+          previousState,
+        };
+      }
+
+      // Note: No history logging for forceTransitionState
+      // This is intentional - the authoritative client already logged the command
+    },
+
+    /**
      * Set the active player (whose turn it is)
      */
     setActivePlayer: (state, action: PayloadAction<SetActivePlayerPayload>) => {

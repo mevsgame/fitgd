@@ -18,6 +18,7 @@ import { DEFAULT_CONFIG } from '@/config/gameConfig';
 import { selectEffectiveEffect, selectDefensiveSuccessValues } from '@/selectors/playerRoundStateSelectors';
 import { calculateOutcome } from '@/utils/diceRules';
 import { logger } from '../utils/logger';
+import type { BlockingRequestType } from './playerRequestService';
 
 /**
  * Coordinates event handling for Player Action Widget
@@ -47,6 +48,31 @@ export class PlayerActionEventCoordinator {
    */
   protected get context(): IPlayerActionWidgetContext {
     return this._context;
+  }
+
+  /**
+   * Request validation from GM via RPC for blocking player actions
+   * Returns true if GM approved, false if rejected or unavailable
+   *
+   * @param requestType - The blocking request type
+   * @param payload - Optional payload data
+   * @returns true if GM approved the action
+   */
+  private async requestGMValidation(requestType: BlockingRequestType, payload: Record<string, unknown> = {}): Promise<boolean> {
+    // GM doesn't need to validate with themselves
+    if (this.context.isGM()) {
+      return true;
+    }
+
+    const requestService = this.context.getPlayerRequestService();
+    if (!requestService) {
+      // No request service - fall back to direct execution
+      logger.warn('No PlayerRequestService available, falling back to direct execution');
+      return true;
+    }
+
+    const result = await requestService.sendBlockingRequest(requestType, payload);
+    return result.success;
   }
 
   /* ========================================
@@ -527,6 +553,20 @@ export class PlayerActionEventCoordinator {
       return;
     }
 
+    // For players: Request GM validation via RPC before executing roll
+    // This ensures GM is aware and game state is valid
+    if (!this.context.isGM()) {
+      const approved = await this.requestGMValidation('REQUEST_ROLL', {
+        characterId: this.context.getCharacterId(),
+        approach: playerState.selectedApproach,
+        pushed: playerState.pushed,
+      });
+      if (!approved) {
+        // GM rejected or unavailable - error already shown by requestGMValidation
+        return;
+      }
+    }
+
     try {
       const state = game.fitgd.store.getState();
 
@@ -579,19 +619,9 @@ export class PlayerActionEventCoordinator {
         { affectedReduxIds: [asReduxId(diceRollingHandler.getAffectedReduxId())], silent: true }
       );
 
-      // Roll dice
+      // Roll dice with Dice So Nice animation (no chat message - outcome shows dice values)
       const dicePool = diceRollingHandler.calculateDicePool(state);
-      const rollResult = await this.context.getDiceService().roll(dicePool);
-
-      // Post the roll to chat with approach flavor
-      const approach = playerState.selectedApproach || 'unknown';
-      const characterName = character.name || 'Character';
-      const localizedApproach = game.i18n.localize(`FITGD.Approaches.${approach.charAt(0).toUpperCase() + approach.slice(1)}`);
-      await this.context.getDiceService().postRollToChat(
-        rollResult,
-        this.context.getCharacterId(),
-        game.i18n.format('FITGD.Messages.RollFlavor', { name: characterName, approach: localizedApproach })
-      );
+      const rollResult = await this.context.getDiceService().rollWithDiceSoNice(dicePool);
 
       const outcome = calculateOutcome(rollResult);
 
@@ -648,10 +678,8 @@ export class PlayerActionEventCoordinator {
         }
       );
 
-      // Post success to chat if applicable
-      if (outcome === 'critical' || outcome === 'success') {
-        await this.context.postSuccessToChat(outcome, rollResult);
-      }
+      // Post outcome to chat (success, partial, failure, critical)
+      await this.context.postSuccessToChat(outcome, rollResult);
     } catch (error) {
       logger.error('Error in handleRoll:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -874,6 +902,16 @@ export class PlayerActionEventCoordinator {
 
     if (!transaction) return;
 
+    // For players: Request GM validation via RPC before accepting
+    if (!this.context.isGM()) {
+      const approved = await this.requestGMValidation('REQUEST_ACCEPT_CONSEQUENCE', {
+        characterId: this.context.getCharacterId(),
+      });
+      if (!approved) {
+        return;
+      }
+    }
+
     const state = game.fitgd.store.getState();
     const workflow = consequenceApplicationHandler.createConsequenceApplicationWorkflow(state, transaction);
 
@@ -963,6 +1001,16 @@ export class PlayerActionEventCoordinator {
         .getNotificationService()
         .error(stimsWorkflowHandler.getErrorMessage(validation.reason));
       return;
+    }
+
+    // For players: Request GM validation via RPC before using stims
+    if (!this.context.isGM()) {
+      const approved = await this.requestGMValidation('REQUEST_USE_STIMS', {
+        characterId: this.context.getCharacterId(),
+      });
+      if (!approved) {
+        return;
+      }
     }
 
     // Find or create addiction clock
@@ -1068,18 +1116,9 @@ export class PlayerActionEventCoordinator {
     // Fetch fresh state for dice pool calculation
     const freshState = game.fitgd.store.getState();
     const dicePool = diceRollingHandler.calculateDicePool(freshState);
-    const rollResult = await this.context.getDiceService().roll(dicePool);
 
-    // Post the reroll to chat
-    const character = this.context.getCharacter();
-    const characterName = character?.name || 'Character';
-    const approach = this.context.getPlayerState()?.selectedApproach || 'unknown';
-    const localizedApproach = game.i18n.localize(`FITGD.Approaches.${approach.charAt(0).toUpperCase() + approach.slice(1)}`);
-    await this.context.getDiceService().postRollToChat(
-      rollResult,
-      this.context.getCharacterId(),
-      game.i18n.format('FITGD.Messages.RollFlavor', { name: characterName, approach: localizedApproach }) + ' ' + game.i18n.localize('FITGD.Messages.StimsRerollSuffix')
-    );
+    // Roll dice with Dice So Nice animation (no chat message - outcome shows dice values)
+    const rollResult = await this.context.getDiceService().rollWithDiceSoNice(dicePool);
 
     const outcome = calculateOutcome(rollResult);
 
@@ -1093,10 +1132,8 @@ export class PlayerActionEventCoordinator {
       }
     );
 
-    // Post success
-    if (outcome === 'critical' || outcome === 'success') {
-      await this.context.postSuccessToChat(outcome, rollResult);
-    }
+    // Post outcome to chat (success, partial, failure, critical)
+    await this.context.postSuccessToChat(outcome, rollResult);
   }
 
   /**

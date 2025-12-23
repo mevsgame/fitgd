@@ -319,25 +319,32 @@ Shows the complete action composition visible to both GM and Player:
 - Can be used in subsequent rolls without additional Momentum cost (already locked)
 
 ### Synchronized Views (GM vs Player)
-The widget is designed as a **shared experience**. Both the GM and the Player see the same widget state in real-time, but their available controls differ based on the current phase.
 
-#### The "Turn Passing" Flow
-1.  **Decision Phase**:
-    - **Player**: Controls Approach, Equipment, and Modifiers.
-    - **GM**: Controls Position and Effect.
-    - *Sync*: When the GM changes Position, the Player sees it update instantly.
-2.  **Rolling**:
-    - **Both**: See the 3D dice roll animation simultaneously.
-3.  **Consequence Phase**:
-    - **GM**: Has controls to select Harm, Ticks, or Complications.
-    - **Player**: View is read-only *unless* they trigger an interrupt (Stims).
-    - *Interrupt*: If the Player clicks "Use Stims", the GM's controls are temporarily locked or overridden until the interrupt resolves.
+> [!IMPORTANT]
+> See **[GM-Authority RPC Architecture](./gm-authority-rpc.md)** for the full synchronization protocol.
+
+The widget follows a **GM-as-authoritative-server** pattern:
+- **Player = Client**: Sends requests via `PlayerRequestService` (`REQUEST_ROLL`, `REQUEST_USE_STIMS`, etc.)
+- **GM = Server**: Validates via `handlePlayerRequest` in `socket-handler.ts`, dispatches Redux actions, broadcasts state
+
+**Key Components**:
+- `foundry/module/services/playerRequestService.ts` — Player-side RPC sender
+- `foundry/module/socket/socket-handler.ts` — `handlePlayerRequest()` (GM-side handler), `handleGMHeartbeat()`
+- `foundry/module/services/playerActionEventCoordinator.ts` — Wraps blocking actions with RPC validation
+
+This eliminates race conditions by design — only the GM can modify `playerRoundState`.
+
+#### Control Distribution
+| Phase | Player Controls | GM Controls |
+|-------|-----------------|-------------|
+| Decision | Approach, Equipment, Modifiers | Position, Effect, Passive Approval |
+| Rolling | (Read-only) | (Read-only) |
+| Consequence | Stims interrupt, Accept | Harm/Clock configuration |
 
 ### Redux Integration
-- **Reads**: `playerRoundState`, `characters`, `crews`, `clocks`.
-- **Writes**: Dispatches actions via `FoundryReduxBridge` to update round state, spend resources, and apply consequences.
-- **Subscription**: The widget subscribes to the Redux store to trigger real-time re-renders when *any* relevant state changes.
-- **Refresh**: The `FoundryReduxBridge` and `refreshSheetsByReduxId` helper explicitly include this widget in their refresh logic to ensure it updates during remote state changes (e.g., when viewing another player's roll).
+- **Reads**: `playerRoundState`, `characters`, `crews`, `clocks`
+- **Writes**: GM dispatches via `FoundryReduxBridge`; players send requests via socket
+- **Subscription**: Widget re-renders on state changes (including remote updates)
 
 ## Implementation Details
 
@@ -349,6 +356,13 @@ To avoid a massive "God Class", business logic is delegated to specialized handl
 - `TraitHandler`: Manages trait transactions (Flashback, Leaning, Consolidation).
 - `EquipmentHandler`: Manages equipment selection, locking, momentum costs for Active/Passive/Consumable items.
 - `RallyHandler`: Manages the [Rally](./mechanics-rally.md) logic.
+
+### RPC Service (Player-side)
+- `PlayerRequestService`: Manages GM-Authority RPC communication for players.
+  - `sendBlockingRequest()`: Awaits GM response (roll, stims, accept consequence)
+  - `sendOptimisticRequest()`: Fire-and-forget for approach/equipment selection
+  - `shouldApplyBroadcast()`: Filters incoming state updates by request ID
+  - Located in `foundry/module/services/playerRequestService.ts`
 
 ### Transaction Pattern
 The widget uses a **Transaction Pattern** to handle complex state changes that require "staging" or "previewing" before being committed to the permanent game state. This ensures atomicity and allows users to cancel operations without side effects.
@@ -647,22 +661,15 @@ interface ActivePlayerAction {
 | `commitToRoll` | Player clicks "Roll". Sets `committedToRoll: true`. Prevents player closing. |
 | `abortPlayerAction` | GM or Player closes widget. Clears action. Triggers auto-close. |
 
-### Synchronization Logic (Anti-Loop Mechanisms)
+### Synchronization Logic
 
-To prevent infinite loops (where receiving a state update triggers a re-broadcast), the synchronization system implements **three layers of protection**:
+> [!NOTE]
+> The widget uses the [GM-Authority RPC Architecture](./gm-authority-rpc.md) which eliminates race conditions by design.
 
-1.  **Deduplication (`activePlayerActionsChanged`)**:
-    *   The broadcaster (`fitgd.ts`) tracks the JSON string of the *last successfully broadcast* `activePlayerActions`.
-    *   It only broadcasts if the current state differs from the last broadcast state.
-
-2.  **Reflexive Suppression (`isReceivingFromSocket`)**:
-    *   The socket handler sets a flag `isReceivingFromSocket = true` while applying received updates.
-    *   Usage of `saveImmediate()` checks this flag and **blocks broadcast** if strictly receiving.
-
-3.  **Tracking Synchronization (`syncActivePlayerActionsTracking`)**:
-    *   **Crucial Fix**: When a client receives an update (e.g., `activePlayerAction: null`), it *must* update its local "last broadcast" tracking to match the received data.
-    *   Without this, the receiver's state updates, but their "last broadcast" remains stale. The next save check sees a "change" (Current vs Stale Last) and broadcasts back, causing a "Ping Pong" infinite loop.
-    *   The socket handler calls `game.fitgd.syncActivePlayerActionsTracking(receivedData)` to align these states immediately.
+**Key mechanisms:**
+- **Single Writer**: Only GM dispatches Redux actions for `playerRoundState`
+- **Heartbeat**: GM sends periodic heartbeats; player shows warning if connection lost
+- **Full State Sync**: On GM reconnect, full state snapshot is broadcast
 
 ### Permission Rules
 

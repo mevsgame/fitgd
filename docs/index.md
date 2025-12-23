@@ -7,6 +7,7 @@ Each feature should have a dedicated document linked below.
 
 - [Foundry-Redux Bridge](./foundry-bridge.md) - The integration layer between Foundry VTT and Redux.
 - [Player Action Widget](./player-action-widget.md) - The core interface for action resolution.
+- [GM-Authority RPC Architecture](./gm-authority-rpc.md) - Synchronization protocol for Player Action Widget.
 - [Character Sheet](./character-sheet.md) - Managing character state, traits, and equipment.
 - [Crew Sheet](./crew-sheet.md) - Managing crew resources, momentum, and clocks.
 - [Crew HUD Panel](./crew-hud-panel.md) - Persistent overlay showing crew status at a glance.

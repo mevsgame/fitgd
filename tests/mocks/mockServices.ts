@@ -7,7 +7,7 @@
  */
 
 import { vi } from 'vitest';
-import type { DiceService } from '../../foundry/module/services/diceService';
+import type { DiceService, RollResult } from '../../foundry/module/services/diceService';
 import type { NotificationService } from '../../foundry/module/services/notificationService';
 import type { DialogFactory, FlashbackItemCallback } from '../../foundry/module/services/dialogFactory';
 
@@ -53,8 +53,24 @@ export class MockDiceService implements DiceService {
         return result;
     }
 
-    async postRollToChat(result: number[], characterId: string, flavor: string): Promise<void> {
+    async rollWithObject(dicePool: number): Promise<RollResult> {
+        const results = await this.roll(dicePool);
+        // Return a mock Roll object
+        return {
+            results,
+            roll: { total: results.reduce((a, b) => a + b, 0) } as any
+        };
+    }
+
+    async rollAndPostToChat(dicePool: number, characterId: string, flavor: string): Promise<number[]> {
+        const result = await this.roll(dicePool);
         this.chatPosts.push({ result, characterId, flavor });
+        return result;
+    }
+
+    async rollWithDiceSoNice(dicePool: number): Promise<number[]> {
+        // Just roll, no chat post - simulates Dice So Nice without message
+        return this.roll(dicePool);
     }
 
     /**
