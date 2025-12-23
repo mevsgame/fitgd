@@ -324,34 +324,6 @@ export class FoundryReduxBridge {
           app.render(force);
         }
       }
-      // Handle Crew HUD Panel
-      else if (appName === 'CrewHUDPanel') {
-        const hud = app as any;
-        const hudCrewId = hud.crewId as ReduxId | undefined;
-
-        if (hudCrewId) {
-          // Refresh if HUD's crew is affected
-          if (affectedIds.has(hudCrewId)) {
-            hud.render(force);
-            continue;
-          }
-
-          // Refresh if any of the crew's characters are affected
-          // We need to look up the crew to know its characters
-          const state = this.getState();
-          const crew = state.crews.byId[hudCrewId];
-
-          if (crew) {
-            const hasAffectedCharacter = crew.characters.some(charId =>
-              affectedIds.has(charId as ReduxId)
-            );
-
-            if (hasAffectedCharacter) {
-              hud.render(force);
-            }
-          }
-        }
-      }
       // Handle Player Action Widget
       else if (appName === 'PlayerActionWidget') {
         const widget = app as any;
@@ -362,6 +334,9 @@ export class FoundryReduxBridge {
         }
       }
     }
+
+    // Note: CrewHUDPanel now handles its own updates via store subscription
+    // No explicit refresh needed here
   }
 }
 

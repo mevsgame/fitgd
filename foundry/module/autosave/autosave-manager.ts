@@ -350,6 +350,9 @@ export function refreshAffectedSheets(commands: CommandHistory, clockEntityIds: 
   }
 
   console.log(`FitGD | Refreshed ${refreshedCount} sheets`);
+
+  // Note: CrewHUDPanel now handles its own updates via store subscription
+  // No explicit refresh needed here
 }
 
 /**

@@ -20,10 +20,11 @@ A persistent overlay panel on the left side of the screen that displays the prim
 ## Architecture & State
 
 ### Redux Integration
-- Subscribes to store for real-time updates
+- **Pure reactive pattern**: Subscribes to store, debounced render on any state change
 - Reads from `crews`, `characters`, and `clocks` slices
-- Updates on momentum, clock, or character changes
-- **Name sync**: Actor name changes in Foundry trigger HUD re-render via `updateActor` hook
+- No external refresh calls needed - HUD manages its own updates
+- **Debounce**: 16ms (~1 frame) to consolidate rapid changes
+- **Name sync**: Actor name changes trigger store updates → HUD re-renders
 
 ### Settings
 | Setting | Scope | Purpose |

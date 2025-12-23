@@ -67,9 +67,17 @@ interface CrewHUDData {
 export class CrewHUDPanel extends Application {
     private static _instance: CrewHUDPanel | null = null;
 
+    /**
+     * Get the singleton instance
+     */
+    public static get instance(): CrewHUDPanel | null {
+        return this._instance;
+    }
+
     private crewId: string | null = null;
     private storeUnsubscribe: (() => void) | null = null;
     private currentPosition: { left: number; top: number } | null = null;
+    private debounceTimer: number | null = null;
 
     // ===== STATIC METHODS =====
 
@@ -159,7 +167,10 @@ export class CrewHUDPanel extends Application {
     }
 
     /**
-     * Subscribe to Redux store for live updates
+     * Subscribe to Redux store for live updates.
+     * 
+     * Uses a simple reactive pattern: any state change triggers a debounced render.
+     * No complex state comparison needed - if state changed, HUD re-renders.
      */
     private _subscribeToStore(): void {
         if (this.storeUnsubscribe) return; // Already subscribed
@@ -167,41 +178,17 @@ export class CrewHUDPanel extends Application {
         const store = game.fitgd?.store;
         if (!store) return;
 
-        let previousState = store.getState();
-
         this.storeUnsubscribe = store.subscribe(() => {
-            const currentState = store.getState();
+            if (!this.rendered) return;
 
-            // Only re-render if relevant state changed
-            if (this.rendered && this._hasRelevantStateChanged(previousState, currentState)) {
+            // Debounce rapid state changes (batch updates, socket sync, etc.)
+            if (this.debounceTimer) window.clearTimeout(this.debounceTimer);
+            this.debounceTimer = window.setTimeout(() => {
                 this.render(false);
-            }
-
-            previousState = currentState;
+            }, 16); // ~1 frame, imperceptible delay
         });
     }
 
-    /**
-     * Check if state changes affect the HUD display
-     */
-    private _hasRelevantStateChanged(prev: any, current: any): boolean {
-        if (!this.crewId) return false;
-
-        // Check crew momentum and active player action
-        const prevCrew = prev.crews.byId[this.crewId];
-        const currentCrew = current.crews.byId[this.crewId];
-        if (prevCrew?.currentMomentum !== currentCrew?.currentMomentum) return true;
-        if (prevCrew?.characters?.length !== currentCrew?.characters?.length) return true;
-        if (prevCrew?.activePlayerAction?.characterId !== currentCrew?.activePlayerAction?.characterId) return true;
-
-        // Check clocks (simple reference check)
-        if (prev.clocks !== current.clocks) return true;
-
-        // Check characters (for harm clocks)
-        if (prev.characters !== current.characters) return true;
-
-        return false;
-    }
 
     /**
      * Enable drag-to-reposition functionality
