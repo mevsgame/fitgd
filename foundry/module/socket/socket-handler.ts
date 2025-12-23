@@ -24,6 +24,42 @@ export function getIsReceivingFromSocket(): boolean {
 /* -------------------------------------------- */
 
 /**
+ * GM Heartbeat constants
+ * @see docs/gm-authority-rpc.md
+ */
+export const GM_HEARTBEAT_INTERVAL = 5000; // 5 seconds
+export const GM_HEARTBEAT_TIMEOUT = 15000; // 15 seconds
+
+/**
+ * GM Heartbeat tracking state
+ */
+let lastGMHeartbeat: number | null = null;
+
+/**
+ * Get last GM heartbeat timestamp
+ */
+export function getLastGMHeartbeat(): number | null {
+  return lastGMHeartbeat;
+}
+
+/**
+ * Check if GM is considered disconnected
+ */
+export function isGMDisconnected(): boolean {
+  if (!lastGMHeartbeat) return false;
+  return Date.now() - lastGMHeartbeat > GM_HEARTBEAT_TIMEOUT;
+}
+
+/**
+ * Handle GM Heartbeat message
+ * Called on player clients when GM sends heartbeat
+ */
+function handleGMHeartbeat(data: { timestamp: number }): void {
+  lastGMHeartbeat = data.timestamp;
+  logger.debug(`Received GM heartbeat at ${new Date(data.timestamp).toISOString()}`);
+}
+
+/**
  * Command history structure for socket messages
  */
 interface CommandHistory {
@@ -504,5 +540,220 @@ async function handleTakeAction(data: { characterId: string; userId: string; use
   }
 }
 
+/* -------------------------------------------- */
+/*  GM Authority RPC Handler                    */
+/* -------------------------------------------- */
+
+/**
+ * Player request structure for GM-Authority RPC
+ * @see docs/gm-authority-rpc.md
+ */
+interface PlayerRequest {
+  type: string;
+  payload: Record<string, unknown>;
+  characterId: string;
+  requestId: string;
+}
+
+/**
+ * Result returned to player from handlePlayerRequest
+ */
+interface PlayerRequestResult {
+  success: boolean;
+  error?: string;
+  lastConfirmedRequestId: string;
+}
+
+/**
+ * Handle player requests via executeAsGM
+ * 
+ * This is the core RPC handler for the GM-Authority pattern.
+ * All blocking player actions go through this function.
+ * 
+ * @see docs/gm-authority-rpc.md
+ */
+async function handlePlayerRequest(request: PlayerRequest): Promise<PlayerRequestResult> {
+  logger.debug(`handlePlayerRequest received:`, request);
+
+  // Only GM can process requests
+  if (!game.user!.isGM) {
+    return {
+      success: false,
+      error: 'Only GM can handle player requests',
+      lastConfirmedRequestId: request.requestId
+    };
+  }
+
+  const { characterId, requestId, type, payload } = request;
+
+  // Get current player state
+  const state = game.fitgd!.store.getState();
+  const playerState = state.playerRoundState.byCharacterId[characterId];
+
+  // Find crew for this character
+  const crew = Object.values(state.crews.byId).find(c => c.characters.includes(characterId));
+
+  try {
+    switch (type) {
+      case 'REQUEST_START_ACTION': {
+        // Initialize player state and start action
+        game.fitgd!.store.dispatch({
+          type: 'playerRoundState/initializePlayerState',
+          payload: { characterId }
+        });
+
+        if (crew) {
+          game.fitgd!.store.dispatch({
+            type: 'crews/startPlayerAction',
+            payload: {
+              crewId: crew.id,
+              characterId,
+              playerId: (payload as { playerId?: string }).playerId || game.user!.id
+            }
+          });
+        }
+
+        await game.fitgd!.saveImmediate();
+        return { success: true, lastConfirmedRequestId: requestId };
+      }
+
+      case 'REQUEST_SET_APPROACH': {
+        const { approach, secondaryApproach } = payload as {
+          approach: string;
+          secondaryApproach?: string;
+        };
+
+        game.fitgd!.store.dispatch({
+          type: 'playerRoundState/setActionPlan',
+          payload: {
+            characterId,
+            approach,
+            secondaryApproach,
+            position: playerState?.position || 'risky',
+            effect: playerState?.effect || 'standard'
+          }
+        });
+
+        await game.fitgd!.saveImmediate();
+        return { success: true, lastConfirmedRequestId: requestId };
+      }
+
+      case 'REQUEST_SET_IMPROVEMENTS': {
+        const { pushed, pushType, flashbackApplied } = payload as {
+          pushed?: boolean;
+          pushType?: string;
+          flashbackApplied?: boolean;
+        };
+
+        game.fitgd!.store.dispatch({
+          type: 'playerRoundState/setImprovements',
+          payload: {
+            characterId,
+            pushed: pushed || false,
+            pushType,
+            flashbackApplied
+          }
+        });
+
+        await game.fitgd!.saveImmediate();
+        return { success: true, lastConfirmedRequestId: requestId };
+      }
+
+      case 'REQUEST_ROLL': {
+        // Validate state
+        if (playerState?.state !== 'DECISION_PHASE') {
+          return {
+            success: false,
+            error: `Cannot roll: not in DECISION_PHASE (current: ${playerState?.state})`,
+            lastConfirmedRequestId: requestId
+          };
+        }
+
+        if (!playerState?.selectedApproach) {
+          return {
+            success: false,
+            error: 'Cannot roll: no approach selected',
+            lastConfirmedRequestId: requestId
+          };
+        }
+
+        // Validate momentum for push
+        if (playerState.pushed && crew && crew.currentMomentum < 1) {
+          return {
+            success: false,
+            error: 'Insufficient momentum for push',
+            lastConfirmedRequestId: requestId
+          };
+        }
+
+        // Note: Actual roll logic is handled by the widget's coordinator
+        // This just validates the request - the widget will perform the roll
+        return { success: true, lastConfirmedRequestId: requestId };
+      }
+
+      case 'REQUEST_USE_STIMS': {
+        // Validate stims can be used
+        if (playerState?.stimsUsedThisAction) {
+          return {
+            success: false,
+            error: 'Stims already used this action',
+            lastConfirmedRequestId: requestId
+          };
+        }
+
+        // Note: Actual stims workflow is handled by the widget
+        return { success: true, lastConfirmedRequestId: requestId };
+      }
+
+      case 'REQUEST_ACCEPT_CONSEQUENCE': {
+        // Validate state
+        if (playerState?.state !== 'GM_RESOLVING_CONSEQUENCE') {
+          return {
+            success: false,
+            error: `Cannot accept consequence: not in GM_RESOLVING_CONSEQUENCE (current: ${playerState?.state})`,
+            lastConfirmedRequestId: requestId
+          };
+        }
+
+        // Note: Actual consequence acceptance is handled by the widget's coordinator
+        return { success: true, lastConfirmedRequestId: requestId };
+      }
+
+      case 'REQUEST_CLOSE_WIDGET': {
+        // Reset player state
+        game.fitgd!.store.dispatch({
+          type: 'playerRoundState/resetPlayerState',
+          payload: { characterId }
+        });
+
+        // Clear active player action on crew
+        if (crew) {
+          game.fitgd!.store.dispatch({
+            type: 'crews/abortPlayerAction',
+            payload: { crewId: crew.id }
+          });
+        }
+
+        await game.fitgd!.saveImmediate();
+        return { success: true, lastConfirmedRequestId: requestId };
+      }
+
+      default:
+        return {
+          success: false,
+          error: `Unknown request type: ${type}`,
+          lastConfirmedRequestId: requestId
+        };
+    }
+  } catch (err) {
+    logger.error('Error handling player request:', err);
+    return {
+      success: false,
+      error: (err as Error).message,
+      lastConfirmedRequestId: requestId
+    };
+  }
+}
+
 // Export socket handler functions
-export { receiveCommandsFromSocket, handleTakeAction };
+export { receiveCommandsFromSocket, handleTakeAction, handlePlayerRequest, handleGMHeartbeat };

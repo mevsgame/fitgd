@@ -36,6 +36,8 @@ import { DiceService, FoundryDiceService } from '../services/diceService';
 import { NotificationService, FoundryNotificationService } from '../services/notificationService';
 
 import { DialogFactory, FoundryDialogFactory } from '../services/dialogFactory';
+import { PlayerRequestService } from '../services/playerRequestService';
+import { GM_HEARTBEAT_INTERVAL } from '../socket/socket-handler';
 import { logger } from '../utils/logger';
 interface PlayerActionWidgetData {
   character: Character;
@@ -206,6 +208,12 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
   private sidePanelMode: 'harm-clock' | 'crew-clock' | 'success-clock' | null = null;
   private sidePanelPosition: 'left' | 'right' = 'right';
 
+  // GM-Authority RPC service (only used by players)
+  private playerRequestService: PlayerRequestService | null = null;
+
+  // GM Heartbeat interval (only runs when GM opens widget)
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+
   /**
    * Create a new Player Action Widget
    *
@@ -234,6 +242,11 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
 
     // Initialize event coordinator (passes this widget as the context)
     this.coordinator = new PlayerActionEventCoordinator(this);
+
+    // Initialize player request service for non-GM users
+    if (!game.user?.isGM) {
+      this.playerRequestService = new PlayerRequestService(characterId);
+    }
   }
 
   async _render(force: boolean, options: any): Promise<void> {
@@ -342,6 +355,14 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
 
         previousState = currentState;
       });
+
+      // Start GM heartbeat interval (GM only)
+      if (game.user?.isGM && !this.heartbeatInterval) {
+        this.heartbeatInterval = setInterval(() => {
+          game.fitgd?.socket.executeForEveryone('gmHeartbeat', { timestamp: Date.now() });
+        }, GM_HEARTBEAT_INTERVAL);
+        logger.debug('GM heartbeat interval started');
+      }
     }
   }
 
@@ -434,6 +455,18 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
     if (this.storeUnsubscribe) {
       this.storeUnsubscribe();
       this.storeUnsubscribe = null;
+    }
+
+    // Stop GM heartbeat interval
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+      logger.debug('GM heartbeat interval stopped');
+    }
+
+    // Reset player request service
+    if (this.playerRequestService) {
+      this.playerRequestService.reset();
     }
 
     // Reset handler factory
@@ -541,6 +574,22 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
    */
   async postSuccessToChat(outcome: string, rollResult: number[]): Promise<void> {
     return this._postSuccessToChat(outcome, rollResult);
+  }
+
+  /**
+   * Get the player request service for GM-Authority RPC
+   * @implements IPlayerActionWidgetContext
+   */
+  getPlayerRequestService(): PlayerRequestService | null {
+    return this.playerRequestService;
+  }
+
+  /**
+   * Check if current user is the GM
+   * @implements IPlayerActionWidgetContext
+   */
+  isGM(): boolean {
+    return game.user?.isGM || false;
   }
 
   /**
@@ -1371,17 +1420,21 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
 
   /**
    * Roll dice and return results using Foundry's Roll class
+   * Uses rollAndPostToChat to ensure ONE roll is used for both game logic and chat display
    */
   private async _rollDice(dicePool: number): Promise<number[]> {
     try {
-      const results = await this.diceService.roll(dicePool);
-
       // Get fresh player state for flavor text
       const currentState = game.fitgd.store.getState();
       const currentPlayerState = currentState.playerRoundState.byCharacterId[this.characterId];
       const approach = currentPlayerState?.selectedApproach || 'unknown';
 
-      await this.diceService.postRollToChat(results, this.characterId, `${this.character!.name} - ${approach} approach`);
+      // Roll and post to chat in ONE step - same Roll object for both!
+      const results = await this.diceService.rollAndPostToChat(
+        dicePool,
+        this.characterId,
+        game.i18n.format('FITGD.Notifications.RollFlavor', { name: this.character!.name, approach })
+      );
 
       return results;
     } catch (error) {
@@ -1533,21 +1586,52 @@ export class PlayerActionWidget extends Application implements IPlayerActionWidg
   }
 
   /**
-   * Post success message to chat
+   * Post outcome message to chat
+   * Includes the actual dice values that were rolled
    */
   private _postSuccessToChat(outcome: string, rollResult: number[]): void {
     const highestDie = Math.max(...rollResult);
-    const isCritical = outcome === 'critical';
+    const diceDisplay = rollResult.join(', ');
+
+    // Determine outcome display based on type
+    let outcomeLabel: string;
+    let cssClass: string;
+    let message: string;
+
+    switch (outcome) {
+      case 'critical':
+        outcomeLabel = game.i18n.localize('FITGD.ActionWidget.OutcomeCritical');
+        cssClass = 'critical';
+        message = game.i18n.format('FITGD.ActionWidget.FullSuccessResultMessage', { name: this.character!.name });
+        break;
+      case 'success':
+        outcomeLabel = game.i18n.localize('FITGD.ActionWidget.OutcomeSuccess');
+        cssClass = 'success';
+        message = game.i18n.format('FITGD.ActionWidget.FullSuccessResultMessage', { name: this.character!.name });
+        break;
+      case 'partial':
+        outcomeLabel = game.i18n.localize('FITGD.ActionWidget.OutcomePartial');
+        cssClass = 'partial';
+        message = game.i18n.format('FITGD.ActionWidget.PartialSuccessResultMessage', { name: this.character!.name });
+        break;
+      case 'failure':
+      default:
+        outcomeLabel = game.i18n.localize('FITGD.ActionWidget.OutcomeFailure');
+        cssClass = 'failure';
+        message = game.i18n.format('FITGD.ActionWidget.FailureResultMessage', { name: this.character!.name });
+        break;
+    }
 
     const content = `
-    <div class="fitgd-chat-message success">
-      <h3>${isCritical ? game.i18n.localize('FITGD.ActionWidget.OutcomeCritical') : game.i18n.localize('FITGD.ActionWidget.OutcomeSuccess')}</h3>
-        <div class="dice-result">${game.i18n.format('FITGD.ActionWidget.DiceResult', { max: highestDie })}</div>
-          <div class="message">
-            ${game.i18n.format('FITGD.ActionWidget.FullSuccessResultMessage', { name: this.character!.name })}
-              </div>
-              </div>
-                `;
+    <div class="fitgd-chat-message ${cssClass}">
+      <h3>${outcomeLabel}</h3>
+      <div class="dice-result">${game.i18n.format('FITGD.ActionWidget.DiceResult', { max: highestDie })}</div>
+      <div class="dice-rolled">${game.i18n.format('FITGD.ActionWidget.DiceRolled', { results: diceDisplay })}</div>
+      <div class="message">
+        ${message}
+      </div>
+    </div>
+    `;
 
     ChatMessage.create({
       content,

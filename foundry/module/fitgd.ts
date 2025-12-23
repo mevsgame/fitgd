@@ -38,7 +38,7 @@ import { registerItemHooks } from './hooks/item-hooks';
 import { CrewHUDPanel } from './widgets/crew-hud-panel';
 
 // Socket and autosave modules
-import { receiveCommandsFromSocket, handleTakeAction, getIsReceivingFromSocket } from './socket/socket-handler';
+import { receiveCommandsFromSocket, handleTakeAction, handlePlayerRequest, handleGMHeartbeat, getIsReceivingFromSocket } from './socket/socket-handler';
 import { saveCommandHistory, trackInitialCommandsAsApplied, getNewCommandsSinceLastBroadcast, checkCircuitBreaker } from './autosave/autosave-manager';
 
 // Developer commands
@@ -155,8 +155,9 @@ Hooks.once('init', async function () {
     // Note: Handler function must be defined before registration
     game.fitgd!.socket.register('syncCommands', receiveCommandsFromSocket);
     game.fitgd!.socket.register('takeAction', handleTakeAction);
-    logger.info('Socket handlers registered for "syncCommands" and "takeAction"');
-    logger.info('Handler functions:', receiveCommandsFromSocket, handleTakeAction);
+    game.fitgd!.socket.register('handlePlayerRequest', handlePlayerRequest);
+    game.fitgd!.socket.register('gmHeartbeat', handleGMHeartbeat);
+    logger.info('Socket handlers registered for "syncCommands", "takeAction", "handlePlayerRequest", and "gmHeartbeat"');
   } catch (error) {
     logger.error('Failed to initialize socketlib:', error);
     logger.error('Make sure socketlib module is installed and enabled');

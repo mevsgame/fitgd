@@ -15,13 +15,14 @@ import type { PlayerActionHandlerFactory } from '../services/playerActionHandler
 import type { DiceService } from '../services/diceService';
 import type { NotificationService } from '../services/notificationService';
 import type { DialogFactory } from '../services/dialogFactory';
+import type { PlayerRequestService } from '../services/playerRequestService';
 
 /**
  * Context interface for Player Action Widget
  *
  * Provides access to:
  * - Entity state (character, crew, player round state)
- * - Utility services (dice, notifications, dialogs)
+ * - Utility services (dice, notifications, dialogs, RPC)
  * - Handler factory for creating handlers
  * - Special utility methods (post to chat)
  *
@@ -40,6 +41,8 @@ import type { DialogFactory } from '../services/dialogFactory';
  *   getNotificationService: () => mockNotificationService,
  *   getDialogFactory: () => mockDialogFactory,
  *   getHandlerFactory: () => mockHandlerFactory,
+ *   getPlayerRequestService: () => mockPlayerRequestService,
+ *   isGM: () => false,
  *   postSuccessToChat: jest.fn()
  * };
  *
@@ -103,6 +106,19 @@ export interface IPlayerActionWidgetContext {
   getHandlerFactory(): PlayerActionHandlerFactory;
 
   /**
+   * Get the player request service for GM-Authority RPC
+   * Used by players to send requests to GM via socketlib
+   * @returns PlayerRequestService instance or null for GM
+   */
+  getPlayerRequestService(): PlayerRequestService | null;
+
+  /**
+   * Check if current user is the GM
+   * @returns true if current user is GM
+   */
+  isGM(): boolean;
+
+  /**
    * Post a success message to the game chat
    *
    * Called when player successfully rolls and wants outcome posted to chat.
@@ -113,3 +129,4 @@ export interface IPlayerActionWidgetContext {
    */
   postSuccessToChat(outcome: string, rollResult: number[]): Promise<void>;
 }
+

@@ -74,6 +74,21 @@ export interface BridgeSpyData {
     actions: ReduxAction[];
     error: string;
   }>;
+
+  /** RPC requests sent (GM-authority pattern) */
+  requests: Array<{
+    type: string;
+    payload: any;
+    characterId?: string;
+    requestId: string;
+    timestamp: number;
+  }>;
+
+  /** Heartbeats sent (GM only) */
+  heartbeatsSent: number;
+
+  /** Last heartbeat received timestamp (player only) */
+  lastHeartbeatReceived: number | null;
 }
 
 export interface BridgeSpy {
@@ -160,6 +175,9 @@ export function createBridgeSpy(store: Store<RootState>): BridgeSpyResult {
     executeCalls: [],
     batchCalls: [],
     invalidBatches: [],
+    requests: [],
+    heartbeatsSent: 0,
+    lastHeartbeatReceived: null,
   };
 
   // Mock saveImmediate (broadcast function)
@@ -295,6 +313,9 @@ export function createBridgeSpy(store: Store<RootState>): BridgeSpyResult {
       data.executeCalls = [];
       data.batchCalls = [];
       data.invalidBatches = [];
+      data.requests = [];
+      data.heartbeatsSent = 0;
+      data.lastHeartbeatReceived = null;
     },
 
     getActionsByType: (type: string) => {
@@ -309,7 +330,7 @@ export function createBridgeSpy(store: Store<RootState>): BridgeSpyResult {
           let from: string | undefined;
           for (let i = index - 1; i >= 0; i--) {
             if (data.dispatches[i].type === 'playerRoundState/transitionState' &&
-                data.dispatches[i].payload?.characterId === a.payload?.characterId) {
+              data.dispatches[i].payload?.characterId === a.payload?.characterId) {
               from = data.dispatches[i].payload?.newState;
               break;
             }

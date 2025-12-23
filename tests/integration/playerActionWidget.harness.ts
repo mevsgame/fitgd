@@ -168,6 +168,45 @@ export interface WidgetTestHarness {
 
   /** Clean up harness (call in afterEach) */
   cleanup: () => void;
+
+  /* -------------------------------------------- */
+  /*  GM Authority RPC Methods                    */
+  /* -------------------------------------------- */
+
+  /** Send an RPC request (player side) */
+  sendRequest: (type: string, payload: any) => Promise<{
+    sentToServer: boolean;
+    localValidationError?: string;
+  }>;
+
+  /** Handle a player request (GM side) */
+  handlePlayerRequest: (request: {
+    type: string;
+    payload: any;
+    characterId: string;
+    requestId: string;
+  }) => Promise<{ success: boolean; error?: string }>;
+
+  /** Check if pending request in flight */
+  isPending: () => boolean;
+
+  /** Get type of pending request */
+  pendingRequestType: () => string | null;
+
+  /** Start GM heartbeat (GM only) */
+  startHeartbeat: () => void;
+
+  /** Stop GM heartbeat */
+  stopHeartbeat: () => void;
+
+  /** Simulate receiving heartbeat (player only) */
+  receiveHeartbeat: (data: { timestamp: number }) => void;
+
+  /** Check if GM is considered disconnected */
+  isGMDisconnected: () => boolean;
+
+  /** Receive full state sync from GM */
+  receiveFullStateSync: (playerState: PlayerRoundState) => void;
 }
 
 /* -------------------------------------------- */
@@ -657,6 +696,168 @@ export async function createWidgetHarness(
     cleanupUIMocks();
     delete (global as any).game;
     spy.reset();
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
+    }
+  };
+
+  /* -------------------------------------------- */
+  /*  GM Authority RPC Methods                    */
+  /* -------------------------------------------- */
+
+  // RPC state tracking
+  let pendingRequest: { type: string; resolve: (result: any) => void } | null = null;
+  let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+  let gmDisconnected = false;
+  const HEARTBEAT_INTERVAL = 5000; // 5 seconds
+  const HEARTBEAT_TIMEOUT = 15000; // 15 seconds
+
+  const sendRequest = async (type: string, payload: any): Promise<{
+    sentToServer: boolean;
+    localValidationError?: string;
+  }> => {
+    // Local validation before sending
+    const playerState = getPlayerState();
+
+    // Validate based on request type
+    if (type === 'REQUEST_ROLL') {
+      if (!playerState?.selectedApproach) {
+        return { sentToServer: false, localValidationError: 'No approach selected' };
+      }
+    }
+
+    // Track request
+    const requestId = `req-${Date.now()}`;
+    spy.data.requests.push({
+      type,
+      payload,
+      characterId,
+      requestId,
+      timestamp: Date.now(),
+    });
+
+    // Set pending state
+    return new Promise((resolve) => {
+      pendingRequest = { type, resolve: () => resolve({ sentToServer: true }) };
+
+      // Simulate async resolution (in real impl, would wait for ACK)
+      setTimeout(() => {
+        if (pendingRequest?.type === type) {
+          pendingRequest.resolve({ sentToServer: true });
+          pendingRequest = null;
+        }
+      }, 50);
+    });
+  };
+
+  const handlePlayerRequest = async (request: {
+    type: string;
+    payload: any;
+    characterId: string;
+    requestId: string;
+  }): Promise<{ success: boolean; error?: string }> => {
+    if (!isGM) {
+      return { success: false, error: 'Only GM can handle player requests' };
+    }
+
+    const playerState = getPlayerState();
+
+    try {
+      switch (request.type) {
+        case 'REQUEST_SET_APPROACH':
+          await game.fitgd.bridge.execute({
+            type: 'playerRoundState/setActionPlan',
+            payload: {
+              characterId: request.characterId,
+              approach: request.payload.approach,
+              secondaryApproach: request.payload.secondaryApproach,
+              position: playerState?.position || 'risky',
+              effect: playerState?.effect || 'standard',
+            },
+          });
+          return { success: true };
+
+        case 'REQUEST_ROLL':
+          // Validate state
+          if (playerState?.state !== 'DECISION_PHASE') {
+            return { success: false, error: 'Cannot roll: not in DECISION_PHASE' };
+          }
+          if (!playerState?.selectedApproach) {
+            return { success: false, error: 'Cannot roll: no approach selected' };
+          }
+
+          // Validate momentum
+          const crewData = getCrew();
+          const baseMomentumCost = playerState.pushed ? 1 : 0;
+          if (crewData && crewData.currentMomentum < baseMomentumCost) {
+            return { success: false, error: 'Insufficient momentum for push' };
+          }
+
+          // Execute roll (delegate to clickRoll logic)
+          await clickRoll();
+          return { success: true };
+
+        case 'REQUEST_USE_STIMS':
+          await clickUseStims();
+          return { success: true };
+
+        case 'REQUEST_ACCEPT_CONSEQUENCE':
+          await acceptConsequence();
+          return { success: true };
+
+        default:
+          return { success: false, error: `Unknown request type: ${request.type}` };
+      }
+    } catch (err) {
+      return { success: false, error: (err as Error).message };
+    }
+  };
+
+  const isPending = (): boolean => {
+    return pendingRequest !== null;
+  };
+
+  const pendingRequestType = (): string | null => {
+    return pendingRequest?.type || null;
+  };
+
+  const startHeartbeat = (): void => {
+    if (!isGM) return;
+
+    heartbeatInterval = setInterval(() => {
+      spy.data.heartbeatsSent++;
+      // In real impl, would broadcast via socket
+    }, HEARTBEAT_INTERVAL);
+  };
+
+  const stopHeartbeat = (): void => {
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
+    }
+  };
+
+  const receiveHeartbeat = (data: { timestamp: number }): void => {
+    spy.data.lastHeartbeatReceived = data.timestamp;
+    gmDisconnected = false;
+  };
+
+  const isGMDisconnected = (): boolean => {
+    if (isGM) return false;
+
+    const lastHeartbeat = spy.data.lastHeartbeatReceived;
+    if (!lastHeartbeat) return false;
+
+    return Date.now() - lastHeartbeat > HEARTBEAT_TIMEOUT;
+  };
+
+  const receiveFullStateSync = (playerState: PlayerRoundState): void => {
+    // Directly set state (simulates receiving full state from GM)
+    game.fitgd.store.dispatch({
+      type: 'playerRoundState/forceSetState',
+      payload: { characterId, state: playerState },
+    });
   };
 
   /* -------------------------------------------- */
@@ -699,6 +900,17 @@ export async function createWidgetHarness(
     advanceToState,
     setupActionPlan,
     cleanup,
+
+    // GM Authority RPC methods
+    sendRequest,
+    handlePlayerRequest,
+    isPending,
+    pendingRequestType,
+    startHeartbeat,
+    stopHeartbeat,
+    receiveHeartbeat,
+    isGMDisconnected,
+    receiveFullStateSync,
   };
 }
 

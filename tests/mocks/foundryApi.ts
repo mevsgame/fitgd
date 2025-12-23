@@ -77,11 +77,19 @@ export interface MockApi {
   };
 }
 
+export interface MockSocket {
+  register: ReturnType<typeof vi.fn>;
+  executeAsGM: ReturnType<typeof vi.fn>;
+  executeForEveryone: ReturnType<typeof vi.fn>;
+  executeForOthers: ReturnType<typeof vi.fn>;
+}
+
 export interface MockFoundryGame {
   fitgd: {
     store: Store<RootState>;
     bridge: MockBridge;
     api: MockApi;
+    socket: MockSocket;
     saveImmediate: ReturnType<typeof vi.fn>;
   };
   user?: MockUser;
@@ -90,6 +98,10 @@ export interface MockFoundryGame {
     contents: MockUser[];
   };
   actors: MockActorCollection;
+  i18n: {
+    localize: (key: string) => string;
+    format: (key: string, data?: Record<string, string>) => string;
+  };
 }
 
 export interface MockFoundryOptions {
@@ -309,11 +321,20 @@ export function createMockFoundryGame(options: MockFoundryOptions = {}): MockFou
   const bridge = createMockBridge(store, saveImmediate);
   const api = createMockApi(store);
 
+  // Create socket mock that resolves RPC calls successfully
+  const socket: MockSocket = {
+    register: vi.fn(),
+    executeAsGM: vi.fn(async () => ({ success: true, lastConfirmedRequestId: 'mock-req' })),
+    executeForEveryone: vi.fn(async () => { }),
+    executeForOthers: vi.fn(async () => { }),
+  };
+
   return {
     fitgd: {
       store,
       bridge,
       api,
+      socket,
       saveImmediate,
     },
     user: {
@@ -341,6 +362,18 @@ export function createMockFoundryGame(options: MockFoundryOptions = {}): MockFou
       ],
     },
     actors: createMockActorCollection(actors),
+    i18n: {
+      localize: (key: string) => key,
+      format: (key: string, data?: Record<string, string>) => {
+        let result = key;
+        if (data) {
+          for (const [k, v] of Object.entries(data)) {
+            result = result.replace(`{${k}}`, v);
+          }
+        }
+        return result;
+      },
+    },
   };
 }
 
