@@ -267,21 +267,8 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
           });
         }
 
-        // CRITICAL: Handle state transitions
-        if (receivedPlayerState.state && receivedPlayerState.state !== currentPlayerState?.state) {
-          logger.debug(`  Dispatching state transition: ${currentPlayerState?.state} → ${receivedPlayerState.state}`);
-          game.fitgd!.store.dispatch({
-            type: 'playerRoundState/transitionState',
-            payload: {
-              characterId,
-              newState: receivedPlayerState.state
-            }
-          });
-        } else {
-          logger.debug(`  State transition skipped - receivedPlayerState.state: ${receivedPlayerState.state}, currentPlayerState.state: ${currentPlayerState?.state}`);
-        }
-
         // CRITICAL: Handle roll results (dicePool, rollResult, outcome)
+        // MUST be applied BEFORE state transition so UI has data when state changes
         if (receivedPlayerState.rollResult || receivedPlayerState.outcome || receivedPlayerState.dicePool !== undefined) {
           if (JSON.stringify(receivedPlayerState.rollResult) !== JSON.stringify(currentPlayerState?.rollResult) ||
             receivedPlayerState.outcome !== currentPlayerState?.outcome ||
@@ -299,6 +286,7 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
         }
 
         // CRITICAL: Handle consequence transactions (NEW in Phase 3)
+        // MUST be applied BEFORE state transition
         if (JSON.stringify(receivedPlayerState.consequenceTransaction) !== JSON.stringify(currentPlayerState?.consequenceTransaction)) {
           if (receivedPlayerState.consequenceTransaction) {
             // Set or update consequence transaction
@@ -327,6 +315,21 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
               used: receivedPlayerState.stimsUsedThisAction || false
             }
           });
+        }
+
+        // CRITICAL: Handle state transitions
+        // MUST be applied LAST to ensure all data is ready for the new state
+        if (receivedPlayerState.state && receivedPlayerState.state !== currentPlayerState?.state) {
+          logger.debug(`  Dispatching state transition: ${currentPlayerState?.state} → ${receivedPlayerState.state}`);
+          game.fitgd!.store.dispatch({
+            type: 'playerRoundState/transitionState',
+            payload: {
+              characterId,
+              newState: receivedPlayerState.state
+            }
+          });
+        } else {
+          logger.debug(`  State transition skipped - receivedPlayerState.state: ${receivedPlayerState.state}, currentPlayerState.state: ${currentPlayerState?.state}`);
         }
       }
 
