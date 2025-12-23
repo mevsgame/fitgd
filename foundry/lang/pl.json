@@ -156,7 +156,8 @@
             "ConvertToScar": "Konwertuj na Bliznę",
             "Dying": "UMIERAJĄCY",
             "MaxClocks": "Maks 3 zegary obrażeń",
-            "CreateSuccess": "Utworzono zegar obrażeń \"{name}\""
+            "CreateSuccess": "Utworzono zegar obrażeń \"{name}\"",
+            "Title": "Obrażenia"
         },
         "Equipment": {
             "Accessible": "Dostępne",
@@ -262,8 +263,6 @@
             "InsufficientMomentumDetail": "Niewystarczający Pęd! Potrzeba {needed}, posiadasz {available}",
             "InsufficientMomentumEquipment": "Niewystarczający Pęd na ekwipunek! Potrzeba {total}M (w tym {lock}M za pierwsze zablokowanie), posiadasz {available}M",
             "RollFlavor": "{name} - podejście {approach}",
-            "FullSuccessResultMessage": "{name} odnosi sukces bez konsekwencji!",
-            "AddictionClockNotification": "Zegar uzależnienia: {current}/{max} (+{segments})",
             "AddictionFilledNotification": "{name} jest teraz UZALEŻNIONY! Stimy są ZABLOKOWANE dla załogi.",
             "AddictionRollFlavor": "{name} - Rzut na Uzależnienie (Stimy)",
             "ClockCreated": "Utworzono zegar \"{name}\"",
@@ -342,6 +341,9 @@
             "OutcomeGMCritical": "✨ KRYTYCZNY SUKCES - Opcjonalny Awans Zegara",
             "OutcomeGMPartial": "⚠️ CZĘŚCIOWY SUKCES - Konfigurowanie Konsekwencji",
             "OutcomeGMFailure": "❌ PORAŻKA - Konfigurowanie Konsekwencji",
+            "FullSuccessResultMessage": "{name} odnosi sukces bez konsekwencji!",
+            "PartialSuccessResultMessage": "{name} odnosi sukces z konsekwencjami!",
+            "FailureResultMessage": "{name} ponosi porażkę z konsekwencjami.",
             "DiceResult": "Najwyższa: {max}",
             "DiceRolled": "Rzucono: {results}",
             "PartialMessage": "Konsekwencje zaakceptowane. GM konfiguruje twój sukces...",
@@ -409,7 +411,13 @@
             "CommitCloseWarning": "Nie możesz zamknąć widgetu po zatwierdzeniu rzutu. Poczekaj na rozwiązanie przez GM.",
             "OutcomeAddict": "Uzależniony",
             "GMPassiveApproval": "⚙️ Zatwierdzenie Pasywnego Ekwipunku GM",
-            "NoPassive": "-- Brak Pasywnego --"
+            "NoPassive": "-- Brak Pasywnego --",
+            "Self": "Ja",
+            "Other": "Inny",
+            "SelectTargetPrompt": "Wybierz postać docelową",
+            "NoClocksAvailable": "Brak dostępnych zegarów",
+            "LockedForConsequence": "Zablokowane dla konsekwencji",
+            "UseTrait": "Użyj Cechy (+1 poz)"
         },
         "Dialogs": {
             "TakeHarm": {
@@ -461,6 +469,63 @@
                 "DescriptionOptional": "Opis (opcjonalny)",
                 "DescriptionPlaceholder": "Opcjonalne notatki o tym zegarze...",
                 "CreateClock": "Stwórz Zegar"
+            },
+            "Flashback": {
+                "Title": "Użyj Cechy / Retrospekcja",
+                "CurrentMomentum": "Obecny Pęd",
+                "CostNotice": "💎 Koszt: <strong>1 Pęd</strong> za poprawę pozycji (Ryzykowna→Kontrolowana lub Desperacka→Ryzykowna)",
+                "BackAction": "Akcja:",
+                "UseExisting": "Użyj Istniejącej Cechy",
+                "CreateNew": "Stwórz Nową Cechę (Retrospekcja)",
+                "Consolidate": "Konsoliduj 3 Cechy w 1",
+                "SelectConsolidate": "Wybierz 3 Cechy do Konsolidacji:",
+                "ConsolidateHelp": "Cechy Roli i Tła nie mogą być konsolidowane.",
+                "NoConsolidatable": "Brak cech do konsolidacji.",
+                "ConsolidatedName": "Nazwa Nowej Skonsolidowanej Cechy:",
+                "PlaceholderName": "np. Zaprawiony w Boju Weteran",
+                "DescriptionOptional": "Opis (opcjonalny):",
+                "PlaceholderConsolidateDesc": "Jak te doświadczenia się łączą...",
+                "PlaceholderCreateDesc": "Co zrobiłeś w przeszłości?",
+                "PlaceholderCreateName": "np. Przestudiowana Taktyka Wroga",
+                "CreateNewTitle": "Stwórz Nową Cechę:",
+                "CreateNewHelp": "Opisz przeszłe doświadczenie, które pomaga w tej akcji.",
+                "TraitName": "Nazwa Cechy:",
+                "SelectTrait": "Wybierz Cechę:",
+                "SelectTraitHelp": "Wybierz cechę, która pomaga w tej akcji.",
+                "NoTraitsAvailable": "Brak dostępnych cech. Wszystkie cechy są obecnie wyłączone (oparte na).",
+                "BtnUse": "Użyj Cechy (1M)",
+                "BtnCreateUse": "Stwórz i Użyj (1M)",
+                "BtnConsolidateUse": "Konsoliduj i Użyj (1M)"
+            },
+            "LeanInto": {
+                "Title": "Oprzyj się na Cesze",
+                "CurrentMomentum": "Obecny Pęd",
+                "GainNotice": "✨ Zysk: <strong>+{gain} Pędu</strong>",
+                "Capped": "<span class='cap-warning'>(Limit do 10)</span>",
+                "Instruction": "Oprzyj się na cesze, aby stworzyć komplikację.",
+                "HelpText": "Cecha zostanie <strong>wyłączona</strong> do następnego Resetu Pędu. Kiedy wyłączona, nie możesz jej użyć do retrospekcji lub poprawy pozycji/efektu.",
+                "SelectTrait": "Wybierz Cechę:",
+                "NoTraits": "Brak dostępnych cech. Wszystkie cechy są obecnie wyłączone (już oparte na).",
+                "DescribeComplication": "Opisz komplikację (opcjonalne):",
+                "PlaceholderComplication": "Jak ta cecha stwarza teraz problemy?",
+                "FlavorText": "To jest dla klimatu/narracji - nie wymagane.",
+                "BtnLean": "Oprzyj się na Cesze (+{gain}M)"
+            },
+            "Rally": {
+                "Title": "Zbiórka Drużynowa",
+                "CurrentMomentum": "Obecny Pęd",
+                "InfoNotice": "💬 Odwołaj się do cechy sojusznika, aby zainspirować grupę. <strong>Zawsze Kontrolowana pozycja.</strong>",
+                "TargetTeammate": "Docelowy Sojusznik:",
+                "SelectTeammatePlaceholder": "-- Wybierz Sojusznika --",
+                "NoTeammates": "Brak innych członków załogi.",
+                "SelectTrait": "Wybierz Cechę {name}:",
+                "SelectTraitHelp": "Odwołaj się do cechy, która inspiruje zespół.",
+                "TraitDisabled": "🔒 Wyłączona (zostanie włączona)",
+                "NoTraits": "Brak dostępnych cech dla tej postaci.",
+                "ReadyToRoll": "Gotowy do rzutu",
+                "PossibleGain": "Możliwy Zysk Pędu:",
+                "GainTable": "1-3→+1M | 4-5→+2M | 6→+3M | Kryt→+4M",
+                "BtnRoll": "🎲 Rzuć i Zastosuj ({n}k6)"
             }
         }
     }

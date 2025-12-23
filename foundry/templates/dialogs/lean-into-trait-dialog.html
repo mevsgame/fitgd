@@ -1,26 +1,26 @@
 <div class="lean-into-trait-dialog">
   <!-- Header -->
   <div class="dialog-header">
-    <h2>Lean Into Trait</h2>
-    <p class="momentum-display">Current Momentum: <strong>{{momentum}}/10</strong></p>
+    <h2>{{localize "FITGD.Dialogs.LeanInto.Title"}}</h2>
+    <p class="momentum-display">{{localize "FITGD.Dialogs.LeanInto.CurrentMomentum"}}: <strong>{{momentum}}/10</strong>
+    </p>
     <p class="gain-notice">
-      ✨ Gain: <strong>+{{momentumGain}} Momentum</strong>
-      {{#if wouldCapOut}}<span class="cap-warning">(Capped at 10)</span>{{/if}}
+      {{{localize "FITGD.Dialogs.LeanInto.GainNotice" gain=momentumGain}}}
+      {{#if wouldCapOut}}{{{localize "FITGD.Dialogs.LeanInto.Capped"}}}{{/if}}
     </p>
   </div>
 
   <!-- Instructions -->
   <div class="instructions">
-    <p><strong>Lean into a trait to create a complication.</strong></p>
+    <p><strong>{{localize "FITGD.Dialogs.LeanInto.Instruction"}}</strong></p>
     <p class="help-text">
-      The trait will be <strong>disabled</strong> until the next Momentum Reset.
-      While disabled, you cannot use it for flashbacks or position/effect improvements.
+      {{{localize "FITGD.Dialogs.LeanInto.HelpText"}}}
     </p>
   </div>
 
   <!-- Trait List -->
   <div class="trait-list">
-    <h3>Select a Trait:</h3>
+    <h3>{{localize "FITGD.Dialogs.LeanInto.SelectTrait"}}</h3>
 
     <div class="traits-grid">
       {{#each availableTraits}}
@@ -34,7 +34,7 @@
       {{/each}}
 
       {{#unless availableTraits.length}}
-      <p class="no-traits">No available traits. All traits are currently disabled (already leaned into).</p>
+      <p class="no-traits">{{localize "FITGD.Dialogs.LeanInto.NoTraits"}}</p>
       {{/unless}}
     </div>
   </div>
@@ -42,17 +42,18 @@
   <!-- Optional Complication Description -->
   {{#if selectedTraitId}}
   <div class="complication-input">
-    <label>Describe the complication (optional):</label>
-    <textarea name="complicationDescription" rows="2" placeholder="How does this trait create problems right now?"></textarea>
-    <p class="help-text-small">This is for flavor/narrative - not required.</p>
+    <label>{{localize "FITGD.Dialogs.LeanInto.DescribeComplication"}}</label>
+    <textarea name="complicationDescription" rows="2"
+      placeholder="{{localize 'FITGD.Dialogs.LeanInto.PlaceholderComplication'}}"></textarea>
+    <p class="help-text-small">{{localize "FITGD.Dialogs.LeanInto.FlavorText"}}</p>
   </div>
   {{/if}}
 
   <!-- Action Buttons -->
   <div class="dialog-buttons">
-    <button type="button" data-action="cancel" class="secondary">Cancel</button>
+    <button type="button" data-action="cancel" class="secondary">{{localize "FITGD.Global.Cancel"}}</button>
     <button type="button" data-action="apply" class="primary" {{#unless selectedTraitId}}disabled{{/unless}}>
-      Lean Into Trait (+{{momentumGain}}M)
+      {{localize "FITGD.Dialogs.LeanInto.BtnLean" gain=momentumGain}}
     </button>
   </div>
 </div>

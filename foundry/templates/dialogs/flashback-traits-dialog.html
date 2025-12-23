@@ -1,28 +1,29 @@
 <div class="flashback-traits-dialog">
   <!-- Header -->
   <div class="dialog-header">
-    <h2>Use Trait / Flashback</h2>
-    <p class="momentum-display">Current Momentum: <strong>{{momentum}}/10</strong></p>
-    <p class="cost-notice">💎 Cost: <strong>1 Momentum</strong> for position improvement (Risky→Controlled or Desperate→Risky)</p>
+    <h2>{{localize "FITGD.Dialogs.Flashback.Title"}}</h2>
+    <p class="momentum-display">{{localize "FITGD.Dialogs.Flashback.CurrentMomentum"}}: <strong>{{momentum}}/10</strong>
+    </p>
+    <p class="cost-notice">{{{localize "FITGD.Dialogs.Flashback.CostNotice"}}}</p>
   </div>
 
   <!-- Mode Selection (if editable) -->
   {{#if isEditable}}
   <div class="mode-selection">
-    <h3>Action:</h3>
+    <h3>{{localize "FITGD.Dialogs.Flashback.BackAction"}}</h3>
     <div class="mode-options">
       <label class="mode-option">
-        <input type="radio" name="mode" value="use-existing" {{#if (eq mode "use-existing")}}checked{{/if}} />
-        <span>Use Existing Trait</span>
+        <input type="radio" name="mode" value="use-existing" {{#if (eq mode "use-existing" )}}checked{{/if}} />
+        <span>{{localize "FITGD.Dialogs.Flashback.UseExisting"}}</span>
       </label>
       <label class="mode-option">
-        <input type="radio" name="mode" value="create-new" {{#if (eq mode "create-new")}}checked{{/if}} />
-        <span>Create New Trait (Flashback)</span>
+        <input type="radio" name="mode" value="create-new" {{#if (eq mode "create-new" )}}checked{{/if}} />
+        <span>{{localize "FITGD.Dialogs.Flashback.CreateNew"}}</span>
       </label>
       {{#if canConsolidate}}
       <label class="mode-option">
-        <input type="radio" name="mode" value="consolidate" {{#if (eq mode "consolidate")}}checked{{/if}} />
-        <span>Consolidate 3 Traits into 1</span>
+        <input type="radio" name="mode" value="consolidate" {{#if (eq mode "consolidate" )}}checked{{/if}} />
+        <span>{{localize "FITGD.Dialogs.Flashback.Consolidate"}}</span>
       </label>
       {{/if}}
     </div>
@@ -32,75 +33,78 @@
   <!-- Trait List -->
   <div class="trait-list">
     {{#if (eq mode "consolidate")}}
-      <h3>Select 3 Traits to Consolidate:</h3>
-      <p class="help-text">Role and Background traits cannot be consolidated.</p>
+    <h3>{{localize "FITGD.Dialogs.Flashback.SelectConsolidate"}}</h3>
+    <p class="help-text">{{localize "FITGD.Dialogs.Flashback.ConsolidateHelp"}}</p>
 
-      <div class="traits-grid">
-        {{#each consolidatableTraits}}
-        <div class="trait-item {{#if (includes ../selectedTraitIds this.id)}}selected{{/if}}" data-trait-id="{{this.id}}">
-          <div class="trait-name">{{this.name}}</div>
-          <div class="trait-category">{{this.category}}</div>
-        </div>
-        {{/each}}
-
-        {{#unless consolidatableTraits.length}}
-        <p class="no-traits">No consolidatable traits available.</p>
-        {{/unless}}
+    <div class="traits-grid">
+      {{#each consolidatableTraits}}
+      <div class="trait-item {{#if (includes ../selectedTraitIds this.id)}}selected{{/if}}" data-trait-id="{{this.id}}">
+        <div class="trait-name">{{this.name}}</div>
+        <div class="trait-category">{{this.category}}</div>
       </div>
+      {{/each}}
 
-      {{#if (eq selectedTraitIds.length 3)}}
-      <div class="consolidation-input">
-        <label>New Consolidated Trait Name:</label>
-        <input type="text" name="newTraitName" placeholder="e.g., Battle-Hardened Veteran" />
-        <label>Description (optional):</label>
-        <textarea name="newTraitDescription" rows="2" placeholder="How these experiences combine..."></textarea>
-      </div>
-      {{/if}}
+      {{#unless consolidatableTraits.length}}
+      <p class="no-traits">{{localize "FITGD.Dialogs.Flashback.NoConsolidatable"}}</p>
+      {{/unless}}
+    </div>
+
+    {{#if (eq selectedTraitIds.length 3)}}
+    <div class="consolidation-input">
+      <label>{{localize "FITGD.Dialogs.Flashback.ConsolidatedName"}}</label>
+      <input type="text" name="newTraitName" placeholder="{{localize 'FITGD.Dialogs.Flashback.PlaceholderName'}}" />
+      <label>{{localize "FITGD.Dialogs.Flashback.DescriptionOptional"}}</label>
+      <textarea name="newTraitDescription" rows="2"
+        placeholder="{{localize 'FITGD.Dialogs.Flashback.PlaceholderConsolidateDesc'}}"></textarea>
+    </div>
+    {{/if}}
 
     {{else if (eq mode "create-new")}}
-      <h3>Create New Trait:</h3>
-      <p class="help-text">Describe a past experience that helps with this action.</p>
+    <h3>{{localize "FITGD.Dialogs.Flashback.CreateNewTitle"}}</h3>
+    <p class="help-text">{{localize "FITGD.Dialogs.Flashback.CreateNewHelp"}}</p>
 
-      <div class="new-trait-input">
-        <label>Trait Name:</label>
-        <input type="text" name="newTraitName" placeholder="e.g., Studied Enemy Tactics" />
-        <label>Description (optional):</label>
-        <textarea name="newTraitDescription" rows="2" placeholder="What did you do in the past?"></textarea>
-      </div>
+    <div class="new-trait-input">
+      <label>{{localize "FITGD.Dialogs.Flashback.TraitName"}}</label>
+      <input type="text" name="newTraitName"
+        placeholder="{{localize 'FITGD.Dialogs.Flashback.PlaceholderCreateName'}}" />
+      <label>{{localize "FITGD.Dialogs.Flashback.DescriptionOptional"}}</label>
+      <textarea name="newTraitDescription" rows="2"
+        placeholder="{{localize 'FITGD.Dialogs.Flashback.PlaceholderCreateDesc'}}"></textarea>
+    </div>
 
     {{else}}
-      <!-- Use Existing Trait Mode -->
-      <h3>Select a Trait:</h3>
-      <p class="help-text">Choose a trait that helps with this action.</p>
+    <!-- Use Existing Trait Mode -->
+    <h3>{{localize "FITGD.Dialogs.Flashback.SelectTrait"}}</h3>
+    <p class="help-text">{{localize "FITGD.Dialogs.Flashback.SelectTraitHelp"}}</p>
 
-      <div class="traits-grid">
-        {{#each availableTraits}}
-        <div class="trait-item {{#if (eq ../selectedTraitId this.id)}}selected{{/if}}" data-trait-id="{{this.id}}">
-          <div class="trait-name">{{this.name}}</div>
-          <div class="trait-category">{{this.category}}</div>
-          {{#if this.description}}
-          <div class="trait-description">{{this.description}}</div>
-          {{/if}}
-        </div>
-        {{/each}}
-
-        {{#unless availableTraits.length}}
-        <p class="no-traits">No available traits. All traits are currently disabled (leaned into).</p>
-        {{/unless}}
+    <div class="traits-grid">
+      {{#each availableTraits}}
+      <div class="trait-item {{#if (eq ../selectedTraitId this.id)}}selected{{/if}}" data-trait-id="{{this.id}}">
+        <div class="trait-name">{{this.name}}</div>
+        <div class="trait-category">{{this.category}}</div>
+        {{#if this.description}}
+        <div class="trait-description">{{this.description}}</div>
+        {{/if}}
       </div>
+      {{/each}}
+
+      {{#unless availableTraits.length}}
+      <p class="no-traits">{{localize "FITGD.Dialogs.Flashback.NoTraitsAvailable"}}</p>
+      {{/unless}}
+    </div>
     {{/if}}
   </div>
 
   <!-- Action Buttons -->
   <div class="dialog-buttons">
-    <button type="button" data-action="cancel" class="secondary">Cancel</button>
+    <button type="button" data-action="cancel" class="secondary">{{localize "FITGD.Global.Cancel"}}</button>
     <button type="button" data-action="apply" class="primary">
       {{#if (eq mode "use-existing")}}
-        Use Trait (1M)
+      {{localize "FITGD.Dialogs.Flashback.BtnUse"}}
       {{else if (eq mode "create-new")}}
-        Create & Use (1M)
+      {{localize "FITGD.Dialogs.Flashback.BtnCreateUse"}}
       {{else}}
-        Consolidate & Use (1M)
+      {{localize "FITGD.Dialogs.Flashback.BtnConsolidateUse"}}
       {{/if}}
     </button>
   </div>
