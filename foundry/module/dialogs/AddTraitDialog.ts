@@ -18,20 +18,20 @@ export class AddTraitDialog extends Dialog {
     const content = `
       <form>
         <div class="form-group">
-          <label>Trait Name</label>
-          <input type="text" name="traitName" placeholder="e.g., 'Veteran Soldier'" />
+          <label>${game.i18n.localize('FITGD.Dialogs.AddTrait.TraitName')}</label>
+          <input type="text" name="traitName" placeholder="${game.i18n.localize('FITGD.Dialogs.AddTrait.PlaceholderName')}" />
         </div>
         <div class="form-group">
-          <label>Category</label>
+          <label>${game.i18n.localize('FITGD.Dialogs.AddTrait.Category')}</label>
           <select name="category">
-            <option value="role">Role</option>
-            <option value="background">Background</option>
-            <option value="scar">Scar</option>
-            <option value="flashback">Flashback</option>
+            <option value="role">${game.i18n.localize('FITGD.TraitCategories.Role')}</option>
+            <option value="background">${game.i18n.localize('FITGD.TraitCategories.Background')}</option>
+            <option value="scar">${game.i18n.localize('FITGD.TraitCategories.Scar')}</option>
+            <option value="flashback">${game.i18n.localize('FITGD.TraitCategories.Flashback')}</option>
           </select>
         </div>
         <div class="form-group">
-          <label>Description (optional)</label>
+          <label>${game.i18n.localize('FITGD.Dialogs.AddTrait.DescriptionOptional')}</label>
           <textarea name="description" rows="3"></textarea>
         </div>
       </form>
@@ -40,18 +40,18 @@ export class AddTraitDialog extends Dialog {
     const buttons = {
       add: {
         icon: '<i class="fas fa-plus"></i>',
-        label: "Add Trait",
+        label: game.i18n.localize('FITGD.Dialogs.AddTrait.ButtonAdd'),
         callback: (html?: JQuery) => this._onApply(html!, characterId)
       },
       cancel: {
         icon: '<i class="fas fa-times"></i>',
-        label: "Cancel"
+        label: game.i18n.localize('FITGD.Global.Cancel')
       }
     };
 
     super(
       {
-        title: "Add Trait",
+        title: game.i18n.localize('FITGD.Dialogs.AddTrait.Title'),
         content,
         buttons,
         default: "add"
@@ -76,7 +76,7 @@ export class AddTraitDialog extends Dialog {
     const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value.trim();
 
     if (!traitName) {
-      ui.notifications!.warn('Please enter a trait name');
+      ui.notifications!.warn(game.i18n.localize('FITGD.Dialogs.AddTrait.EnterNameWarning'));
       return;
     }
 
@@ -103,7 +103,7 @@ export class AddTraitDialog extends Dialog {
         { affectedReduxIds: [asReduxId(characterId)], force: true }
       );
 
-      ui.notifications!.info(`Trait "${traitName}" added`);
+      ui.notifications!.info(game.i18n.format('FITGD.Dialogs.AddTrait.AddedSuccess', { name: traitName }));
 
     } catch (error) {
       ui.notifications!.error(`Error: ${(error as Error).message}`);

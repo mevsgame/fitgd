@@ -2,16 +2,16 @@
   {{!-- Header --}}
   <div class="dialog-header">
     {{#if (eq mode 'create')}}
-    <p class="info-notice">📦 Create a new equipment item for this character</p>
+    <p class="info-notice">{{localize 'FITGD.Dialogs.EquipmentEdit.InfoCreate'}}</p>
     {{else}}
-    <p class="info-notice">📦 Configure equipment stats and modifiers</p>
+    <p class="info-notice">{{localize 'FITGD.Dialogs.EquipmentEdit.InfoEdit'}}</p>
     {{/if}}
 
     {{!-- Player tier restriction warning --}}
     {{#unless isGM}}
     {{#unless canEditTier}}
     <div class="warning-notice">
-      ⚠️ You can only create or edit Common tier equipment. Rare and Epic items are GM-controlled.
+      {{localize 'FITGD.Dialogs.EquipmentEdit.TierWarning'}}
     </div>
     {{/unless}}
     {{/unless}}
@@ -23,70 +23,74 @@
     {{!-- Simplified Form for Players --}}
     <div class="form-row">
       <div class="form-group">
-        <label>Name <span class="required">*</span></label>
-        <input type="text" name="name" value="{{equipment.name}}" maxlength="50" required />
-        <p class="help-text">Equipment name (max 50 characters)</p>
+        <label>{{localize 'FITGD.Dialogs.EquipmentEdit.LabelName'}} <span class="required">*</span></label>
+        <input type="text" name="name" value="{{equipment.name}}" maxlength="50" required
+          placeholder="{{localize 'FITGD.Dialogs.EquipmentEdit.PlaceholderName'}}" />
+        <p class="help-text">{{localize 'FITGD.Dialogs.EquipmentEdit.PlaceholderName'}}</p>
       </div>
       <div class="form-group">
-        <label>Slots <span class="required">*</span></label>
+        <label>{{localize 'FITGD.Dialogs.EquipmentEdit.LabelSlots'}} <span class="required">*</span></label>
         <input type="number" name="slots" value="{{#if equipment.slots}}{{equipment.slots}}{{else}}1{{/if}}" min="1"
           required />
-        <p class="help-text">Load slots occupied</p>
+        <p class="help-text">{{localize 'FITGD.Dialogs.EquipmentEdit.PlaceholderSlots'}}</p>
       </div>
     </div>
 
     <div class="form-group">
-      <label>Type <span class="required">*</span></label>
+      <label>{{localize 'FITGD.Dialogs.EquipmentEdit.LabelType'}} <span class="required">*</span></label>
       <div class="type-selection">
         <label class="type-option">
           <input type="radio" name="restrictedType" value="active" checked>
           <div>
-            <strong>Active</strong> <span style="color: #4caf50">(+1d check)</span>
+            <strong>{{localize 'FITGD.Equipment.Active'}}</strong> <span style="color: #4caf50">{{localize
+              'FITGD.Dialogs.EquipmentEdit.ActiveBonus'}}</span>
           </div>
         </label>
         <label class="type-option">
           <input type="radio" name="restrictedType" value="passive">
           <div>
-            <strong>Passive</strong> <span style="color: #4caf50">(+1d check)</span>
+            <strong>{{localize 'FITGD.Equipment.Passive'}}</strong> <span style="color: #4caf50">{{localize
+              'FITGD.Dialogs.EquipmentEdit.PassiveBonus'}}</span>
           </div>
         </label>
         <label class="type-option">
           <input type="radio" name="restrictedType" value="consumable">
           <div>
-            <strong>Consumable</strong> <span style="color: #2196f3">(+1d, +1 pos)</span>
+            <strong>{{localize 'FITGD.Equipment.Consumable'}}</strong> <span style="color: #2196f3">{{localize
+              'FITGD.Dialogs.EquipmentEdit.ConsumableBonus'}}</span>
           </div>
         </label>
       </div>
-      <p class="help-text">Players can create simple Active/Passive items (adds +1d) or Consumables (+1d, improved
-        position).</p>
+      <p class="help-text">{{localize 'FITGD.Dialogs.EquipmentEdit.PlayerHelp'}}</p>
     </div>
 
     <div class="form-group">
-      <label>Description</label>
-      <textarea name="description" rows="3" placeholder="Describe the equipment...">{{equipment.description}}</textarea>
+      <label>{{localize 'FITGD.Dialogs.EquipmentEdit.LabelDescription'}}</label>
+      <textarea name="description" rows="3"
+        placeholder="{{localize 'FITGD.Dialogs.EquipmentEdit.PlaceholderDescription'}}">{{equipment.description}}</textarea>
     </div>
 
     {{else}}
     {{!-- Standard Form --}}
     <div class="form-row">
       <div class="form-group">
-        <label>Name <span class="required">*</span></label>
+        <label>{{localize 'FITGD.Dialogs.EquipmentEdit.LabelName'}} <span class="required">*</span></label>
         <input type="text" name="name" value="{{equipment.name}}" maxlength="50" required />
-        <p class="help-text">Equipment name (max 50 chars)</p>
+        <p class="help-text">{{localize 'FITGD.Dialogs.EquipmentEdit.PlaceholderName'}}</p>
       </div>
 
       <div class="form-group">
-        <label>Tier <span class="required">*</span></label>
+        <label>{{localize 'FITGD.Dialogs.EquipmentEdit.LabelTier'}} <span class="required">*</span></label>
         <select name="tier" {{#unless canEditTier}}disabled{{/unless}}>
           {{#each tiers}}
           <option value="{{this}}" {{#if (eq this ../equipment.tier)}}selected{{/if}}>{{capitalize this}}</option>
           {{/each}}
         </select>
         <p class="help-text">
-          Common (Standard), Rare (1M), Epic (Story)
+          {{localize 'FITGD.Dialogs.EquipmentEdit.HelpTier'}}
           {{#unless isGM}}
           {{#unless canEditTier}}
-          <br /><span class="warning-text">⚠️ Common only</span>
+          <br /><span class="warning-text">{{localize 'FITGD.Dialogs.EquipmentEdit.TierCommonOnly'}}</span>
           {{/unless}}
           {{/unless}}
         </p>
@@ -96,49 +100,50 @@
     {{!-- Category and Slots side-by-side --}}
     <div class="form-row">
       <div class="form-group">
-        <label>Category <span class="required">*</span></label>
+        <label>{{localize 'FITGD.Dialogs.EquipmentEdit.LabelCategory'}} <span class="required">*</span></label>
         <select name="category" required>
           {{#each categories}}
           <option value="{{this}}" {{#if (eq this ../equipment.category)}}selected{{/if}}>{{capitalize this}}</option>
           {{/each}}
         </select>
         <p class="help-text">
-          Active (Weapons/Tools), Passive (Armor/Implants), Consumable
+          {{localize 'FITGD.Dialogs.EquipmentEdit.HelpCategory'}}
         </p>
       </div>
 
       <div class="form-group">
-        <label>Slots <span class="required">*</span></label>
+        <label>{{localize 'FITGD.Dialogs.EquipmentEdit.LabelSlots'}} <span class="required">*</span></label>
         <input type="number" name="slots" value="{{#if equipment.slots}}{{equipment.slots}}{{else}}1{{/if}}" min="1"
           required />
-        <p class="help-text">Load slots (min 1, usually 1-2)</p>
+        <p class="help-text">{{localize 'FITGD.Dialogs.EquipmentEdit.PlaceholderSlots'}}</p>
       </div>
     </div>
 
     <div class="form-group">
-      <label>Description</label>
-      <textarea name="description" rows="3" placeholder="Describe the equipment...">{{equipment.description}}</textarea>
+      <label>{{localize 'FITGD.Dialogs.EquipmentEdit.LabelDescription'}}</label>
+      <textarea name="description" rows="3"
+        placeholder="{{localize 'FITGD.Dialogs.EquipmentEdit.PlaceholderDescription'}}">{{equipment.description}}</textarea>
       <p class="help-text">Narrative details and mechanical effects.</p>
     </div>
 
     <div class="form-group">
-      <label>Modifiers</label>
+      <label>{{localize 'FITGD.Dialogs.EquipmentEdit.LabelModifiers'}}</label>
       <div class="modifiers-grid">
         <div class="modifier-field">
-          <label>Dice +/-</label>
+          <label>{{localize 'FITGD.Dialogs.EquipmentEdit.LabelDice'}}</label>
           <input type="number" name="modifiers.dice" value="{{modifiers.dice}}" placeholder="0" />
         </div>
         <div class="modifier-field">
-          <label>Position +/-</label>
+          <label>{{localize 'FITGD.Dialogs.EquipmentEdit.LabelPosition'}}</label>
           <input type="number" name="modifiers.position" value="{{modifiers.position}}" placeholder="0" min="-1"
             max="1" />
         </div>
         <div class="modifier-field">
-          <label>Effect +/-</label>
+          <label>{{localize 'FITGD.Dialogs.EquipmentEdit.LabelEffect'}}</label>
           <input type="number" name="modifiers.effect" value="{{modifiers.effect}}" placeholder="0" min="-1" max="1" />
         </div>
       </div>
-      <p class="help-text-small">Use negative values for penalties.</p>
+      <p class="help-text-small">{{localize 'FITGD.Dialogs.EquipmentEdit.HelpNegative'}}</p>
     </div>
     {{/if}}
 
@@ -147,13 +152,13 @@
   {{!-- Action Buttons --}}
   <div class="dialog-buttons">
     <button type="button" class="secondary cancel-btn">
-      <i class="fas fa-times"></i> Cancel
+      <i class="fas fa-times"></i> {{localize 'FITGD.Global.Cancel'}}
     </button>
     <button type="submit" class="primary save-btn">
       {{#if (eq mode 'create')}}
-      <i class="fas fa-plus"></i> Create Equipment
+      <i class="fas fa-plus"></i> {{localize 'FITGD.Dialogs.EquipmentEdit.BtnCreate'}}
       {{else}}
-      <i class="fas fa-save"></i> Save Changes
+      <i class="fas fa-save"></i> {{localize 'FITGD.Dialogs.EquipmentEdit.BtnSave'}}
       {{/if}}
     </button>
   </div>
