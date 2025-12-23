@@ -319,10 +319,12 @@ async function receiveCommandsFromSocket(data: SocketMessageData): Promise<void>
 
         // CRITICAL: Handle state transitions
         // MUST be applied LAST to ensure all data is ready for the new state
+        // Use forceTransitionState to skip validation - remote client is authoritative
+        // and we may have missed intermediate states
         if (receivedPlayerState.state && receivedPlayerState.state !== currentPlayerState?.state) {
-          logger.debug(`  Dispatching state transition: ${currentPlayerState?.state} → ${receivedPlayerState.state}`);
+          logger.debug(`  Forcing state transition: ${currentPlayerState?.state} → ${receivedPlayerState.state}`);
           game.fitgd!.store.dispatch({
-            type: 'playerRoundState/transitionState',
+            type: 'playerRoundState/forceTransitionState',
             payload: {
               characterId,
               newState: receivedPlayerState.state

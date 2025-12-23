@@ -87,14 +87,14 @@ describe('Socket Handler Synchronization', () => {
         await receiveCommandsFromSocket(receivedData);
 
         // Verify dispatch calls
-        const calls = dispatchSpy.mock.calls.map(call => call[0].type);
+        const calls = dispatchSpy.mock.calls.map((call: any[]) => call[0].type);
 
         // Find indices
         const rollResultIndex = calls.indexOf('playerRoundState/setRollResult');
-        const transitionIndex = calls.indexOf('playerRoundState/transitionState');
+        const transitionIndex = calls.indexOf('playerRoundState/forceTransitionState');
 
         expect(rollResultIndex).not.toBe(-1); // "setRollResult should be dispatched"
-        expect(transitionIndex).not.toBe(-1); // "transitionState should be dispatched"
-        expect(rollResultIndex).toBeLessThan(transitionIndex); // "setRollResult should precipitate transitionState"
+        expect(transitionIndex).not.toBe(-1); // "forceTransitionState should be dispatched"
+        expect(rollResultIndex).toBeLessThan(transitionIndex); // "setRollResult should precede forceTransitionState"
     });
 });
