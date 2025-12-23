@@ -127,9 +127,15 @@ class FitGDCharacterSheet extends ActorSheet {
           .filter((e: Equipment) => e.equipped)
           .reduce((sum: number, e: Equipment) => sum + (e.slots || 1), 0);
 
+        // Localize trait categories for display
+        const traitsWithLocalizedCategories = character.traits.map((trait: Trait) => ({
+          ...trait,
+          localizedCategory: game.i18n.localize(`FITGD.TraitCategories.${trait.category.charAt(0).toUpperCase() + trait.category.slice(1)}`)
+        }));
+
         context.system = {
           approaches: approachesArray,
-          traits: character.traits,
+          traits: traitsWithLocalizedCategories,
           equipment: character.equipment,
           rallyAvailable: character.rallyAvailable,
           loadLimit: character.loadLimit,

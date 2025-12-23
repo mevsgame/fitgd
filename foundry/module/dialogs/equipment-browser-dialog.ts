@@ -35,19 +35,19 @@ export class EquipmentBrowserDialog extends Dialog {
 
     super(
       {
-        title: 'Add Equipment',
-        content: '<div class="equipment-browser-loading">Loading equipment...</div>',
+        title: game.i18n.localize('FITGD.Dialogs.EquipmentBrowser.Title'),
+        content: `<div class="equipment-browser-loading">${game.i18n.localize('FITGD.Global.Loading')}</div>`,
         buttons: {
           add: {
             icon: '<i class="fas fa-plus"></i>',
-            label: 'Add Equipment',
+            label: game.i18n.localize('FITGD.Dialogs.EquipmentBrowser.ButtonAdd'),
             callback: async (html?: JQuery<HTMLElement>) => {
               await this._onAddEquipment(html!);
             },
           },
           cancel: {
             icon: '<i class="fas fa-times"></i>',
-            label: 'Cancel',
+            label: game.i18n.localize('FITGD.Global.Cancel'),
           },
         },
         default: 'add',
@@ -171,20 +171,20 @@ export class EquipmentBrowserDialog extends Dialog {
       <div class="equipment-browser">
         <div class="browser-filters">
           <select class="tier-filter">
-            <option value="all" ${!this.tierFilter ? 'selected' : ''}>All Tiers</option>
-            <option value="common" ${this.tierFilter === 'common' ? 'selected' : ''}>Common</option>
-            <option value="rare" ${this.tierFilter === 'rare' ? 'selected' : ''}>Rare</option>
-            <option value="epic" ${this.tierFilter === 'epic' ? 'selected' : ''}>Epic</option>
+            <option value="all" ${!this.tierFilter ? 'selected' : ''}>${game.i18n.localize('FITGD.Dialogs.EquipmentBrowser.AllTiers')}</option>
+            <option value="common" ${this.tierFilter === 'common' ? 'selected' : ''}>${game.i18n.localize('FITGD.Equipment.Common')}</option>
+            <option value="rare" ${this.tierFilter === 'rare' ? 'selected' : ''}>${game.i18n.localize('FITGD.Equipment.Rare')}</option>
+            <option value="epic" ${this.tierFilter === 'epic' ? 'selected' : ''}>${game.i18n.localize('FITGD.Equipment.Epic')}</option>
           </select>
 
           <select class="category-filter">
-            <option value="all" ${!this.categoryFilter ? 'selected' : ''}>All Categories</option>
-            <option value="active" ${this.categoryFilter === 'active' ? 'selected' : ''}>Active (Weapons/Tools)</option>
-            <option value="passive" ${this.categoryFilter === 'passive' ? 'selected' : ''}>Passive (Armor/Implants)</option>
-            <option value="consumable" ${this.categoryFilter === 'consumable' ? 'selected' : ''}>Consumable (Grenades/Stims)</option>
+            <option value="all" ${!this.categoryFilter ? 'selected' : ''}>${game.i18n.localize('FITGD.Dialogs.EquipmentBrowser.AllCategories')}</option>
+            <option value="active" ${this.categoryFilter === 'active' ? 'selected' : ''}>${game.i18n.localize('FITGD.Equipment.Active')}</option>
+            <option value="passive" ${this.categoryFilter === 'passive' ? 'selected' : ''}>${game.i18n.localize('FITGD.Equipment.Passive')}</option>
+            <option value="consumable" ${this.categoryFilter === 'consumable' ? 'selected' : ''}>${game.i18n.localize('FITGD.Equipment.Consumable')}</option>
           </select>
 
-          <input type="text" class="equipment-search" placeholder="Search by name..."/>
+          <input type="text" class="equipment-search" placeholder="${game.i18n.localize('FITGD.Dialogs.EquipmentBrowser.SearchPlaceholder')}"/>
         </div>
 
         <div class="equipment-list">
@@ -201,7 +201,7 @@ export class EquipmentBrowserDialog extends Dialog {
    */
   private _renderEquipmentItems(): string {
     if (this.items.length === 0) {
-      return '<p class="no-items">No equipment found matching filters.</p>';
+      return `<p class="no-items">${game.i18n.localize('FITGD.Dialogs.EquipmentBrowser.NoResults')}</p>`;
     }
 
     return this.items
@@ -211,11 +211,10 @@ export class EquipmentBrowserDialog extends Dialog {
         <input type="radio" name="equipment" value="${item.id}"/>
         <div class="browser-equipment-row">
           <div class="browser-equipment-icon">
-            ${
-              item.img
-                ? `<img src="${item.img}" alt="${item.name}"/>`
-                : '<i class="fas fa-box"></i>'
-            }
+            ${item.img
+            ? `<img src="${item.img}" alt="${item.name}"/>`
+            : '<i class="fas fa-box"></i>'
+          }
           </div>
 
           <div class="browser-equipment-details">
@@ -225,7 +224,7 @@ export class EquipmentBrowserDialog extends Dialog {
               <span class="category-badge">${item.category}</span>
               <span class="source-badge">${item.source}</span>
             </div>
-            <p class="browser-equipment-description">${item.description || '<em>No description</em>'}</p>
+            <p class="browser-equipment-description">${item.description || `<em>${game.i18n.localize('FITGD.Dialogs.EquipmentBrowser.NoDescription')}</em>`}</p>
           </div>
         </div>
       </label>
@@ -275,27 +274,27 @@ export class EquipmentBrowserDialog extends Dialog {
     const selectedId = html.find('input[name="equipment"]:checked').val() as string;
 
     if (!selectedId) {
-      ui.notifications.warn('Please select an equipment item');
+      ui.notifications.warn(game.i18n.localize('FITGD.Dialogs.EquipmentBrowser.SelectEquipmentWarning'));
       return;
     }
 
     const template = this.items.find((t) => t.id === selectedId);
 
     if (!template) {
-      ui.notifications.error('Equipment template not found');
+      ui.notifications.error(game.i18n.localize('FITGD.Equipment.NotFound'));
       return;
     }
 
     // Check tier restrictions (players can only add common items)
     if (game.user && !game.user.isGM && template.tier === 'rare') {
-      ui.notifications.warn('Rare equipment requires a flashback (1 Momentum + trait)');
+      ui.notifications.warn(game.i18n.localize('FITGD.Dialogs.EquipmentBrowser.RareWarning'));
       // TODO: Open flashback dialog
       return;
     }
 
     if (game.user && !game.user.isGM && template.tier === 'epic') {
       ui.notifications.error(
-        'Epic equipment cannot be acquired through flashbacks - must be earned'
+        game.i18n.localize('FITGD.Dialogs.EquipmentBrowser.EpicWarning')
       );
       return;
     }
@@ -350,6 +349,6 @@ export class EquipmentBrowserDialog extends Dialog {
       },
     });
 
-    ui.notifications.info(`Added ${template.name}`);
+    ui.notifications.info(game.i18n.format('FITGD.Dialogs.EquipmentBrowser.AddedSuccess', { name: template.name }));
   }
 }

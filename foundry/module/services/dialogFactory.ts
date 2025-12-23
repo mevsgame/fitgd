@@ -66,29 +66,29 @@ export class FoundryDialogFactory implements DialogFactory {
     const content = `
       <form>
         <div class="form-group">
-          <label>Item Name</label>
-          <input type="text" name="name" placeholder="e.g. Heavy Blaster" autofocus style="width: 100%; margin-bottom: 10px;">
+          <label>${game.i18n.localize('FITGD.Dialogs.FlashbackItem.ItemName')}</label>
+          <input type="text" name="name" placeholder="${game.i18n.localize('FITGD.Dialogs.FlashbackItem.ItemName')}" autofocus style="width: 100%; margin-bottom: 10px;">
         </div>
         <div class="form-group">
-          <label>Tags</label>
-          <input type="text" name="tags" value="bonus" placeholder="comma separated" style="width: 100%; margin-bottom: 10px;">
-          <p class="notes" style="font-size: 0.8em; color: #666;">Default "bonus" tag grants +1d.</p>
+          <label>${game.i18n.localize('FITGD.Dialogs.FlashbackItem.Tags')}</label>
+          <input type="text" name="tags" value="bonus" placeholder="${game.i18n.localize('FITGD.Dialogs.FlashbackItem.Tags')}" style="width: 100%; margin-bottom: 10px;">
+          <p class="notes" style="font-size: 0.8em; color: #666;">${game.i18n.localize('FITGD.Dialogs.FlashbackItem.TagsHint')}</p>
         </div>
         <div class="form-group">
-          <label>Momentum Cost</label>
+          <label>${game.i18n.localize('FITGD.Dialogs.FlashbackItem.MomentumCost')}</label>
           <input type="number" name="cost" value="1" min="0" max="10" style="width: 100%;">
-          <p class="notes" style="font-size: 0.8em; color: #666;">Usually 0 for Standard, 1 for Fine/Special.</p>
+          <p class="notes" style="font-size: 0.8em; color: #666;">${game.i18n.localize('FITGD.Dialogs.FlashbackItem.CostHint')}</p>
         </div>
       </form>
     `;
 
     return new Dialog({
-      title: "Flashback Item",
+      title: game.i18n.localize('FITGD.Dialogs.FlashbackItem.Title'),
       content: content,
       buttons: {
         add: {
           icon: '<i class="fas fa-check"></i>',
-          label: "Add Item",
+          label: game.i18n.localize('FITGD.Global.Add'),
           callback: async (html: JQuery | HTMLElement | undefined) => {
             if (!html) return;
             const $html = $(html as HTMLElement);
@@ -104,7 +104,7 @@ export class FoundryDialogFactory implements DialogFactory {
         },
         cancel: {
           icon: '<i class="fas fa-times"></i>',
-          label: "Cancel",
+          label: game.i18n.localize('FITGD.Global.Cancel'),
         },
       },
       default: "add",

@@ -1,10 +1,10 @@
 <div class="rally-dialog">
   <!-- Header -->
   <div class="dialog-header">
-    <h2>Rally Teammate</h2>
-    <p class="momentum-display">Current Momentum: <strong>{{momentum}}/10</strong></p>
+    <h2>{{localize "FITGD.Dialogs.Rally.Title"}}</h2>
+    <p class="momentum-display">{{localize "FITGD.Dialogs.Rally.CurrentMomentum"}}: <strong>{{momentum}}/10</strong></p>
     <p class="info-notice">
-      💬 Reference a teammate's trait to inspire the group. <strong>Always Controlled position.</strong>
+      {{{localize "FITGD.Dialogs.Rally.InfoNotice"}}}
     </p>
   </div>
 
@@ -14,9 +14,9 @@
 
     <!-- Target Selection -->
     <div class="form-group">
-      <label>Target Teammate:</label>
+      <label>{{localize "FITGD.Dialogs.Rally.TargetTeammate"}}</label>
       <select name="target" class="target-select">
-        <option value="">-- Select Teammate --</option>
+        <option value="">{{localize "FITGD.Dialogs.Rally.SelectTeammatePlaceholder"}}</option>
         {{#each teammates}}
         <option value="{{this.id}}" {{#if (eq ../selectedTargetId this.id)}}selected{{/if}}>
           {{this.name}}
@@ -24,15 +24,15 @@
         {{/each}}
       </select>
       {{#unless teammates.length}}
-      <p class="no-teammates">No other teammates in crew.</p>
+      <p class="no-teammates">{{localize "FITGD.Dialogs.Rally.NoTeammates"}}</p>
       {{/unless}}
     </div>
 
     <!-- Trait Selection -->
     {{#if selectedTargetId}}
     <div class="trait-selection">
-      <h3>Select {{targetCharacter.name}}'s Trait:</h3>
-      <p class="help-text">Reference a trait that inspires the team.</p>
+      <h3>{{localize "FITGD.Dialogs.Rally.SelectTrait" name=targetCharacter.name}}</h3>
+      <p class="help-text">{{localize "FITGD.Dialogs.Rally.SelectTraitHelp"}}</p>
 
       <div class="traits-grid">
         {{#each targetTraits}}
@@ -42,7 +42,7 @@
           <div class="trait-name">{{this.name}}</div>
           <div class="trait-category">{{this.category}}</div>
           {{#if this.disabled}}
-          <div class="trait-status">🔒 Disabled (will be re-enabled)</div>
+          <div class="trait-status">{{localize "FITGD.Dialogs.Rally.TraitDisabled"}}</div>
           {{/if}}
           {{#if this.description}}
           <div class="trait-description">{{this.description}}</div>
@@ -51,7 +51,7 @@
         {{/each}}
 
         {{#unless targetTraits.length}}
-        <p class="no-traits">No traits available for this character.</p>
+        <p class="no-traits">{{localize "FITGD.Dialogs.Rally.NoTraits"}}</p>
         {{/unless}}
       </div>
     </div>
@@ -60,10 +60,11 @@
     <!-- Roll Info -->
     {{#if canRoll}}
     <div class="roll-info">
-      <p><strong>Ready to roll:</strong> {{actionDots}}d6 (Controlled position)</p>
+      <p><strong>{{localize "FITGD.Dialogs.Rally.ReadyToRoll"}}:</strong> {{actionDots}}d6 ({{localize
+        "FITGD.Position.Controlled"}})</p>
       <p class="momentum-preview">
-        Possible Momentum Gain:
-        <span class="momentum-outcomes">1-3→+1M | 4-5→+2M | 6→+3M | Crit→+4M</span>
+        {{localize "FITGD.Dialogs.Rally.PossibleGain"}}
+        <span class="momentum-outcomes">{{localize "FITGD.Dialogs.Rally.GainTable"}}</span>
       </p>
     </div>
     {{/if}}
@@ -71,9 +72,9 @@
 
   <!-- Action Buttons -->
   <div class="dialog-buttons">
-    <button type="button" data-action="cancel" class="secondary">Cancel</button>
+    <button type="button" data-action="cancel" class="secondary">{{localize "FITGD.Global.Cancel"}}</button>
     <button type="button" data-action="roll" class="primary" {{#unless canRoll}}disabled{{/unless}}>
-      🎲 Roll & Apply ({{#if actionDots}}{{actionDots}}{{else}}2{{/if}}d6)
+      {{localize "FITGD.Dialogs.Rally.BtnRoll" n=(or actionDots 2)}}
     </button>
   </div>
 </div>

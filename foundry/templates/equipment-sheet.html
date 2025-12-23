@@ -2,93 +2,107 @@
   <header class="sheet-header">
     <img class="profile-img" src="{{item.img}}" data-edit="img" title="{{item.name}}" height="64" width="64" />
     <div class="header-fields">
-      <h1 class="charname"><input name="name" type="text" value="{{item.name}}" placeholder="Equipment Name" /></h1>
+      <h1 class="charname"><input name="name" type="text" value="{{item.name}}"
+          placeholder="{{localize 'FITGD.Equipment.Sheet.PlaceholderName'}}" /></h1>
     </div>
   </header>
 
   <div class="sheet-body equipment-sheet-body">
     <div class="form-group">
-      <label>Tier <span class="required">*</span></label>
+      <label>{{localize 'FITGD.Equipment.Sheet.Tier'}} <span class="required">*</span></label>
       <select name="system.tier" required>
-        <option value="common" {{#if (eq system.tier "common" )}}selected{{/if}}>Common</option>
-        <option value="rare" {{#if (eq system.tier "rare" )}}selected{{/if}}>Rare</option>
-        <option value="epic" {{#if (eq system.tier "epic" )}}selected{{/if}}>Epic</option>
+        <option value="common" {{#if (eq system.tier "common" )}}selected{{/if}}>{{localize 'FITGD.Equipment.Common'}}
+        </option>
+        <option value="rare" {{#if (eq system.tier "rare" )}}selected{{/if}}>{{localize 'FITGD.Equipment.Rare'}}
+        </option>
+        <option value="epic" {{#if (eq system.tier "epic" )}}selected{{/if}}>{{localize 'FITGD.Equipment.Epic'}}
+        </option>
       </select>
       <p class="help-text">
-        <strong>Common:</strong> Standard gear, freely available<br />
-        <strong>Rare:</strong> Requires 1M on first use (between Resets)<br />
-        <strong>Epic:</strong> Must be earned through story
+        {{{localize 'FITGD.Equipment.Sheet.HelpTier'}}}
       </p>
     </div>
 
     <div class="form-group">
-      <label>Category <span class="required">*</span></label>
+      <label>{{localize 'FITGD.Equipment.Sheet.Category'}} <span class="required">*</span></label>
       <select name="system.category" required>
-        <option value="active" {{#if (eq system.category "active" )}}selected{{/if}}>Active (Weapons/Tools)</option>
-        <option value="passive" {{#if (eq system.category "passive" )}}selected{{/if}}>Passive (Armor/Implants)</option>
-        <option value="consumable" {{#if (eq system.category "consumable" )}}selected{{/if}}>Consumable (Grenades/Stims)</option>
+        <option value="active" {{#if (eq system.category "active" )}}selected{{/if}}>{{localize
+          'FITGD.Equipment.Active'}}</option>
+        <option value="passive" {{#if (eq system.category "passive" )}}selected{{/if}}>{{localize
+          'FITGD.Equipment.Passive'}}</option>
+        <option value="consumable" {{#if (eq system.category "consumable" )}}selected{{/if}}>{{localize
+          'FITGD.Equipment.Consumable'}}</option>
       </select>
       <p class="help-text">
-        <strong>Active:</strong> Player selects in roll (weapons, tools, devices)<br />
-        <strong>Passive:</strong> GM approves during roll (armor, implants, augmentations)<br />
-        <strong>Consumable:</strong> Single-use items (grenades, stims, medkits)
+        {{{localize 'FITGD.Equipment.Sheet.HelpCategory'}}}
       </p>
     </div>
 
     <div class="form-group">
-      <label>Slots <span class="required">*</span></label>
-      <input type="number" name="system.slots" value="{{system.slots}}" min="1" required placeholder="1" />
-      <p class="help-text">Load slots occupied (minimum 1, default 5 slots per character)</p>
+      <label>{{localize 'FITGD.Equipment.Sheet.Slots'}} <span class="required">*</span></label>
+      <input type="number" name="system.slots" value="{{system.slots}}" min="1" required
+        placeholder="{{localize 'FITGD.Equipment.Sheet.PlaceholderSlots'}}" />
+      <p class="help-text">{{localize 'FITGD.Equipment.Sheet.HelpSlots'}}</p>
     </div>
 
     <div class="form-group">
-      <label>Description</label>
+      <label>{{localize 'FITGD.Equipment.Sheet.Description'}}</label>
       <textarea name="system.description" rows="4"
-        placeholder="Describe the equipment and how it affects gameplay...">{{system.description}}</textarea>
-      <p class="help-text">Include narrative details and mechanical effects on Position/Effect</p>
+        placeholder="{{localize 'FITGD.Equipment.Sheet.PlaceholderDesc'}}">{{system.description}}</textarea>
+      <p class="help-text">{{localize 'FITGD.Equipment.Sheet.HelpDescription'}}</p>
     </div>
 
     <div class="form-group">
-      <label>Modifiers</label>
-      <p class="help-text">Configure how this equipment affects rolls when used</p>
+      <label>{{localize 'FITGD.Equipment.Sheet.Modifiers'}}</label>
+      <p class="help-text">{{localize 'FITGD.Equipment.Sheet.HelpModifiers'}}</p>
       <div class="modifiers-grid">
         <div class="modifier-field">
-          <label>Dice Bonus</label>
-          <input type="text" name="system.modifiers.diceBonus" value="{{#if system.modifiers.diceBonus}}{{system.modifiers.diceBonus}}{{/if}}" placeholder="0" />
-          <p class="help-text-small">Additional dice in pool (default 1 if not specified)</p>
+          <label>{{localize 'FITGD.Equipment.Sheet.DiceBonus'}}</label>
+          <input type="text" name="system.modifiers.diceBonus"
+            value="{{#if system.modifiers.diceBonus}}{{system.modifiers.diceBonus}}{{/if}}"
+            placeholder="{{localize 'FITGD.Equipment.Sheet.PlaceholderModifier'}}" />
+          <p class="help-text-small">{{localize 'FITGD.Equipment.Sheet.HelpDiceBonus'}}</p>
         </div>
         <div class="modifier-field">
-          <label>Dice Penalty</label>
-          <input type="text" name="system.modifiers.dicePenalty" value="{{#if system.modifiers.dicePenalty}}{{system.modifiers.dicePenalty}}{{/if}}" placeholder="0" />
-          <p class="help-text-small">Dice to remove from pool</p>
+          <label>{{localize 'FITGD.Equipment.Sheet.DicePenalty'}}</label>
+          <input type="text" name="system.modifiers.dicePenalty"
+            value="{{#if system.modifiers.dicePenalty}}{{system.modifiers.dicePenalty}}{{/if}}"
+            placeholder="{{localize 'FITGD.Equipment.Sheet.PlaceholderModifier'}}" />
+          <p class="help-text-small">{{localize 'FITGD.Equipment.Sheet.HelpDicePenalty'}}</p>
         </div>
         <div class="modifier-field">
-          <label>Position Bonus</label>
-          <input type="text" name="system.modifiers.positionBonus" value="{{#if system.modifiers.positionBonus}}{{system.modifiers.positionBonus}}{{/if}}" placeholder="0" />
-          <p class="help-text-small">Improve position by N steps</p>
+          <label>{{localize 'FITGD.Equipment.Sheet.PositionBonus'}}</label>
+          <input type="text" name="system.modifiers.positionBonus"
+            value="{{#if system.modifiers.positionBonus}}{{system.modifiers.positionBonus}}{{/if}}"
+            placeholder="{{localize 'FITGD.Equipment.Sheet.PlaceholderModifier'}}" />
+          <p class="help-text-small">{{localize 'FITGD.Equipment.Sheet.HelpPositionBonus'}}</p>
         </div>
         <div class="modifier-field">
-          <label>Position Penalty</label>
-          <input type="text" name="system.modifiers.positionPenalty" value="{{#if system.modifiers.positionPenalty}}{{system.modifiers.positionPenalty}}{{/if}}" placeholder="0" />
-          <p class="help-text-small">Worsen position by N steps</p>
+          <label>{{localize 'FITGD.Equipment.Sheet.PositionPenalty'}}</label>
+          <input type="text" name="system.modifiers.positionPenalty"
+            value="{{#if system.modifiers.positionPenalty}}{{system.modifiers.positionPenalty}}{{/if}}"
+            placeholder="{{localize 'FITGD.Equipment.Sheet.PlaceholderModifier'}}" />
+          <p class="help-text-small">{{localize 'FITGD.Equipment.Sheet.HelpPositionPenalty'}}</p>
         </div>
         <div class="modifier-field">
-          <label>Effect Bonus</label>
-          <input type="text" name="system.modifiers.effectBonus" value="{{#if system.modifiers.effectBonus}}{{system.modifiers.effectBonus}}{{/if}}" placeholder="0" />
-          <p class="help-text-small">Improve effect by N levels</p>
+          <label>{{localize 'FITGD.Equipment.Sheet.EffectBonus'}}</label>
+          <input type="text" name="system.modifiers.effectBonus"
+            value="{{#if system.modifiers.effectBonus}}{{system.modifiers.effectBonus}}{{/if}}"
+            placeholder="{{localize 'FITGD.Equipment.Sheet.PlaceholderModifier'}}" />
+          <p class="help-text-small">{{localize 'FITGD.Equipment.Sheet.HelpEffectBonus'}}</p>
         </div>
         <div class="modifier-field">
-          <label>Effect Penalty</label>
-          <input type="text" name="system.modifiers.effectPenalty" value="{{#if system.modifiers.effectPenalty}}{{system.modifiers.effectPenalty}}{{/if}}" placeholder="0" />
-          <p class="help-text-small">Reduce effect by N levels</p>
+          <label>{{localize 'FITGD.Equipment.Sheet.EffectPenalty'}}</label>
+          <input type="text" name="system.modifiers.effectPenalty"
+            value="{{#if system.modifiers.effectPenalty}}{{system.modifiers.effectPenalty}}{{/if}}"
+            placeholder="{{localize 'FITGD.Equipment.Sheet.PlaceholderModifier'}}" />
+          <p class="help-text-small">{{localize 'FITGD.Equipment.Sheet.HelpEffectPenalty'}}</p>
         </div>
       </div>
     </div>
 
     <div class="form-group template-note">
-      <p class="help-text"><strong>📋 Template Factory Pattern:</strong> This item serves as a <em>template</em>. When a
-        character acquires this equipment, all data is copied to their Redux state. The character's copy is fully
-        independent and editable.</p>
+      <p class="help-text">{{{localize 'FITGD.Equipment.Sheet.TemplateNote'}}}</p>
     </div>
   </div>
 </form>
